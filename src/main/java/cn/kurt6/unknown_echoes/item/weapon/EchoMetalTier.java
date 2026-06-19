@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.Block;
 
 /**
  * 回响金属材质:正式武器/工具的统一材质等级。
- * 定位高于下界合金一档(终局回响装备):耐久 2600(>合金 2031),挖掘速度 10.0(>合金 9.0),
+ * 定位高于下界合金一档(终局回响装备):耐久 3250(>合金 2031),挖掘速度 10.0(>合金 9.0),
  * 工具攻击加成 5.0(>合金 4.0),附魔亲和 20(回响材料"易于共鸣"),挖掘等级等同合金(可挖一切)。
  * 近战武器面板伤害仍由 WeaponAttributes 直接声明(不吃材质加成);此处加成只影响工具类。
  * 修复材料为回响金属锭。
@@ -23,7 +23,7 @@ public final class EchoMetalTier implements Tier {
 
     @Override
     public int getUses() {
-        return 2600;
+        return 3250;
     }
 
     @Override

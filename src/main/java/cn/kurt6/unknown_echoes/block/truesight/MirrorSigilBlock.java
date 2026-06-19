@@ -103,7 +103,7 @@ public class MirrorSigilBlock extends BaseEntityBlock {
                     cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian.class,
                     new net.minecraft.world.phys.AABB(pos).inflate(24.0))) {
                 if (!guardian.isIllusion()) {
-                    guardian.onSigilActivated(serverPlayer);
+                    guardian.onSigilActivated(serverPlayer, pos);
                 }
             }
             serverPlayer.displayClientMessage(

@@ -325,19 +325,17 @@ public final class EchoCompletionManager {
     private static void claimIndexExpansionRewards(ServerPlayer player) {
         boolean changed = false;
         if (canClaimIndexExpansionOne(player) && !hasIndexExpansionOne(player)) {
-            grantIndexReward(player, INDEX_EXPANSION_ONE_KEY,
+            changed |= grantIndexReward(player, INDEX_EXPANSION_ONE_KEY,
                     List.of(new ItemStack(ModItems.ECHO_MARK.get(), 4),
                             new ItemStack(ModItems.RECORD_TRACING_PAPER.get(), 4),
                             new ItemStack(ModItems.ECHO_CORE.get(), 2)),
                     "message.unknown_echoes.index.expansion1");
-            changed = true;
         }
         if (canClaimIndexExpansionTwo(player) && !hasIndexExpansionTwo(player)) {
-            grantIndexReward(player, INDEX_EXPANSION_TWO_KEY,
+            changed |= grantIndexReward(player, INDEX_EXPANSION_TWO_KEY,
                     List.of(new ItemStack(ModItems.CLUE_MAP.get(), 1),
                             new ItemStack(ModItems.RECORD_TRACING_PAPER.get(), 6)),
                     "message.unknown_echoes.index.expansion2");
-            changed = true;
         }
         if (changed) {
             EchoAbilityManager.syncToClient(player);
@@ -365,17 +363,20 @@ public final class EchoCompletionManager {
         return EchoAbilityManager.hasActivatedMechanism(player, INDEX_EXPANSION_TWO_KEY);
     }
 
-    private static void grantIndexReward(ServerPlayer player, String key,
-                                         List<ItemStack> rewards, String messageKey) {
+    private static boolean grantIndexReward(ServerPlayer player, String key,
+                                            List<ItemStack> rewards, String messageKey) {
+        if (!canFitAllRewards(player, rewards)) {
+            player.displayClientMessage(Component.translatable("message.unknown_echoes.index.need_space"), true);
+            return false;
+        }
         EchoAbilityManager.activateMechanism(player, key);
         for (ItemStack stack : rewards) {
-            if (!player.getInventory().add(stack)) {
-                player.drop(stack, false);
-            }
+            player.getInventory().add(stack);
         }
         player.displayClientMessage(Component.translatable(messageKey), true);
         player.level().playSound(null, player.blockPosition(),
                 SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.7F, 0.8F);
+        return true;
     }
 
     private static String backfillTarget(ServerPlayer player) {
@@ -414,12 +415,70 @@ public final class EchoCompletionManager {
     }
 
     private static boolean giveSupplement(ServerPlayer player, String key, ItemStack stack) {
-        if (player.getInventory().getFreeSlot() < 0) {
+        if (!canFitEntireStack(player, stack)) {
             return false;
         }
         player.getInventory().add(stack);
         EchoAbilityManager.activateMechanism(player, key);
         return true;
+    }
+
+    private static boolean canFitEntireStack(ServerPlayer player, ItemStack stack) {
+        int remaining = stack.getCount();
+        int max = stack.getMaxStackSize();
+        for (ItemStack slot : player.getInventory().items) {
+            if (slot.isEmpty()) {
+                remaining -= max;
+            } else if (ItemStack.isSameItemSameComponents(slot, stack)) {
+                remaining -= Math.max(0, max - slot.getCount());
+            }
+            if (remaining <= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean canFitAllRewards(ServerPlayer player, List<ItemStack> rewards) {
+        List<ItemStack> slots = new ArrayList<>();
+        for (ItemStack slot : player.getInventory().items) {
+            slots.add(slot.copy());
+        }
+        for (ItemStack reward : rewards) {
+            if (!simulateInsert(slots, reward.copy())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean simulateInsert(List<ItemStack> slots, ItemStack reward) {
+        int remaining = reward.getCount();
+        for (ItemStack slot : slots) {
+            if (remaining <= 0) {
+                return true;
+            }
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, reward)) {
+                int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
+                if (move > 0) {
+                    slot.grow(move);
+                    remaining -= move;
+                }
+            }
+        }
+        for (int i = 0; i < slots.size(); i++) {
+            if (remaining <= 0) {
+                return true;
+            }
+            if (slots.get(i).isEmpty()) {
+                ItemStack placed = reward.copy();
+                int move = Math.min(remaining, placed.getMaxStackSize());
+                placed.setCount(move);
+                slots.set(i, placed);
+                remaining -= move;
+            }
+        }
+        return remaining <= 0;
     }
 
     private static Component doneLine(String key, boolean done) {

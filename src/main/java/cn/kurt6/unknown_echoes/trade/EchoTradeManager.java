@@ -136,13 +136,17 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
                 return;
             }
         }
+        ItemStack result = trade.makeResult();
+        if (!canFitResultAfterCosts(player, trade, result)) {
+            player.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.trade.need_space"), true);
+            playNo(player, traveler);
+            return;
+        }
         for (EchoTrade.Cost cost : trade.costs()) {
             consumeItem(player, trade.getCostItemHolder(cost), cost.count());
         }
-        ItemStack result = trade.makeResult();
-        if (!player.getInventory().add(result)) {
-            player.drop(result, false);
-        }
+        player.getInventory().add(result);
         used.merge(index, 1, Integer::sum);
         traveler.level().playSound(null, traveler.blockPosition(),
                 SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.9F, 1.0F);
@@ -155,9 +159,71 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
                 SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 0.9F, 1.0F);
     }
 
+    private static boolean canFitResultAfterCosts(ServerPlayer player, EchoTrade trade, ItemStack result) {
+        List<ItemStack> mainSlots = copySlots(player.getInventory().items);
+        List<ItemStack> offhandSlots = copySlots(player.getInventory().offhand);
+        for (EchoTrade.Cost cost : trade.costs()) {
+            int remaining = consumeFromSlots(mainSlots, trade.getCostItemHolder(cost), cost.count());
+            consumeFromSlots(offhandSlots, trade.getCostItemHolder(cost), remaining);
+        }
+        return simulateInsert(mainSlots, result.copy());
+    }
+
+    private static List<ItemStack> copySlots(List<ItemStack> slots) {
+        List<ItemStack> copied = new ArrayList<>();
+        for (ItemStack slot : slots) {
+            copied.add(slot.copy());
+        }
+        return copied;
+    }
+
+    private static int consumeFromSlots(List<ItemStack> slots, Item item, int amount) {
+        for (ItemStack stack : slots) {
+            if (amount <= 0) {
+                return 0;
+            }
+            if (stack.is(item)) {
+                int take = Math.min(amount, stack.getCount());
+                stack.shrink(take);
+                amount -= take;
+            }
+        }
+        return amount;
+    }
+
+    private static boolean simulateInsert(List<ItemStack> slots, ItemStack stack) {
+        int remaining = stack.getCount();
+        for (ItemStack slot : slots) {
+            if (remaining <= 0) {
+                return true;
+            }
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, stack)) {
+                int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
+                if (move > 0) {
+                    slot.grow(move);
+                    remaining -= move;
+                }
+            }
+        }
+        for (ItemStack slot : slots) {
+            if (remaining <= 0) {
+                return true;
+            }
+            if (slot.isEmpty()) {
+                remaining -= stack.getMaxStackSize();
+            }
+        }
+        return remaining <= 0;
+    }
+
     private static int countItem(ServerPlayer player, Item item) {
         int count = 0;
         for (ItemStack stack : player.getInventory().items) {
+            if (stack.is(item)) {
+                count += stack.getCount();
+            }
+        }
+        for (ItemStack stack : player.getInventory().offhand) {
             if (stack.is(item)) {
                 count += stack.getCount();
             }
@@ -167,6 +233,16 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
 
     private static void consumeItem(ServerPlayer player, Item item, int amount) {
         for (ItemStack stack : player.getInventory().items) {
+            if (amount <= 0) {
+                return;
+            }
+            if (stack.is(item)) {
+                int take = Math.min(amount, stack.getCount());
+                stack.shrink(take);
+                amount -= take;
+            }
+        }
+        for (ItemStack stack : player.getInventory().offhand) {
             if (amount <= 0) {
                 return;
             }

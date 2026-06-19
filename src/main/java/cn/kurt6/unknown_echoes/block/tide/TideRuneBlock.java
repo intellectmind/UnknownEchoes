@@ -34,6 +34,8 @@ public class TideRuneBlock extends Block {
     public static final MapCodec<TideRuneBlock> CODEC = simpleCodec(TideRuneBlock::new);
     /** 被深渊观测者侵蚀:由 Boss 写入,玩家净化;只在 Boss 战期间出现。 */
     public static final BooleanProperty CORRUPTED = BooleanProperty.create("corrupted");
+    /** 覆盖符文簇半径 + Boss 游荡半径,避免 Boss 走到场地边缘时净化通知漏发。 */
+    private static final double WATCHER_NOTIFY_RANGE = 64.0D;
 
     /** 铭文文本组数(lang 键 rune.unknown_echoes.tide.<0..N-1>)。 */
     public static final int INSCRIPTION_COUNT = 4;
@@ -110,7 +112,7 @@ public class TideRuneBlock extends Block {
     /** 净化后通知附近的深渊观测者重新检查破防条件。 */
     private static void notifyNearbyWatcher(ServerLevel level, BlockPos pos, Player purifier) {
         for (AbyssWatcher watcher : level.getEntitiesOfClass(AbyssWatcher.class,
-                new net.minecraft.world.phys.AABB(pos).inflate(32.0))) {
+                new net.minecraft.world.phys.AABB(pos).inflate(WATCHER_NOTIFY_RANGE))) {
             if (!watcher.isClone()) {
                 watcher.onRunePurified(purifier);
             }

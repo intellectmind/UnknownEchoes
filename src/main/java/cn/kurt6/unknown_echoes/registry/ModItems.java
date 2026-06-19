@@ -311,82 +311,82 @@ public class ModItems {
 
     public static final DeferredItem<EchoMeleeWeaponItem> ECHO_BROADSWORD =
             ITEMS.register("echo_broadsword", () -> new EchoMeleeWeaponItem(11.0, 1.55,
-                    "echo_broadsword", new Item.Properties().durability(2200).rarity(Rarity.UNCOMMON)));
+                    "echo_broadsword", new Item.Properties().durability(2750).rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<EchoMeleeWeaponItem> ECHO_BATTLEAXE =
             ITEMS.register("echo_battleaxe", () -> new EchoMeleeWeaponItem(15.0, 0.95,
-                    "echo_battleaxe", new Item.Properties().durability(2200).rarity(Rarity.RARE)));
+                    "echo_battleaxe", new Item.Properties().durability(2750).rarity(Rarity.RARE)));
 
     public static final DeferredItem<EchoBowItem> ECHO_LONGBOW =
             ITEMS.register("echo_longbow", () -> new EchoBowItem("echo_longbow",
-                    new Item.Properties().durability(980).rarity(Rarity.UNCOMMON)));
+                    new Item.Properties().durability(1225).rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<WindSpearItem> WIND_SPEAR =
             ITEMS.register("wind_spear", () -> new WindSpearItem(12.0, 1.40, 140, 1.65,
-                    9.9F, new Item.Properties().durability(2100).rarity(Rarity.RARE)));
+                    9.9F, new Item.Properties().durability(2625).rarity(Rarity.RARE)));
 
     public static final DeferredItem<TideCrossbowItem> TIDE_CROSSBOW =
             ITEMS.register("tide_crossbow", () -> new TideCrossbowItem(4.6, 2,
-                    new Item.Properties().stacksTo(1).durability(1800).rarity(Rarity.RARE)));
+                    new Item.Properties().stacksTo(1).durability(2250).rarity(Rarity.RARE)));
 
     public static final DeferredItem<TrueSightBladeItem> TRUE_SIGHT_BLADE =
             ITEMS.register("true_sight_blade", () -> new TrueSightBladeItem(10.0, 2.2, 80,
-                    6.0F, new Item.Properties().durability(2100).rarity(Rarity.RARE)));
+                    6.0F, new Item.Properties().durability(2625).rarity(Rarity.RARE)));
 
     public static final DeferredItem<EchoMeleeWeaponItem> SILENCE_SCYTHE =
             ITEMS.register("silence_scythe", () -> new EchoMeleeWeaponItem(12.0, 1.25,
-                    "silence_scythe", new Item.Properties().durability(2100).rarity(Rarity.RARE)));
+                    "silence_scythe", new Item.Properties().durability(2625).rarity(Rarity.RARE)));
 
     public static final DeferredItem<EchoMeleeWeaponItem> CRYSTAL_SONG_STAFF =
             ITEMS.register("crystal_song_staff", () -> new CrystalSongStaffItem(11.0, 1.10,
-                    "crystal_song_staff", new Item.Properties().durability(2000).rarity(Rarity.RARE)));
+                    "crystal_song_staff", new Item.Properties().durability(2500).rarity(Rarity.RARE)));
 
     public static final DeferredItem<EchoMeleeWeaponItem> BROKEN_BELL_HAMMER =
             ITEMS.register("broken_bell_hammer", () -> new EchoMeleeWeaponItem(16.0, 0.85,
-                    "broken_bell_hammer", new Item.Properties().durability(2300).rarity(Rarity.RARE)));
+                    "broken_bell_hammer", new Item.Properties().durability(2875).rarity(Rarity.RARE)));
 
     public static final DeferredItem<EchoBowItem> DREAM_BLOOM_BOW =
             ITEMS.register("dream_bloom_bow", () -> new EchoBowItem("dream_bloom_bow",
-                    new Item.Properties().durability(960).rarity(Rarity.RARE)));
+                    new Item.Properties().durability(1200).rarity(Rarity.RARE)));
 
     public static final DeferredItem<EchoMeleeWeaponItem> ECHO_OATHBLADE =
             ITEMS.register("echo_oathblade", () -> new EchoMeleeWeaponItem(13.0, 1.6,
-                    "echo_oathblade", new Item.Properties().durability(3000).rarity(Rarity.EPIC)));
+                    "echo_oathblade", new Item.Properties().durability(3750).rarity(Rarity.EPIC)));
 
     // ---- V0.7U 回响基础采集工具:只改善采集体验,不授予进度权限 ----
 
     public static final DeferredItem<EchoPickaxeItem> ECHO_PICKAXE =
             ITEMS.register("echo_pickaxe", () -> new EchoPickaxeItem(Tiers.DIAMOND,
-                    toolProperties(1561, 1.5F, -2.8F, Rarity.UNCOMMON)));
+                    toolProperties(1950, 1.5F, -2.8F, Rarity.UNCOMMON)));
 
     public static final DeferredItem<EchoShovelItem> ECHO_SHOVEL =
             ITEMS.register("echo_shovel", () -> new EchoShovelItem(Tiers.DIAMOND,
-                    toolProperties(1561, 1.5F, -3.0F, Rarity.UNCOMMON)));
+                    toolProperties(1950, 1.5F, -3.0F, Rarity.UNCOMMON)));
 
     public static final DeferredItem<EchoHatchetItem> ECHO_HATCHET =
             ITEMS.register("echo_hatchet", () -> new EchoHatchetItem(Tiers.DIAMOND,
-                    toolProperties(1561, 5.5F, -3.0F, Rarity.UNCOMMON)));
+                    toolProperties(1950, 5.5F, -3.0F, Rarity.UNCOMMON)));
 
     public static final DeferredItem<EchoHoeItem> ECHO_HOE =
             ITEMS.register("echo_hoe", () -> new EchoHoeItem(Tiers.DIAMOND,
-                    toolProperties(1561, -1.0F, 0.0F, Rarity.UNCOMMON)));
+                    toolProperties(1950, -1.0F, 0.0F, Rarity.UNCOMMON)));
 
     public static final DeferredItem<EchoShearsItem> ECHO_SHEARS =
             ITEMS.register("echo_shears", () -> new EchoShearsItem(new Item.Properties()
-                    .durability(512).rarity(Rarity.UNCOMMON)
+                    .durability(640).rarity(Rarity.UNCOMMON)
                     .component(DataComponents.TOOL, ShearsItem.createToolProperties())));
 
     public static final DeferredItem<EchoFishingRodItem> ECHO_FISHING_ROD =
             ITEMS.register("echo_fishing_rod", () -> new EchoFishingRodItem(new Item.Properties()
-                    .durability(384).rarity(Rarity.UNCOMMON)));
+                    .durability(480).rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<EchoBrushItem> ECHO_BRUSH =
             ITEMS.register("echo_brush", () -> new EchoBrushItem(new Item.Properties()
-                    .durability(256).rarity(Rarity.UNCOMMON)));
+                    .durability(320).rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<EchoIgniterItem> ECHO_IGNITER =
             ITEMS.register("echo_igniter", () -> new EchoIgniterItem(new Item.Properties()
-                    .durability(256).rarity(Rarity.UNCOMMON)));
+                    .durability(320).rarity(Rarity.UNCOMMON)));
 
     /** 装备图纸:配方线索,非关键奖励(EquipmentBlueprintItem)。 */
     public static final DeferredItem<EquipmentBlueprintItem> WIND_SPEAR_BLUEPRINT =
@@ -604,109 +604,109 @@ public class ModItems {
 
     public static final DeferredItem<EchoSetArmorItem> EXPLORER_HELMET = ITEMS.register("explorer_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.EXPLORER, ArmorItem.Type.HELMET, "explorer",
-                    new Item.Properties().durability(ArmorItem.Type.HELMET.getDurability(12))));
+                    new Item.Properties().durability(ArmorItem.Type.HELMET.getDurability(15))));
     public static final DeferredItem<EchoSetArmorItem> EXPLORER_CHESTPLATE = ITEMS.register("explorer_chestplate",
             () -> new EchoSetArmorItem(ModArmorMaterials.EXPLORER, ArmorItem.Type.CHESTPLATE, "explorer",
-                    new Item.Properties().durability(ArmorItem.Type.CHESTPLATE.getDurability(12))));
+                    new Item.Properties().durability(ArmorItem.Type.CHESTPLATE.getDurability(15))));
     public static final DeferredItem<EchoSetArmorItem> EXPLORER_LEGGINGS = ITEMS.register("explorer_leggings",
             () -> new EchoSetArmorItem(ModArmorMaterials.EXPLORER, ArmorItem.Type.LEGGINGS, "explorer",
-                    new Item.Properties().durability(ArmorItem.Type.LEGGINGS.getDurability(12))));
+                    new Item.Properties().durability(ArmorItem.Type.LEGGINGS.getDurability(15))));
     public static final DeferredItem<EchoSetArmorItem> EXPLORER_BOOTS = ITEMS.register("explorer_boots",
             () -> new EchoSetArmorItem(ModArmorMaterials.EXPLORER, ArmorItem.Type.BOOTS, "explorer",
-                    new Item.Properties().durability(ArmorItem.Type.BOOTS.getDurability(12))));
+                    new Item.Properties().durability(ArmorItem.Type.BOOTS.getDurability(15))));
 
     public static final DeferredItem<EchoSetArmorItem> LISTENER_HELMET = ITEMS.register("listener_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.LISTENER, ArmorItem.Type.HELMET, "listener",
-                    new Item.Properties().durability(ArmorItem.Type.HELMET.getDurability(18)).rarity(Rarity.UNCOMMON)));
+                    new Item.Properties().durability(ArmorItem.Type.HELMET.getDurability(23)).rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<EchoSetArmorItem> LISTENER_CHESTPLATE = ITEMS.register("listener_chestplate",
             () -> new EchoSetArmorItem(ModArmorMaterials.LISTENER, ArmorItem.Type.CHESTPLATE, "listener",
-                    new Item.Properties().durability(ArmorItem.Type.CHESTPLATE.getDurability(18)).rarity(Rarity.UNCOMMON)));
+                    new Item.Properties().durability(ArmorItem.Type.CHESTPLATE.getDurability(23)).rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<EchoSetArmorItem> LISTENER_LEGGINGS = ITEMS.register("listener_leggings",
             () -> new EchoSetArmorItem(ModArmorMaterials.LISTENER, ArmorItem.Type.LEGGINGS, "listener",
-                    new Item.Properties().durability(ArmorItem.Type.LEGGINGS.getDurability(18)).rarity(Rarity.UNCOMMON)));
+                    new Item.Properties().durability(ArmorItem.Type.LEGGINGS.getDurability(23)).rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<EchoSetArmorItem> LISTENER_BOOTS = ITEMS.register("listener_boots",
             () -> new EchoSetArmorItem(ModArmorMaterials.LISTENER, ArmorItem.Type.BOOTS, "listener",
-                    new Item.Properties().durability(ArmorItem.Type.BOOTS.getDurability(18)).rarity(Rarity.UNCOMMON)));
+                    new Item.Properties().durability(ArmorItem.Type.BOOTS.getDurability(23)).rarity(Rarity.UNCOMMON)));
 
     // ---- V0.7H 六套第一维度装备 ----
 
     public static final DeferredItem<EchoSetArmorItem> ECHO_TRAVELER_HELMET = ITEMS.register("echo_traveler_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_TRAVELER, ArmorItem.Type.HELMET, "echo_traveler",
-                    armorProperties(ArmorItem.Type.HELMET, 36, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.HELMET, 45, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> ECHO_TRAVELER_CHESTPLATE = ITEMS.register("echo_traveler_chestplate",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_TRAVELER, ArmorItem.Type.CHESTPLATE, "echo_traveler",
-                    armorProperties(ArmorItem.Type.CHESTPLATE, 36, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.CHESTPLATE, 45, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> ECHO_TRAVELER_LEGGINGS = ITEMS.register("echo_traveler_leggings",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_TRAVELER, ArmorItem.Type.LEGGINGS, "echo_traveler",
-                    armorProperties(ArmorItem.Type.LEGGINGS, 36, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.LEGGINGS, 45, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> ECHO_TRAVELER_BOOTS = ITEMS.register("echo_traveler_boots",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_TRAVELER, ArmorItem.Type.BOOTS, "echo_traveler",
-                    armorProperties(ArmorItem.Type.BOOTS, 36, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.BOOTS, 45, Rarity.RARE)));
 
     public static final DeferredItem<EchoSetArmorItem> WIND_WALKER_HELMET = ITEMS.register("wind_walker_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.WIND_WALKER, ArmorItem.Type.HELMET, "wind_walker",
-                    armorProperties(ArmorItem.Type.HELMET, 40, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.HELMET, 50, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> WIND_WALKER_CHESTPLATE = ITEMS.register("wind_walker_chestplate",
             () -> new EchoSetArmorItem(ModArmorMaterials.WIND_WALKER, ArmorItem.Type.CHESTPLATE, "wind_walker",
-                    armorProperties(ArmorItem.Type.CHESTPLATE, 40, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.CHESTPLATE, 50, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> WIND_WALKER_LEGGINGS = ITEMS.register("wind_walker_leggings",
             () -> new EchoSetArmorItem(ModArmorMaterials.WIND_WALKER, ArmorItem.Type.LEGGINGS, "wind_walker",
-                    armorProperties(ArmorItem.Type.LEGGINGS, 40, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.LEGGINGS, 50, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> WIND_WALKER_BOOTS = ITEMS.register("wind_walker_boots",
             () -> new EchoSetArmorItem(ModArmorMaterials.WIND_WALKER, ArmorItem.Type.BOOTS, "wind_walker",
-                    armorProperties(ArmorItem.Type.BOOTS, 40, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.BOOTS, 50, Rarity.RARE)));
 
     public static final DeferredItem<EchoSetArmorItem> TIDE_STALKER_HELMET = ITEMS.register("tide_stalker_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.TIDE_STALKER, ArmorItem.Type.HELMET, "tide_stalker",
-                    armorProperties(ArmorItem.Type.HELMET, 41, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.HELMET, 51, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> TIDE_STALKER_CHESTPLATE = ITEMS.register("tide_stalker_chestplate",
             () -> new EchoSetArmorItem(ModArmorMaterials.TIDE_STALKER, ArmorItem.Type.CHESTPLATE, "tide_stalker",
-                    armorProperties(ArmorItem.Type.CHESTPLATE, 41, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.CHESTPLATE, 51, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> TIDE_STALKER_LEGGINGS = ITEMS.register("tide_stalker_leggings",
             () -> new EchoSetArmorItem(ModArmorMaterials.TIDE_STALKER, ArmorItem.Type.LEGGINGS, "tide_stalker",
-                    armorProperties(ArmorItem.Type.LEGGINGS, 41, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.LEGGINGS, 51, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> TIDE_STALKER_BOOTS = ITEMS.register("tide_stalker_boots",
             () -> new EchoSetArmorItem(ModArmorMaterials.TIDE_STALKER, ArmorItem.Type.BOOTS, "tide_stalker",
-                    armorProperties(ArmorItem.Type.BOOTS, 41, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.BOOTS, 51, Rarity.RARE)));
 
     public static final DeferredItem<EchoSetArmorItem> TRUE_SIGHT_SHADOW_HELMET = ITEMS.register("true_sight_shadow_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.TRUE_SIGHT_SHADOW, ArmorItem.Type.HELMET, "true_sight_shadow",
-                    armorProperties(ArmorItem.Type.HELMET, 39, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.HELMET, 49, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> TRUE_SIGHT_SHADOW_CHESTPLATE = ITEMS.register("true_sight_shadow_chestplate",
             () -> new EchoSetArmorItem(ModArmorMaterials.TRUE_SIGHT_SHADOW, ArmorItem.Type.CHESTPLATE, "true_sight_shadow",
-                    armorProperties(ArmorItem.Type.CHESTPLATE, 39, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.CHESTPLATE, 49, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> TRUE_SIGHT_SHADOW_LEGGINGS = ITEMS.register("true_sight_shadow_leggings",
             () -> new EchoSetArmorItem(ModArmorMaterials.TRUE_SIGHT_SHADOW, ArmorItem.Type.LEGGINGS, "true_sight_shadow",
-                    armorProperties(ArmorItem.Type.LEGGINGS, 39, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.LEGGINGS, 49, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> TRUE_SIGHT_SHADOW_BOOTS = ITEMS.register("true_sight_shadow_boots",
             () -> new EchoSetArmorItem(ModArmorMaterials.TRUE_SIGHT_SHADOW, ArmorItem.Type.BOOTS, "true_sight_shadow",
-                    armorProperties(ArmorItem.Type.BOOTS, 39, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.BOOTS, 49, Rarity.RARE)));
 
     public static final DeferredItem<EchoSetArmorItem> SILENT_WATCH_HELMET = ITEMS.register("silent_watch_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.SILENT_WATCH, ArmorItem.Type.HELMET, "silent_watch",
-                    armorProperties(ArmorItem.Type.HELMET, 42, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.HELMET, 53, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> SILENT_WATCH_CHESTPLATE = ITEMS.register("silent_watch_chestplate",
             () -> new EchoSetArmorItem(ModArmorMaterials.SILENT_WATCH, ArmorItem.Type.CHESTPLATE, "silent_watch",
-                    armorProperties(ArmorItem.Type.CHESTPLATE, 42, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.CHESTPLATE, 53, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> SILENT_WATCH_LEGGINGS = ITEMS.register("silent_watch_leggings",
             () -> new EchoSetArmorItem(ModArmorMaterials.SILENT_WATCH, ArmorItem.Type.LEGGINGS, "silent_watch",
-                    armorProperties(ArmorItem.Type.LEGGINGS, 42, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.LEGGINGS, 53, Rarity.RARE)));
     public static final DeferredItem<EchoSetArmorItem> SILENT_WATCH_BOOTS = ITEMS.register("silent_watch_boots",
             () -> new EchoSetArmorItem(ModArmorMaterials.SILENT_WATCH, ArmorItem.Type.BOOTS, "silent_watch",
-                    armorProperties(ArmorItem.Type.BOOTS, 42, Rarity.RARE)));
+                    armorProperties(ArmorItem.Type.BOOTS, 53, Rarity.RARE)));
 
     public static final DeferredItem<EchoSetArmorItem> ECHO_OATH_HELMET = ITEMS.register("echo_oath_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_OATH, ArmorItem.Type.HELMET, "echo_oath",
-                    armorProperties(ArmorItem.Type.HELMET, 47, Rarity.EPIC)));
+                    armorProperties(ArmorItem.Type.HELMET, 59, Rarity.EPIC)));
     public static final DeferredItem<EchoSetArmorItem> ECHO_OATH_CHESTPLATE = ITEMS.register("echo_oath_chestplate",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_OATH, ArmorItem.Type.CHESTPLATE, "echo_oath",
-                    armorProperties(ArmorItem.Type.CHESTPLATE, 47, Rarity.EPIC)));
+                    armorProperties(ArmorItem.Type.CHESTPLATE, 59, Rarity.EPIC)));
     public static final DeferredItem<EchoSetArmorItem> ECHO_OATH_LEGGINGS = ITEMS.register("echo_oath_leggings",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_OATH, ArmorItem.Type.LEGGINGS, "echo_oath",
-                    armorProperties(ArmorItem.Type.LEGGINGS, 47, Rarity.EPIC)));
+                    armorProperties(ArmorItem.Type.LEGGINGS, 59, Rarity.EPIC)));
     public static final DeferredItem<EchoSetArmorItem> ECHO_OATH_BOOTS = ITEMS.register("echo_oath_boots",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_OATH, ArmorItem.Type.BOOTS, "echo_oath",
-                    armorProperties(ArmorItem.Type.BOOTS, 47, Rarity.EPIC)));
+                    armorProperties(ArmorItem.Type.BOOTS, 59, Rarity.EPIC)));
 
     // BlockItems
     public static final DeferredItem<BlockItem> ECHO_STONE_BRICKS = ITEMS.registerSimpleBlockItem("echo_stone_bricks", ModBlocks.ECHO_STONE_BRICKS);

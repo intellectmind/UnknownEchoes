@@ -10,11 +10,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * 共鸣信物仪式统一入口(V0.6E,设计文档 5.1.1)。
  * 权威判定永远是服务端个人双记录(机关完成 + Boss 击败);信物只是仪式载体:
- * - 机关完成 → 写个人"仪式记录" + 发信物(凭据归属同神器序号方案,他人/旧信物无效);
+ * - 机关完成 → 写个人"仪式记录" + 发信物(凭据归属同神器序号 + owner 方案,他人/旧信物无效);
  * - 信物丢失不卡进度:回到机关核心处免费复领(序号自增,旧信物作废);
  * - 祭坛吸收时消耗信物,双记录齐全才写入能力(红线 #2:信物不是权威状态)。
  */
@@ -50,12 +51,16 @@ public class ResonanceTokenManager {
             return;
         }
         if (firstTime || !hasValidToken(player, ability)) {
-            issueToken(player, ability);
-            player.sendSystemMessage(Component.translatable(
-                    "message.unknown_echoes.token.granted",
-                    Component.translatable("item.unknown_echoes." + tokenId(ability))));
-            player.level().playSound(null, player.blockPosition(),
-                    SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.4F);
+            if (issueToken(player, ability)) {
+                player.sendSystemMessage(Component.translatable(
+                        "message.unknown_echoes.token.granted",
+                        Component.translatable("item.unknown_echoes." + tokenId(ability))));
+                player.level().playSound(null, player.blockPosition(),
+                        SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.4F);
+            } else {
+                player.displayClientMessage(
+                        Component.translatable("message.unknown_echoes.token.need_space"), true);
+            }
         }
     }
 
@@ -71,7 +76,11 @@ public class ResonanceTokenManager {
                 || hasValidToken(player, ability)) {
             return false;
         }
-        issueToken(player, ability);
+        if (!issueToken(player, ability)) {
+            player.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.token.need_space"), true);
+            return false;
+        }
         player.displayClientMessage(
                 Component.translatable("message.unknown_echoes.token.reissued"), true);
         player.level().playSound(null, player.blockPosition(),
@@ -81,14 +90,26 @@ public class ResonanceTokenManager {
 
     /** 信物校验:能力 id 与凭据序号都要与玩家数据一致(他人信物/旧信物不通过)。 */
     public static boolean isValidToken(ServerPlayer player, EchoAbilityType ability, ItemStack stack) {
+        if (!hasRitualRecord(player, ability)) {
+            return false;
+        }
         Item item = tokenItem(ability);
         if (item == null || !stack.is(item)) {
             return false;
         }
         String id = stack.get(ModDataComponents.TOKEN_ABILITY.get());
         Integer serial = stack.get(ModDataComponents.CREDENTIAL_SERIAL.get());
-        return ability.getId().equals(id) && serial != null
-                && serial == EchoAbilityManager.getData(player).getTokenSerial(ability);
+        int currentSerial = EchoAbilityManager.getData(player).getTokenSerial(ability);
+        if (!ability.getId().equals(id) || serial == null
+                || currentSerial <= 0 || serial != currentSerial) {
+            return false;
+        }
+        String owner = stack.get(ModDataComponents.TOKEN_OWNER.get());
+        if (owner == null || owner.isBlank()) {
+            stack.set(ModDataComponents.TOKEN_OWNER.get(), player.getUUID().toString());
+            return true;
+        }
+        return owner.equals(player.getUUID().toString());
     }
 
     /** 背包(含副手)里是否持有效信物。 */
@@ -106,6 +127,30 @@ public class ResonanceTokenManager {
         return true;
     }
 
+    /** 当前玩家正在持有的有效共鸣信物。旧序号/他人信物可正常丢弃清理。 */
+    public static boolean isCurrentToken(ServerPlayer player, ItemStack stack) {
+        EchoAbilityType ability = abilityFromTokenItem(stack);
+        return ability != null && isValidToken(player, ability, stack);
+    }
+
+    /** 把绑定信物放回玩家背包或副手。用于丢弃/死亡保护。 */
+    public static boolean returnTokenToInventory(ServerPlayer player, ItemStack stack) {
+        int slot = player.getInventory().getFreeSlot();
+        if (slot >= 0) {
+            player.getInventory().items.set(slot, stack);
+            player.getInventory().setChanged();
+            return true;
+        }
+        for (int i = 0; i < player.getInventory().offhand.size(); i++) {
+            if (player.getInventory().offhand.get(i).isEmpty()) {
+                player.getInventory().offhand.set(i, stack);
+                player.getInventory().setChanged();
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Nullable
     private static ItemStack findToken(ServerPlayer player, EchoAbilityType ability) {
         ItemStack offhand = player.getOffhandItem();
@@ -120,18 +165,68 @@ public class ResonanceTokenManager {
         return null;
     }
 
-    private static void issueToken(ServerPlayer player, EchoAbilityType ability) {
+    private static boolean issueToken(ServerPlayer player, EchoAbilityType ability) {
         Item item = tokenItem(ability);
         if (item == null) {
-            return;
+            return false;
+        }
+        normalizeTokens(player, ability);
+        if (!hasTokenSpace(player)) {
+            return false;
         }
         int serial = EchoAbilityManager.getData(player).nextTokenSerial(ability);
         ItemStack stack = new ItemStack(item);
         stack.set(ModDataComponents.TOKEN_ABILITY.get(), ability.getId());
         stack.set(ModDataComponents.CREDENTIAL_SERIAL.get(), serial);
-        if (!player.getInventory().add(stack)) {
-            player.drop(stack, false);
+        stack.set(ModDataComponents.TOKEN_OWNER.get(), player.getUUID().toString());
+        return returnTokenToInventory(player, stack);
+    }
+
+    private static boolean hasTokenSpace(ServerPlayer player) {
+        if (player.getInventory().getFreeSlot() >= 0) {
+            return true;
         }
+        for (ItemStack stack : player.getInventory().offhand) {
+            if (stack.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void normalizeTokens(ServerPlayer player, EchoAbilityType ability) {
+        boolean foundValid = normalizeTokenList(player, ability, player.getInventory().items, false);
+        normalizeTokenList(player, ability, player.getInventory().offhand, foundValid);
+        player.getInventory().setChanged();
+    }
+
+    private static boolean normalizeTokenList(ServerPlayer player, EchoAbilityType ability,
+                                              List<ItemStack> stacks, boolean foundValid) {
+        Item item = tokenItem(ability);
+        if (item == null) {
+            return foundValid;
+        }
+        for (int i = 0; i < stacks.size(); i++) {
+            ItemStack stack = stacks.get(i);
+            if (!stack.is(item)) {
+                continue;
+            }
+            boolean valid = isValidToken(player, ability, stack);
+            if (valid && !foundValid) {
+                foundValid = true;
+            } else {
+                stacks.set(i, ItemStack.EMPTY);
+            }
+        }
+        return foundValid;
+    }
+
+    @Nullable
+    private static EchoAbilityType abilityFromTokenItem(ItemStack stack) {
+        if (stack.isEmpty() || !(stack.getItem() instanceof cn.kurt6.unknown_echoes.item.ResonanceTokenItem token)) {
+            return null;
+        }
+        return token.getAbility();
     }
 
     private static String tokenId(EchoAbilityType ability) {

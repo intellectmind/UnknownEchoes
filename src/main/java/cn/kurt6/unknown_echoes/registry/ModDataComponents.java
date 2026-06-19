@@ -36,6 +36,14 @@ public class ModDataComponents {
                             .networkSynchronized(ByteBufCodecs.VAR_INT)
                             .build());
 
+    /** 神器凭据绑定的玩家 UUID。旧档缺失时由本人首次使用/复领补写。 */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> ARTIFACT_OWNER =
+            DATA_COMPONENT_TYPES.register("artifact_owner",
+                    () -> DataComponentType.<String>builder()
+                            .persistent(Codec.STRING)
+                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                            .build());
+
     /** 线索地图绑定的结构 id(迷途旅者出售;使用时一次性定位写入个人日志线索)。 */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> CLUE_STRUCTURE =
             DATA_COMPONENT_TYPES.register("clue_structure",
@@ -47,6 +55,14 @@ public class ModDataComponents {
     /** 共鸣信物所属能力 id(V0.6E 5.1.1:信物只是仪式凭据,序号复用 CREDENTIAL_SERIAL)。 */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> TOKEN_ABILITY =
             DATA_COMPONENT_TYPES.register("token_ability",
+                    () -> DataComponentType.<String>builder()
+                            .persistent(Codec.STRING)
+                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                            .build());
+
+    /** 共鸣信物绑定的玩家 UUID。旧档缺失时由本人首次校验补写。 */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> TOKEN_OWNER =
+            DATA_COMPONENT_TYPES.register("token_owner",
                     () -> DataComponentType.<String>builder()
                             .persistent(Codec.STRING)
                             .networkSynchronized(ByteBufCodecs.STRING_UTF8)

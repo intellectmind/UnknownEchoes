@@ -5,6 +5,8 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.artifact.ArtifactEffectManager;
+import cn.kurt6.unknown_echoes.artifact.ArtifactManager;
+import cn.kurt6.unknown_echoes.ability.ResonanceTokenManager;
 import cn.kurt6.unknown_echoes.command.EchoCommands;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.entity.boss.BossMaterialRewards;
@@ -36,21 +38,28 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
+import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
+import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
 public class CommonEvents {
     private static final Map<UUID, Integer> LAST_ENERGY_REGEN_RATE = new HashMap<>();
+    private static final Map<UUID, List<ItemStack>> PENDING_ARTIFACT_CREDENTIALS = new HashMap<>();
+    private static final Map<UUID, List<ItemStack>> PENDING_RESONANCE_TOKENS = new HashMap<>();
     private static final float TIDE_UNDERWATER_MINING_MULTIPLIER = 1.3F;
     private static final float TIDE_UNDERWATER_MINING_MULTIPLIER_RESEARCH2 = 1.5F;
     private static final float TIDE_WET_DAMAGE_BONUS = 0.08F;
@@ -67,6 +76,7 @@ public class CommonEvents {
             EchoAbilityManager.syncToClient(player);
             cn.kurt6.unknown_echoes.journal.JournalManager.syncJournal(player);
             cn.kurt6.unknown_echoes.artifact.ArtifactManager.syncToClient(player);
+            restorePendingArtifactCredentials(player, true);
             BossMaterialRewards.retryPendingPersonalRewards(player);
             MiniBossEntity.retryPendingFirstKillRewards(player);
         }
@@ -88,6 +98,7 @@ public class CommonEvents {
             cn.kurt6.unknown_echoes.ability.WindGlideTracker.tick(player);
             ArtifactEffectManager.tick(player);
             if (player.tickCount % 100 == 0) {
+                restorePendingArtifactCredentials(player, false);
                 BossMaterialRewards.retryPendingPersonalRewards(player);
                 MiniBossEntity.retryPendingFirstKillRewards(player);
             }
@@ -98,6 +109,7 @@ public class CommonEvents {
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ArtifactEffectManager.clearPlayer(player);
+            restorePendingArtifactCredentials(player, true);
             EchoAbilityManager.syncToClient(player);
             cn.kurt6.unknown_echoes.journal.JournalManager.syncJournal(player);
             cn.kurt6.unknown_echoes.artifact.ArtifactManager.syncToClient(player);
@@ -115,6 +127,88 @@ public class CommonEvents {
             cn.kurt6.unknown_echoes.artifact.ArtifactManager.syncToClient(player);
             if (event.getTo().location().equals(EchoPermission.ECHO_REALM_ID)) {
                 EchoAbilityManager.unlockDimension(player, EchoPermission.ECHO_REALM_ID);
+            }
+        }
+    }
+
+    /** 个人绑定凭据:玩家数据是权威,有效凭据不进入掉落/抢夺循环。 */
+    @SubscribeEvent
+    public static void onItemToss(ItemTossEvent event) {
+        if (!(event.getPlayer() instanceof ServerPlayer player)) {
+            return;
+        }
+        ItemStack stack = event.getEntity().getItem();
+        if (ArtifactManager.isCurrentCredential(player, stack)) {
+            event.setCanceled(true);
+            if (ArtifactManager.returnCredentialToInventory(player, stack.copy())) {
+                player.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.artifact.bound_returned"), true);
+            }
+            return;
+        }
+        if (!ResonanceTokenManager.isCurrentToken(player, stack)) {
+            return;
+        }
+        event.setCanceled(true);
+        if (ResonanceTokenManager.returnTokenToInventory(player, stack.copy())) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.token.bound_returned"), true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingDrops(LivingDropsEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        Iterator<net.minecraft.world.entity.item.ItemEntity> iterator = event.getDrops().iterator();
+        while (iterator.hasNext()) {
+            ItemStack stack = iterator.next().getItem();
+            if (ArtifactManager.isCurrentCredential(player, stack)) {
+                iterator.remove();
+                PENDING_ARTIFACT_CREDENTIALS
+                        .computeIfAbsent(player.getUUID(), id -> new ArrayList<>())
+                        .add(stack.copy());
+            } else if (ResonanceTokenManager.isCurrentToken(player, stack)) {
+                iterator.remove();
+                PENDING_RESONANCE_TOKENS
+                        .computeIfAbsent(player.getUUID(), id -> new ArrayList<>())
+                        .add(stack.copy());
+            }
+        }
+    }
+
+    private static void restorePendingArtifactCredentials(ServerPlayer player, boolean notify) {
+        List<ItemStack> pending = PENDING_ARTIFACT_CREDENTIALS.remove(player.getUUID());
+        if (pending != null) {
+            List<ItemStack> remaining = new ArrayList<>();
+            for (ItemStack stack : pending) {
+                if (!ArtifactManager.returnCredentialToInventory(player, stack)) {
+                    remaining.add(stack);
+                }
+            }
+            if (!remaining.isEmpty()) {
+                PENDING_ARTIFACT_CREDENTIALS.put(player.getUUID(), remaining);
+                if (notify) {
+                    player.displayClientMessage(Component.translatable(
+                            "message.unknown_echoes.artifact.need_space"), true);
+                }
+            }
+        }
+        List<ItemStack> tokenPending = PENDING_RESONANCE_TOKENS.remove(player.getUUID());
+        if (tokenPending != null) {
+            List<ItemStack> remaining = new ArrayList<>();
+            for (ItemStack stack : tokenPending) {
+                if (!ResonanceTokenManager.returnTokenToInventory(player, stack)) {
+                    remaining.add(stack);
+                }
+            }
+            if (!remaining.isEmpty()) {
+                PENDING_RESONANCE_TOKENS.put(player.getUUID(), remaining);
+                if (notify) {
+                    player.displayClientMessage(Component.translatable(
+                            "message.unknown_echoes.token.need_space"), true);
+                }
             }
         }
     }

@@ -1,9 +1,9 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
-import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.block.truesight.MirrorSigilBlock;
+import cn.kurt6.unknown_echoes.block.truesight.MirrorSigilBlockEntity;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
@@ -70,7 +70,7 @@ import java.util.UUID;
  * 攻击:幻象斩击(真斩低音、假斩高音)/ 镜面换位(与假身换位,留下镜尘残影)/
  *       镜光乱射(三波扇形镜光,附虚弱)/ 镜刺突袭(直线镜刺浪涌,逐段推进)/
  *       镜环爆发(贴身环形冲击,惩罚持续贴脸);假目标爆裂 = 击碎假身时的小范围幻象冲击(反制惩罚)。
- * 死亡:场地内参与玩家个人写入击败记录与真视回响;掉落表只有普通材料。
+ * 死亡:场地内参与玩家个人写入击败记录;真视回响由真视祭坛校验信物后解锁。
  */
 public class MirrorGuardian extends Monster implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
@@ -316,13 +316,13 @@ public class MirrorGuardian extends Monster implements GeoEntity {
     // ---- 真实辨认 → 真视破防:由 MirrorSigilBlock 在真符印被激活时调用 ----
 
     /** 该玩家已亲自激活本神殿全部真符印 → 假影收束,真实核心暴露。 */
-    public void onSigilActivated(ServerPlayer activator) {
+    public void onSigilActivated(ServerPlayer activator, BlockPos activatedSigil) {
         if (this.level().isClientSide || this.isBroken() || this.isIllusion()
                 || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
         this.participants.add(activator.getUUID());
-        List<BlockPos> realSigils = findNearbyRealSigils(serverLevel);
+        List<BlockPos> realSigils = findNearbyRealSigils(serverLevel, activatedSigil);
         if (realSigils.isEmpty()) {
             return;
         }
@@ -341,14 +341,18 @@ public class MirrorGuardian extends Monster implements GeoEntity {
         }
     }
 
-    private List<BlockPos> findNearbyRealSigils(ServerLevel serverLevel) {
+    private List<BlockPos> findNearbyRealSigils(ServerLevel serverLevel, BlockPos center) {
         List<BlockPos> result = new ArrayList<>();
-        BlockPos center = this.blockPosition();
         for (BlockPos pos : BlockPos.betweenClosed(
-                center.offset(-20, -8, -20), center.offset(20, 8, 20))) {
+                center.offset(-MirrorSigilBlockEntity.CLUSTER_RANGE_H,
+                        -MirrorSigilBlockEntity.CLUSTER_RANGE_V,
+                        -MirrorSigilBlockEntity.CLUSTER_RANGE_H),
+                center.offset(MirrorSigilBlockEntity.CLUSTER_RANGE_H,
+                        MirrorSigilBlockEntity.CLUSTER_RANGE_V,
+                        MirrorSigilBlockEntity.CLUSTER_RANGE_H))) {
             var state = serverLevel.getBlockState(pos);
             if (state.getBlock() instanceof MirrorSigilBlock
-                    && cn.kurt6.unknown_echoes.block.truesight.MirrorSigilBlockEntity.isReal(serverLevel, pos)) {
+                    && MirrorSigilBlockEntity.isReal(serverLevel, pos)) {
                 result.add(pos.immutable());
             }
         }
@@ -909,9 +913,6 @@ public class MirrorGuardian extends Monster implements GeoEntity {
                 BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.BROKEN_REFLECTION.get(),
                         2 + this.random.nextInt(3)));
                 BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.MIRROR_GUARDIAN_CORE.get()));
-                if (ServerConfig.PERSONAL_KEY_REWARDS.get()) {
-                    EchoAbilityManager.unlockAbility(player, EchoAbilityType.TRUE_SIGHT_ECHO);
-                }
             }
         }
     }

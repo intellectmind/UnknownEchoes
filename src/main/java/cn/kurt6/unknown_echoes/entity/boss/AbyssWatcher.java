@@ -1,7 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
-import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.registry.ModItems;
@@ -74,7 +73,7 @@ import java.util.UUID;
  *   (场地没有符文时退化为"清空拟影破防",保证刷怪蛋/空旷水域也能完整战斗。)
  * 攻击:潮汐冲刺(水纹预警线→突进)/ 齐射水刃(本体高伤、拟影低伤,全部直线光束预警)/
  *       深水牵引(漩涡拖拽)/ 深渊脉冲(近身爆发驱离)。全部动画先行、伤害延迟到命中帧。
- * 死亡:场地内参与玩家个人写入击败记录与潮汐回响;掉落表只有普通材料。
+ * 死亡:场地内参与玩家个人写入击败记录;潮汐回响由潮汐核心祭坛校验信物后解锁。
  */
 public class AbyssWatcher extends Monster implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
@@ -121,6 +120,7 @@ public class AbyssWatcher extends Monster implements GeoEntity {
     private float brokenWindowHealthFloor = 0.0F;
     private int veiledMessageCooldown = 0;
     private int outOfCombatTicks = 0;
+    private BlockPos homePos = null;
     private final List<UUID> cloneIds = new ArrayList<>();
     private final Set<UUID> participants = new HashSet<>();
 
@@ -681,6 +681,10 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         if (!(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
+        if (this.homePos == null) {
+            this.homePos = this.blockPosition();
+            this.restrictTo(this.homePos, RUNE_SCAN_RADIUS);
+        }
         if (this.veiledMessageCooldown > 0) {
             this.veiledMessageCooldown--;
         }
@@ -768,7 +772,7 @@ public class AbyssWatcher extends Monster implements GeoEntity {
     /** 侵蚀场地内全部水下符文(黑潮漫上符文,等待玩家净化)。 */
     private void corruptRunes(ServerLevel serverLevel) {
         this.corruptedRunes.clear();
-        BlockPos center = this.blockPosition();
+        BlockPos center = arenaAnchor();
         for (BlockPos pos : BlockPos.betweenClosed(
                 center.offset(-RUNE_SCAN_RADIUS, -RUNE_SCAN_HEIGHT, -RUNE_SCAN_RADIUS),
                 center.offset(RUNE_SCAN_RADIUS, RUNE_SCAN_HEIGHT, RUNE_SCAN_RADIUS))) {
@@ -786,6 +790,10 @@ public class AbyssWatcher extends Monster implements GeoEntity {
                     SoundEvents.ELDER_GUARDIAN_CURSE, SoundSource.HOSTILE, 1.6F, 0.7F);
             broadcastNearby(Component.translatable("message.unknown_echoes.watcher.runes_corrupted"));
         }
+    }
+
+    private BlockPos arenaAnchor() {
+        return this.homePos != null ? this.homePos : this.blockPosition();
     }
 
     /** 玩家净化一块符文时由 TideRuneBlock 调用:全部净化 → 破防窗口。 */
@@ -946,9 +954,6 @@ public class AbyssWatcher extends Monster implements GeoEntity {
                         2 + this.random.nextInt(3)));
                 BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.BLACK_TIDE_THREAD.get(),
                         1 + this.random.nextInt(2)));
-                if (ServerConfig.PERSONAL_KEY_REWARDS.get()) {
-                    EchoAbilityManager.unlockAbility(player, EchoAbilityType.TIDE_ECHO);
-                }
             }
         }
     }
@@ -1034,6 +1039,9 @@ public class AbyssWatcher extends Monster implements GeoEntity {
             runes.add(new net.minecraft.nbt.IntArrayTag(new int[]{pos.getX(), pos.getY(), pos.getZ()}));
         }
         tag.put("CorruptedRunes", runes);
+        if (this.homePos != null) {
+            tag.putIntArray("HomePos", new int[]{this.homePos.getX(), this.homePos.getY(), this.homePos.getZ()});
+        }
     }
 
     @Override
@@ -1067,6 +1075,13 @@ public class AbyssWatcher extends Monster implements GeoEntity {
             int[] coords = runes.getIntArray(i);
             if (coords.length == 3) {
                 this.corruptedRunes.add(new BlockPos(coords[0], coords[1], coords[2]));
+            }
+        }
+        int[] home = tag.getIntArray("HomePos");
+        if (home.length == 3) {
+            this.homePos = new BlockPos(home[0], home[1], home[2]);
+            if (!this.isClone()) {
+                this.restrictTo(this.homePos, RUNE_SCAN_RADIUS);
             }
         }
         if (this.hasCustomName()) {

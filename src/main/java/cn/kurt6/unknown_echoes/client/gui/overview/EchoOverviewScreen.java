@@ -20,7 +20,9 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -168,6 +170,7 @@ public class EchoOverviewScreen extends Screen {
     /** 神器台座上下文:仅在由记录台/升级台打开时非空,按钮操作回传该坐标供服务端校验。 */
     private int stationMode = -1;
     private net.minecraft.core.BlockPos stationPos = null;
+    private final Map<String, Long> artifactActionCooldowns = new HashMap<>();
 
     /** 记录台/升级台交互入口(OpenArtifactStationPayload):打开总览"神器"页并携带台座上下文。 */
     public static void openArtifactStation(int mode, net.minecraft.core.BlockPos pos) {
@@ -390,6 +393,13 @@ public class EchoOverviewScreen extends Screen {
         if (this.stationPos == null) {
             return;
         }
+        String key = action + ":" + type.getId() + ":" + word;
+        long now = Minecraft.getInstance().level == null ? 0L : Minecraft.getInstance().level.getGameTime();
+        long nextAllowed = this.artifactActionCooldowns.getOrDefault(key, Long.MIN_VALUE);
+        if (now < nextAllowed) {
+            return;
+        }
+        this.artifactActionCooldowns.put(key, now + 10L);
         net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                 new cn.kurt6.unknown_echoes.network.ArtifactActionPayload(
                         action, type.getId(), word, this.stationPos));

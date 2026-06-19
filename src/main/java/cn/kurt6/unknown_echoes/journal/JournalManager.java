@@ -169,23 +169,68 @@ public class JournalManager {
         }
     }
 
-    private static void claimAllPagesReward(ServerPlayer player) {
+    private static boolean claimAllPagesReward(ServerPlayer player) {
         if (EchoAbilityManager.hasActivatedMechanism(player, ALL_PAGES_REWARD_KEY)) {
-            return;
+            return false;
+        }
+        List<ItemStack> rewards = List.of(
+                new ItemStack(ModItems.RECORD_TRACING_PAPER.get(), 12),
+                new ItemStack(ModItems.ECHO_MARK.get(), 8));
+        if (!canFitAllRewards(player, rewards)) {
+            player.displayClientMessage(Component.translatable("message.unknown_echoes.pages.need_space"), true);
+            return false;
         }
         EchoAbilityManager.activateMechanism(player, ALL_PAGES_REWARD_KEY);
-        giveOrDrop(player, new ItemStack(ModItems.RECORD_TRACING_PAPER.get(), 12));
-        giveOrDrop(player, new ItemStack(ModItems.ECHO_MARK.get(), 8));
+        for (ItemStack reward : rewards) {
+            player.getInventory().add(reward);
+        }
         ModAdvancements.award(player, ModAdvancements.ALL_PAGES);
         player.displayClientMessage(Component.translatable("message.unknown_echoes.pages.all_reward"), true);
         player.level().playSound(null, player.blockPosition(),
                 SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 0.6F);
+        return true;
     }
 
-    private static void giveOrDrop(ServerPlayer player, ItemStack stack) {
-        if (!player.getInventory().add(stack)) {
-            player.drop(stack, false);
+    private static boolean canFitAllRewards(ServerPlayer player, List<ItemStack> rewards) {
+        List<ItemStack> slots = new ArrayList<>();
+        for (ItemStack slot : player.getInventory().items) {
+            slots.add(slot.copy());
         }
+        for (ItemStack reward : rewards) {
+            if (!simulateInsert(slots, reward.copy())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean simulateInsert(List<ItemStack> slots, ItemStack reward) {
+        int remaining = reward.getCount();
+        for (ItemStack slot : slots) {
+            if (remaining <= 0) {
+                return true;
+            }
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, reward)) {
+                int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
+                if (move > 0) {
+                    slot.grow(move);
+                    remaining -= move;
+                }
+            }
+        }
+        for (int i = 0; i < slots.size(); i++) {
+            if (remaining <= 0) {
+                return true;
+            }
+            if (slots.get(i).isEmpty()) {
+                ItemStack placed = reward.copy();
+                int move = Math.min(remaining, placed.getMaxStackSize());
+                placed.setCount(move);
+                slots.set(i, placed);
+                remaining -= move;
+            }
+        }
+        return remaining <= 0;
     }
 
     /** 同步个人日志到客户端(书本 UI 数据源)。登录与每次新记录后调用。 */
@@ -223,6 +268,9 @@ public class JournalManager {
     /** 汇总完成度(分母动态:结构/群系按本 Mod 命名空间注册表,生物按 Tag)。 */
     public static List<Component> buildSummary(ServerPlayer player) {
         ExplorationJournalData journal = getData(player);
+        if (AncientPageCatalog.countReleasePages(journal.getPages()) >= KNOWN_PAGES) {
+            claimAllPagesReward(player);
+        }
         var abilityData = EchoAbilityManager.getData(player);
         var registries = player.server.registryAccess();
 

@@ -4,6 +4,8 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -344,14 +346,32 @@ public class LostRecorderChief extends MiniBossEntity {
         tag.putInt("ExposedTicks", this.exposedTicks);
         tag.putInt("ReadTicks", this.readTicks);
         tag.putInt("PageCount", this.scatteredPages.size());
+        ListTag pages = new ListTag();
+        for (Vec3 page : this.scatteredPages) {
+            CompoundTag pageTag = new CompoundTag();
+            pageTag.putDouble("X", page.x);
+            pageTag.putDouble("Y", page.y);
+            pageTag.putDouble("Z", page.z);
+            pages.add(pageTag);
+        }
+        tag.put("ScatteredPages", pages);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.exposedTicks = tag.getInt("ExposedTicks");
-        // 残页为场地坐标,重载后由下一次审阅重建;此处仅恢复暴露窗口与节奏
-        if (tag.getInt("PageCount") > 0) {
+        this.readTicks = tag.getInt("ReadTicks");
+        this.scatteredPages.clear();
+        for (Tag entry : tag.getList("ScatteredPages", Tag.TAG_COMPOUND)) {
+            if (entry instanceof CompoundTag pageTag) {
+                this.scatteredPages.add(new Vec3(
+                        pageTag.getDouble("X"), pageTag.getDouble("Y"), pageTag.getDouble("Z")));
+            }
+        }
+        if (!this.scatteredPages.isEmpty()) {
+            this.exposedTicks = 0;
+        } else if (tag.getInt("PageCount") > 0) {
             this.pagestormCooldown = 60;
         }
     }

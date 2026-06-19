@@ -45,11 +45,12 @@ public class ArtifactManager {
 
     // ---- 凭据(物品只是凭据,功能数据一律读玩家数据) ----
 
-    /** 制作凭据物品:组件存"神器 id + 凭据序号",与玩家数据比对后才可用。 */
-    public static ItemStack makeCredential(ArtifactType type, int serial) {
+    /** 制作凭据物品:组件存"神器 id + 凭据序号 + owner",与玩家数据比对后才可用。 */
+    public static ItemStack makeCredential(ArtifactType type, int serial, ServerPlayer owner) {
         ItemStack stack = new ItemStack(type.getCredentialItem());
         stack.set(ModDataComponents.ARTIFACT_ID.get(), type.getId());
         stack.set(ModDataComponents.CREDENTIAL_SERIAL.get(), serial);
+        stack.set(ModDataComponents.ARTIFACT_OWNER.get(), owner.getUUID().toString());
         return stack;
     }
 
@@ -58,10 +59,50 @@ public class ArtifactManager {
         if (!getData(player).isClaimed(type)) {
             return false;
         }
+        if (!stack.is(type.getCredentialItem())) {
+            return false;
+        }
         String id = stack.get(ModDataComponents.ARTIFACT_ID.get());
         Integer serial = stack.get(ModDataComponents.CREDENTIAL_SERIAL.get());
-        return type.getId().equals(id) && serial != null
-                && serial == getData(player).getSerial(type);
+        if (!type.getId().equals(id) || serial == null
+                || serial != getData(player).getSerial(type)) {
+            return false;
+        }
+        String owner = stack.get(ModDataComponents.ARTIFACT_OWNER.get());
+        if (owner == null || owner.isBlank()) {
+            stack.set(ModDataComponents.ARTIFACT_OWNER.get(), player.getUUID().toString());
+            return true;
+        }
+        return owner.equals(player.getUUID().toString());
+    }
+
+    /** 是否是任意神器凭据物品。用于掉落/丢弃保护,不代表当前可用。 */
+    public static boolean isArtifactCredential(ItemStack stack) {
+        return credentialType(stack) != null;
+    }
+
+    /** 当前玩家正在持有的有效神器凭据。旧序号/他人凭据不受防丢保护,可丢弃清理。 */
+    public static boolean isCurrentCredential(ServerPlayer player, ItemStack stack) {
+        ArtifactType type = credentialType(stack);
+        return type != null && validateCredential(player, type, stack);
+    }
+
+    /** 把绑定凭据放回背包。手动丢弃事件已先移除原物品,正常会腾出空位。 */
+    public static boolean returnCredentialToInventory(ServerPlayer player, ItemStack stack) {
+        int slot = player.getInventory().getFreeSlot();
+        if (slot >= 0) {
+            player.getInventory().items.set(slot, stack);
+            player.getInventory().setChanged();
+            return true;
+        }
+        for (int i = 0; i < player.getInventory().offhand.size(); i++) {
+            if (player.getInventory().offhand.get(i).isEmpty()) {
+                player.getInventory().offhand.set(i, stack);
+                player.getInventory().setChanged();
+                return true;
+            }
+        }
+        return false;
     }
 
     // ---- 领取与复领(记录台,12.2) ----
@@ -69,16 +110,15 @@ public class ArtifactManager {
     /** 领取资格判定(只读)。资格本体是个人探索进度,永不作为掉落物或材料消耗(红线 #2)。 */
     public static boolean hasClaimRequirement(ServerPlayer player, ArtifactType type) {
         return switch (type) {
-            case STORM_COMPASS -> EchoAbilityManager.hasDefeatedBoss(player,
-                    UnknownEchoes.id("storm_weaver"))
-                    || EchoAbilityManager.hasAbility(player, EchoAbilityType.WIND_ECHO)
-                    && hasStructure(player, "sky_observatory");
+            case STORM_COMPASS -> EchoAbilityManager.hasAbility(player, EchoAbilityType.WIND_ECHO)
+                    && hasStructure(player, "sky_observatory")
+                    && EchoAbilityManager.hasDefeatedBoss(player, UnknownEchoes.id("storm_weaver"));
             case TIDE_LANTERN -> EchoAbilityManager.hasAbility(player, EchoAbilityType.TIDE_ECHO)
-                    && (hasStructure(player, "tide_lighthouse_reef")
-                    || EchoAbilityManager.hasDefeatedBoss(player, UnknownEchoes.id("tide_lantern_keeper")));
+                    && hasStructure(player, "tide_lighthouse_reef")
+                    && EchoAbilityManager.hasDefeatedBoss(player, UnknownEchoes.id("tide_lantern_keeper"));
             case ECHO_LENS -> EchoAbilityManager.hasAbility(player, EchoAbilityType.TRUE_SIGHT_ECHO)
-                    && (hasStructure(player, "mirror_dust_cloister")
-                    || EchoAbilityManager.hasDefeatedBoss(player, UnknownEchoes.id("mirror_dust_butler")));
+                    && hasStructure(player, "mirror_dust_cloister")
+                    && EchoAbilityManager.hasDefeatedBoss(player, UnknownEchoes.id("mirror_dust_butler"));
         };
     }
 
@@ -90,13 +130,21 @@ public class ArtifactManager {
         }
         ArtifactData data = getData(player);
         if (data.isClaimed(type)) {
+            if (normalizeCredentials(player, type)) {
+                actionbar(player, "message.unknown_echoes.artifact.already_bound");
+                syncToClient(player);
+                return true;
+            }
             if (!hasCredentialSpace(player)) {
                 actionbar(player, "message.unknown_echoes.artifact.need_space");
                 return false;
             }
             // 复领:资格已落账,凭据丢失/被抢都不影响进度;旧凭据从此失效
             data.nextSerial(type);
-            giveCredential(player, type);
+            if (!giveCredential(player, type)) {
+                actionbar(player, "message.unknown_echoes.artifact.need_space");
+                return false;
+            }
             actionbar(player, "message.unknown_echoes.artifact.reissued");
             player.level().playSound(null, player.blockPosition(),
                     SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 1.3F);
@@ -113,7 +161,10 @@ public class ArtifactManager {
         }
         data.setLevel(type, eligibleLevel(player, type));
         data.nextSerial(type);
-        giveCredential(player, type);
+        if (!giveCredential(player, type)) {
+            actionbar(player, "message.unknown_echoes.artifact.need_space");
+            return false;
+        }
         player.sendSystemMessage(Component.translatable("message.unknown_echoes.artifact.claimed",
                 Component.translatable("artifact.unknown_echoes." + type.getId())));
         player.level().playSound(null, player.blockPosition(),
@@ -415,12 +466,61 @@ public class ArtifactManager {
     // ---- 工具 ----
 
     private static boolean hasCredentialSpace(ServerPlayer player) {
-        return player.getInventory().getFreeSlot() >= 0;
+        if (player.getInventory().getFreeSlot() >= 0) {
+            return true;
+        }
+        for (ItemStack stack : player.getInventory().offhand) {
+            if (stack.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    private static void giveCredential(ServerPlayer player, ArtifactType type) {
-        ItemStack credential = makeCredential(type, getData(player).getSerial(type));
-        player.getInventory().add(credential);
+    private static boolean giveCredential(ServerPlayer player, ArtifactType type) {
+        ItemStack credential = makeCredential(type, getData(player).getSerial(type), player);
+        return returnCredentialToInventory(player, credential);
+    }
+
+    private static ArtifactType credentialType(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return null;
+        }
+        String id = stack.get(ModDataComponents.ARTIFACT_ID.get());
+        ArtifactType byId = id == null ? null : ArtifactType.byId(id);
+        if (byId != null && stack.is(byId.getCredentialItem())) {
+            return byId;
+        }
+        for (ArtifactType type : ArtifactType.values()) {
+            if (stack.is(type.getCredentialItem())) {
+                return type;
+            }
+        }
+        return null;
+    }
+
+    private static boolean normalizeCredentials(ServerPlayer player, ArtifactType type) {
+        boolean foundValid = normalizeCredentialList(player, type, player.getInventory().items, false);
+        foundValid = normalizeCredentialList(player, type, player.getInventory().offhand, foundValid);
+        player.getInventory().setChanged();
+        return foundValid;
+    }
+
+    private static boolean normalizeCredentialList(ServerPlayer player, ArtifactType type,
+                                                   List<ItemStack> stacks, boolean foundValid) {
+        for (int i = 0; i < stacks.size(); i++) {
+            ItemStack stack = stacks.get(i);
+            if (credentialType(stack) != type) {
+                continue;
+            }
+            boolean valid = validateCredential(player, type, stack);
+            if (valid && !foundValid) {
+                foundValid = true;
+            } else {
+                stacks.set(i, ItemStack.EMPTY);
+            }
+        }
+        return foundValid;
     }
 
     private static int countItem(ServerPlayer player, Item item) {
@@ -430,11 +530,26 @@ public class ArtifactManager {
                 count += stack.getCount();
             }
         }
+        for (ItemStack stack : player.getInventory().offhand) {
+            if (stack.is(item)) {
+                count += stack.getCount();
+            }
+        }
         return count;
     }
 
     private static void consumeItem(ServerPlayer player, Item item, int amount) {
         for (ItemStack stack : player.getInventory().items) {
+            if (amount <= 0) {
+                return;
+            }
+            if (stack.is(item)) {
+                int take = Math.min(amount, stack.getCount());
+                stack.shrink(take);
+                amount -= take;
+            }
+        }
+        for (ItemStack stack : player.getInventory().offhand) {
             if (amount <= 0) {
                 return;
             }

@@ -41,6 +41,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
@@ -61,7 +62,7 @@ import java.util.UUID;
  *
  * 阶段一(封锁):受到的伤害 = min(伤害 x 5%, 上限 4.0),防高伤害 Mod 秒杀。
  * 阶段二(破防):4 根记忆柱全部激活后持续 20 秒,受到正常伤害;超时未死重新封锁并重置记忆柱。
- * 阶段三(死亡):场地范围内所有玩家直接写入风之回响与击败记录——不生成可被抢夺/漏斗吸走的掉落物。
+ * 阶段三(死亡):场地范围内所有参与玩家写入击败记录;风之回响由祭坛吸收本人信物后解锁。
  *
  * 模型与动画由 GeckoLib 驱动(Blockbench 制作,见 model/forgotten_colossus.bbmodel)。
  */
@@ -105,6 +106,7 @@ public class ForgottenColossus extends Monster implements GeoEntity {
     private enum SimonPhase { IDLE, DEMO, INPUT }
     private static final int SIMON_LIT_TICKS = 12;   // 演示单根亮持续
     private static final int SIMON_STEP_TICKS = 20;  // 演示单步总时长(亮 + 间隔)
+    private static final double SIMON_HINT_TOP_OFFSET = 0.95D;
     private SimonPhase simonPhase = SimonPhase.IDLE;
     private final List<BlockPos> orderedPillars = new ArrayList<>();
     private int[] simonSequence = new int[0];
@@ -294,9 +296,44 @@ public class ForgottenColossus extends Monster implements GeoEntity {
         } else if (this.simonDemoTimer == SIMON_LIT_TICKS) {
             setPillarLit(pillar, false);
         }
+        if (this.simonDemoTimer < SIMON_LIT_TICKS) {
+            playSimonPillarHint(pillar, this.simonDemoTimer);
+        }
         if (++this.simonDemoTimer >= SIMON_STEP_TICKS) {
             this.simonDemoTimer = 0;
             this.simonDemoStep++;
+        }
+    }
+
+    /** 演示期的可读提示:当前记忆柱柱顶发光,并用短粒子束连向巨像核心。 */
+    private void playSimonPillarHint(BlockPos pillar, int timer) {
+        if (!(this.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        Vec3 top = Vec3.atCenterOf(pillar).add(0.0D, SIMON_HINT_TOP_OFFSET, 0.0D);
+        Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.62D, 0.0D);
+        serverLevel.sendParticles(ParticleTypes.END_ROD,
+                top.x, top.y, top.z, 4, 0.18D, 0.10D, 0.18D, 0.02D);
+        serverLevel.sendParticles(ParticleTypes.GLOW,
+                top.x, top.y + 0.12D, top.z, 2, 0.12D, 0.08D, 0.12D, 0.01D);
+        if (timer % 2 == 0) {
+            drawSimonHintBeam(serverLevel, top, core);
+            double radius = 0.52D + 0.05D * Math.sin((this.tickCount + timer) * 0.45D);
+            BossFx.ring(serverLevel, top, radius, 14, 0.02D, ParticleTypes.GLOW);
+        }
+    }
+
+    private void drawSimonHintBeam(ServerLevel serverLevel, Vec3 from, Vec3 to) {
+        Vec3 delta = to.subtract(from);
+        int steps = Math.max(8, (int) (delta.length() * 1.4D));
+        for (int i = 0; i <= steps; i++) {
+            Vec3 point = from.add(delta.scale(i / (double) steps));
+            serverLevel.sendParticles(ParticleTypes.GLOW,
+                    point.x, point.y, point.z, 1, 0.025D, 0.025D, 0.025D, 0.0D);
+            if (i % 4 == 0) {
+                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                        point.x, point.y, point.z, 1, 0.015D, 0.015D, 0.015D, 0.0D);
+            }
         }
     }
 
@@ -939,9 +976,6 @@ public class ForgottenColossus extends Monster implements GeoEntity {
                     }
                     BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.MEMORY_STONE_SLAB.get(),
                             2 + this.random.nextInt(3)));
-                    if (ServerConfig.PERSONAL_KEY_REWARDS.get()) {
-                        EchoAbilityManager.unlockAbility(player, EchoAbilityType.WIND_ECHO);
-                    }
                 }
             }
         }

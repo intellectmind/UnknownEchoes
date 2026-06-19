@@ -8,14 +8,16 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 public final class ArtifactHudOverlay {
-    private static final int PANEL_WIDTH = 164;
-    private static final int BAR_WIDTH = 98;
-    private static final int BAR_HEIGHT = 5;
-    private static final int COL_PANEL_TOP = 0xAA06101A;
-    private static final int COL_PANEL_BOTTOM = 0xD902050A;
+    private static final int PANEL_WIDTH = 112;
+    private static final int BAR_WIDTH = 72;
+    private static final int BAR_HEIGHT = 4;
+    private static final int ROW_HEIGHT = 18;
+    private static final int COL_PANEL_TOP = 0x8806101A;
+    private static final int COL_PANEL_BOTTOM = 0xB802050A;
     private static final int COL_EDGE = 0xAA2D8B86;
     private static final int COL_EDGE_FAINT = 0x55304E59;
     private static final int COL_ACCENT = 0xFF52D6FF;
@@ -39,35 +41,38 @@ public final class ArtifactHudOverlay {
 
     public static void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui || mc.screen != null || !hasClaimedArtifact()) {
+        if (mc.player == null || mc.options.hideGui || mc.screen != null || !shouldRender(mc.player)) {
             return;
         }
-        int rows = claimedCount();
-        int height = 18 + rows * 26;
+        String held = heldArtifactId(mc.player);
+        boolean renderAll = held == null && energyNeedsAttention();
+        int rows = renderAll ? claimedCount() : 1;
+        int height = 15 + rows * ROW_HEIGHT;
         int x = 8;
-        int y = graphics.guiHeight() - height - 40;
+        int y = graphics.guiHeight() - height - 34;
 
         renderPanel(graphics, x, y, height);
         renderEnergy(graphics, mc, x, y);
-        int rowY = y + 16;
+        int rowY = y + 15;
         for (int i = 0; i < ARTIFACT_IDS.length; i++) {
-            if (ClientArtifactCache.isClaimed(ARTIFACT_IDS[i])) {
+            if (ClientArtifactCache.isClaimed(ARTIFACT_IDS[i])
+                    && (renderAll || ARTIFACT_IDS[i].equals(held))) {
                 renderArtifactRow(graphics, mc, ARTIFACT_IDS[i], ICONS[i], x, rowY);
-                rowY += 26;
+                rowY += ROW_HEIGHT;
             }
         }
     }
 
     private static void renderPanel(GuiGraphics graphics, int x, int y, int height) {
-        graphics.fillGradient(x - 5, y - 7, x + PANEL_WIDTH + 5, y + height + 5,
+        graphics.fillGradient(x - 4, y - 5, x + PANEL_WIDTH + 4, y + height + 3,
                 COL_PANEL_TOP, COL_PANEL_BOTTOM);
-        graphics.fillGradient(x - 2, y - 4, x + PANEL_WIDTH + 2, y + height + 2,
+        graphics.fillGradient(x - 1, y - 2, x + PANEL_WIDTH + 1, y + height,
                 0x44223948, 0x7703050A);
-        graphics.renderOutline(x - 5, y - 7, PANEL_WIDTH + 10, height + 12, COL_EDGE);
-        graphics.renderOutline(x - 2, y - 4, PANEL_WIDTH + 4, height + 6, COL_EDGE_FAINT);
-        graphics.fill(x + 7, y - 3, x + 48, y - 2, COL_GOLD);
-        graphics.fill(x + 52, y - 3, x + PANEL_WIDTH - 9, y - 2, COL_ACCENT_DIM);
-        drawCornerMarks(graphics, x - 5, y - 7, x + PANEL_WIDTH + 5, y + height + 5, COL_EDGE);
+        graphics.renderOutline(x - 4, y - 5, PANEL_WIDTH + 8, height + 8, COL_EDGE);
+        graphics.renderOutline(x - 1, y - 2, PANEL_WIDTH + 2, height + 2, COL_EDGE_FAINT);
+        graphics.fill(x + 7, y - 1, x + 35, y, COL_GOLD);
+        graphics.fill(x + 39, y - 1, x + PANEL_WIDTH - 8, y, COL_ACCENT_DIM);
+        drawCornerMarks(graphics, x - 4, y - 5, x + PANEL_WIDTH + 4, y + height + 3, COL_EDGE);
     }
 
     private static void renderEnergy(GuiGraphics graphics, Minecraft mc, int x, int y) {
@@ -78,12 +83,12 @@ public final class ArtifactHudOverlay {
         boolean lowFlash = energy * 5 < max && (time / 10L) % 2L == 0L;
         graphics.drawString(mc.font,
                 Component.translatable("hud.unknown_echoes.artifact.energy", energy, max),
-                x, y, lowFlash ? 0xFFFF9E8A : 0xFFE2F9FF, true);
-        int barX = x + 42;
-        int barY = y + 3;
-        graphics.fillGradient(barX - 2, barY - 2, barX + BAR_WIDTH + 2, barY + BAR_HEIGHT + 2,
+                x + 2, y + 1, lowFlash ? 0xFFFF9E8A : 0xFFE2F9FF, false);
+        int barX = x + 37;
+        int barY = y + 4;
+        graphics.fillGradient(barX - 1, barY - 1, barX + BAR_WIDTH + 1, barY + BAR_HEIGHT + 1,
                 0xAA08121A, 0xDD020408);
-        graphics.renderOutline(barX - 2, barY - 2, BAR_WIDTH + 4, BAR_HEIGHT + 4,
+        graphics.renderOutline(barX - 1, barY - 1, BAR_WIDTH + 2, BAR_HEIGHT + 2,
                 lowFlash ? 0xCCFF6F5A : COL_EDGE);
         graphics.fill(barX, barY, barX + BAR_WIDTH, barY + BAR_HEIGHT, 0xAA102030);
         graphics.fillGradient(barX, barY, barX + fill, barY + BAR_HEIGHT,
@@ -100,24 +105,18 @@ public final class ArtifactHudOverlay {
             return;
         }
         int cooldown = ClientArtifactCache.getCooldownSeconds(id);
-        graphics.fillGradient(x - 1, y - 3, x + PANEL_WIDTH - 4, y + 22, 0x33101824, 0x1103050A);
-        graphics.fill(x + 2, y - 2, x + 3, y + 21, cooldown > 0 ? COL_GOLD : COL_ACCENT_DIM);
-        graphics.renderOutline(x + 6, y - 3, 20, 20, COL_EDGE_FAINT);
-        graphics.renderItem(icon, x, y - 2);
+        graphics.fillGradient(x, y - 2, x + PANEL_WIDTH - 3, y + 16, 0x33101824, 0x1103050A);
+        graphics.fill(x + 2, y - 1, x + 3, y + 15, cooldown > 0 ? COL_GOLD : COL_ACCENT_DIM);
+        graphics.renderOutline(x + 7, y - 1, 18, 18, COL_EDGE_FAINT);
+        graphics.renderItem(icon, x + 8, y);
         Component name = Component.translatable("artifact.unknown_echoes." + id);
         graphics.drawString(mc.font,
                 Component.translatable("hud.unknown_echoes.artifact.level", name, entry.level()),
-                x + 28, y - 1, COL_TEXT, false);
-        Component tuning = entry.tuning().isBlank()
-                ? Component.translatable("hud.unknown_echoes.artifact.tuning.none")
-                : Component.translatable("artifact.unknown_echoes." + id + ".tuning." + entry.tuning());
-        graphics.drawString(mc.font,
-                Component.translatable("hud.unknown_echoes.artifact.tuning", tuning),
-                x + 28, y + 8, COL_DIM, false);
+                x + 30, y - 1, COL_TEXT, false);
         Component state = cooldown > 0
                 ? Component.translatable("hud.unknown_echoes.artifact.cooldown", cooldown)
                 : Component.translatable("hud.unknown_echoes.artifact.ready");
-        graphics.drawString(mc.font, state, x + 28, y + 17,
+        graphics.drawString(mc.font, state, x + 30, y + 8,
                 cooldown > 0 ? 0xFFFFD28A : 0xFF8AF7C5, false);
     }
 
@@ -150,5 +149,34 @@ public final class ArtifactHudOverlay {
             }
         }
         return count;
+    }
+
+    private static boolean shouldRender(Player player) {
+        return hasClaimedArtifact() && (energyNeedsAttention() || heldArtifactId(player) != null);
+    }
+
+    private static boolean energyNeedsAttention() {
+        int energy = ClientArtifactCache.getEnergy();
+        return energy >= 0 && energy < Math.max(1, ClientArtifactCache.getMaxEnergy());
+    }
+
+    private static String heldArtifactId(Player player) {
+        for (String id : ARTIFACT_IDS) {
+            if (ClientArtifactCache.isClaimed(id)
+                    && (isHeldArtifact(player.getMainHandItem(), id)
+                    || isHeldArtifact(player.getOffhandItem(), id))) {
+                return id;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isHeldArtifact(ItemStack stack, String id) {
+        for (int i = 0; i < ARTIFACT_IDS.length; i++) {
+            if (ARTIFACT_IDS[i].equals(id) && stack.is(ICONS[i].getItem())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

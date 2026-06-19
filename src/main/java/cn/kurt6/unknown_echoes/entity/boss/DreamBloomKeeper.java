@@ -4,6 +4,8 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -349,14 +351,31 @@ public class DreamBloomKeeper extends MiniBossEntity {
         super.addAdditionalSaveData(tag);
         tag.putInt("ExposedTicks", this.exposedTicks);
         tag.putInt("BudCount", this.healingBuds.size());
+        ListTag buds = new ListTag();
+        for (Vec3 bud : this.healingBuds) {
+            CompoundTag budTag = new CompoundTag();
+            budTag.putDouble("X", bud.x);
+            budTag.putDouble("Y", bud.y);
+            budTag.putDouble("Z", bud.z);
+            buds.add(budTag);
+        }
+        tag.put("HealingBuds", buds);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.exposedTicks = tag.getInt("ExposedTicks");
-        // 花苞为场地坐标,重载后由下一次绽放重建;此处仅恢复暴露窗口与冷却节奏
-        if (tag.getInt("BudCount") > 0) {
+        this.healingBuds.clear();
+        for (Tag entry : tag.getList("HealingBuds", Tag.TAG_COMPOUND)) {
+            if (entry instanceof CompoundTag budTag) {
+                this.healingBuds.add(new Vec3(
+                        budTag.getDouble("X"), budTag.getDouble("Y"), budTag.getDouble("Z")));
+            }
+        }
+        if (!this.healingBuds.isEmpty()) {
+            this.exposedTicks = 0;
+        } else if (tag.getInt("BudCount") > 0) {
             this.bloomCooldown = 60;
         }
     }
