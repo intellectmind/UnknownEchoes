@@ -42,16 +42,16 @@
     [],
     [],
     [
-      "unknown_echoes:echo_trees",
-      "unknown_echoes:ancient_echo_trees",
-      "unknown_echoes:glow_grass_patch",
-      "unknown_echoes:echo_flowers",
-      "unknown_echoes:resonant_mushroom_patch",
-      "minecraft:patch_grass_forest",
       "minecraft:brown_mushroom_normal",
+      "minecraft:patch_grass_forest",
       "minecraft:red_mushroom_normal",
-      "unknown_echoes:whispering_trees",
-      "unknown_echoes:glow_fern_patch"
+      "unknown_echoes:ancient_echo_trees",
+      "unknown_echoes:echo_flowers",
+      "unknown_echoes:echo_trees",
+      "unknown_echoes:glow_fern_patch",
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:resonant_mushroom_patch",
+      "unknown_echoes:whispering_trees"
     ],
     []
   ],

@@ -40,14 +40,14 @@
     [],
     [],
     [
+      "minecraft:patch_grass_plain",
       "unknown_echoes:dream_flower_patch",
       "unknown_echoes:dream_mist_vine_patch",
-      "unknown_echoes:star_mist_bloom_patch",
-      "unknown_echoes:glow_grass_patch",
       "unknown_echoes:echo_flowers",
+      "unknown_echoes:glow_grass_patch",
       "unknown_echoes:resonant_mushroom_patch",
-      "unknown_echoes:whispering_trees",
-      "minecraft:patch_grass_plain"
+      "unknown_echoes:star_mist_bloom_patch",
+      "unknown_echoes:whispering_trees"
     ],
     []
   ],

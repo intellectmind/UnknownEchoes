@@ -41,11 +41,11 @@
     [],
     [],
     [
-      "unknown_echoes:silent_pod_patch",
-      "unknown_echoes:tidewood_trees",
-      "unknown_echoes:glow_fern_patch",
       "minecraft:brown_mushroom_normal",
-      "minecraft:red_mushroom_normal"
+      "minecraft:red_mushroom_normal",
+      "unknown_echoes:glow_fern_patch",
+      "unknown_echoes:silent_pod_patch",
+      "unknown_echoes:tidewood_trees"
     ],
     []
   ],

@@ -42,11 +42,11 @@
     [],
     [],
     [
-      "unknown_echoes:glow_grass_patch",
-      "unknown_echoes:wind_eroded_rubble_patch",
-      "unknown_echoes:star_mist_bloom_patch",
+      "minecraft:patch_grass_plain",
       "unknown_echoes:echo_flowers",
-      "minecraft:patch_grass_plain"
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:star_mist_bloom_patch",
+      "unknown_echoes:wind_eroded_rubble_patch"
     ],
     []
   ],

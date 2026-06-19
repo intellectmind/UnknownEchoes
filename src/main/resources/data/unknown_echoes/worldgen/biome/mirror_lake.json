@@ -43,14 +43,14 @@
     [],
     [],
     [
-      "unknown_echoes:glow_grass_patch",
       "unknown_echoes:echo_flowers",
-      "unknown_echoes:mirror_reed_patch",
-      "unknown_echoes:mirror_lotus_patch",
       "unknown_echoes:glow_fern_patch",
-      "unknown_echoes:tidewood_trees",
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:mirror_lotus_patch",
+      "unknown_echoes:mirror_reed_patch",
+      "unknown_echoes:pearl_anemone_patch",
       "unknown_echoes:tide_grass_patch",
-      "unknown_echoes:pearl_anemone_patch"
+      "unknown_echoes:tidewood_trees"
     ],
     []
   ],
