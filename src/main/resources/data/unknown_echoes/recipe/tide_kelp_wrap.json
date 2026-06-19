@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:tide_glass_eel"
+    },
+    {
+      "item": "unknown_echoes:tide_grass"
+    },
+    {
+      "item": "unknown_echoes:pearl_clam"
+    },
+    {
+      "item": "unknown_echoes:tide_salt"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:tide_kelp_wrap"
+  }
+}

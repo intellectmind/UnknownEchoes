@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:illusion_wall_chamber",
+  "biomes": "#unknown_echoes:has_illusion_wall_chamber",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

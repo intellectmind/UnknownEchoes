@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:reef_hut",
+  "biomes": "#unknown_echoes:has_reef_hut",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_weapon_frame"
+    },
+    {
+      "item": "unknown_echoes:silence_moss"
+    },
+    {
+      "item": "unknown_echoes:silent_pod"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:silence_scythe"
+  }
+}

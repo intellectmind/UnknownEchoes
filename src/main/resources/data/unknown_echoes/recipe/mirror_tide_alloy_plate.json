@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SMS",
+    "MTM",
+    "SMS"
+  ],
+  "key": {
+    "S": {
+      "item": "unknown_echoes:tide_salt"
+    },
+    "M": {
+      "item": "unknown_echoes:mirror_lake_shard"
+    },
+    "T": {
+      "item": "unknown_echoes:tide_rune_fragment"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:mirror_tide_alloy_plate",
+    "count": 2
+  }
+}

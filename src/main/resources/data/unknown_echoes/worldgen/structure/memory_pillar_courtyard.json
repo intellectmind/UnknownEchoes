@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:memory_pillar_courtyard",
+  "biomes": "#unknown_echoes:has_memory_pillar_courtyard",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

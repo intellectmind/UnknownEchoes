@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:wind_spear_blueprint"
+    },
+    {
+      "item": "unknown_echoes:echo_weapon_frame"
+    },
+    {
+      "item": "unknown_echoes:wind_rune_shard"
+    },
+    {
+      "item": "unknown_echoes:crystal_feather"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:wind_spear"
+  }
+}

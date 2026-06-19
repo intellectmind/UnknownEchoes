@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:first_research",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_ink_page"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.research_level_4.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.research_level_4.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

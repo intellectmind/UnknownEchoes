@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    " B ",
+    "BSB",
+    " B "
+  ],
+  "key": {
+    "B": { "item": "unknown_echoes:echo_stone_bricks" },
+    "S": { "item": "unknown_echoes:echo_shard" }
+  },
+  "result": {
+    "id": "unknown_echoes:echo_rune_bricks",
+    "count": 4
+  }
+}

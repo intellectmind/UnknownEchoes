@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "unknown_echoes:submerged_record_room",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 28,
+    "separation": 10,
+    "salt": 660611424
+  }
+}

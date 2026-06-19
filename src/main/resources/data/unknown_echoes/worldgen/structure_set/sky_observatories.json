@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "unknown_echoes:sky_observatory",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 56,
+    "separation": 24,
+    "salt": 731442897
+  }
+}

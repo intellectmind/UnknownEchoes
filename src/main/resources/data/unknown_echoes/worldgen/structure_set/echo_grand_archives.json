@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "unknown_echoes:echo_grand_archive",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 64,
+    "separation": 28,
+    "salt": 702511
+  }
+}

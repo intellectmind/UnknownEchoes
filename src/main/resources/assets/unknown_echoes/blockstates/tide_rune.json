@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "corrupted=false": {
+      "model": "unknown_echoes:block/tide_rune"
+    },
+    "corrupted=true": {
+      "model": "unknown_echoes:block/tide_rune_corrupted"
+    }
+  }
+}

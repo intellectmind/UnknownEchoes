@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "minecraft:diamond_hoe"
+    },
+    {
+      "item": "unknown_echoes:echo_weapon_frame"
+    },
+    {
+      "item": "unknown_echoes:echo_metal_ingot"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_hoe"
+  }
+}

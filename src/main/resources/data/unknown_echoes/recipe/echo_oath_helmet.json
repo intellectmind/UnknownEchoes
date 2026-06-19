@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "tag": "unknown_echoes:region_armor_helmets"
+    },
+    {
+      "item": "unknown_echoes:oathbound_alloy"
+    },
+    {
+      "item": "unknown_echoes:echo_realm_ingot"
+    },
+    {
+      "item": "unknown_echoes:colossus_memory_core"
+    },
+    {
+      "item": "unknown_echoes:tide_core"
+    },
+    {
+      "item": "unknown_echoes:mirror_guardian_core"
+    },
+    {
+      "tag": "unknown_echoes:mini_boss_oath_materials"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_oath_helmet"
+  }
+}

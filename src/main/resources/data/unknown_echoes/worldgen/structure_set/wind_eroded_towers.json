@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "unknown_echoes:wind_eroded_tower",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 32,
+    "separation": 12,
+    "salt": 905118264
+  }
+}

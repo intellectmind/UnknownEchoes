@@ -1,0 +1,95 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.7,
+  "downfall": 0.5,
+  "effects": {
+    "fog_color": 7915954,
+    "sky_color": 4942991,
+    "water_color": 3383976,
+    "water_fog_color": 407098,
+    "grass_color": 7124866,
+    "foliage_color": 7849325,
+    "ambient_particle": {
+      "options": {
+        "type": "minecraft:glow"
+      },
+      "probability": 0.008
+    },
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    }
+  },
+  "carvers": {
+    "air": [
+      "minecraft:cave",
+      "minecraft:cave_extra_underground",
+      "minecraft:canyon"
+    ]
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:echo_amber_ore_disk"
+    ],
+    [],
+    [],
+    [
+      "unknown_echoes:echo_trees",
+      "unknown_echoes:ancient_echo_trees",
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:echo_flowers",
+      "unknown_echoes:resonant_mushroom_patch",
+      "minecraft:patch_grass_forest",
+      "minecraft:brown_mushroom_normal",
+      "minecraft:red_mushroom_normal",
+      "unknown_echoes:whispering_trees",
+      "unknown_echoes:glow_fern_patch"
+    ],
+    []
+  ],
+  "spawners": {
+    "monster": [
+      {
+        "type": "unknown_echoes:echo_wanderer",
+        "weight": 70,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:echo_remnant",
+        "weight": 28,
+        "minCount": 1,
+        "maxCount": 2
+      }
+    ],
+    "creature": [
+      {
+        "type": "unknown_echoes:echo_deer",
+        "weight": 30,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:glow_rabbit",
+        "weight": 25,
+        "minCount": 2,
+        "maxCount": 3
+      }
+    ],
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
+  },
+  "spawn_costs": {}
+}

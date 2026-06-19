@@ -1,0 +1,47 @@
+{
+  "parent": "unknown_echoes:echo_traveler_armor",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:wind_walker_chestplate"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.regional_armor.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.regional_armor.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_armor": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:wind_walker_helmet",
+              "unknown_echoes:wind_walker_chestplate",
+              "unknown_echoes:wind_walker_leggings",
+              "unknown_echoes:wind_walker_boots",
+              "unknown_echoes:tide_stalker_helmet",
+              "unknown_echoes:tide_stalker_chestplate",
+              "unknown_echoes:tide_stalker_leggings",
+              "unknown_echoes:tide_stalker_boots",
+              "unknown_echoes:true_sight_shadow_helmet",
+              "unknown_echoes:true_sight_shadow_chestplate",
+              "unknown_echoes:true_sight_shadow_leggings",
+              "unknown_echoes:true_sight_shadow_boots",
+              "unknown_echoes:silent_watch_helmet",
+              "unknown_echoes:silent_watch_chestplate",
+              "unknown_echoes:silent_watch_leggings",
+              "unknown_echoes:silent_watch_boots"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

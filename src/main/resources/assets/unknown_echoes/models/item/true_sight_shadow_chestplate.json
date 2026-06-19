@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "unknown_echoes:item/true_sight_shadow_chestplate"
+  }
+}

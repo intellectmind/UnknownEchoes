@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:silent_hut",
+  "biomes": "#unknown_echoes:has_silent_hut",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

@@ -1,0 +1,30 @@
+{
+  "values": [
+    "unknown_echoes:resonance_beacon",
+    "unknown_echoes:wind_door",
+    "unknown_echoes:memory_pillar",
+    "unknown_echoes:reward_altar",
+    "unknown_echoes:sequence_rune",
+    "unknown_echoes:puzzle_core",
+    "unknown_echoes:sealed_stone",
+    "unknown_echoes:anchored_sealed_stone",
+    "unknown_echoes:hidden_rune_bricks",
+    "unknown_echoes:tide_rune",
+    "unknown_echoes:tide_pillar",
+    "unknown_echoes:tide_core_altar",
+    "unknown_echoes:mirror_sigil",
+    "unknown_echoes:true_sight_altar",
+    "unknown_echoes:observatory_core",
+    "unknown_echoes:miniboss_spawner",
+    "unknown_echoes:tide_buoy",
+    "unknown_echoes:tide_rune_seat",
+    "unknown_echoes:cracked_mirror_bricks",
+    "unknown_echoes:artifact_record_table",
+    "unknown_echoes:artifact_tuning_table",
+    "unknown_echoes:wind_current_platform",
+    "unknown_echoes:tide_sensor_door",
+    "unknown_echoes:true_sight_stele",
+    "unknown_echoes:true_sight_chest",
+    "unknown_echoes:echo_archive_terminal"
+  ]
+}

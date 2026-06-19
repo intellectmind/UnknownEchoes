@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:sky_observatory",
+  "biomes": "#unknown_echoes:has_sky_observatory",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

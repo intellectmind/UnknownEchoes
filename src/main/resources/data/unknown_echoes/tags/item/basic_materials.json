@@ -1,0 +1,17 @@
+{
+  "values": [
+    "unknown_echoes:echo_shard",
+    "unknown_echoes:echo_dust",
+    "unknown_echoes:echo_fiber",
+    "unknown_echoes:echo_cloth",
+    "unknown_echoes:echo_metal_ingot",
+    "unknown_echoes:echo_weapon_frame",
+    "unknown_echoes:echo_armor_plate",
+    "unknown_echoes:blank_echo_page",
+    "unknown_echoes:echo_ink_page",
+    "unknown_echoes:glow_hide",
+    "unknown_echoes:echo_string",
+    "unknown_echoes:record_tracing_paper",
+    "unknown_echoes:pearl_clam"
+  ]
+}

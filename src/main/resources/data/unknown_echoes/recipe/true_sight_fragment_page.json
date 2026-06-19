@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:true_sight_research_rubbing" },
+    { "item": "unknown_echoes:echo_ink_page" }
+  ],
+  "result": {
+    "id": "unknown_echoes:true_sight_fragment_page"
+  }
+}

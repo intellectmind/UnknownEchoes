@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "minecraft:bow"
+    },
+    {
+      "item": "unknown_echoes:echo_fiber"
+    },
+    {
+      "item": "unknown_echoes:crystal_feather"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_longbow"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_metal_ingot"
+    },
+    {
+      "item": "unknown_echoes:echo_core"
+    },
+    {
+      "item": "unknown_echoes:echo_string"
+    },
+    {
+      "item": "unknown_echoes:echo_fiber"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_weapon_frame"
+  }
+}

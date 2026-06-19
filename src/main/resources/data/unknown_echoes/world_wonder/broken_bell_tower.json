@@ -1,0 +1,26 @@
+{
+  "id": "unknown_echoes:broken_bell_tower",
+  "structure": "unknown_echoes:broken_bell_tower",
+  "region": "unknown_echoes:broken_bell_wastes",
+  "biome_tags": [
+    "unknown_echoes:has_broken_bell_tower"
+  ],
+  "spacing": 136,
+  "separation": 46,
+  "salt": 702507,
+  "allow_multiple": true,
+  "priority": 3,
+  "mechanic": "great_bell_timing_chain",
+  "reward_tier": "t7_echo_realm_endgame",
+  "discovery_score": 4,
+  "completion_score": 8,
+  "core_record_score": 3,
+  "loot_tables": {
+    "common": "unknown_echoes:chests/broken_archive",
+    "core": "unknown_echoes:chests/common/t5_miniboss_repeat"
+  },
+  "clue_key": "clue.unknown_echoes.broken_bell_tower",
+  "critical_path": false,
+  "single_player_solvable": true,
+  "personal_reward_only": true
+}

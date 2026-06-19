@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:underground_greenhouse",
+  "biomes": "#unknown_echoes:has_underground_greenhouse",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

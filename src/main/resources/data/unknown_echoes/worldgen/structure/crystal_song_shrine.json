@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:crystal_song_shrine",
+  "biomes": "#unknown_echoes:has_crystal_song_shrine",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

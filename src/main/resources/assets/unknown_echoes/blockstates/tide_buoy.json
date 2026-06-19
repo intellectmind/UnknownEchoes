@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=true": {
+      "model": "unknown_echoes:block/tide_buoy"
+    },
+    "lit=false": {
+      "model": "unknown_echoes:block/tide_buoy_off"
+    }
+  }
+}

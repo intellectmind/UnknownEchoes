@@ -1,0 +1,492 @@
+{
+  "trades": [
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_shard",
+        "count": 3
+      },
+      "result": {
+        "item": "unknown_echoes:echo_bandage",
+        "count": 2
+      },
+      "min_stage": 0,
+      "max_uses": 8
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_shard",
+        "count": 2
+      },
+      "result": {
+        "item": "minecraft:torch",
+        "count": 8
+      },
+      "min_stage": 0,
+      "max_uses": 8
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_shard",
+        "count": 2
+      },
+      "result": {
+        "item": "unknown_echoes:echo_berry",
+        "count": 4
+      },
+      "min_stage": 0,
+      "max_uses": 6
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_dust",
+        "count": 2
+      },
+      "result": {
+        "item": "unknown_echoes:echo_fiber",
+        "count": 4
+      },
+      "min_stage": 0,
+      "max_uses": 6
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_dust",
+        "count": 4
+      },
+      "result": {
+        "item": "unknown_echoes:inscription_rubbing_paper",
+        "count": 2
+      },
+      "min_stage": 0,
+      "max_uses": 6
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_shard",
+        "count": 8
+      },
+      "result": {
+        "item": "unknown_echoes:clue_map",
+        "count": 1
+      },
+      "min_stage": 0,
+      "max_uses": 2
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_shard",
+          "count": 10
+        },
+        {
+          "item": "unknown_echoes:echo_dust",
+          "count": 4
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:clue_map",
+        "count": 1,
+        "components": {
+          "unknown_echoes:clue_structure": "unknown_echoes:memory_pillar_courtyard"
+        }
+      },
+      "min_stage": 0,
+      "max_uses": 1
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_mark",
+          "count": 4
+        },
+        {
+          "item": "unknown_echoes:mirror_lake_shard",
+          "count": 2
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:clue_map",
+        "count": 1,
+        "components": {
+          "unknown_echoes:clue_structure": "unknown_echoes:sunken_temple"
+        }
+      },
+      "min_stage": 1,
+      "max_uses": 1,
+      "required_ability": "wind_echo"
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_mark",
+          "count": 5
+        },
+        {
+          "item": "unknown_echoes:illusion_dust",
+          "count": 2
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:clue_map",
+        "count": 1,
+        "components": {
+          "unknown_echoes:clue_structure": "unknown_echoes:mirror_temple"
+        }
+      },
+      "min_stage": 2,
+      "max_uses": 1,
+      "required_ability": "tide_echo"
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 2
+      },
+      "result": {
+        "item": "unknown_echoes:wind_rune_shard",
+        "count": 4
+      },
+      "min_stage": 1,
+      "max_uses": 3,
+      "required_ability": "wind_echo"
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 2
+      },
+      "result": {
+        "item": "unknown_echoes:sky_quartz",
+        "count": 4
+      },
+      "min_stage": 1,
+      "max_uses": 3,
+      "required_ability": "wind_echo"
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 2
+      },
+      "result": {
+        "item": "unknown_echoes:mirror_lake_shard",
+        "count": 4
+      },
+      "min_stage": 1,
+      "max_uses": 3,
+      "required_ability": "tide_echo"
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 2
+      },
+      "result": {
+        "item": "unknown_echoes:tide_salt",
+        "count": 6
+      },
+      "min_stage": 1,
+      "max_uses": 3,
+      "required_ability": "tide_echo"
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 2
+      },
+      "result": {
+        "item": "unknown_echoes:illusion_dust",
+        "count": 4
+      },
+      "min_stage": 1,
+      "max_uses": 3,
+      "required_ability": "true_sight_echo"
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_dust",
+          "count": 3
+        },
+        {
+          "item": "unknown_echoes:crystal_feather",
+          "count": 1
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:wind_chime_bottle",
+        "count": 1
+      },
+      "min_stage": 1,
+      "max_uses": 4,
+      "required_ability": "wind_echo"
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_dust",
+          "count": 3
+        },
+        {
+          "item": "unknown_echoes:tide_pearl",
+          "count": 1
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:tide_breath_bottle",
+        "count": 1
+      },
+      "min_stage": 1,
+      "max_uses": 4,
+      "required_ability": "tide_echo"
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_shard",
+          "count": 3
+        },
+        {
+          "item": "unknown_echoes:tide_salt",
+          "count": 2
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:tide_salted_fish",
+        "count": 2
+      },
+      "min_stage": 1,
+      "max_uses": 4,
+      "required_ability": "tide_echo"
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_dust",
+          "count": 3
+        },
+        {
+          "item": "unknown_echoes:polished_mirror_dust",
+          "count": 1
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:revealing_powder",
+        "count": 1
+      },
+      "min_stage": 1,
+      "max_uses": 4,
+      "required_ability": "true_sight_echo"
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_mark",
+          "count": 3
+        },
+        {
+          "item": "unknown_echoes:wind_rune_shard",
+          "count": 2
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:wind_research_rubbing",
+        "count": 1
+      },
+      "min_stage": 1,
+      "max_uses": 2,
+      "required_ability": "wind_echo"
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_mark",
+          "count": 3
+        },
+        {
+          "item": "unknown_echoes:mirror_lake_shard",
+          "count": 2
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:tide_research_rubbing",
+        "count": 1
+      },
+      "min_stage": 1,
+      "max_uses": 2,
+      "required_ability": "tide_echo"
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_mark",
+          "count": 3
+        },
+        {
+          "item": "unknown_echoes:illusion_dust",
+          "count": 2
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:true_sight_research_rubbing",
+        "count": 1
+      },
+      "min_stage": 1,
+      "max_uses": 2,
+      "required_ability": "true_sight_echo"
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 4
+      },
+      "result": {
+        "item": "unknown_echoes:echo_index",
+        "count": 1
+      },
+      "min_stage": 1,
+      "max_uses": 1
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_dust",
+        "count": 8
+      },
+      "result": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 1
+      },
+      "min_stage": 1,
+      "max_uses": 4
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 5
+      },
+      "result": {
+        "item": "unknown_echoes:clue_map",
+        "count": 1
+      },
+      "min_stage": 3,
+      "max_uses": 2
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:traveler_badge",
+        "count": 2
+      },
+      "result": {
+        "item": "unknown_echoes:memory_echo_stone",
+        "count": 1
+      },
+      "min_stage": 3,
+      "max_uses": 2
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 3
+      },
+      "result": {
+        "item": "unknown_echoes:echo_amber",
+        "count": 3
+      },
+      "min_stage": 3,
+      "max_uses": 3
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:echo_mark",
+          "count": 2
+        },
+        {
+          "item": "unknown_echoes:echo_amber",
+          "count": 1
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:dream_nectar_tart",
+        "count": 2
+      },
+      "min_stage": 3,
+      "max_uses": 2
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:traveler_badge",
+        "count": 2
+      },
+      "result": {
+        "item": "unknown_echoes:ancient_page",
+        "count": 1,
+        "components": {
+          "unknown_echoes:page_id": 6
+        }
+      },
+      "min_stage": 3,
+      "max_uses": 3
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:traveler_badge",
+          "count": 4
+        },
+        {
+          "item": "unknown_echoes:echo_mark",
+          "count": 8
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:clue_map",
+        "count": 1
+      },
+      "min_stage": 3,
+      "max_uses": 1
+    },
+    {
+      "costs": [
+        {
+          "item": "unknown_echoes:traveler_badge",
+          "count": 6
+        },
+        {
+          "item": "unknown_echoes:echo_mark",
+          "count": 12
+        }
+      ],
+      "result": {
+        "item": "unknown_echoes:echo_realm_ingot",
+        "count": 1
+      },
+      "min_stage": 3,
+      "max_uses": 1
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:traveler_badge",
+        "count": 5
+      },
+      "result": {
+        "item": "minecraft:music_disc_wait",
+        "count": 1
+      },
+      "min_stage": 3,
+      "max_uses": 1
+    },
+    {
+      "cost": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 3
+      },
+      "result": {
+        "item": "unknown_echoes:echo_stone_bricks",
+        "count": 16
+      },
+      "min_stage": 3,
+      "max_uses": 6
+    }
+  ]
+}

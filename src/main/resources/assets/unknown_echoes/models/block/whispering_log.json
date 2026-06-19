@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "unknown_echoes:block/whispering_log_top",
+    "side": "unknown_echoes:block/whispering_log"
+  }
+}

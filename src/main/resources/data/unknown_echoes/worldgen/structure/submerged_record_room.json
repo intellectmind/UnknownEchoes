@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:submerged_record_room",
+  "biomes": "#unknown_echoes:has_submerged_record_room",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

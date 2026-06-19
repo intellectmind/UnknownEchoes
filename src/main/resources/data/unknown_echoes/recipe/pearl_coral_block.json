@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "PP",
+    "PP"
+  ],
+  "key": {
+    "P": {
+      "item": "unknown_echoes:pearl_clam"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:pearl_coral_block"
+  }
+}

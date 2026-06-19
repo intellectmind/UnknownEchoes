@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "minecraft:flint_and_steel"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    },
+    {
+      "item": "unknown_echoes:echo_metal_ingot"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_igniter"
+  }
+}

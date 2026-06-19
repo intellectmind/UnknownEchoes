@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:tide_buoy_array",
+  "biomes": "#unknown_echoes:has_tide_buoy_array",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

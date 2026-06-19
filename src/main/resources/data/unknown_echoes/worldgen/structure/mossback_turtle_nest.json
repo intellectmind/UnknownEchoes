@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:mossback_turtle_nest",
+  "biomes": "#unknown_echoes:has_mossback_turtle_nest",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

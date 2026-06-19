@@ -1,0 +1,91 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.75,
+  "downfall": 0.65,
+  "effects": {
+    "fog_color": 15780078,
+    "sky_color": 11834344,
+    "water_color": 8486880,
+    "water_fog_color": 4140908,
+    "grass_color": 9355626,
+    "foliage_color": 8304997,
+    "ambient_particle": {
+      "options": {
+        "type": "minecraft:falling_spore_blossom"
+      },
+      "probability": 0.009
+    },
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 10000,
+      "block_search_extent": 8,
+      "offset": 1.5
+    }
+  },
+  "carvers": {
+    "air": [
+      "minecraft:cave"
+    ]
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:echo_amber_ore_disk"
+    ],
+    [],
+    [],
+    [
+      "unknown_echoes:dream_flower_patch",
+      "unknown_echoes:dream_mist_vine_patch",
+      "unknown_echoes:star_mist_bloom_patch",
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:echo_flowers",
+      "unknown_echoes:resonant_mushroom_patch",
+      "unknown_echoes:whispering_trees",
+      "minecraft:patch_grass_plain"
+    ],
+    []
+  ],
+  "spawners": {
+    "monster": [
+      {
+        "type": "unknown_echoes:echo_wanderer",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 1
+      }
+    ],
+    "creature": [
+      {
+        "type": "unknown_echoes:echo_deer",
+        "weight": 28,
+        "minCount": 2,
+        "maxCount": 4
+      },
+      {
+        "type": "unknown_echoes:glow_rabbit",
+        "weight": 24,
+        "minCount": 2,
+        "maxCount": 4
+      },
+      {
+        "type": "unknown_echoes:dreaming_deer",
+        "weight": 20,
+        "minCount": 1,
+        "maxCount": 3
+      }
+    ],
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
+  },
+  "spawn_costs": {}
+}

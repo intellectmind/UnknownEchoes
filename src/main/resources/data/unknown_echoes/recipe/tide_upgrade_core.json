@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:attuned_echo_gem" },
+    { "item": "unknown_echoes:tide_core" },
+    { "item": "unknown_echoes:watcher_eye_shard" },
+    { "item": "unknown_echoes:mirror_lake_shard" },
+    { "item": "unknown_echoes:tide_pearl" },
+    { "item": "unknown_echoes:tide_rune_fragment" }
+  ],
+  "result": {
+    "id": "unknown_echoes:tide_upgrade_core"
+  }
+}

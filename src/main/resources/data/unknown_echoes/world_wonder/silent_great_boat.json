@@ -1,0 +1,26 @@
+{
+  "id": "unknown_echoes:silent_great_boat",
+  "structure": "unknown_echoes:silent_great_boat",
+  "region": "unknown_echoes:silent_swamp",
+  "biome_tags": [
+    "unknown_echoes:has_silent_great_boat"
+  ],
+  "spacing": 152,
+  "separation": 50,
+  "salt": 702506,
+  "allow_multiple": true,
+  "priority": 3,
+  "mechanic": "silent_cabins",
+  "reward_tier": "t7_echo_realm_endgame",
+  "discovery_score": 4,
+  "completion_score": 8,
+  "core_record_score": 3,
+  "loot_tables": {
+    "common": "unknown_echoes:chests/silent_hut",
+    "core": "unknown_echoes:chests/common/t4_region_core"
+  },
+  "clue_key": "clue.unknown_echoes.silent_great_boat",
+  "critical_path": false,
+  "single_player_solvable": true,
+  "personal_reward_only": true
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:tide_crossbow_blueprint"
+    },
+    {
+      "item": "minecraft:crossbow"
+    },
+    {
+      "item": "unknown_echoes:tide_pearl"
+    },
+    {
+      "item": "unknown_echoes:echo_string"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:tide_crossbow"
+  }
+}

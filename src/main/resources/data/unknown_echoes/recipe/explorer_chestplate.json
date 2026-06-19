@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "F F",
+    "FBF",
+    "SFS"
+  ],
+  "key": {
+    "B": {
+      "item": "unknown_echoes:echo_stone_bricks"
+    },
+    "F": {
+      "item": "unknown_echoes:echo_fiber"
+    },
+    "S": {
+      "item": "unknown_echoes:echo_shard"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:explorer_chestplate"
+  }
+}

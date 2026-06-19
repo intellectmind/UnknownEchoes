@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "unknown_echoes:item/mirror_tide_alloy_plate"
+  }
+}

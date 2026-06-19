@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "FFF",
+    "S S",
+    "F F"
+  ],
+  "key": {
+    "F": {
+      "item": "unknown_echoes:echo_fiber"
+    },
+    "S": {
+      "item": "unknown_echoes:echo_shard"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:explorer_leggings"
+  }
+}

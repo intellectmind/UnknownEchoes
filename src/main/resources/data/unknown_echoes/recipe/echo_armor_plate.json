@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_metal_ingot"
+    },
+    {
+      "item": "unknown_echoes:echo_cloth"
+    },
+    {
+      "item": "unknown_echoes:glow_hide"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_armor_plate",
+    "count": 2
+  }
+}

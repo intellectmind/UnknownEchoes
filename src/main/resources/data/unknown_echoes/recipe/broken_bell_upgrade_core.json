@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:attuned_echo_gem" },
+    { "item": "unknown_echoes:broken_bell_gear" },
+    { "item": "unknown_echoes:rusted_time_gear" },
+    { "item": "unknown_echoes:storm_compass_part" }
+  ],
+  "result": {
+    "id": "unknown_echoes:broken_bell_upgrade_core"
+  }
+}

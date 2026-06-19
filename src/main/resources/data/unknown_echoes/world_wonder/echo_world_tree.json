@@ -1,0 +1,26 @@
+{
+  "id": "unknown_echoes:echo_world_tree",
+  "structure": "unknown_echoes:echo_world_tree",
+  "region": "unknown_echoes:echo_forest",
+  "biome_tags": [
+    "unknown_echoes:has_echo_world_tree"
+  ],
+  "spacing": 112,
+  "separation": 38,
+  "salt": 702501,
+  "allow_multiple": true,
+  "priority": 1,
+  "mechanic": "root_resonance_network",
+  "reward_tier": "t4_region_core",
+  "discovery_score": 4,
+  "completion_score": 8,
+  "core_record_score": 3,
+  "loot_tables": {
+    "common": "unknown_echoes:chests/common/t3_puzzle",
+    "core": "unknown_echoes:chests/common/t4_region_core"
+  },
+  "clue_key": "clue.unknown_echoes.echo_world_tree",
+  "critical_path": false,
+  "single_player_solvable": true,
+  "personal_reward_only": true
+}

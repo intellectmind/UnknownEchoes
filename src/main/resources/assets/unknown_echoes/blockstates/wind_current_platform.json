@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "unknown_echoes:block/wind_current_platform"
+    },
+    "active=true": {
+      "model": "unknown_echoes:block/wind_current_platform_active"
+    }
+  }
+}

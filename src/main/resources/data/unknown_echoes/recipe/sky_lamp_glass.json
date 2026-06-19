@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:glass"
+    },
+    {
+      "item": "unknown_echoes:sky_quartz"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:sky_lamp_glass",
+    "count": 2
+  }
+}

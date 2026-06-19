@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:silence_moss"
+    },
+    {
+      "item": "unknown_echoes:silent_pod"
+    },
+    {
+      "item": "unknown_echoes:echo_amber"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:silent_resin",
+    "count": 2
+  }
+}

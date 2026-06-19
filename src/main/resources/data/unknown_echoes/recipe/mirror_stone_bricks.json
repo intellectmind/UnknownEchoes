@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "##",
+    "##"
+  ],
+  "key": {
+    "#": {
+      "item": "unknown_echoes:mirror_stone"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:mirror_stone_bricks",
+    "count": 4
+  }
+}

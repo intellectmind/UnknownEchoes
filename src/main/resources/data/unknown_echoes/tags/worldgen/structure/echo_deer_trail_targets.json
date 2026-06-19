@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:small_echo_ruin",
+    "unknown_echoes:echo_temple",
+    "unknown_echoes:rune_puzzle_room",
+    "unknown_echoes:resonance_beacon_structure"
+  ]
+}

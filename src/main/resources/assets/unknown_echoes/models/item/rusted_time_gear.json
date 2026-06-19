@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "unknown_echoes:item/rusted_time_gear"
+  }
+}

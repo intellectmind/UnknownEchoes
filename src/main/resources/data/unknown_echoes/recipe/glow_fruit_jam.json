@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_berry"
+    },
+    {
+      "item": "unknown_echoes:glow_fern"
+    },
+    {
+      "item": "minecraft:glass_bottle"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:glow_fruit_jam"
+  }
+}

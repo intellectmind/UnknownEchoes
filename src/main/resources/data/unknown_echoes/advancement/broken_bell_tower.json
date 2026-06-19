@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:first_ruin",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:broken_bell_gear"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.broken_bell_tower.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.broken_bell_tower.desc"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

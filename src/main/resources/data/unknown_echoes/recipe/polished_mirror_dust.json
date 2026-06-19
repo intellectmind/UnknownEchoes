@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:illusion_dust" },
+    { "item": "unknown_echoes:illusion_dust" },
+    { "item": "unknown_echoes:mirror_lake_shard" }
+  ],
+  "result": {
+    "id": "unknown_echoes:polished_mirror_dust",
+    "count": 2
+  }
+}

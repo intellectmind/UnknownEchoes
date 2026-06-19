@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:dream_flower_house",
+  "biomes": "#unknown_echoes:has_dream_flower_house",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

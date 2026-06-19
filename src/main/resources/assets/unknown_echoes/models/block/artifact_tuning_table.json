@@ -1,0 +1,48 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "0": "unknown_echoes:block/artifact_tuning_table",
+    "particle": "unknown_echoes:block/artifact_tuning_table"
+  },
+  "elements": [
+    {
+      "name": "base",
+      "from": [2, 0, 2],
+      "to": [14, 3, 14],
+      "faces": {
+        "north": { "uv": [2, 13, 14, 16], "texture": "#0" },
+        "east": { "uv": [2, 13, 14, 16], "texture": "#0" },
+        "south": { "uv": [2, 13, 14, 16], "texture": "#0" },
+        "west": { "uv": [2, 13, 14, 16], "texture": "#0" },
+        "up": { "uv": [2, 2, 14, 14], "texture": "#0" },
+        "down": { "uv": [2, 2, 14, 14], "texture": "#0" }
+      }
+    },
+    {
+      "name": "column",
+      "from": [5, 3, 5],
+      "to": [11, 9, 11],
+      "faces": {
+        "north": { "uv": [5, 5, 11, 11], "texture": "#0" },
+        "east": { "uv": [5, 5, 11, 11], "texture": "#0" },
+        "south": { "uv": [5, 5, 11, 11], "texture": "#0" },
+        "west": { "uv": [5, 5, 11, 11], "texture": "#0" },
+        "up": { "uv": [5, 5, 11, 11], "texture": "#0" },
+        "down": { "uv": [5, 5, 11, 11], "texture": "#0" }
+      }
+    },
+    {
+      "name": "top",
+      "from": [3, 9, 3],
+      "to": [13, 13, 13],
+      "faces": {
+        "north": { "uv": [3, 1, 13, 5], "texture": "#0" },
+        "east": { "uv": [3, 1, 13, 5], "texture": "#0" },
+        "south": { "uv": [3, 1, 13, 5], "texture": "#0" },
+        "west": { "uv": [3, 1, 13, 5], "texture": "#0" },
+        "up": { "uv": [3, 3, 13, 13], "texture": "#0" },
+        "down": { "uv": [3, 3, 13, 13], "texture": "#0" }
+      }
+    }
+  ]
+}

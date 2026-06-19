@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "minecraft:bow"
+    },
+    {
+      "item": "unknown_echoes:dream_nectar"
+    },
+    {
+      "item": "unknown_echoes:moss_honey_stew"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:dream_bloom_bow"
+  }
+}

@@ -1,0 +1,49 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"0": "unknown_echoes:block/true_sight_altar",
+		"1": "unknown_echoes:block/mirror_stone_bricks",
+		"particle": "unknown_echoes:block/true_sight_altar"
+	},
+	"elements": [
+		{
+			"name": "base",
+			"from": [1, 0, 1],
+			"to": [15, 4, 15],
+			"faces": {
+				"north": { "uv": [1, 12, 15, 16], "texture": "#1" },
+				"east": { "uv": [1, 12, 15, 16], "texture": "#1" },
+				"south": { "uv": [1, 12, 15, 16], "texture": "#1" },
+				"west": { "uv": [1, 12, 15, 16], "texture": "#1" },
+				"up": { "uv": [1, 1, 15, 15], "texture": "#1" },
+				"down": { "uv": [1, 1, 15, 15], "texture": "#1" }
+			}
+		},
+		{
+			"name": "stem",
+			"from": [4, 4, 4],
+			"to": [12, 11, 12],
+			"faces": {
+				"north": { "uv": [4, 4, 12, 11], "texture": "#1" },
+				"east": { "uv": [4, 4, 12, 11], "texture": "#1" },
+				"south": { "uv": [4, 4, 12, 11], "texture": "#1" },
+				"west": { "uv": [4, 4, 12, 11], "texture": "#1" },
+				"up": { "uv": [4, 4, 12, 12], "texture": "#1" },
+				"down": { "uv": [4, 4, 12, 12], "texture": "#1" }
+			}
+		},
+		{
+			"name": "tabletop",
+			"from": [2, 11, 2],
+			"to": [14, 15, 14],
+			"faces": {
+				"north": { "uv": [2, 1, 14, 5], "texture": "#0" },
+				"east": { "uv": [2, 1, 14, 5], "texture": "#0" },
+				"south": { "uv": [2, 1, 14, 5], "texture": "#0" },
+				"west": { "uv": [2, 1, 14, 5], "texture": "#0" },
+				"up": { "uv": [2, 2, 14, 14], "texture": "#0" },
+				"down": { "uv": [2, 2, 14, 14], "texture": "#0" }
+			}
+		}
+	]
+}

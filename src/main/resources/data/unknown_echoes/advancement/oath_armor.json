@@ -1,0 +1,35 @@
+{
+  "parent": "unknown_echoes:regional_armor",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_oath_chestplate"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.oath_armor.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.oath_armor.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_armor": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:echo_oath_helmet",
+              "unknown_echoes:echo_oath_chestplate",
+              "unknown_echoes:echo_oath_leggings",
+              "unknown_echoes:echo_oath_boots"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

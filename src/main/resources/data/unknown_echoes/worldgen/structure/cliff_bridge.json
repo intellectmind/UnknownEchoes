@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:cliff_bridge",
+  "biomes": "#unknown_echoes:has_cliff_bridge",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

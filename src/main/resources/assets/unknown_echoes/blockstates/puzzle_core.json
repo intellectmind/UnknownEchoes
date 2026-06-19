@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "active=false": { "model": "unknown_echoes:block/puzzle_core" },
+    "active=true": { "model": "unknown_echoes:block/puzzle_core_active" }
+  }
+}

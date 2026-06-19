@@ -1,0 +1,20 @@
+{
+  "textures": {
+    "door": "unknown_echoes:block/wind_door",
+    "particle": "unknown_echoes:block/wind_door"
+  },
+  "elements": [
+    {
+      "from": [14, 0, 6],
+      "to": [16, 16, 10],
+      "faces": {
+        "north": { "texture": "#door" },
+        "south": { "texture": "#door" },
+        "up": { "texture": "#door" },
+        "down": { "texture": "#door" },
+        "west": { "texture": "#door" },
+        "east": { "texture": "#door" }
+      }
+    }
+  ]
+}

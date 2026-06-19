@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:attuned_echo_gem" },
+    { "item": "unknown_echoes:silence_moss" },
+    { "item": "unknown_echoes:silent_pod" },
+    { "item": "unknown_echoes:moss_shell_plate" }
+  ],
+  "result": {
+    "id": "unknown_echoes:silence_upgrade_core"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "minecraft:diamond_axe"
+    },
+    {
+      "item": "unknown_echoes:echo_weapon_frame"
+    },
+    {
+      "item": "unknown_echoes:broken_clockwork_plate"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_battleaxe"
+  }
+}

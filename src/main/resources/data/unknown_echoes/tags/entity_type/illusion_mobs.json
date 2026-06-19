@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:mirror_guardian",
+    "unknown_echoes:abyss_watcher",
+    "unknown_echoes:mirror_dust_butler",
+    "unknown_echoes:mirror_dust_decoy"
+  ]
+}

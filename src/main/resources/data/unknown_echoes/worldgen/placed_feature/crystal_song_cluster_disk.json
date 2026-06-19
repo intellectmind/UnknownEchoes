@@ -1,0 +1,10 @@
+{
+  "feature": "unknown_echoes:crystal_song_cluster_disk",
+  "placement": [
+    { "type": "minecraft:rarity_filter", "chance": 3 },
+    { "type": "minecraft:count", "count": 1 },
+    { "type": "minecraft:in_square" },
+    { "type": "minecraft:heightmap", "heightmap": "MOTION_BLOCKING_NO_LEAVES" },
+    { "type": "minecraft:biome" }
+  ]
+}

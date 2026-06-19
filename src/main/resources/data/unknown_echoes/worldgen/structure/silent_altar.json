@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:silent_altar",
+  "biomes": "#unknown_echoes:has_silent_altar",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

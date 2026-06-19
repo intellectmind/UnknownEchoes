@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "ingredients": [
+    { "item": "minecraft:wheat" },
+    { "item": "minecraft:sugar" },
+    { "item": "unknown_echoes:dream_nectar" },
+    { "item": "unknown_echoes:echo_amber" }
+  ],
+  "result": {
+    "id": "unknown_echoes:dream_nectar_tart"
+  }
+}

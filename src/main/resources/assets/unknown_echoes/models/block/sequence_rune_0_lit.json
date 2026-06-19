@@ -1,0 +1,4 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": { "all": "unknown_echoes:block/sequence_rune_0_lit" }
+}

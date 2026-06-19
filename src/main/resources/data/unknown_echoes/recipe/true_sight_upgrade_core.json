@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:attuned_echo_gem" },
+    { "item": "unknown_echoes:true_sight_core" },
+    { "item": "unknown_echoes:mirror_lake_shard" },
+    { "item": "unknown_echoes:illusion_dust" },
+    { "item": "unknown_echoes:polished_mirror_dust" }
+  ],
+  "result": {
+    "id": "unknown_echoes:true_sight_upgrade_core"
+  }
+}

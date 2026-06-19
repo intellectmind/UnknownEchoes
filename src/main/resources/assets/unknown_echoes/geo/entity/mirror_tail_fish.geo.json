@@ -1,0 +1,163 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.mirror_tail_fish",
+        "texture_width": 32,
+        "texture_height": 32,
+        "visible_bounds_width": 2,
+        "visible_bounds_height": 1.5,
+        "visible_bounds_offset": [
+          0,
+          0.25,
+          0
+        ]
+      },
+      "bones": [
+        {
+          "name": "root",
+          "pivot": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "body",
+          "parent": "root",
+          "pivot": [
+            0,
+            3,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -1,
+                1,
+                -4
+              ],
+              "size": [
+                2,
+                4,
+                7
+              ],
+              "uv": [
+                0,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -0.5,
+                5,
+                -2
+              ],
+              "size": [
+                1,
+                2,
+                3
+              ],
+              "uv": [
+                0,
+                11
+              ]
+            }
+          ]
+        },
+        {
+          "name": "tail",
+          "parent": "body",
+          "pivot": [
+            0,
+            3,
+            3
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -0.5,
+                0.5,
+                3
+              ],
+              "size": [
+                1,
+                6,
+                4
+              ],
+              "uv": [
+                18,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "name": "fin_l",
+          "parent": "body",
+          "pivot": [
+            -1,
+            2.5,
+            -2
+          ],
+          "rotation": [
+            0,
+            35,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -2,
+                2,
+                -2
+              ],
+              "size": [
+                1,
+                1,
+                2
+              ],
+              "uv": [
+                0,
+                17
+              ]
+            }
+          ]
+        },
+        {
+          "name": "fin_r",
+          "parent": "body",
+          "pivot": [
+            1,
+            2.5,
+            -2
+          ],
+          "rotation": [
+            0,
+            -20,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                1,
+                2,
+                -2
+              ],
+              "size": [
+                1,
+                1,
+                2
+              ],
+              "uv": [
+                8,
+                17
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

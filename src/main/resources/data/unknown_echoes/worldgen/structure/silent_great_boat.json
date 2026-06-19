@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:silent_great_boat",
+  "biomes": "#unknown_echoes:has_silent_great_boat",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:silent_ring",
+  "biomes": "#unknown_echoes:has_silent_ring",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

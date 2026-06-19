@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:first_page",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:inscription_rubbing_paper"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.first_research.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.first_research.desc"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

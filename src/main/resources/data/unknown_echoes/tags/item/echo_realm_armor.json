@@ -1,0 +1,28 @@
+{
+  "values": [
+    "unknown_echoes:echo_traveler_helmet",
+    "unknown_echoes:echo_traveler_chestplate",
+    "unknown_echoes:echo_traveler_leggings",
+    "unknown_echoes:echo_traveler_boots",
+    "unknown_echoes:wind_walker_helmet",
+    "unknown_echoes:wind_walker_chestplate",
+    "unknown_echoes:wind_walker_leggings",
+    "unknown_echoes:wind_walker_boots",
+    "unknown_echoes:tide_stalker_helmet",
+    "unknown_echoes:tide_stalker_chestplate",
+    "unknown_echoes:tide_stalker_leggings",
+    "unknown_echoes:tide_stalker_boots",
+    "unknown_echoes:true_sight_shadow_helmet",
+    "unknown_echoes:true_sight_shadow_chestplate",
+    "unknown_echoes:true_sight_shadow_leggings",
+    "unknown_echoes:true_sight_shadow_boots",
+    "unknown_echoes:silent_watch_helmet",
+    "unknown_echoes:silent_watch_chestplate",
+    "unknown_echoes:silent_watch_leggings",
+    "unknown_echoes:silent_watch_boots",
+    "unknown_echoes:echo_oath_helmet",
+    "unknown_echoes:echo_oath_chestplate",
+    "unknown_echoes:echo_oath_leggings",
+    "unknown_echoes:echo_oath_boots"
+  ]
+}

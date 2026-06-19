@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " G ",
+    "GRG",
+    " G "
+  ],
+  "key": {
+    "G": {
+      "item": "unknown_echoes:broken_bell_gear"
+    },
+    "R": {
+      "item": "unknown_echoes:rusted_time_gear"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:broken_clockwork_plate",
+    "count": 2
+  }
+}

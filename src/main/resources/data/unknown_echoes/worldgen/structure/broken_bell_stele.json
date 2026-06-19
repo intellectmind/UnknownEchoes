@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:broken_bell_stele",
+  "biomes": "#unknown_echoes:has_broken_bell_stele",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:wind_etched_stone"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:wind_rune_shard",
+    "count": 2
+  }
+}

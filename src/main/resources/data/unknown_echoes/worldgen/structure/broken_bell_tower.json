@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:broken_bell_tower",
+  "biomes": "#unknown_echoes:has_broken_bell_tower",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

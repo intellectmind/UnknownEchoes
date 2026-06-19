@@ -1,0 +1,21 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:small_echo_ruin",
+    "unknown_echoes:echo_temple",
+    "unknown_echoes:rune_puzzle_room",
+    "unknown_echoes:resonance_beacon_structure",
+    "unknown_echoes:broken_archive",
+    "unknown_echoes:mirror_temple",
+    "unknown_echoes:sunken_temple",
+    "unknown_echoes:reflection_vault",
+    "unknown_echoes:mirror_dust_cloister",
+    "unknown_echoes:tide_lighthouse_reef",
+    "unknown_echoes:silent_altar",
+    "unknown_echoes:silent_hut",
+    "unknown_echoes:silent_ring",
+    "unknown_echoes:sky_observatory",
+    "unknown_echoes:wind_eroded_tower",
+    "unknown_echoes:submerged_record_room"
+  ]
+}

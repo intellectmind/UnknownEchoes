@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:ability_wind_echo",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:watcher_eye_shard"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.defeat_abyss_watcher.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.defeat_abyss_watcher.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

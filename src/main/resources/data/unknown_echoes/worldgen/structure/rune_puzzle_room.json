@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:rune_puzzle_room",
+  "biomes": "#unknown_echoes:has_rune_puzzle_room",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

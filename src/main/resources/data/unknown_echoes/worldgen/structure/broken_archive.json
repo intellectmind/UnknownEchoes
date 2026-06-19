@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:broken_archive",
+  "biomes": "#unknown_echoes:has_broken_archive",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

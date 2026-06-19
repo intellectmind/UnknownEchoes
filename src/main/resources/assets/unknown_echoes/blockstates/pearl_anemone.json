@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "pickles=1,waterlogged=true": {
+      "model": "unknown_echoes:block/pearl_anemone"
+    },
+    "pickles=1,waterlogged=false": {
+      "model": "unknown_echoes:block/pearl_anemone"
+    },
+    "pickles=2,waterlogged=true": {
+      "model": "unknown_echoes:block/pearl_anemone"
+    },
+    "pickles=2,waterlogged=false": {
+      "model": "unknown_echoes:block/pearl_anemone"
+    },
+    "pickles=3,waterlogged=true": {
+      "model": "unknown_echoes:block/pearl_anemone"
+    },
+    "pickles=3,waterlogged=false": {
+      "model": "unknown_echoes:block/pearl_anemone"
+    },
+    "pickles=4,waterlogged=true": {
+      "model": "unknown_echoes:block/pearl_anemone"
+    },
+    "pickles=4,waterlogged=false": {
+      "model": "unknown_echoes:block/pearl_anemone"
+    }
+  }
+}

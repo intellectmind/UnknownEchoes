@@ -1,0 +1,7 @@
+{
+	"parent": "minecraft:block/cube_column",
+	"textures": {
+		"end": "unknown_echoes:block/mirror_stone_bricks",
+		"side": "unknown_echoes:block/true_sight_stele"
+	}
+}

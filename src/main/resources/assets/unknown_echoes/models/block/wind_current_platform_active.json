@@ -1,0 +1,7 @@
+{
+	"parent": "unknown_echoes:block/wind_current_platform",
+	"textures": {
+		"top": "unknown_echoes:block/wind_current_platform_active",
+		"particle": "unknown_echoes:block/wind_current_platform_active"
+	}
+}

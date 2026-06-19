@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_traveler_leggings"
+    },
+    {
+      "item": "unknown_echoes:silent_resin"
+    },
+    {
+      "item": "unknown_echoes:moss_shell_plate"
+    },
+    {
+      "item": "unknown_echoes:silence_moss"
+    },
+    {
+      "item": "unknown_echoes:echo_metal_ingot"
+    },
+    {
+      "item": "unknown_echoes:silence_upgrade_core"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:silent_watch_leggings"
+  }
+}

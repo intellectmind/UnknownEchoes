@@ -1,0 +1,26 @@
+{
+  "id": "unknown_echoes:mirror_sea",
+  "structure": "unknown_echoes:mirror_sea",
+  "region": "unknown_echoes:mirror_lake",
+  "biome_tags": [
+    "unknown_echoes:has_mirror_sea"
+  ],
+  "spacing": 136,
+  "separation": 44,
+  "salt": 702503,
+  "allow_multiple": true,
+  "priority": 2,
+  "mechanic": "reflection_positioning",
+  "reward_tier": "t5_miniboss_repeat",
+  "discovery_score": 4,
+  "completion_score": 8,
+  "core_record_score": 3,
+  "loot_tables": {
+    "common": "unknown_echoes:chests/mirror_lake_cache",
+    "core": "unknown_echoes:chests/common/t4_region_core"
+  },
+  "clue_key": "clue.unknown_echoes.mirror_sea",
+  "critical_path": false,
+  "single_player_solvable": true,
+  "personal_reward_only": true
+}

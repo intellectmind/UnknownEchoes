@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:eternal_echo_lighthouse",
+  "biomes": "#unknown_echoes:has_eternal_echo_lighthouse",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

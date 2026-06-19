@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:wind_etched_stone"
+  },
+  "result": {
+    "id": "unknown_echoes:wind_chiseled_stone",
+    "count": 1
+  }
+}

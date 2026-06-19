@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "unknown_echoes:block/echo_stone_bricks",
+    "north": "unknown_echoes:block/echo_rune_bricks",
+    "south": "unknown_echoes:block/echo_rune_bricks",
+    "east": "unknown_echoes:block/echo_stone_bricks",
+    "west": "unknown_echoes:block/echo_stone_bricks",
+    "up": "unknown_echoes:block/echo_stone_bricks",
+    "down": "unknown_echoes:block/echo_stone_bricks"
+  }
+}

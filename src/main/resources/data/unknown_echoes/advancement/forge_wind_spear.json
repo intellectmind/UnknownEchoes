@@ -1,0 +1,32 @@
+{
+  "parent": "unknown_echoes:ability_wind_echo",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:wind_spear"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.forge_wind_spear.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.forge_wind_spear.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_weapon": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:wind_spear"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

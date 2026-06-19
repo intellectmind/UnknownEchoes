@@ -1,0 +1,83 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.7,
+  "downfall": 0.9,
+  "effects": {
+    "fog_color": 4215364,
+    "sky_color": 3490125,
+    "water_color": 5074008,
+    "water_fog_color": 2110506,
+    "grass_color": 5074251,
+    "foliage_color": 4809798,
+    "ambient_particle": {
+      "options": {
+        "type": "minecraft:white_ash"
+      },
+      "probability": 0.01
+    },
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 12000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    }
+  },
+  "carvers": {
+    "air": [
+      "minecraft:cave",
+      "minecraft:cave_extra_underground"
+    ]
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:muffle_moss_disk"
+    ],
+    [],
+    [],
+    [
+      "unknown_echoes:silent_pod_patch",
+      "unknown_echoes:tidewood_trees",
+      "unknown_echoes:glow_fern_patch",
+      "minecraft:brown_mushroom_normal",
+      "minecraft:red_mushroom_normal"
+    ],
+    []
+  ],
+  "spawners": {
+    "monster": [
+      {
+        "type": "unknown_echoes:silent_walker",
+        "weight": 60,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:echo_wanderer",
+        "weight": 15,
+        "minCount": 1,
+        "maxCount": 1
+      }
+    ],
+    "creature": [
+      {
+        "type": "unknown_echoes:moss_back_turtle",
+        "weight": 25,
+        "minCount": 1,
+        "maxCount": 2
+      }
+    ],
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
+  },
+  "spawn_costs": {}
+}

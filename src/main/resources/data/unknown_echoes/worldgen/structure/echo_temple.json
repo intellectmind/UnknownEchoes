@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:echo_temple",
+  "biomes": "#unknown_echoes:has_echo_temple",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

@@ -1,0 +1,89 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.45,
+  "downfall": 0.35,
+  "effects": {
+    "fog_color": 11262207,
+    "sky_color": 8561384,
+    "water_color": 5748426,
+    "water_fog_color": 1588314,
+    "grass_color": 7913378,
+    "foliage_color": 7189908,
+    "ambient_particle": {
+      "options": {
+        "type": "minecraft:glow"
+      },
+      "probability": 0.009
+    },
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 8000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    }
+  },
+  "carvers": {
+    "air": [
+      "minecraft:cave",
+      "minecraft:cave_extra_underground"
+    ]
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:crystal_song_cluster_disk"
+    ],
+    [],
+    [],
+    [
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:whispering_trees",
+      "unknown_echoes:glow_fern_patch",
+      "unknown_echoes:resonant_mushroom_patch",
+      "unknown_echoes:echo_flowers"
+    ],
+    []
+  ],
+  "spawners": {
+    "monster": [
+      {
+        "type": "unknown_echoes:echo_wanderer",
+        "weight": 18,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:crystal_noise_wisp",
+        "weight": 16,
+        "minCount": 1,
+        "maxCount": 2
+      }
+    ],
+    "creature": [
+      {
+        "type": "unknown_echoes:crystal_feather_bird",
+        "weight": 18,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:crystal_chime_spirit",
+        "weight": 16,
+        "minCount": 1,
+        "maxCount": 2
+      }
+    ],
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
+  },
+  "spawn_costs": {}
+}

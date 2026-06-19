@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:sand"
+    },
+    {
+      "item": "unknown_echoes:mirror_lake_shard"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:mirror_sand",
+    "count": 2
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:sunken_temple",
+  "biomes": "#unknown_echoes:has_sunken_temple",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:archive_remnant_hall",
+  "biomes": "#unknown_echoes:has_archive_remnant_hall",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:attuned_echo_gem" },
+    { "item": "unknown_echoes:crystal_song_shard" },
+    { "item": "unknown_echoes:resonant_crystal_note" },
+    { "item": "unknown_echoes:crystal_feather" }
+  ],
+  "result": {
+    "id": "unknown_echoes:crystal_song_upgrade_core"
+  }
+}

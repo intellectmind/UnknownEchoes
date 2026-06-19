@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "M M",
+    "RMR",
+    "MCM"
+  ],
+  "key": {
+    "C": {
+      "item": "unknown_echoes:crystal_feather"
+    },
+    "M": {
+      "item": "unknown_echoes:echo_metal_ingot"
+    },
+    "R": {
+      "item": "unknown_echoes:mirror_lake_shard"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:listener_chestplate"
+  }
+}

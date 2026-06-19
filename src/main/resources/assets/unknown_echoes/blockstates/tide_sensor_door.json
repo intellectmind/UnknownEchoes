@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "open=false": {
+      "model": "unknown_echoes:block/tide_sensor_door"
+    },
+    "open=true": {
+      "model": "unknown_echoes:block/tide_sensor_door_open"
+    }
+  }
+}

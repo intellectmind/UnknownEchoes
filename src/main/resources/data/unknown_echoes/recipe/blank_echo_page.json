@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:paper" },
+    { "item": "unknown_echoes:echo_fiber" },
+    { "item": "unknown_echoes:echo_dust" }
+  ],
+  "result": {
+    "id": "unknown_echoes:blank_echo_page",
+    "count": 2
+  }
+}

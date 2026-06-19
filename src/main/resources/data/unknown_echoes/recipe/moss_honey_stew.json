@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:silence_moss"
+    },
+    {
+      "item": "unknown_echoes:dream_nectar"
+    },
+    {
+      "item": "unknown_echoes:echo_berry"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:moss_honey_stew",
+    "count": 1
+  }
+}

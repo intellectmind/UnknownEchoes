@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:mirror_lake_cache",
+  "biomes": "#unknown_echoes:has_mirror_lake_cache",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

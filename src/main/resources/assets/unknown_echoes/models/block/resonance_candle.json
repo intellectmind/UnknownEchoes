@@ -1,0 +1,127 @@
+{
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "particle": "unknown_echoes:block/resonance_candle",
+    "all": "unknown_echoes:block/resonance_candle"
+  },
+  "elements": [
+    {
+      "from": [
+        5,
+        0,
+        5
+      ],
+      "to": [
+        11,
+        12,
+        11
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            4,
+            11,
+            16
+          ],
+          "texture": "#all"
+        },
+        "south": {
+          "uv": [
+            5,
+            4,
+            11,
+            16
+          ],
+          "texture": "#all"
+        },
+        "east": {
+          "uv": [
+            5,
+            4,
+            11,
+            16
+          ],
+          "texture": "#all"
+        },
+        "west": {
+          "uv": [
+            5,
+            4,
+            11,
+            16
+          ],
+          "texture": "#all"
+        },
+        "up": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#all"
+        },
+        "down": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#all"
+        }
+      }
+    },
+    {
+      "from": [
+        7.5,
+        12,
+        7.5
+      ],
+      "to": [
+        8.5,
+        14,
+        8.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            7,
+            1,
+            9,
+            4
+          ],
+          "texture": "#all"
+        },
+        "south": {
+          "uv": [
+            7,
+            1,
+            9,
+            4
+          ],
+          "texture": "#all"
+        },
+        "east": {
+          "uv": [
+            7,
+            1,
+            9,
+            4
+          ],
+          "texture": "#all"
+        },
+        "west": {
+          "uv": [
+            7,
+            1,
+            9,
+            4
+          ],
+          "texture": "#all"
+        }
+      }
+    }
+  ]
+}

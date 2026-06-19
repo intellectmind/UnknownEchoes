@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "#unknown_echoes:echo_mobs",
+    "unknown_echoes:crystal_songkeeper",
+    "unknown_echoes:broken_bell_keeper"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " C ",
+    " N ",
+    " S "
+  ],
+  "key": {
+    "C": {
+      "item": "unknown_echoes:crystal_song_shard"
+    },
+    "N": {
+      "item": "unknown_echoes:resonant_crystal_note"
+    },
+    "S": {
+      "item": "unknown_echoes:sky_quartz"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:crystal_resonance_rod",
+    "count": 2
+  }
+}

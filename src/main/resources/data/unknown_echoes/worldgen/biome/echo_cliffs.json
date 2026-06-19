@@ -1,0 +1,102 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.35,
+  "downfall": 0.15,
+  "effects": {
+    "fog_color": 8030880,
+    "sky_color": 5533599,
+    "water_color": 4353416,
+    "water_fog_color": 2440021,
+    "grass_color": 6322016,
+    "foliage_color": 5663317,
+    "ambient_particle": {
+      "options": {
+        "type": "minecraft:white_ash"
+      },
+      "probability": 0.009
+    },
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 7000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    }
+  },
+  "carvers": {
+    "air": [
+      "minecraft:cave",
+      "minecraft:canyon"
+    ]
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:echo_cliff_stone_disk",
+      "unknown_echoes:wind_etched_stone_disk"
+    ],
+    [],
+    [],
+    [
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:wind_eroded_rubble_patch",
+      "unknown_echoes:ash_chime_grass_patch",
+      "unknown_echoes:echo_flowers",
+      "minecraft:patch_grass_plain"
+    ],
+    []
+  ],
+  "spawners": {
+    "monster": [
+      {
+        "type": "unknown_echoes:echo_wanderer",
+        "weight": 35,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:broken_bell_guard",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:lost_recorder",
+        "weight": 14,
+        "minCount": 1,
+        "maxCount": 2
+      }
+    ],
+    "creature": [
+      {
+        "type": "unknown_echoes:crystal_feather_bird",
+        "weight": 10,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:broken_bell_crow",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:wind_sac_moth",
+        "weight": 12,
+        "minCount": 2,
+        "maxCount": 4
+      }
+    ],
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
+  },
+  "spawn_costs": {}
+}

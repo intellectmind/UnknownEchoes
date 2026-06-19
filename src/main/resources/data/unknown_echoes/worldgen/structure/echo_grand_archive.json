@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:echo_grand_archive",
+  "biomes": "#unknown_echoes:has_echo_grand_archive",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

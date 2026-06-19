@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:first_ruin",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_rune_bricks"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.explorer_5.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.explorer_5.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

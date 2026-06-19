@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "SCS",
+    " S "
+  ],
+  "key": {
+    "S": { "item": "unknown_echoes:echo_shard" },
+    "C": { "item": "unknown_echoes:echo_core" }
+  },
+  "result": {
+    "id": "unknown_echoes:echo_key"
+  }
+}

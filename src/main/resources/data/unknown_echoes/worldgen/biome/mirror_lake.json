@@ -1,0 +1,101 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.6,
+  "downfall": 0.5,
+  "effects": {
+    "fog_color": 10344434,
+    "sky_color": 4611486,
+    "water_color": 8639721,
+    "water_fog_color": 1193830,
+    "grass_color": 7317642,
+    "foliage_color": 6858622,
+    "ambient_particle": {
+      "options": {
+        "type": "minecraft:nautilus"
+      },
+      "probability": 0.008
+    },
+    "mood_sound": {
+      "sound": "minecraft:ambient.underwater.loop",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    }
+  },
+  "carvers": {
+    "air": [
+      "minecraft:cave",
+      "minecraft:cave_extra_underground",
+      "minecraft:canyon"
+    ]
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:mirror_stone_disk",
+      "unknown_echoes:tide_salt_ore_disk"
+    ],
+    [],
+    [],
+    [
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:echo_flowers",
+      "unknown_echoes:mirror_reed_patch",
+      "unknown_echoes:mirror_lotus_patch",
+      "unknown_echoes:glow_fern_patch",
+      "unknown_echoes:tidewood_trees",
+      "unknown_echoes:tide_grass_patch",
+      "unknown_echoes:pearl_anemone_patch"
+    ],
+    []
+  ],
+  "spawners": {
+    "monster": [
+      {
+        "type": "unknown_echoes:echo_wanderer",
+        "weight": 40,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:water_shadow",
+        "weight": 18,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:mirror_dust_decoy",
+        "weight": 10,
+        "minCount": 1,
+        "maxCount": 2
+      }
+    ],
+    "creature": [
+      {
+        "type": "unknown_echoes:glow_rabbit",
+        "weight": 15,
+        "minCount": 1,
+        "maxCount": 2
+      }
+    ],
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [
+      {
+        "type": "unknown_echoes:mirror_tail_fish",
+        "weight": 40,
+        "minCount": 3,
+        "maxCount": 6
+      }
+    ],
+    "misc": []
+  },
+  "spawn_costs": {}
+}

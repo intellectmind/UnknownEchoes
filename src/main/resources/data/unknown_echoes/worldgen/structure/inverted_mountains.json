@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:inverted_mountains",
+  "biomes": "#unknown_echoes:has_inverted_mountains",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

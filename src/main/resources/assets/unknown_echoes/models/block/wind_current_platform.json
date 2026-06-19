@@ -1,0 +1,35 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"side": "unknown_echoes:block/wind_etched_stone",
+		"top": "unknown_echoes:block/wind_current_platform",
+		"particle": "unknown_echoes:block/wind_current_platform"
+	},
+	"elements": [
+		{
+			"name": "base",
+			"from": [0, 0, 0],
+			"to": [16, 3, 16],
+			"faces": {
+				"north": { "uv": [0, 13, 16, 16], "texture": "#side" },
+				"east": { "uv": [0, 13, 16, 16], "texture": "#side" },
+				"south": { "uv": [0, 13, 16, 16], "texture": "#side" },
+				"west": { "uv": [0, 13, 16, 16], "texture": "#side" },
+				"up": { "uv": [0, 0, 16, 16], "texture": "#top" },
+				"down": { "uv": [0, 0, 16, 16], "texture": "#side" }
+			}
+		},
+		{
+			"name": "hub",
+			"from": [2, 3, 2],
+			"to": [14, 6, 14],
+			"faces": {
+				"north": { "uv": [2, 10, 14, 13], "texture": "#side" },
+				"east": { "uv": [2, 10, 14, 13], "texture": "#side" },
+				"south": { "uv": [2, 10, 14, 13], "texture": "#side" },
+				"west": { "uv": [2, 10, 14, 13], "texture": "#side" },
+				"up": { "uv": [2, 2, 14, 14], "texture": "#top" }
+			}
+		}
+	]
+}

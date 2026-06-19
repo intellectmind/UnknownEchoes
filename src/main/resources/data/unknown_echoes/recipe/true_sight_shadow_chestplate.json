@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_traveler_chestplate"
+    },
+    {
+      "item": "unknown_echoes:illusion_prism"
+    },
+    {
+      "item": "unknown_echoes:polished_mirror_dust"
+    },
+    {
+      "item": "unknown_echoes:decoy_shard"
+    },
+    {
+      "item": "unknown_echoes:echo_metal_ingot"
+    },
+    {
+      "item": "unknown_echoes:true_sight_upgrade_core"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:true_sight_shadow_chestplate"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "values": [
+    "unknown_echoes:echo_core",
+    "unknown_echoes:tide_core",
+    "unknown_echoes:true_sight_core",
+    "unknown_echoes:attuned_echo_gem",
+    "unknown_echoes:wind_enhance_core",
+    "unknown_echoes:tide_upgrade_core",
+    "unknown_echoes:true_sight_upgrade_core",
+    "unknown_echoes:silence_upgrade_core",
+    "unknown_echoes:crystal_song_upgrade_core",
+    "unknown_echoes:broken_bell_upgrade_core",
+    "unknown_echoes:colossus_memory_core",
+    "unknown_echoes:memory_stone_slab",
+    "unknown_echoes:black_tide_thread",
+    "unknown_echoes:broken_reflection",
+    "unknown_echoes:mirror_guardian_core",
+    "unknown_echoes:echo_realm_ingot",
+    "unknown_echoes:echo_realm_core",
+    "unknown_echoes:storm_compass_part",
+    "unknown_echoes:resonant_crystal_note",
+    "unknown_echoes:rusted_time_gear"
+  ]
+}

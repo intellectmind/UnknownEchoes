@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:mirror_temple",
+  "biomes": "#unknown_echoes:has_mirror_temple",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

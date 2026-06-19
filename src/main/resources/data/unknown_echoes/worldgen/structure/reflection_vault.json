@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:reflection_vault",
+  "biomes": "#unknown_echoes:has_reflection_vault",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:blank_echo_page" },
+    { "item": "unknown_echoes:echo_dust" },
+    { "item": "minecraft:ink_sac" }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_ink_page"
+  }
+}

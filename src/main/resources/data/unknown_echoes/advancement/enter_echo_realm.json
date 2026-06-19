@@ -1,0 +1,26 @@
+{
+  "parent": "unknown_echoes:root",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_key"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.enter_echo_realm.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.enter_echo_realm.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "entered": {
+      "trigger": "minecraft:changed_dimension",
+      "conditions": {
+        "to": "unknown_echoes:echo_realm"
+      }
+    }
+  }
+}

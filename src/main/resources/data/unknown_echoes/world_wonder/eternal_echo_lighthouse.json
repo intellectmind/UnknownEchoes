@@ -1,0 +1,26 @@
+{
+  "id": "unknown_echoes:eternal_echo_lighthouse",
+  "structure": "unknown_echoes:eternal_echo_lighthouse",
+  "region": "unknown_echoes:mirror_lake",
+  "biome_tags": [
+    "unknown_echoes:has_eternal_echo_lighthouse"
+  ],
+  "spacing": 128,
+  "separation": 42,
+  "salt": 702502,
+  "allow_multiple": true,
+  "priority": 1,
+  "mechanic": "triple_lamp_mirrors",
+  "reward_tier": "t4_region_core",
+  "discovery_score": 4,
+  "completion_score": 8,
+  "core_record_score": 3,
+  "loot_tables": {
+    "common": "unknown_echoes:chests/mirror_lake_cache",
+    "core": "unknown_echoes:chests/common/t4_region_core"
+  },
+  "clue_key": "clue.unknown_echoes.eternal_echo_lighthouse",
+  "critical_path": false,
+  "single_player_solvable": true,
+  "personal_reward_only": true
+}

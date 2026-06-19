@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_traveler_chestplate"
+    },
+    {
+      "item": "unknown_echoes:mirror_tide_alloy_plate"
+    },
+    {
+      "item": "unknown_echoes:mirror_scale"
+    },
+    {
+      "item": "unknown_echoes:tide_pearl"
+    },
+    {
+      "item": "unknown_echoes:echo_metal_ingot"
+    },
+    {
+      "item": "unknown_echoes:tide_upgrade_core"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:tide_stalker_chestplate"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_shard"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_dust",
+    "count": 2
+  }
+}

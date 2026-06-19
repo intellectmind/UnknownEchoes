@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:sky_rift",
+  "biomes": "#unknown_echoes:has_sky_rift",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

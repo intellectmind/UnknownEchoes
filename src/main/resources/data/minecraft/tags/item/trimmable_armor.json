@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:explorer_helmet",
+    "unknown_echoes:explorer_chestplate",
+    "unknown_echoes:explorer_leggings",
+    "unknown_echoes:explorer_boots",
+    "unknown_echoes:listener_helmet",
+    "unknown_echoes:listener_chestplate",
+    "unknown_echoes:listener_leggings",
+    "unknown_echoes:listener_boots"
+  ]
+}

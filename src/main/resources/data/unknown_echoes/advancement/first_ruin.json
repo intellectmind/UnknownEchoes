@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:root",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_stone_bricks"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.first_ruin.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.first_ruin.desc"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

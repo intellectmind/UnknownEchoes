@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:echo_world_tree",
+  "biomes": "#unknown_echoes:has_echo_world_tree",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

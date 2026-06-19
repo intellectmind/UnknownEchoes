@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "ingredients": [
+    { "item": "unknown_echoes:mirror_tail_fish" },
+    { "item": "unknown_echoes:tide_salt" }
+  ],
+  "result": {
+    "id": "unknown_echoes:tide_salted_fish"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:overworld_lost_camp",
+  "biomes": "#unknown_echoes:has_overworld_lost_camp",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

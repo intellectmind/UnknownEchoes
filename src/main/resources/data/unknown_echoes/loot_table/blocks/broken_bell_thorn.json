@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:broken_bell_thorn" },
+        { "type": "minecraft:item", "name": "unknown_echoes:broken_bell_gear", "weight": 1 }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:blocks/broken_bell_thorn"
+}

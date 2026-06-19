@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "activated=false": { "model": "unknown_echoes:block/memory_pillar" },
+    "activated=true": { "model": "unknown_echoes:block/memory_pillar_active" }
+  }
+}

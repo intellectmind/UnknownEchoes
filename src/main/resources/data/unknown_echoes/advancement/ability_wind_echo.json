@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:defeat_forgotten_colossus",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:wind_echo_mark"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.ability_wind_echo.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.ability_wind_echo.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

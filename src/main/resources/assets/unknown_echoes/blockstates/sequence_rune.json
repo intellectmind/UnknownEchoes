@@ -1,0 +1,52 @@
+{
+  "variants": {
+    "order=0,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_0"
+    },
+    "order=0,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_0_lit"
+    },
+    "order=1,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_1"
+    },
+    "order=1,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_1_lit"
+    },
+    "order=2,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_2"
+    },
+    "order=2,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_2_lit"
+    },
+    "order=3,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_3"
+    },
+    "order=3,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_3_lit"
+    },
+    "order=4,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_4"
+    },
+    "order=4,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_4_lit"
+    },
+    "order=5,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_5"
+    },
+    "order=5,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_5_lit"
+    },
+    "order=6,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_6"
+    },
+    "order=6,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_6_lit"
+    },
+    "order=7,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_7"
+    },
+    "order=7,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_7_lit"
+    }
+  }
+}

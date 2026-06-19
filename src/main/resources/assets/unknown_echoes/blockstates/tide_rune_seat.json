@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=true": {
+      "model": "unknown_echoes:block/tide_rune_seat"
+    },
+    "lit=false": {
+      "model": "unknown_echoes:block/tide_rune_seat_off"
+    }
+  }
+}

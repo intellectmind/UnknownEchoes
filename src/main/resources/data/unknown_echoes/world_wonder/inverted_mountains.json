@@ -1,0 +1,26 @@
+{
+  "id": "unknown_echoes:inverted_mountains",
+  "structure": "unknown_echoes:inverted_mountains",
+  "region": "unknown_echoes:floating_isles",
+  "biome_tags": [
+    "unknown_echoes:has_inverted_mountains"
+  ],
+  "spacing": 152,
+  "separation": 50,
+  "salt": 702504,
+  "allow_multiple": true,
+  "priority": 2,
+  "mechanic": "reverse_windway",
+  "reward_tier": "t5_miniboss_repeat",
+  "discovery_score": 4,
+  "completion_score": 8,
+  "core_record_score": 3,
+  "loot_tables": {
+    "common": "unknown_echoes:chests/common/t4_region_core",
+    "core": "unknown_echoes:chests/common/t5_miniboss_repeat"
+  },
+  "clue_key": "clue.unknown_echoes.inverted_mountains",
+  "critical_path": false,
+  "single_player_solvable": true,
+  "personal_reward_only": true
+}

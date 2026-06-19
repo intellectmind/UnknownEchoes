@@ -1,0 +1,67 @@
+{
+  "parent": "unknown_echoes:forge_true_sight_blade",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_metal_ingot"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.echo_arsenal.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.echo_arsenal.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "spear": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:wind_spear"
+            ]
+          }
+        ]
+      }
+    },
+    "crossbow": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:tide_crossbow"
+            ]
+          }
+        ]
+      }
+    },
+    "blade": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:true_sight_blade"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "spear"
+    ],
+    [
+      "crossbow"
+    ],
+    [
+      "blade"
+    ]
+  ]
+}

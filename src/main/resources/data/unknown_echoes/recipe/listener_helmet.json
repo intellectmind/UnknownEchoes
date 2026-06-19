@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "MMM",
+    "R R"
+  ],
+  "key": {
+    "M": {
+      "item": "unknown_echoes:echo_metal_ingot"
+    },
+    "R": {
+      "item": "unknown_echoes:mirror_lake_shard"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:listener_helmet"
+  }
+}

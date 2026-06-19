@@ -1,0 +1,185 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.silent_priest",
+        "texture_width": 64,
+        "texture_height": 64,
+        "visible_bounds_width": 2,
+        "visible_bounds_height": 3.5,
+        "visible_bounds_offset": [
+          0,
+          1.25,
+          0
+        ]
+      },
+      "bones": [
+        {
+          "name": "root",
+          "pivot": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "body",
+          "parent": "root",
+          "pivot": [
+            0,
+            16,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -6,
+                0,
+                -5
+              ],
+              "size": [
+                12,
+                16,
+                10
+              ],
+              "uv": [
+                0,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -4,
+                16,
+                -3
+              ],
+              "size": [
+                8,
+                10,
+                6
+              ],
+              "uv": [
+                32,
+                26
+              ]
+            }
+          ]
+        },
+        {
+          "name": "head",
+          "parent": "body",
+          "pivot": [
+            0,
+            26,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -4,
+                26,
+                -4
+              ],
+              "size": [
+                8,
+                8,
+                8
+              ],
+              "uv": [
+                0,
+                26
+              ]
+            }
+          ]
+        },
+        {
+          "name": "arm_left",
+          "parent": "body",
+          "pivot": [
+            5.5,
+            25,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                4,
+                12,
+                -1.5
+              ],
+              "size": [
+                3,
+                14,
+                3
+              ],
+              "uv": [
+                0,
+                42
+              ]
+            }
+          ]
+        },
+        {
+          "name": "arm_right",
+          "parent": "body",
+          "pivot": [
+            -5.5,
+            25,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -7,
+                12,
+                -1.5
+              ],
+              "size": [
+                3,
+                14,
+                3
+              ],
+              "uv": [
+                12,
+                42
+              ]
+            },
+            {
+              "origin": [
+                -6.5,
+                4,
+                -1
+              ],
+              "size": [
+                2,
+                20,
+                2
+              ],
+              "uv": [
+                24,
+                42
+              ]
+            },
+            {
+              "origin": [
+                -7.5,
+                24,
+                -2
+              ],
+              "size": [
+                4,
+                4,
+                4
+              ],
+              "uv": [
+                44,
+                0
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

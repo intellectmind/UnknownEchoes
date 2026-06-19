@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:true_sight_blade_blueprint"
+    },
+    {
+      "item": "unknown_echoes:echo_weapon_frame"
+    },
+    {
+      "item": "unknown_echoes:illusion_dust"
+    },
+    {
+      "item": "unknown_echoes:mirror_lake_shard"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:true_sight_blade"
+  }
+}

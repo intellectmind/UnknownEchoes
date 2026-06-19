@@ -1,0 +1,217 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"0": "unknown_echoes:block/echo_stone_bricks",
+		"1": "unknown_echoes:block/memory_pillar",
+		"particle": "unknown_echoes:block/memory_pillar"
+	},
+	"elements": [
+		{
+			"name": "base",
+			"from": [
+				2,
+				0,
+				2
+			],
+			"to": [
+				14,
+				3,
+				14
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						2,
+						13,
+						14,
+						16
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						2,
+						13,
+						14,
+						16
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						2,
+						13,
+						14,
+						16
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						2,
+						13,
+						14,
+						16
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						2,
+						2,
+						14,
+						14
+					],
+					"texture": "#0"
+				},
+				"down": {
+					"uv": [
+						2,
+						2,
+						14,
+						14
+					],
+					"texture": "#0"
+				}
+			}
+		},
+		{
+			"name": "shaft",
+			"from": [
+				4,
+				3,
+				4
+			],
+			"to": [
+				12,
+				13,
+				12
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						4,
+						3,
+						12,
+						13
+					],
+					"texture": "#1"
+				},
+				"east": {
+					"uv": [
+						4,
+						3,
+						12,
+						13
+					],
+					"texture": "#1"
+				},
+				"south": {
+					"uv": [
+						4,
+						3,
+						12,
+						13
+					],
+					"texture": "#1"
+				},
+				"west": {
+					"uv": [
+						4,
+						3,
+						12,
+						13
+					],
+					"texture": "#1"
+				},
+				"up": {
+					"uv": [
+						4,
+						4,
+						12,
+						12
+					],
+					"texture": "#1"
+				},
+				"down": {
+					"uv": [
+						4,
+						4,
+						12,
+						12
+					],
+					"texture": "#1"
+				}
+			}
+		},
+		{
+			"name": "cap",
+			"from": [
+				3,
+				13,
+				3
+			],
+			"to": [
+				13,
+				16,
+				13
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						3,
+						0,
+						13,
+						3
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						3,
+						0,
+						13,
+						3
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						3,
+						0,
+						13,
+						3
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						3,
+						0,
+						13,
+						3
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						3,
+						3,
+						13,
+						13
+					],
+					"texture": "#0"
+				},
+				"down": {
+					"uv": [
+						3,
+						3,
+						13,
+						13
+					],
+					"texture": "#0"
+				}
+			}
+		}
+	]
+}

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "unknown_echoes:block/echo_rune_bricks" },
+    "facing=south": { "model": "unknown_echoes:block/echo_rune_bricks", "y": 180 },
+    "facing=west": { "model": "unknown_echoes:block/echo_rune_bricks", "y": 270 },
+    "facing=east": { "model": "unknown_echoes:block/echo_rune_bricks", "y": 90 }
+  }
+}

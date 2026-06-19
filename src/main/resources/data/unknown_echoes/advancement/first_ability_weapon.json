@@ -1,0 +1,34 @@
+{
+  "parent": "unknown_echoes:echo_broadsword",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:wind_spear"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.first_ability_weapon.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.first_ability_weapon.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_weapon": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:wind_spear",
+              "unknown_echoes:tide_crossbow",
+              "unknown_echoes:true_sight_blade"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

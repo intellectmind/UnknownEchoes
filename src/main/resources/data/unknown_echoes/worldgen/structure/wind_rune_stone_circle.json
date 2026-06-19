@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:wind_rune_stone_circle",
+  "biomes": "#unknown_echoes:has_wind_rune_stone_circle",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_log"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_planks",
+    "count": 4
+  }
+}

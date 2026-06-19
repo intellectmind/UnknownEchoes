@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:crystal_song_hall",
+  "biomes": "#unknown_echoes:has_crystal_song_hall",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

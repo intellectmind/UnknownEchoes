@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "P",
+    "P"
+  ],
+  "key": {
+    "P": {
+      "item": "unknown_echoes:whispering_planks"
+    }
+  },
+  "result": {
+    "id": "minecraft:stick",
+    "count": 4
+  }
+}

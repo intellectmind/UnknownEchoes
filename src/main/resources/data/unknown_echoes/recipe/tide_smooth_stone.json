@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:mirror_stone"
+  },
+  "result": {
+    "id": "unknown_echoes:tide_smooth_stone",
+    "count": 1
+  }
+}

@@ -1,0 +1,312 @@
+{
+  "type": "unknown_echoes:echo_realm",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "minecraft:overworld",
+    "biome_source": {
+      "type": "minecraft:multi_noise",
+      "biomes": [
+        {
+          "biome": "unknown_echoes:mirror_lake",
+          "parameters": {
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              1.0
+            ],
+            "continentalness": [
+              -1.2,
+              -0.19
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:tide_lighthouse_reef",
+          "parameters": {
+            "temperature": [
+              0.35,
+              1.0
+            ],
+            "humidity": [
+              0.2,
+              1.0
+            ],
+            "continentalness": [
+              -1.2,
+              -0.19
+            ],
+            "erosion": [
+              -1.0,
+              -0.2
+            ],
+            "weirdness": [
+              0.15,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:floating_isles",
+          "parameters": {
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              1.0
+            ],
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              -0.86
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:echo_cliffs",
+          "parameters": {
+            "temperature": [
+              -1.0,
+              0.25
+            ],
+            "humidity": [
+              -1.0,
+              0.6
+            ],
+            "continentalness": [
+              0.25,
+              1.0
+            ],
+            "erosion": [
+              -0.86,
+              -0.78
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:crystal_song_grove",
+          "parameters": {
+            "temperature": [
+              0.25,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              0.6
+            ],
+            "continentalness": [
+              0.25,
+              1.0
+            ],
+            "erosion": [
+              -0.86,
+              -0.78
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:silent_swamp",
+          "parameters": {
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              0.4,
+              1.0
+            ],
+            "continentalness": [
+              -0.19,
+              0.1
+            ],
+            "erosion": [
+              -0.78,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:echo_forest",
+          "parameters": {
+            "temperature": [
+              -1.0,
+              0.55
+            ],
+            "humidity": [
+              -1.0,
+              0.4
+            ],
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -0.78,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:dreaming_meadow",
+          "parameters": {
+            "temperature": [
+              0.55,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              0.4
+            ],
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -0.78,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              0.15
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:broken_bell_wastes",
+          "parameters": {
+            "temperature": [
+              0.55,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              0.4
+            ],
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -0.78,
+              1.0
+            ],
+            "weirdness": [
+              0.15,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:mirror_dust_cloister",
+          "parameters": {
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              0.4,
+              1.0
+            ],
+            "continentalness": [
+              0.1,
+              1.0
+            ],
+            "erosion": [
+              -0.78,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        }
+      ]
+    }
+  }
+}

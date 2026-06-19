@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/crossbow_arrow",
+  "textures": {
+    "layer0": "unknown_echoes:item/tide_crossbow_charged"
+  }
+}

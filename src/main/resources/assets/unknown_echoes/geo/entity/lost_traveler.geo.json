@@ -1,0 +1,62 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.lost_traveler",
+        "texture_width": 64,
+        "texture_height": 64,
+        "visible_bounds_width": 2,
+        "visible_bounds_height": 2.5,
+        "visible_bounds_offset": [0, 1.2, 0]
+      },
+      "bones": [
+        {
+          "name": "root",
+          "pivot": [0, 0, 0]
+        },
+        {
+          "name": "body",
+          "parent": "root",
+          "pivot": [0, 0, 0],
+          "cubes": [
+            { "origin": [-4, 0, -2], "size": [8, 12, 4], "uv": [0, 16] }
+          ]
+        },
+        {
+          "name": "head",
+          "parent": "body",
+          "pivot": [0, 12, 0],
+          "cubes": [
+            { "origin": [-3, 12, -3], "size": [6, 6, 6], "uv": [0, 0] },
+            { "origin": [-3, 12, -3], "size": [6, 6, 6], "inflate": 0.6, "uv": [32, 0] }
+          ]
+        },
+        {
+          "name": "left_arm",
+          "parent": "body",
+          "pivot": [4, 11, 0],
+          "cubes": [
+            { "origin": [4, 4, -1.5], "size": [2, 8, 3], "uv": [0, 36] }
+          ]
+        },
+        {
+          "name": "right_arm",
+          "parent": "body",
+          "pivot": [-4, 11, 0],
+          "cubes": [
+            { "origin": [-6, 4, -1.5], "size": [2, 8, 3], "uv": [12, 36] }
+          ]
+        },
+        {
+          "name": "pack",
+          "parent": "body",
+          "pivot": [0, 8, 2],
+          "cubes": [
+            { "origin": [-3, 5, 2], "size": [6, 7, 4], "uv": [24, 32] }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:wind_eroded_steps",
+  "biomes": "#unknown_echoes:has_wind_eroded_steps",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

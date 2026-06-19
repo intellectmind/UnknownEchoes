@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:wind_eroded_tower",
+  "biomes": "#unknown_echoes:has_wind_eroded_tower",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

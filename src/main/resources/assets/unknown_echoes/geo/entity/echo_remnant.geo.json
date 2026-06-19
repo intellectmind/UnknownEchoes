@@ -1,0 +1,91 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.echo_remnant",
+				"texture_width": 64,
+				"texture_height": 64,
+				"visible_bounds_width": 2,
+				"visible_bounds_height": 2.5,
+				"visible_bounds_offset": [0, 0.75, 0]
+			},
+			"bones": [
+				{
+					"name": "root",
+					"pivot": [0, 0, 0]
+				},
+				{
+					"name": "body",
+					"parent": "root",
+					"pivot": [0, 10, 0],
+					"rotation": [-4, 0, -3],
+					"cubes": [
+						{"origin": [-3, 9, -1.5], "size": [6, 8, 3], "uv": [0, 16]}
+					]
+				},
+				{
+					"name": "head",
+					"parent": "body",
+					"pivot": [0, 17, 0],
+					"cubes": [
+						{"origin": [-2, 17, -2.5], "size": [4, 4, 3], "uv": [0, 0]}
+					]
+				},
+				{
+					"name": "afterimage",
+					"parent": "body",
+					"pivot": [0, 14, 2.5],
+					"rotation": [8, 0, 0],
+					"cubes": [
+						{"origin": [-2.5, 12, 2], "size": [5, 6, 1], "uv": [24, 16]}
+					]
+				},
+				{
+					"name": "arm_l",
+					"parent": "body",
+					"pivot": [-4, 15, 0],
+					"rotation": [0, 0, -8],
+					"cubes": [
+						{"origin": [-5, 8, -1], "size": [2, 7, 2], "uv": [40, 16]}
+					]
+				},
+				{
+					"name": "arm_r",
+					"parent": "body",
+					"pivot": [4, 15, 0],
+					"rotation": [0, 0, 14],
+					"cubes": [
+						{"origin": [3, 11, -1], "size": [2, 4, 2], "uv": [40, 28]}
+					]
+				},
+				{
+					"name": "shards",
+					"parent": "body",
+					"pivot": [0, 13, 0],
+					"cubes": [
+						{"origin": [4.5, 9, 0], "size": [1.5, 1.5, 1.5], "pivot": [5.25, 9.75, 0.75], "rotation": [-20, 20, 15], "uv": [0, 40]},
+						{"origin": [-5.5, 12, 2], "size": [1.5, 1.5, 1.5], "pivot": [-4.75, 12.75, 2.75], "rotation": [15, -25, -10], "uv": [8, 40]},
+						{"origin": [-0.5, 18, 3], "size": [1.5, 1.5, 1.5], "pivot": [0.25, 18.75, 3.75], "rotation": [-10, -30, 20], "uv": [16, 40]}
+					]
+				},
+				{
+					"name": "leg_l",
+					"parent": "root",
+					"pivot": [-2, 5, 0],
+					"cubes": [
+						{"origin": [-2.5, 0, -1], "size": [2, 6, 2], "uv": [24, 40]}
+					]
+				},
+				{
+					"name": "leg_r",
+					"parent": "root",
+					"pivot": [2, 5, 0],
+					"cubes": [
+						{"origin": [0.5, 0, -1], "size": [2, 6, 2], "uv": [40, 40]}
+					]
+				}
+			]
+		}
+	]
+}

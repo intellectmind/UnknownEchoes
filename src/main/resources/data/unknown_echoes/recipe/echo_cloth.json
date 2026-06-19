@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:echo_fiber" },
+    { "item": "unknown_echoes:echo_fiber" },
+    { "item": "unknown_echoes:echo_fiber" },
+    { "item": "unknown_echoes:echo_fiber" }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_cloth",
+    "count": 2
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "values": [
+    "unknown_echoes:observatory_core",
+    "unknown_echoes:artifact_record_table",
+    "unknown_echoes:artifact_tuning_table",
+    "unknown_echoes:wind_current_platform",
+    "unknown_echoes:tide_sensor_door",
+    "unknown_echoes:true_sight_stele",
+    "unknown_echoes:true_sight_chest",
+    "unknown_echoes:echo_archive_terminal"
+  ]
+}

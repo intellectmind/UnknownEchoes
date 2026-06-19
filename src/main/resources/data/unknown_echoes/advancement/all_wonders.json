@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:broken_bell_tower",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_index"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.all_wonders.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.all_wonders.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

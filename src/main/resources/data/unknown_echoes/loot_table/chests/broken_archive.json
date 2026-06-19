@@ -1,0 +1,387 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 60
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 61
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 62
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 5
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 92
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 93
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 94
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 95
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 96
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 97
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 104
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 105
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 106
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 107
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 108
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 109
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 110
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 111
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 112
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ancient_page",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "unknown_echoes:page_id": 113
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": {
+        "type": "minecraft:uniform",
+        "min": 2,
+        "max": 3
+      },
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:book",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 3
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:paper",
+          "weight": 5,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 2,
+                "max": 6
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:ink_sac",
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 3
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:feather",
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 3
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:candle",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 4
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:echo_shard",
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 2
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:archive_binding",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 1
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/broken_archive"
+}

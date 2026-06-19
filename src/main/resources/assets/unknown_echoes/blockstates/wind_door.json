@@ -1,0 +1,20 @@
+{
+  "multipart": [
+    { "when": { "open": "false", "facing": "north|south" },
+      "apply": { "model": "unknown_echoes:block/wind_door" } },
+    { "when": { "open": "false", "facing": "east|west" },
+      "apply": { "model": "unknown_echoes:block/wind_door", "y": 90 } },
+    { "when": { "open": "true", "facing": "north|south", "up": "false" },
+      "apply": { "model": "unknown_echoes:block/wind_door_top" } },
+    { "when": { "open": "true", "facing": "east|west", "up": "false" },
+      "apply": { "model": "unknown_echoes:block/wind_door_top", "y": 90 } },
+    { "when": { "open": "true", "facing": "north|south", "west": "false" },
+      "apply": { "model": "unknown_echoes:block/wind_door_post_left" } },
+    { "when": { "open": "true", "facing": "north|south", "east": "false" },
+      "apply": { "model": "unknown_echoes:block/wind_door_post_right" } },
+    { "when": { "open": "true", "facing": "east|west", "north": "false" },
+      "apply": { "model": "unknown_echoes:block/wind_door_post_left", "y": 90 } },
+    { "when": { "open": "true", "facing": "east|west", "south": "false" },
+      "apply": { "model": "unknown_echoes:block/wind_door_post_right", "y": 90 } }
+  ]
+}

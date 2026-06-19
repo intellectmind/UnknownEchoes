@@ -1,0 +1,6 @@
+{
+  "type": "unknown_echoes:tide_lighthouse_reef",
+  "biomes": "#unknown_echoes:has_tide_lighthouse_reef",
+  "step": "surface_structures",
+  "spawn_overrides": {}
+}

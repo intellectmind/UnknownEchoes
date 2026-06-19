@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " D ",
+    "DMD",
+    " P "
+  ],
+  "key": {
+    "D": {
+      "item": "unknown_echoes:illusion_dust"
+    },
+    "M": {
+      "item": "unknown_echoes:mirror_lake_shard"
+    },
+    "P": {
+      "item": "unknown_echoes:polished_mirror_dust"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:illusion_prism",
+    "count": 2
+  }
+}

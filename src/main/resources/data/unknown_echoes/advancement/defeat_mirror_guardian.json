@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:ability_tide_echo",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:mirror_lake_shard"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.defeat_mirror_guardian.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.defeat_mirror_guardian.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

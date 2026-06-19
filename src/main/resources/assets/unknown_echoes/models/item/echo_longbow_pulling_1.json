@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/bow_pulling_1",
+  "textures": {
+    "layer0": "unknown_echoes:item/echo_longbow_pulling_1"
+  }
+}

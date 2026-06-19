@@ -1,0 +1,459 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.forgotten_colossus",
+				"texture_width": 128,
+				"texture_height": 128,
+				"visible_bounds_width": 4,
+				"visible_bounds_height": 6.5,
+				"visible_bounds_offset": [
+					0,
+					2.75,
+					0
+				]
+			},
+			"bones": [
+				{
+					"name": "root",
+					"pivot": [
+						0,
+						0,
+						0
+					]
+				},
+				{
+					"name": "body",
+					"parent": "root",
+					"pivot": [
+						0,
+						30,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								-9,
+								30,
+								-5
+							],
+							"size": [
+								18,
+								10,
+								10
+							],
+							"uv": [
+								0,
+								54
+							]
+						}
+					]
+				},
+				{
+					"name": "chest",
+					"parent": "body",
+					"pivot": [
+						0,
+						40,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								-11,
+								40,
+								-6
+							],
+							"size": [
+								22,
+								22,
+								12
+							],
+							"uv": [
+								0,
+								20
+							]
+						},
+						{
+							"origin": [
+								-8,
+								42,
+								6
+							],
+							"size": [
+								16,
+								16,
+								3
+							],
+							"uv": [
+								64,
+								74
+							]
+						}
+					]
+				},
+				{
+					"name": "chest_core",
+					"parent": "chest",
+					"pivot": [
+						0,
+						51,
+						-6
+					],
+					"cubes": [
+						{
+							"origin": [
+								-3,
+								48,
+								-8
+							],
+							"size": [
+								6,
+								6,
+								2
+							],
+							"uv": [
+								88,
+								0
+							]
+						}
+					]
+				},
+				{
+					"name": "head",
+					"parent": "chest",
+					"pivot": [
+						0,
+						62,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								-5,
+								62,
+								-5
+							],
+							"size": [
+								10,
+								10,
+								10
+							],
+							"uv": [
+								0,
+								0
+							]
+						},
+						{
+							"origin": [
+								-6,
+								72,
+								-6
+							],
+							"size": [
+								12,
+								3,
+								12
+							],
+							"uv": [
+								40,
+								0
+							]
+						}
+					]
+				},
+				{
+					"name": "left_arm",
+					"parent": "chest",
+					"pivot": [
+						-13,
+						58,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								-19,
+								44,
+								-4
+							],
+							"size": [
+								8,
+								18,
+								8
+							],
+							"uv": [
+								68,
+								20
+							]
+						},
+						{
+							"origin": [
+								-20,
+								56,
+								-5.5
+							],
+							"size": [
+								10,
+								8,
+								11
+							],
+							"uv": [
+								68,
+								46
+							]
+						}
+					]
+				},
+				{
+					"name": "left_forearm",
+					"parent": "left_arm",
+					"pivot": [
+						-15,
+						44,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								-18.5,
+								26,
+								-4.5
+							],
+							"size": [
+								7,
+								18,
+								9
+							],
+							"uv": [
+								0,
+								74
+							]
+						}
+					]
+				},
+				{
+					"name": "right_arm",
+					"parent": "chest",
+					"pivot": [
+						13,
+						58,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								11,
+								44,
+								-4
+							],
+							"size": [
+								8,
+								18,
+								8
+							],
+							"uv": [
+								68,
+								20
+							]
+						},
+						{
+							"origin": [
+								10,
+								56,
+								-5.5
+							],
+							"size": [
+								10,
+								8,
+								11
+							],
+							"uv": [
+								68,
+								46
+							]
+						}
+					]
+				},
+				{
+					"name": "right_forearm",
+					"parent": "right_arm",
+					"pivot": [
+						15,
+						44,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								11.5,
+								26,
+								-4.5
+							],
+							"size": [
+								7,
+								18,
+								9
+							],
+							"uv": [
+								0,
+								74
+							]
+						}
+					]
+				},
+				{
+					"name": "runestone1",
+					"parent": "chest",
+					"pivot": [
+						-16,
+						66,
+						5
+					],
+					"rotation": [
+						0,
+						0,
+						12
+					],
+					"cubes": [
+						{
+							"origin": [
+								-17,
+								63.5,
+								4
+							],
+							"size": [
+								2,
+								5,
+								2
+							],
+							"uv": [
+								104,
+								0
+							]
+						}
+					]
+				},
+				{
+					"name": "runestone2",
+					"parent": "chest",
+					"pivot": [
+						16,
+						66,
+						5
+					],
+					"rotation": [
+						0,
+						0,
+						-12
+					],
+					"cubes": [
+						{
+							"origin": [
+								15,
+								63.5,
+								4
+							],
+							"size": [
+								2,
+								5,
+								2
+							],
+							"uv": [
+								104,
+								0
+							]
+						}
+					]
+				},
+				{
+					"name": "runestone3",
+					"parent": "chest",
+					"pivot": [
+						0,
+						78,
+						7
+					],
+					"rotation": [
+						-10,
+						0,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								-1,
+								75.5,
+								6
+							],
+							"size": [
+								2,
+								5,
+								2
+							],
+							"uv": [
+								104,
+								0
+							]
+						}
+					]
+				},
+				{
+					"name": "left_leg",
+					"pivot": [
+						-5,
+						30,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								-9,
+								0,
+								-4
+							],
+							"size": [
+								8,
+								30,
+								8
+							],
+							"uv": [
+								32,
+								74
+							]
+						}
+					],
+					"parent": "root"
+				},
+				{
+					"name": "right_leg",
+					"pivot": [
+						5,
+						30,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								1,
+								0,
+								-4
+							],
+							"size": [
+								8,
+								30,
+								8
+							],
+							"uv": [
+								32,
+								74
+							]
+						}
+					],
+					"parent": "root"
+				}
+			]
+		}
+	]
+}

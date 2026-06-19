@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:enter_echo_realm",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:forgotten_colossus_spawn_egg"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.defeat_forgotten_colossus.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.defeat_forgotten_colossus.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

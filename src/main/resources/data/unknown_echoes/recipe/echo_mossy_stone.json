@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:echo_stone_bricks"
+    },
+    {
+      "item": "unknown_echoes:silence_moss"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_mossy_stone",
+    "count": 2
+  }
+}
