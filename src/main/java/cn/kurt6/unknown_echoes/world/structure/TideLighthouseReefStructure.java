@@ -49,8 +49,11 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
         // 深水礁盘:只生成在镜湖深水(灯塔高 9 + 浮标层,要求中心水深 ≥ 11)。
         // 不调用 super——SinglePieceStructure 默认拒绝水下放置(gotchas #16)。
         //
-        // CRITICAL: 不在此处做水深校验——/locate 会对每个候选区块调用此方法,
-        // 累积的噪声柱采样会拖服务端主线程超看门狗限制。水深校验推迟到 postProcess。
+        // CRITICAL: 不在此处做连续水方块校验——/locate 会对每个候选区块调用此方法,
+        // 累积的噪声柱采样会拖服务端主线程超看门狗限制。这里用五点高度图预判,严格校验推迟到 postProcess。
+        if (!LakeBedPlacement.hasSubmergedFootprint(context, SIZE, 11, 6)) {
+            return java.util.Optional.empty();
+        }
         return onTopOfChunkCenter(context, Heightmap.Types.OCEAN_FLOOR_WG,
                 builder -> builder.addPiece(new Piece(context.random(),
                         context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ())));

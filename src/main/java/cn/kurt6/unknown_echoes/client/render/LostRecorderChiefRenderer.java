@@ -10,7 +10,8 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 public class LostRecorderChiefRenderer extends GeoEntityRenderer<LostRecorderChief> {
     public LostRecorderChiefRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("lost_recorder_chief"), true));
-        this.shadowRadius = 0.55F;
+        this.shadowRadius = 0.65F;
+        this.withScale(1.15F);
         addRenderLayer(new EchoGlowLayer<>(this,
                 ResourceLocation.fromNamespaceAndPath(UnknownEchoes.MODID,
                         "textures/entity/lost_recorder_chief_glowing.png")));

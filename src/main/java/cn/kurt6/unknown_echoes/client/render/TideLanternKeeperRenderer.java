@@ -16,7 +16,8 @@ public class TideLanternKeeperRenderer extends GeoEntityRenderer<TideLanternKeep
 
     public TideLanternKeeperRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("tide_lantern_keeper"), true));
-        this.shadowRadius = 0.7F;
+        this.shadowRadius = 0.8F;
+        this.withScale(1.15F);
         addRenderLayer(new EchoGlowLayer<>(this,
                 ResourceLocation.fromNamespaceAndPath(UnknownEchoes.MODID,
                         "textures/entity/tide_lantern_keeper_glowing.png")));

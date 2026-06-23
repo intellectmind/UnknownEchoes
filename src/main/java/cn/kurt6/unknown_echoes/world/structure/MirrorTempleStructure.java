@@ -47,8 +47,11 @@ public class MirrorTempleStructure extends SinglePieceStructure {
         // 镜湖群系存在旱地区段:湖底气穴大殿必须整体沉在水里(殿高 12,要求中心水深 ≥ 13)。
         // 不调用 super——SinglePieceStructure 默认拒绝"最低地表 < 海平面"的位置,水下结构必须绕开。
         //
-        // CRITICAL: 不在此处做水深校验——/locate 会对每个候选区块调用此方法,
-        // 累积的噪声柱采样会拖服务端主线程超看门狗限制。水深校验推迟到 postProcess。
+        // CRITICAL: 不在此处做连续水方块校验——/locate 会对每个候选区块调用此方法,
+        // 累积的噪声柱采样会拖服务端主线程超看门狗限制。这里用五点高度图预判,严格校验推迟到 postProcess。
+        if (!LakeBedPlacement.hasSubmergedFootprint(context, WIDTH, 17, 9)) {
+            return java.util.Optional.empty();
+        }
         return onTopOfChunkCenter(context, Heightmap.Types.OCEAN_FLOOR_WG,
                 builder -> builder.addPiece(new Piece(context.random(),
                         context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ())));

@@ -16,7 +16,8 @@ public class SilentPriestRenderer extends GeoEntityRenderer<SilentPriest> {
 
     public SilentPriestRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("silent_priest"), true));
-        this.shadowRadius = 0.6F;
+        this.shadowRadius = 0.7F;
+        this.withScale(1.15F);
         addRenderLayer(new EchoGlowLayer<>(this,
                 ResourceLocation.fromNamespaceAndPath(UnknownEchoes.MODID, "textures/entity/silent_priest_glowing.png")));
     }

@@ -153,6 +153,21 @@
         },
         {
           "type": "minecraft:item",
+          "name": "unknown_echoes:wind_sac_membrane",
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 2
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
           "name": "unknown_echoes:echo_shard",
           "weight": 3,
           "functions": [

@@ -99,14 +99,14 @@ public class ModEntities {
     public static final DeferredHolder<EntityType<?>, EntityType<StormWeaver>> STORM_WEAVER =
             ENTITY_TYPES.register("storm_weaver",
                     () -> EntityType.Builder.of(StormWeaver::new, MobCategory.MONSTER)
-                            .sized(1.8F, 1.6F)
+                            .sized(2.05F, 1.85F)
                             .clientTrackingRange(10)
                             .build("storm_weaver"));
 
     public static final DeferredHolder<EntityType<?>, EntityType<SilentPriest>> SILENT_PRIEST =
             ENTITY_TYPES.register("silent_priest",
                     () -> EntityType.Builder.of(SilentPriest::new, MobCategory.MONSTER)
-                            .sized(0.8F, 2.4F)
+                            .sized(0.95F, 2.75F)
                             .clientTrackingRange(10)
                             .build("silent_priest"));
 
@@ -126,7 +126,7 @@ public class ModEntities {
     public static final DeferredHolder<EntityType<?>, EntityType<TideLanternKeeper>> TIDE_LANTERN_KEEPER =
             ENTITY_TYPES.register("tide_lantern_keeper",
                     () -> EntityType.Builder.of(TideLanternKeeper::new, MobCategory.MONSTER)
-                            .sized(1.1F, 1.9F)
+                            .sized(1.3F, 2.2F)
                             .clientTrackingRange(10)
                             .build("tide_lantern_keeper"));
 
@@ -140,7 +140,7 @@ public class ModEntities {
     public static final DeferredHolder<EntityType<?>, EntityType<MirrorDustButler>> MIRROR_DUST_BUTLER =
             ENTITY_TYPES.register("mirror_dust_butler",
                     () -> EntityType.Builder.of(MirrorDustButler::new, MobCategory.MONSTER)
-                            .sized(0.8F, 1.95F)
+                            .sized(0.95F, 2.25F)
                             .clientTrackingRange(10)
                             .build("mirror_dust_butler"));
 
@@ -265,28 +265,28 @@ public class ModEntities {
     public static final DeferredHolder<EntityType<?>, EntityType<CrystalSongkeeper>> CRYSTAL_SONGKEEPER =
             ENTITY_TYPES.register("crystal_songkeeper",
                     () -> EntityType.Builder.of(CrystalSongkeeper::new, MobCategory.MONSTER)
-                            .sized(0.9F, 2.2F)
+                            .sized(1.05F, 2.55F)
                             .clientTrackingRange(10)
                             .build("crystal_songkeeper"));
 
     public static final DeferredHolder<EntityType<?>, EntityType<BrokenBellKeeper>> BROKEN_BELL_KEEPER =
             ENTITY_TYPES.register("broken_bell_keeper",
                     () -> EntityType.Builder.of(BrokenBellKeeper::new, MobCategory.MONSTER)
-                            .sized(1.0F, 2.4F)
+                            .sized(1.15F, 2.75F)
                             .clientTrackingRange(10)
                             .build("broken_bell_keeper"));
 
     public static final DeferredHolder<EntityType<?>, EntityType<DreamBloomKeeper>> DREAM_BLOOM_KEEPER =
             ENTITY_TYPES.register("dream_bloom_keeper",
                     () -> EntityType.Builder.of(DreamBloomKeeper::new, MobCategory.MONSTER)
-                            .sized(0.95F, 1.8F)
+                            .sized(1.1F, 2.1F)
                             .clientTrackingRange(10)
                             .build("dream_bloom_keeper"));
 
     public static final DeferredHolder<EntityType<?>, EntityType<LostRecorderChief>> LOST_RECORDER_CHIEF =
             ENTITY_TYPES.register("lost_recorder_chief",
                     () -> EntityType.Builder.of(LostRecorderChief::new, MobCategory.MONSTER)
-                            .sized(0.8F, 2.25F)
+                            .sized(0.95F, 2.6F)
                             .clientTrackingRange(10)
                             .build("lost_recorder_chief"));
 }

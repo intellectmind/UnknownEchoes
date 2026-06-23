@@ -43,8 +43,11 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
         // 与倒影回廊一致:必须真正沉在水里(镜湖存在旱地区段),水下结构绕开
         // SinglePieceStructure 的"最低地表 < 海平面即拒绝"默认逻辑。
         //
-        // CRITICAL: 不在此处做水深校验——/locate 会对每个候选区块调用此方法,
-        // 累积的噪声柱采样会拖服务端主线程超看门狗限制。水深校验推迟到 postProcess。
+        // CRITICAL: 不在此处做连续水方块校验——/locate 会对每个候选区块调用此方法,
+        // 累积的噪声柱采样会拖服务端主线程超看门狗限制。这里用五点高度图预判,严格校验推迟到 postProcess。
+        if (!LakeBedPlacement.hasSubmergedFootprint(context, SIZE, 6, 4)) {
+            return java.util.Optional.empty();
+        }
         return onTopOfChunkCenter(context, Heightmap.Types.OCEAN_FLOOR_WG,
                 builder -> builder.addPiece(new Piece(context.random(),
                         context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ())));

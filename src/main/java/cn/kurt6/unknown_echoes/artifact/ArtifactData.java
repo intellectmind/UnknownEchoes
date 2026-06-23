@@ -53,9 +53,8 @@ public class ArtifactData {
                         Map<String, Integer> serials, int energyTwentieths,
                         int energyRemainderHundredths, long energyGameTime) {
         this.dataVersion = CURRENT_DATA_VERSION;
-        if (dataVersion >= CURRENT_DATA_VERSION) {
-            copyCurrentArtifacts(levels, tunings, serials);
-        }
+        // 旧档也必须保留当前仍存在的神器数据;新增字段由 Codec 默认值补齐。
+        copyCurrentArtifacts(levels, tunings, serials);
         this.energyTwentieths = energyTwentieths;
         this.energyRemainderHundredths = Math.max(0, Math.min(99, energyRemainderHundredths));
         this.energyGameTime = energyGameTime;

@@ -9,7 +9,7 @@
   "has_ceiling": false,
   "coordinate_scale": 1.0,
   "ambient_light": 0.3,
-  "fixed_time": 13000,
+  "fixed_time": 12900,
   "min_y": -64,
   "height": 384,
   "logical_height": 384,

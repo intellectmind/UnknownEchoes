@@ -4,6 +4,7 @@ import net.minecraft.core.QuartPos;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.NoiseColumn;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.Structure;
 
 /**
@@ -48,6 +49,77 @@ final class LakeBedPlacement {
                 && waterDepth(context, minX + max, minZ) >= edgeDepth
                 && waterDepth(context, minX, minZ + max) >= edgeDepth
                 && waterDepth(context, minX + max, minZ + max) >= edgeDepth;
+    }
+
+    /**
+     * /locate 友好的足印预判:只采样中心群系与五个高度图点,不扫整列方块状态。
+     * 严格的连续水方块校验仍在 Piece.postProcess 执行,这里用于过滤会生成空现场的候选点。
+     */
+    static boolean hasSubmergedFootprint(Structure.GenerationContext context,
+                                         int footprint, int centerDepth, int edgeDepth) {
+        int minX = context.chunkPos().getMinBlockX();
+        int minZ = context.chunkPos().getMinBlockZ();
+        int half = footprint / 2;
+        int max = footprint - 1;
+        int seaLevel = context.chunkGenerator().getSeaLevel();
+        int centerX = minX + half;
+        int centerZ = minZ + half;
+
+        var biome = context.biomeSource().getNoiseBiome(
+                QuartPos.fromBlock(centerX), QuartPos.fromBlock(seaLevel),
+                QuartPos.fromBlock(centerZ), context.randomState().sampler());
+        if (!context.validBiome().test(biome)) {
+            return false;
+        }
+
+        return hasWaterColumnByHeightmap(context, centerX, centerZ, centerDepth)
+                && hasWaterColumnByHeightmap(context, minX, minZ, edgeDepth)
+                && hasWaterColumnByHeightmap(context, minX + max, minZ, edgeDepth)
+                && hasWaterColumnByHeightmap(context, minX, minZ + max, edgeDepth)
+                && hasWaterColumnByHeightmap(context, minX + max, minZ + max, edgeDepth);
+    }
+
+    /**
+     * /locate 友好的中心点预判:只采样中心群系与两个高度图,不扫整列方块状态。
+     * 保留给非主线小结构使用;主线水下结构优先用 hasSubmergedFootprint。
+     */
+    static boolean hasSubmergedCenter(Structure.GenerationContext context,
+                                      int footprint, int centerDepth) {
+        int minX = context.chunkPos().getMinBlockX();
+        int minZ = context.chunkPos().getMinBlockZ();
+        int half = footprint / 2;
+        int centerX = minX + half;
+        int centerZ = minZ + half;
+        int seaLevel = context.chunkGenerator().getSeaLevel();
+
+        var biome = context.biomeSource().getNoiseBiome(
+                QuartPos.fromBlock(centerX), QuartPos.fromBlock(seaLevel),
+                QuartPos.fromBlock(centerZ), context.randomState().sampler());
+        if (!context.validBiome().test(biome)) {
+            return false;
+        }
+
+        int surfaceY = context.chunkGenerator().getBaseHeight(centerX, centerZ,
+                Heightmap.Types.WORLD_SURFACE_WG, context.heightAccessor(), context.randomState());
+        if (surfaceY > seaLevel + 1) {
+            return false;
+        }
+        int floorY = context.chunkGenerator().getBaseHeight(centerX, centerZ,
+                Heightmap.Types.OCEAN_FLOOR_WG, context.heightAccessor(), context.randomState());
+        return seaLevel - floorY >= centerDepth;
+    }
+
+    private static boolean hasWaterColumnByHeightmap(Structure.GenerationContext context,
+                                                     int x, int z, int requiredDepth) {
+        int seaLevel = context.chunkGenerator().getSeaLevel();
+        int surfaceY = context.chunkGenerator().getBaseHeight(x, z,
+                Heightmap.Types.WORLD_SURFACE_WG, context.heightAccessor(), context.randomState());
+        if (surfaceY > seaLevel + 1) {
+            return false;
+        }
+        int floorY = context.chunkGenerator().getBaseHeight(x, z,
+                Heightmap.Types.OCEAN_FLOOR_WG, context.heightAccessor(), context.randomState());
+        return seaLevel - floorY >= requiredDepth;
     }
 
     /** 从海平面向下数连续水方块数;遇到非水(湖底/旱地)即停。 */

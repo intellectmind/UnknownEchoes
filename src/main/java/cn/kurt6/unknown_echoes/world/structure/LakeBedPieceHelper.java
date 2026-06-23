@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.world.structure;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.level.NoiseColumn;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
@@ -58,5 +59,41 @@ public final class LakeBedPieceHelper {
                 && waterDepth(level, generator, maxX, minZ) >= edgeDepth
                 && waterDepth(level, generator, minX, maxZ) >= edgeDepth
                 && waterDepth(level, generator, maxX, maxZ) >= edgeDepth;
+    }
+
+    /**
+     * 用生成器噪声柱校验水深,不读取周边区块方块状态。
+     * 大型结构跨区块时,postProcess 早期读取远端区块可能得到未完整填充的状态,
+     * 导致 /locate 找得到但现场被误判为落旱地并整座取消。
+     */
+    public static boolean checkWaterDepthByNoise(WorldGenLevel level, ChunkGenerator generator,
+                                                 int minX, int minZ, int width, int depth,
+                                                 int centerDepth, int edgeDepth) {
+        int centerX = minX + width / 2;
+        int centerZ = minZ + depth / 2;
+        int maxX = minX + width - 1;
+        int maxZ = minZ + depth - 1;
+
+        return noiseWaterDepth(level, generator, centerX, centerZ) >= centerDepth
+                && noiseWaterDepth(level, generator, minX, minZ) >= edgeDepth
+                && noiseWaterDepth(level, generator, maxX, minZ) >= edgeDepth
+                && noiseWaterDepth(level, generator, minX, maxZ) >= edgeDepth
+                && noiseWaterDepth(level, generator, maxX, maxZ) >= edgeDepth;
+    }
+
+    private static int noiseWaterDepth(WorldGenLevel level, ChunkGenerator generator, int x, int z) {
+        NoiseColumn column = generator.getBaseColumn(
+                x, z, level, level.getLevel().getChunkSource().randomState());
+        int seaLevel = generator.getSeaLevel();
+        int minY = level.getMinBuildHeight();
+        int depth = 0;
+        for (int y = seaLevel - 1; y > minY; y--) {
+            BlockState state = column.getBlock(y);
+            if (!state.getFluidState().is(FluidTags.WATER)) {
+                break;
+            }
+            depth++;
+        }
+        return depth;
     }
 }

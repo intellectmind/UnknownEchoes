@@ -16,7 +16,8 @@ public class StormWeaverRenderer extends GeoEntityRenderer<StormWeaver> {
 
     public StormWeaverRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("storm_weaver"), true));
-        this.shadowRadius = 0.9F;
+        this.shadowRadius = 1.05F;
+        this.withScale(1.15F);
         addRenderLayer(new EchoGlowLayer<>(this,
                 ResourceLocation.fromNamespaceAndPath(UnknownEchoes.MODID, "textures/entity/storm_weaver_glowing.png")));
     }

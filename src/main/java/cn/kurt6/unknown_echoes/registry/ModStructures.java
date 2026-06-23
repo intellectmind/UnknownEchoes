@@ -6,7 +6,6 @@ import cn.kurt6.unknown_echoes.world.structure.EchoTempleStructure;
 import cn.kurt6.unknown_echoes.world.structure.LateRegionSiteStructure;
 import cn.kurt6.unknown_echoes.world.structure.MirrorDustCloisterStructure;
 import cn.kurt6.unknown_echoes.world.structure.ReflectionVaultStructure;
-import cn.kurt6.unknown_echoes.world.structure.ForgottenColossusArenaStructure;
 import cn.kurt6.unknown_echoes.world.structure.MirrorTempleStructure;
 import cn.kurt6.unknown_echoes.world.structure.RegionSiteStructure;
 import cn.kurt6.unknown_echoes.world.structure.ResonanceBeaconStructure;
@@ -43,9 +42,6 @@ public class ModStructures {
 
     public static final DeferredHolder<StructureType<?>, StructureType<ResonanceBeaconStructure>> RESONANCE_BEACON_STRUCTURE =
             STRUCTURE_TYPES.register("resonance_beacon_structure", () -> () -> ResonanceBeaconStructure.CODEC);
-
-    public static final DeferredHolder<StructureType<?>, StructureType<ForgottenColossusArenaStructure>> FORGOTTEN_COLOSSUS_ARENA =
-            STRUCTURE_TYPES.register("forgotten_colossus_arena", () -> () -> ForgottenColossusArenaStructure.CODEC);
 
     public static final DeferredHolder<StructureType<?>, StructureType<RunePuzzleRoomStructure>> RUNE_PUZZLE_ROOM =
             STRUCTURE_TYPES.register("rune_puzzle_room", () -> () -> RunePuzzleRoomStructure.CODEC);
@@ -187,10 +183,6 @@ public class ModStructures {
     public static final DeferredHolder<StructurePieceType, StructurePieceType> RESONANCE_BEACON_PIECE =
             STRUCTURE_PIECE_TYPES.register("resonance_beacon_piece",
                     () -> (StructurePieceType.ContextlessType) ResonanceBeaconStructure.Piece::new);
-
-    public static final DeferredHolder<StructurePieceType, StructurePieceType> FORGOTTEN_COLOSSUS_ARENA_PIECE =
-            STRUCTURE_PIECE_TYPES.register("forgotten_colossus_arena_piece",
-                    () -> (StructurePieceType.ContextlessType) ForgottenColossusArenaStructure.Piece::new);
 
     public static final DeferredHolder<StructurePieceType, StructurePieceType> RUNE_PUZZLE_ROOM_PIECE =
             STRUCTURE_PIECE_TYPES.register("rune_puzzle_room_piece",

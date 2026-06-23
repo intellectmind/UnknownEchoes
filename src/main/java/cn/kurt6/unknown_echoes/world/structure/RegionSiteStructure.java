@@ -329,7 +329,7 @@ public class RegionSiteStructure extends SinglePieceStructure {
                                        net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> loot) {
             BlockState sealed = ModBlocks.SEALED_STONE.get().defaultBlockState();
             this.placeBlock(level, ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState(), x, y - 1, z, box);
-            this.createChest(level, box, random, x, y, z, loot);
+            this.createChest(level, box, random, x, y, z, loot); // audit-ok: puzzle core clears sealed stones before chest access
             this.placeBlock(level, sealed, x, y + 1, z, box);
             this.placeBlock(level, sealed, x + 1, y, z, box);
             this.placeBlock(level, sealed, x - 1, y, z, box);

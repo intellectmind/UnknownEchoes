@@ -11,7 +11,11 @@
           "functions": [
             {
               "function": "minecraft:set_count",
-              "count": 1
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 2,
+                "max": 3
+              }
             }
           ]
         }
@@ -42,21 +46,6 @@
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:echo_armor_plate",
-          "weight": 3,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 2,
-                "max": 4
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
           "name": "unknown_echoes:echo_weapon_frame",
           "weight": 2
         },
@@ -67,13 +56,18 @@
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:traveler_badge",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:echo_index",
-          "weight": 2
+          "name": "unknown_echoes:echo_core",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 2
+              }
+            }
+          ]
         },
         {
           "type": "minecraft:item",
@@ -399,12 +393,7 @@
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:crystal_song_upgrade_core",
-          "weight": 1
-        },
-        {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:broken_bell_upgrade_core",
+          "name": "unknown_echoes:silence_upgrade_core",
           "weight": 1
         }
       ]

@@ -184,6 +184,16 @@
         },
         {
           "type": "minecraft:item",
+          "name": "unknown_echoes:moss_shell_plate",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:silent_resin",
+          "weight": 1
+        },
+        {
+          "type": "minecraft:item",
           "name": "minecraft:experience_bottle",
           "weight": 2,
           "functions": [
@@ -266,6 +276,22 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:silence_upgrade_core"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.25
         }
       ]
     }

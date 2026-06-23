@@ -18,7 +18,8 @@ public class MirrorDustButlerRenderer extends GeoEntityRenderer<MirrorDustButler
 
     public MirrorDustButlerRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("mirror_dust_butler"), true));
-        this.shadowRadius = 0.5F;
+        this.shadowRadius = 0.6F;
+        this.withScale(1.15F);
         addRenderLayer(new EchoGlowLayer<>(this,
                 ResourceLocation.fromNamespaceAndPath(UnknownEchoes.MODID,
                         "textures/entity/mirror_dust_butler_glowing.png")));

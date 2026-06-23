@@ -216,6 +216,11 @@
         },
         {
           "type": "minecraft:item",
+          "name": "unknown_echoes:decoy_shard",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
           "name": "unknown_echoes:echo_dust",
           "weight": 3,
           "functions": [
@@ -282,13 +287,29 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:mirror_staff_core"
+          "name": "unknown_echoes:true_sight_research_rubbing"
         }
       ],
       "conditions": [
         {
           "condition": "minecraft:random_chance",
           "chance": 0.2
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:true_sight_blade_blueprint"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.25
         }
       ]
     }

@@ -177,6 +177,16 @@
         },
         {
           "type": "minecraft:item",
+          "name": "unknown_echoes:tide_pearl",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:mirror_scale",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
           "name": "unknown_echoes:tide_salt",
           "weight": 4,
           "functions": [
@@ -260,6 +270,38 @@
         {
           "condition": "minecraft:random_chance",
           "chance": 0.5
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:tide_crossbow_blueprint"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.35
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:tide_upgrade_core"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.2
         }
       ]
     }

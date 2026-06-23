@@ -7,6 +7,36 @@
       "type": "minecraft:multi_noise",
       "biomes": [
         {
+          "biome": "unknown_echoes:tide_lighthouse_reef",
+          "parameters": {
+            "temperature": [
+              0.35,
+              1.0
+            ],
+            "humidity": [
+              0.2,
+              1.0
+            ],
+            "continentalness": [
+              -1.2,
+              -0.45
+            ],
+            "erosion": [
+              -1.0,
+              -0.2
+            ],
+            "weirdness": [
+              0.15,
+              1.0
+            ],
+            "depth": [
+              -1.0,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
           "biome": "unknown_echoes:mirror_lake",
           "parameters": {
             "temperature": [
@@ -27,36 +57,6 @@
             ],
             "weirdness": [
               -1.0,
-              1.0
-            ],
-            "depth": [
-              -1.0,
-              1.0
-            ],
-            "offset": 0.0
-          }
-        },
-        {
-          "biome": "unknown_echoes:tide_lighthouse_reef",
-          "parameters": {
-            "temperature": [
-              0.35,
-              1.0
-            ],
-            "humidity": [
-              0.2,
-              1.0
-            ],
-            "continentalness": [
-              -1.2,
-              -0.19
-            ],
-            "erosion": [
-              -1.0,
-              -0.2
-            ],
-            "weirdness": [
-              0.15,
               1.0
             ],
             "depth": [

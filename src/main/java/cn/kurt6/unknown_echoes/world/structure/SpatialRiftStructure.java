@@ -96,9 +96,7 @@ public class SpatialRiftStructure extends SinglePieceStructure {
                     this.placeBlock(level, calcite, c + 2 + dx, 0, c + 2 + dz, box);
                 }
             }
-            this.placeBlock(level, Blocks.AIR.defaultBlockState(), c + 2, 1, c + 2, box);
-            this.placeBlock(level, Blocks.AIR.defaultBlockState(), c + 2, 2, c + 2, box);
-            this.createChest(level, box, random, c + 2, 1, c + 2, ModLootTables.SPATIAL_RIFT_CHEST);
+            buildAccessibleChest(level, random, box, c + 2, 1, c + 2, ModLootTables.SPATIAL_RIFT_CHEST);
         }
 
         @Override

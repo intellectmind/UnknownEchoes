@@ -1,7 +1,7 @@
 {
   "feature": "unknown_echoes:silent_pod_patch",
   "placement": [
-    { "type": "minecraft:count", "count": 5 },
+    { "type": "minecraft:count", "count": 3 },
     { "type": "minecraft:in_square" },
     { "type": "minecraft:heightmap", "heightmap": "MOTION_BLOCKING" },
     {

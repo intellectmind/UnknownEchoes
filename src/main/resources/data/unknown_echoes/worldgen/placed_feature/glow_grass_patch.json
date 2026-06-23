@@ -1,7 +1,7 @@
 {
   "feature": "unknown_echoes:glow_grass_patch",
   "placement": [
-    { "type": "minecraft:count", "count": 7 },
+    { "type": "minecraft:count", "count": 4 },
     { "type": "minecraft:in_square" },
     { "type": "minecraft:heightmap", "heightmap": "MOTION_BLOCKING" },
     {

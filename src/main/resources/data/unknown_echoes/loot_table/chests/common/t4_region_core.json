@@ -107,21 +107,6 @@
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:echo_armor_plate",
-          "weight": 3,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 2
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
           "name": "unknown_echoes:echo_weapon_frame",
           "weight": 2
         },
@@ -135,67 +120,156 @@
     {
       "rolls": 1,
       "bonus_rolls": 0,
-      "conditions": [
-        {
-          "condition": "minecraft:random_chance",
-          "chance": 0.15
-        }
-      ],
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:wind_enhance_core",
-          "weight": 2
+          "name": "unknown_echoes:mirror_lake_shard",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 2,
+                "max": 5
+              }
+            }
+          ]
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:tide_upgrade_core",
+          "name": "unknown_echoes:crystal_feather",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 3
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:tide_rune_fragment",
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 2,
+                "max": 4
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:illusion_dust",
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 2,
+                "max": 4
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:silence_moss",
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 2,
+                "max": 4
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:crystal_song_shard",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 3
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:resonant_crystal_note",
           "weight": 1
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:true_sight_upgrade_core",
+          "name": "unknown_echoes:broken_bell_gear",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 3
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:rusted_time_gear",
           "weight": 1
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:silence_upgrade_core",
-          "weight": 1
+          "name": "unknown_echoes:sky_quartz",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 3
+              }
+            }
+          ]
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:crystal_song_upgrade_core",
-          "weight": 1
+          "name": "unknown_echoes:tide_salt",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 2,
+                "max": 5
+              }
+            }
+          ]
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:broken_bell_upgrade_core",
+          "name": "unknown_echoes:echo_amber",
           "weight": 1
-        }
-      ]
-    },
-    {
-      "rolls": 1,
-      "bonus_rolls": 0,
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:wind_spear_blueprint",
-          "weight": 1
-        },
-        {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:tide_crossbow_blueprint",
-          "weight": 1
-        },
-        {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:true_sight_blade_blueprint",
-          "weight": 1
-        },
-        {
-          "type": "minecraft:empty",
-          "weight": 3
         }
       ]
     },

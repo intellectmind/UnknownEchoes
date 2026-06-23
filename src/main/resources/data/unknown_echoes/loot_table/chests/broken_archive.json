@@ -367,7 +367,7 @@
         },
         {
           "type": "minecraft:item",
-          "name": "unknown_echoes:archive_binding",
+          "name": "unknown_echoes:inscription_rubbing_paper",
           "weight": 1,
           "functions": [
             {

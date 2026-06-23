@@ -13,6 +13,7 @@ import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.SeaPickleBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -209,7 +210,9 @@ public class WorldWonderStructure extends SinglePieceStructure {
             for (int i = 0; i < 10; i++) {
                 int x = c - 21 + random.nextInt(43);
                 int z = c - 21 + random.nextInt(43);
-                this.placeBlock(level, ModBlocks.PEARL_ANEMONE.get().defaultBlockState(), x, 2, z, box);
+                this.placeBlock(level, ModBlocks.PEARL_CORAL_BLOCK.get().defaultBlockState(), x, 1, z, box);
+                this.placeBlock(level, ModBlocks.PEARL_ANEMONE.get().defaultBlockState()
+                        .setValue(SeaPickleBlock.WATERLOGGED, Boolean.TRUE), x, 2, z, box);
             }
             platform(level, box, c - 3, 2, c - 3, 7, ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
             this.placeBlock(level, ModBlocks.TRUE_SIGHT_STELE.get().defaultBlockState(), c, 3, c, box);
@@ -328,11 +331,17 @@ public class WorldWonderStructure extends SinglePieceStructure {
         private void decorateWorldTree(WorldGenLevel level, BoundingBox box, RandomSource random, int c) {
             BlockState lamp = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
             BlockState flower = ModBlocks.ECHO_FLOWER.get().defaultBlockState();
+            BlockState moss = Blocks.MOSS_BLOCK.defaultBlockState();
             for (int i = 0; i < 24; i++) {
                 double angle = i * Math.PI / 12.0;
                 int x = c + (int) Math.round(Math.cos(angle) * 20);
                 int z = c + (int) Math.round(Math.sin(angle) * 20);
-                this.placeBlock(level, i % 3 == 0 ? lamp : flower, x, 2, z, box);
+                if (i % 3 == 0) {
+                    this.placeBlock(level, lamp, x, 2, z, box);
+                } else {
+                    this.placeBlock(level, moss, x, 1, z, box);
+                    this.placeBlock(level, flower, x, 2, z, box);
+                }
             }
             for (int i = 0; i < 18; i++) {
                 int x = c - 18 + random.nextInt(37);

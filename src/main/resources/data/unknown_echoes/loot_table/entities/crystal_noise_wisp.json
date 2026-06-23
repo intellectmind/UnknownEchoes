@@ -29,23 +29,13 @@
         {
           "type": "minecraft:item",
           "name": "unknown_echoes:resonant_crystal_note",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 0,
-                "max": 1
-              }
-            }
-          ]
+          "weight": 1
         }
       ],
       "conditions": [
         {
           "condition": "minecraft:random_chance",
-          "chance": 0.12
+          "chance": 0.06
         }
       ]
     }

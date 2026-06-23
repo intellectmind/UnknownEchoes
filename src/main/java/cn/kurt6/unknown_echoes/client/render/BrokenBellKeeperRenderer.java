@@ -11,7 +11,8 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 public class BrokenBellKeeperRenderer extends GeoEntityRenderer<BrokenBellKeeper> {
     public BrokenBellKeeperRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("broken_bell_keeper"), true));
-        this.shadowRadius = 0.75F;
+        this.shadowRadius = 0.85F;
+        this.withScale(1.15F);
         addRenderLayer(new EchoGlowLayer<>(this,
                 ResourceLocation.fromNamespaceAndPath(UnknownEchoes.MODID,
                         "textures/entity/broken_bell_keeper_glowing.png")));

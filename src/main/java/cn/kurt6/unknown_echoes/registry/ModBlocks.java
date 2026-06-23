@@ -171,7 +171,7 @@ public class ModBlocks {
     /** 晶歌晶簇:晶歌林地地表晶体,采集获得晶歌碎片。 */
     public static final DeferredBlock<Block> CRYSTAL_SONG_CLUSTER = BLOCKS.register("crystal_song_cluster",
             () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
-                    .strength(1.2F, 3.0F).sound(SoundType.AMETHYST).lightLevel(state -> 7)
+                    .strength(1.2F, 3.0F).sound(SoundType.AMETHYST).lightLevel(state -> 10)
                     .requiresCorrectToolForDrops().noOcclusion()));
 
     /** 共鸣蘑菇:晶歌林地补充材料植物,无 tick。 */
@@ -179,7 +179,7 @@ public class ModBlocks {
             () -> new FlowerBlock(MobEffects.GLOWING, 6.0F,
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
                             .noCollission().instabreak().sound(SoundType.FUNGUS)
-                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 5)
+                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 8)
                             .pushReaction(PushReaction.DESTROY)));
 
     /** 沉眠花:沉眠花海补给资源,采集获得沉眠花蜜。 */
@@ -187,7 +187,7 @@ public class ModBlocks {
             () -> new FlowerBlock(MobEffects.REGENERATION, 5.0F,
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
                             .noCollission().instabreak().sound(SoundType.GRASS)
-                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 6)
+                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 9)
                             .pushReaction(PushReaction.DESTROY)));
 
     /** 回响琥珀矿:沉眠花海与回响森林交界的温和矿物,补充饰品/食物材料。 */
@@ -199,7 +199,7 @@ public class ModBlocks {
     public static final DeferredBlock<TallGrassBlock> DREAM_MIST_VINE = BLOCKS.register("dream_mist_vine",
             () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
                     .replaceable().noCollission().instabreak().sound(SoundType.VINE)
-                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 3)
+                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 6)
                     .pushReaction(PushReaction.DESTROY)));
 
     /** 残钟锈矿:残钟荒原受控矿物资源,采集获得残钟齿轮。 */
@@ -252,7 +252,7 @@ public class ModBlocks {
 
     public static final DeferredBlock<RotatedPillarBlock> ECHO_LOG = BLOCKS.register("echo_log",
             () -> new RotatedPillarBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
-                    .strength(2.0F).sound(SoundType.WOOD).lightLevel(state -> 3).ignitedByLava()));
+                    .strength(2.0F).sound(SoundType.WOOD).lightLevel(state -> 6).ignitedByLava()));
 
     public static final DeferredBlock<Block> ECHO_PLANKS = BLOCKS.registerSimpleBlock("echo_planks",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
@@ -261,7 +261,7 @@ public class ModBlocks {
     public static final DeferredBlock<LeavesBlock> ECHO_LEAVES = BLOCKS.register("echo_leaves",
             () -> new LeavesBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .strength(0.2F).randomTicks().sound(SoundType.AZALEA_LEAVES).noOcclusion()
-                    .lightLevel(state -> 4)
+                    .lightLevel(state -> 8)
                     .isValidSpawn((state, level, pos, type) -> false)
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false)
@@ -269,7 +269,7 @@ public class ModBlocks {
 
     public static final DeferredBlock<RotatedPillarBlock> WHISPERING_LOG = BLOCKS.register("whispering_log",
             () -> new RotatedPillarBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
-                    .strength(2.0F).sound(SoundType.WOOD).lightLevel(state -> 2).ignitedByLava()));
+                    .strength(2.0F).sound(SoundType.WOOD).lightLevel(state -> 5).ignitedByLava()));
 
     public static final DeferredBlock<Block> WHISPERING_PLANKS = BLOCKS.registerSimpleBlock("whispering_planks",
             BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
@@ -278,7 +278,7 @@ public class ModBlocks {
     public static final DeferredBlock<LeavesBlock> WHISPERING_LEAVES = BLOCKS.register("whispering_leaves",
             () -> new LeavesBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
                     .strength(0.2F).randomTicks().sound(SoundType.AZALEA_LEAVES).noOcclusion()
-                    .lightLevel(state -> 3)
+                    .lightLevel(state -> 7)
                     .isValidSpawn((state, level, pos, type) -> false)
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false)
@@ -286,7 +286,7 @@ public class ModBlocks {
 
     public static final DeferredBlock<RotatedPillarBlock> TIDEWOOD_LOG = BLOCKS.register("tidewood_log",
             () -> new RotatedPillarBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
-                    .strength(2.0F).sound(SoundType.WOOD).lightLevel(state -> 2).ignitedByLava()));
+                    .strength(2.0F).sound(SoundType.WOOD).lightLevel(state -> 5).ignitedByLava()));
 
     public static final DeferredBlock<Block> TIDEWOOD_PLANKS = BLOCKS.registerSimpleBlock("tidewood_planks",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
@@ -295,7 +295,7 @@ public class ModBlocks {
     public static final DeferredBlock<LeavesBlock> TIDEWOOD_LEAVES = BLOCKS.register("tidewood_leaves",
             () -> new LeavesBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
                     .strength(0.2F).randomTicks().sound(SoundType.AZALEA_LEAVES).noOcclusion()
-                    .lightLevel(state -> 3)
+                    .lightLevel(state -> 7)
                     .isValidSpawn((state, level, pos, type) -> false)
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false)
@@ -304,20 +304,20 @@ public class ModBlocks {
     public static final DeferredBlock<TallGrassBlock> GLOW_GRASS = BLOCKS.register("glow_grass",
             () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .replaceable().noCollission().instabreak().sound(SoundType.GRASS)
-                    .offsetType(BlockBehaviour.OffsetType.XYZ).lightLevel(state -> 5)
+                    .offsetType(BlockBehaviour.OffsetType.XYZ).lightLevel(state -> 8)
                     .pushReaction(PushReaction.DESTROY)));
 
     public static final DeferredBlock<FlowerBlock> ECHO_FLOWER = BLOCKS.register("echo_flower",
             () -> new FlowerBlock(MobEffects.GLOWING, 8.0F,
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
                             .noCollission().instabreak().sound(SoundType.GRASS)
-                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 7)
+                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 10)
                             .pushReaction(PushReaction.DESTROY)));
 
     public static final DeferredBlock<TallGrassBlock> GLOW_FERN = BLOCKS.register("glow_fern",
             () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .replaceable().noCollission().instabreak().sound(SoundType.GRASS)
-                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 4)
+                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 8)
                     .pushReaction(PushReaction.DESTROY)));
 
     // ---- V0.6A Mini Boss ----
@@ -414,27 +414,28 @@ public class ModBlocks {
     public static final DeferredBlock<TallGrassBlock> MIRROR_REED = BLOCKS.register("mirror_reed",
             () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
                     .replaceable().noCollission().instabreak().sound(SoundType.WET_GRASS)
-                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 4)
+                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 7)
                     .pushReaction(PushReaction.DESTROY)));
 
     /** 潮草:镜湖浅水水生植物,用于潮汐食物与海底景观。 */
     public static final DeferredBlock<SeagrassBlock> TIDE_GRASS = BLOCKS.register("tide_grass",
             () -> new SeagrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
                     .replaceable().noCollission().instabreak().sound(SoundType.WET_GRASS)
+                    .lightLevel(state -> 6)
                     .pushReaction(PushReaction.DESTROY)));
 
     /** 珍珠海葵:海底发光植物,作为珍珠蚌和潮汐食物路线的普通来源。 */
     public static final DeferredBlock<SeaPickleBlock> PEARL_ANEMONE = BLOCKS.register("pearl_anemone",
             () -> new SeaPickleBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
                     .noCollission().instabreak().sound(SoundType.CORAL_BLOCK)
-                    .lightLevel(state -> 7).pushReaction(PushReaction.DESTROY)));
+                    .lightLevel(state -> 10).pushReaction(PushReaction.DESTROY)));
 
     /** 星雾花:漂浮群岛/沉眠花海的低密度发光花,只作景观与普通食材来源。 */
     public static final DeferredBlock<FlowerBlock> STAR_MIST_BLOOM = BLOCKS.register("star_mist_bloom",
             () -> new FlowerBlock(MobEffects.SLOW_FALLING, 5.0F,
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
                             .noCollission().instabreak().sound(SoundType.GRASS).noOcclusion()
-                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 6)
+                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 9)
                             .pushReaction(PushReaction.DESTROY)));
 
     /** 镜莲:镜湖岸线点缀植物,提供短效探索补给食材。 */
@@ -442,14 +443,14 @@ public class ModBlocks {
             () -> new FlowerBlock(MobEffects.NIGHT_VISION, 4.0F,
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
                             .noCollission().instabreak().sound(SoundType.WET_GRASS).noOcclusion()
-                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 5)
+                            .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 8)
                             .pushReaction(PushReaction.DESTROY)));
 
     /** 灰铃草:残钟荒原与峭壁边缘的稀疏草丛,只做气氛和可采集装饰。 */
     public static final DeferredBlock<TallGrassBlock> ASH_CHIME_GRASS = BLOCKS.register("ash_chime_grass",
             () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_YELLOW)
                     .replaceable().noCollission().instabreak().sound(SoundType.GRASS).noOcclusion()
-                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 2)
+                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 5)
                     .pushReaction(PushReaction.DESTROY)));
 
     // ---- V0.7V 基础景观方块:用于自然过渡与建筑调色,不承载进度权限 ----

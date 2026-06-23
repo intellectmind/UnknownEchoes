@@ -54,25 +54,25 @@ public class EchoOverviewScreen extends Screen {
     private static final int ABILITY_ICON_ATLAS_WIDTH = 160;
 
     // ---- 5.8 色板:镜湖暗蓝 + 回响青线 + 氧化金记忆墨迹 ----
-    private static final int COL_BACKDROP_TOP = 0xE2050810;
-    private static final int COL_BACKDROP_BOTTOM = 0xF0010308;
-    private static final int COL_VOID = 0xF8020307;
-    private static final int COL_PANEL = 0xB7070C14;
-    private static final int COL_PANEL_DEEP = 0xDA04070D;
-    private static final int COL_PANEL_LIGHT = 0xC9101824;
-    private static final int COL_PANEL_WASH = 0x5A183040;
-    private static final int COL_CARD = 0xB8121B27;
-    private static final int COL_CARD_HOVER = 0xD51A2B39;
-    private static final int COL_EDGE = 0xFF263A47;
-    private static final int COL_EDGE_SOFT = 0x88304E59;
-    private static final int COL_EDGE_FAINT = 0x44243C46;
-    private static final int COL_ACCENT = 0xFF62E6D8;
-    private static final int COL_ACCENT_DIM = 0xFF2D8B86;
-    private static final int COL_ACCENT_GLOW = 0x5559D6C8;
-    private static final int COL_ACCENT_HAZE = 0x2459D6C8;
-    private static final int COL_GOLD = 0xFFD8B76A;
-    private static final int COL_GOLD_DIM = 0xFF8D7440;
-    private static final int COL_GOLD_GLOW = 0x44D8B76A;
+    private static final int COL_BACKDROP_TOP = 0xE507111D;
+    private static final int COL_BACKDROP_BOTTOM = 0xF303050A;
+    private static final int COL_VOID = 0xFA020306;
+    private static final int COL_PANEL = 0xC00A111A;
+    private static final int COL_PANEL_DEEP = 0xE004080F;
+    private static final int COL_PANEL_LIGHT = 0xD0142230;
+    private static final int COL_PANEL_WASH = 0x681F3C4A;
+    private static final int COL_CARD = 0xC0142230;
+    private static final int COL_CARD_HOVER = 0xE01C3544;
+    private static final int COL_EDGE = 0xFF35525E;
+    private static final int COL_EDGE_SOFT = 0x99436A76;
+    private static final int COL_EDGE_FAINT = 0x5535505A;
+    private static final int COL_ACCENT = 0xFF74F4E5;
+    private static final int COL_ACCENT_DIM = 0xFF38A59E;
+    private static final int COL_ACCENT_GLOW = 0x665BE8D8;
+    private static final int COL_ACCENT_HAZE = 0x2E5BE8D8;
+    private static final int COL_GOLD = 0xFFE2C276;
+    private static final int COL_GOLD_DIM = 0xFFA0834A;
+    private static final int COL_GOLD_GLOW = 0x55E2C276;
     private static final int COL_TEXT = 0xFFEAF7F4;
     private static final int COL_DIM = 0xFF7C8D96;
     private static final int COL_SILHOUETTE = 0xFF3D4852;
@@ -291,8 +291,6 @@ public class EchoOverviewScreen extends Screen {
         int score = visibleCompletionScore();
         addWrapped(Component.translatable("overview.unknown_echoes.index.header")
                 .withStyle(ChatFormatting.GOLD), null);
-        addWrapped(Component.translatable("overview.unknown_echoes.index.note")
-                .withStyle(ChatFormatting.DARK_GRAY), null);
         addWrapped(Component.empty(), null);
         addIndexLine("overview.unknown_echoes.index.abilities", coreAbilityCount(), 3, 3);
         addIndexLine("overview.unknown_echoes.index.main_bosses", mainBossCount(), MAIN_BOSSES.length,
@@ -679,10 +677,18 @@ public class EchoOverviewScreen extends Screen {
         graphics.fillGradient(panelLeft() + 3, panelTop() + 3,
                 panelRight() - 3, panelBottom() - 3, 0x22101824, 0x9903050A);
         graphics.fill(panelLeft() + 3, panelTop() + 3, panelRight() - 3, panelBottom() - 3, 0x7604070D);
+        graphics.fillGradient(panelLeft() + 4, panelTop() + 4,
+                panelLeft() + 92, panelBottom() - 4, 0x2538A59E, 0x00101824);
+        graphics.fillGradient(panelRight() - 148, panelTop() + 4,
+                panelRight() - 4, panelBottom() - 4, 0x20E2C276, 0x0003050A);
+        drawSoftGrid(graphics, panelLeft() + NAV_WIDTH + 12, panelTop() + 48,
+                panelRight() - 16, panelBottom() - STATUS_HEIGHT - 10, 0x1138A59E);
 
         int cx = (panelLeft() + panelRight()) / 2;
         int cy = (panelTop() + panelBottom()) / 2;
-        graphics.fillGradient(cx - 150, cy - 78, cx + 150, cy + 86, COL_ACCENT_HAZE, 0x00101824);
+        graphics.fillGradient(cx - 170, cy - 96, cx + 170, cy + 104, COL_ACCENT_HAZE, 0x00101824);
+        graphics.fillGradient(cx - 90, panelTop() + 8, cx + 120, panelTop() + 34,
+                0x18E2C276, 0x00101824);
         graphics.fillGradient(panelLeft() + 8, panelTop() + 10, panelRight() - 8, panelTop() + 46,
                 0x2559D6C8, 0x00101824);
         for (int i = 0; i < 7; i++) {
@@ -700,14 +706,22 @@ public class EchoOverviewScreen extends Screen {
                 panelLeft() + 3 + sweep / 2, panelBottom() - 3, COL_GOLD_DIM);
         graphics.fillGradient(panelLeft() + 8, panelTop() + 6,
                 panelLeft() + 8 + Math.max(0, sweep - 12), panelTop() + 8, 0x0062E6D8, COL_ACCENT_GLOW);
+        for (int i = 0; i < 9; i++) {
+            int px = panelLeft() + NAV_WIDTH + 24 + i * 37;
+            int py = panelTop() + 18 + (i * 29) % Math.max(24, panelBottom() - panelTop() - 44);
+            graphics.fill(px, py, px + 1, py + 1, i % 3 == 0 ? COL_GOLD_DIM : COL_ACCENT_DIM);
+        }
     }
 
     private void renderHeader(GuiGraphics graphics, float focus) {
         int x = contentLeft();
         int y = panelTop() + 6;
-        graphics.fillGradient(x - 4, y - 4, contentRight(), y + 18, 0x77101824, 0x2603050A);
-        graphics.fill(x - 4, y - 4, x - 2, y + 18, COL_GOLD_DIM);
-        graphics.fill(contentRight() - 42, y - 2, contentRight() - 40, y + 16, COL_ACCENT_DIM);
+        graphics.fillGradient(x - 6, y - 5, contentRight() + 1, y + 19, 0x9A142330, 0x2203050A);
+        graphics.fillGradient(x - 6, y - 5, x + 120, y + 19, 0x3438A59E, 0x00101824);
+        graphics.fill(x - 6, y - 5, x - 3, y + 19, COL_GOLD_DIM);
+        graphics.fill(contentRight() - 48, y - 3, contentRight() - 46, y + 17, COL_ACCENT_DIM);
+        graphics.fill(contentRight() - 38, y + 3, contentRight() - 22, y + 4, COL_EDGE_SOFT);
+        graphics.fill(contentRight() - 34, y + 8, contentRight() - 16, y + 9, COL_GOLD_DIM);
         if (focus >= 1.0F || (this.focusTicks * 3) % 2 == 0) {
             graphics.drawString(this.font, this.page.title(), x, y, COL_GOLD, true);
         }
@@ -723,11 +737,13 @@ public class EchoOverviewScreen extends Screen {
     private void renderNav(GuiGraphics graphics, int mouseX, int mouseY, float focus) {
         int x = panelLeft();
         int top = panelTop();
-        graphics.fillGradient(x, top, x + NAV_WIDTH, panelBottom(), 0xD5101824, 0xEC03050A);
+        graphics.fillGradient(x, top, x + NAV_WIDTH, panelBottom(), 0xE0142431, 0xF004070C);
         graphics.fillGradient(x + 3, top + 4, x + NAV_WIDTH - 4, panelBottom() - 4,
-                0x331B3441, 0x66000000);
+                0x44294755, 0x77000000);
+        drawSoftGrid(graphics, x + 6, top + 34, x + NAV_WIDTH - 8, panelBottom() - 10, 0x1038A59E);
         graphics.fill(x + NAV_WIDTH, top, x + NAV_WIDTH + 1, panelBottom(), COL_EDGE);
         graphics.fill(x + NAV_WIDTH - 2, top + 6, x + NAV_WIDTH - 1, panelBottom() - 8, COL_ACCENT_HAZE);
+        graphics.fillGradient(x + 6, top + 5, x + NAV_WIDTH - 8, top + 28, 0x2538A59E, 0x0003050A);
         graphics.drawString(this.font, Component.literal("UNKNOWN"),
                 x + 7, top + 6, COL_GOLD_DIM, false);
         graphics.drawString(this.font, Component.literal("ECHOES"),
@@ -741,18 +757,24 @@ public class EchoOverviewScreen extends Screen {
                     && mouseY >= rowY && mouseY < rowY + 20;
             boolean selected = entry == this.page;
             if (selected) {
-                graphics.fillGradient(x + 2, rowY - 1, x + NAV_WIDTH - 3, rowY + 20,
-                        0x5559D6C8, 0x15101824);
+                graphics.fillGradient(x + 1, rowY - 2, x + NAV_WIDTH - 3, rowY + 21,
+                        0x705BE8D8, 0x18101824);
                 graphics.fillGradient(x + 6, rowY + 2, x + NAV_WIDTH - 18, rowY + 18,
-                        0x228D7440, 0x00101824);
+                        0x30E2C276, 0x00101824);
                 graphics.fill(x + 2, rowY + 1, x + 4, rowY + 18, COL_ACCENT);
                 graphics.fill(x + NAV_WIDTH - 6, rowY + 4, x + NAV_WIDTH - 4, rowY + 14, COL_GOLD);
+                graphics.renderOutline(x + 1, rowY - 2, NAV_WIDTH - 4, 23, COL_EDGE_SOFT);
             } else if (hovered || this.navFocus == i) {
                 graphics.fillGradient(x + 2, rowY, x + NAV_WIDTH - 3, rowY + 20,
-                        0x2259D6C8, 0x07101824);
+                        0x305BE8D8, 0x0A101824);
+                graphics.fill(x + 3, rowY + 3, x + 4, rowY + 17, COL_ACCENT_DIM);
             }
             // 图标:未苏醒模块压暗成剪影
             float shadeF = entry.awake ? 1.0F : 0.35F;
+            if (selected || hovered) {
+                graphics.fillGradient(x + 5, rowY + 1, x + 30, rowY + 19,
+                        selected ? 0x355BE8D8 : 0x2038A59E, 0x00101824);
+            }
             graphics.setColor(shadeF, shadeF, shadeF, 1.0F);
             graphics.blit(ICONS, x + 7, rowY, 20, 20,
                     i * (float) ICON_SIZE, 0.0F, ICON_SIZE, ICON_SIZE,
@@ -777,6 +799,12 @@ public class EchoOverviewScreen extends Screen {
         }
         drawGlassPanel(graphics, contentLeft() - 3, contentTop() - 3,
                 contentRight() + 1, contentBottom() + 1, COL_ACCENT_DIM, false);
+        graphics.fillGradient(contentLeft(), contentTop(), contentRight() - 3, contentBottom() - 2,
+                0x1F294755, 0x1103050A);
+        graphics.fillGradient(contentLeft(), contentTop(), contentRight() - 3, contentTop() + 18,
+                0x2D5BE8D8, 0x00101824);
+        drawSoftGrid(graphics, contentLeft() + 5, contentTop() + 22,
+                contentRight() - 10, contentBottom() - 30, 0x0C38A59E);
         if (!this.page.awake) {
             renderSilhouettePage(graphics);
             return;
@@ -807,11 +835,11 @@ public class EchoOverviewScreen extends Screen {
                     && mouseY >= y && mouseY < y + rowHeight;
             if ((i - this.scroll) % 2 == 0) {
                 graphics.fillGradient(contentLeft(), y - 2, contentRight() - 5, y + rowHeight - 1,
-                        0x2A101824, 0x0703050A);
+                        0x30142330, 0x0803050A);
             }
             if (hovered) {
                 graphics.fillGradient(contentLeft(), y - 2, contentRight() - 5, y + rowHeight - 1,
-                        COL_ACCENT_GLOW, 0x15101824);
+                        COL_ACCENT_GLOW, 0x20101824);
                 graphics.fill(contentLeft(), y - 2, contentLeft() + 2, y + rowHeight - 1, COL_ACCENT);
                 graphics.fill(contentRight() - 8, y + 1, contentRight() - 6, y + rowHeight - 4, COL_GOLD_DIM);
             }
@@ -835,15 +863,22 @@ public class EchoOverviewScreen extends Screen {
         int cy = (contentTop() + contentBottom()) / 2;
         drawGlassPanel(graphics, contentLeft(), contentTop(), contentRight(), contentBottom(), COL_ACCENT_DIM, false);
         graphics.fillGradient(contentLeft() + 6, contentTop() + 6, contentRight() - 6, contentBottom() - 6,
-                0x33101824, 0x1303060A);
-        graphics.fillGradient(contentLeft() + 16, cy - 76, contentLeft() + 160, cy + 76,
-                COL_ACCENT_HAZE, 0x00101824);
-        graphics.setColor(1.0F, 1.0F, 1.0F, 0.78F);
+                0x44142330, 0x1703060A);
+        graphics.fillGradient(contentLeft() + 10, contentTop() + 12, contentLeft() + 166, contentBottom() - 12,
+                0x24294755, 0x0503060A);
+        graphics.fillGradient(contentLeft() + 16, cy - 84, contentLeft() + 168, cy + 84,
+                0x3A5BE8D8, 0x00101824);
+        graphics.fillGradient(contentLeft() + 32, cy - 54, contentLeft() + 138, cy + 58,
+                0x18E2C276, 0x00101824);
+        graphics.setColor(1.0F, 1.0F, 1.0F, 0.88F);
         graphics.blit(STAR_DISC, contentLeft() + 14, cy - 66, 132, 132,
                 0.0F, 0.0F, 96, 96, 96, 96);
         graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         graphics.renderOutline(contentLeft() + 28, cy - 52, 104, 104, 0x3359D6C8);
         graphics.renderOutline(contentLeft() + 40, cy - 40, 80, 80, 0x448D7440);
+        graphics.renderOutline(contentLeft() + 52, cy - 28, 56, 56, 0x5538A59E);
+        drawCornerMarks(graphics, contentLeft() + 12, contentTop() + 12,
+                contentLeft() + 166, contentBottom() - 12, COL_EDGE_FAINT);
         graphics.drawString(this.font, Component.translatable("overview.unknown_echoes.title"),
                 contentLeft() + 28, contentTop() + 18, COL_GOLD, true);
         graphics.drawString(this.font, Component.translatable("overview.unknown_echoes.subtitle.overview"),
@@ -859,6 +894,12 @@ public class EchoOverviewScreen extends Screen {
         int gap = 8;
         int startX = Math.max(contentLeft() + 174, contentRight() - (cols * cardW + gap) - 12);
         int startY = contentTop() + 18;
+        graphics.fillGradient(startX - 8, startY - 8,
+                startX + cols * cardW + gap + 8, Math.min(contentBottom() - 10, startY + 4 * (cardH + gap) + 4),
+                0x2C142330, 0x0803050A);
+        drawCornerMarks(graphics, startX - 8, startY - 8,
+                startX + cols * cardW + gap + 8, Math.min(contentBottom() - 10, startY + 4 * (cardH + gap) + 4),
+                COL_EDGE_FAINT);
         for (int i = 0; i < entries.length; i++) {
             ModulePage entry = entries[i];
             int x = startX + (i % cols) * (cardW + gap);
@@ -871,14 +912,18 @@ public class EchoOverviewScreen extends Screen {
                     hovered ? COL_CARD_HOVER : COL_CARD,
                     entry.awake ? 0xAA071018 : 0xAA05070B);
             graphics.fillGradient(x + 3, y + 2, x + cardW - 4, y + 14,
-                    hovered ? 0x3359D6C8 : 0x1A3A5C67, 0x00101824);
+                    hovered ? 0x465BE8D8 : 0x243A5C67, 0x00101824);
             graphics.fill(x, y, x + 2, y + cardH,
                     hovered ? COL_ACCENT : (entry.awake ? COL_ACCENT_DIM : 0xFF18222A));
+            graphics.fill(x + 5, y + cardH - 2, x + cardW - 7, y + cardH - 1,
+                    hovered ? COL_ACCENT_DIM : COL_EDGE_FAINT);
             graphics.renderOutline(x, y, cardW, cardH,
                     hovered ? COL_ACCENT : (entry.awake ? COL_EDGE : 0xFF161E26));
             drawCornerMarks(graphics, x, y, x + cardW, y + cardH,
                     hovered ? COL_ACCENT : (entry.awake ? COL_EDGE_SOFT : 0x55161E26));
             float shadeF = entry.awake ? 1.0F : 0.3F;
+            graphics.fillGradient(x + 6, y + 5, x + 36, y + 35,
+                    hovered ? 0x355BE8D8 : 0x18101824, 0x00101824);
             graphics.setColor(shadeF, shadeF, shadeF, 1.0F);
             graphics.blit(ICONS, x + 8, y + 7, 28, 28,
                     moduleIconU(entry), 0.0F, ICON_SIZE, ICON_SIZE,
@@ -1289,7 +1334,10 @@ public class EchoOverviewScreen extends Screen {
         int top = contentTop();
         drawGlassPanel(graphics, x, top, panelRight() - 2, contentBottom(), COL_GOLD_DIM, false);
         graphics.fillGradient(x + 3, top + 3, panelRight() - 5, contentBottom() - 3,
-                0x55101824, 0x9905080D);
+                0x68142330, 0xA005080D);
+        graphics.fillGradient(x + 4, top + 4, panelRight() - 8, top + 36,
+                0x2EE2C276, 0x00101824);
+        drawSoftGrid(graphics, x + 6, top + 18, panelRight() - 9, contentBottom() - 8, 0x0D38A59E);
         graphics.fill(x, top, x + 2, contentBottom(), COL_GOLD_DIM);
         int textX = x + 5;
         int y = top + 5;
@@ -1305,6 +1353,12 @@ public class EchoOverviewScreen extends Screen {
         y += 4;
         Component next = nextClue();
         if (next != null) {
+            int boxTop = y - 2;
+            int boxBottom = Math.min(contentBottom() - 7, boxTop + 52);
+            graphics.fillGradient(textX - 2, boxTop, panelRight() - 8, boxBottom,
+                    0x26294755, 0x1103050A);
+            graphics.renderOutline(textX - 2, boxTop, panelRight() - textX - 6,
+                    boxBottom - boxTop, COL_EDGE_FAINT);
             graphics.drawString(this.font,
                     Component.translatable("overview.unknown_echoes.note.next"), textX, y, COL_GOLD, false);
             y += 12;
@@ -1342,12 +1396,14 @@ public class EchoOverviewScreen extends Screen {
     private void renderStatusBar(GuiGraphics graphics) {
         int y = panelBottom() - STATUS_HEIGHT;
         graphics.fillGradient(panelLeft() + NAV_WIDTH + 1, y, panelRight(), panelBottom(),
-                0xD0101824, 0xE803050A);
+                0xDD142330, 0xF003050A);
         graphics.fill(panelLeft() + NAV_WIDTH + 1, y, panelRight(), y + 1, COL_EDGE_SOFT);
         graphics.fill(panelLeft() + NAV_WIDTH + 1, y + 1,
                 panelLeft() + NAV_WIDTH + 80, y + 2, COL_ACCENT_DIM);
         graphics.fillGradient(panelRight() - 126, y + 1, panelRight() - 5, panelBottom() - 2,
-                0x1859D6C8, 0x0003050A);
+                0x255BE8D8, 0x0003050A);
+        graphics.fillGradient(contentLeft() - 2, y + 2, contentLeft() + 160, panelBottom() - 2,
+                0x16E2C276, 0x00101824);
         Minecraft mc = Minecraft.getInstance();
         String dimension = mc.level != null
                 ? mc.level.dimension().location().getPath() : "unknown";
@@ -1414,6 +1470,10 @@ public class EchoOverviewScreen extends Screen {
                     BUTTON_SLICE_WIDTH, BUTTON_SLICE_HEIGHT,
                     BUTTON_ATLAS_WIDTH, BUTTON_ATLAS_HEIGHT);
             graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+            graphics.fillGradient(button.x + 2, button.y + 2, button.x + button.width - 2, button.y + 8,
+                    enabled ? 0x2238A59E : 0x113D4852, 0x00101824);
+            graphics.renderOutline(button.x, button.y, button.width, button.height,
+                    !enabled ? COL_EDGE_FAINT : (button.active ? COL_GOLD_DIM : (hovered ? COL_ACCENT_DIM : COL_EDGE_SOFT)));
             if (enabled && (button.active || hovered)) {
                 drawCornerMarks(graphics, button.x, button.y, button.x + button.width, button.y + button.height,
                         button.active ? COL_GOLD : COL_ACCENT);
@@ -1587,6 +1647,18 @@ public class EchoOverviewScreen extends Screen {
         graphics.fill(left - 1, bottom - len, left, bottom + 1, color);
         graphics.fill(right - len, bottom, right + 1, bottom + 1, color);
         graphics.fill(right, bottom - len, right + 1, bottom + 1, color);
+    }
+
+    private static void drawSoftGrid(GuiGraphics graphics, int left, int top, int right, int bottom, int color) {
+        if (right <= left || bottom <= top) {
+            return;
+        }
+        for (int x = left; x < right; x += 18) {
+            graphics.fill(x, top, x + 1, bottom, color);
+        }
+        for (int y = top; y < bottom; y += 18) {
+            graphics.fill(left, y, right, y + 1, color);
+        }
     }
 
     private static void drawFineDivider(GuiGraphics graphics, int left, int y, int right, int color) {

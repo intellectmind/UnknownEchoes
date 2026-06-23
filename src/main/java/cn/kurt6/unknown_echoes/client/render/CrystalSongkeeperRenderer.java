@@ -11,7 +11,8 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 public class CrystalSongkeeperRenderer extends GeoEntityRenderer<CrystalSongkeeper> {
     public CrystalSongkeeperRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("crystal_songkeeper"), true));
-        this.shadowRadius = 0.55F;
+        this.shadowRadius = 0.65F;
+        this.withScale(1.15F);
         addRenderLayer(new EchoGlowLayer<>(this,
                 ResourceLocation.fromNamespaceAndPath(UnknownEchoes.MODID,
                         "textures/entity/crystal_songkeeper_glowing.png")));

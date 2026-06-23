@@ -24,24 +24,6 @@
           "condition": "minecraft:killed_by_player"
         }
       ]
-    },
-    {
-      "rolls": 1,
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:echo_index"
-        }
-      ],
-      "conditions": [
-        {
-          "condition": "minecraft:killed_by_player"
-        },
-        {
-          "condition": "minecraft:random_chance",
-          "chance": 0.35
-        }
-      ]
     }
   ],
   "random_sequence": "unknown_echoes:entities/lost_recorder_chief"

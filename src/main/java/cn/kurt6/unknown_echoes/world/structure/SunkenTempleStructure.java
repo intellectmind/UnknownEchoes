@@ -45,13 +45,15 @@ public class SunkenTempleStructure extends SinglePieceStructure {
 
     @Override
     public java.util.Optional<GenerationStub> findGenerationPoint(GenerationContext context) {
-        // 镜湖群系存在旱地区段:只有整片场地确实沉在湖水里才生成(墙高 8 + 檐圈,要求中心水深 ≥ 12)。
+        // 镜湖群系存在旱地区段:只有整片场地确实沉在湖水里才生成。
         // 不调用 super——SinglePieceStructure 默认"最低地表 < 海平面就不放"(防沙漠神殿落海),
         // 对水下结构正好相反,必须绕开并改锚湖底(OCEAN_FLOOR_WG)。
         //
-        // CRITICAL: 不在此处做水深校验(getBaseColumn)——/locate 会对每个候选区块调用此方法,
-        // 即使有群系预判,剩余候选点累积的噪声柱采样(中心+四角×5次)仍会拖服务端主线程超看门狗限制。
-        // 水深校验推迟到 postProcess 首次生成时做,落旱地时取消生成(boundingBox.move 不调用)。
+        // CRITICAL: 不在此处做连续水方块校验(getBaseColumn)——/locate 会对每个候选区块调用此方法。
+        // 这里只用五点高度图预判过滤空现场;严格水深校验推迟到 postProcess 首次生成时做。
+        if (!LakeBedPlacement.hasSubmergedFootprint(context, WIDTH, 14, 7)) {
+            return java.util.Optional.empty();
+        }
         return onTopOfChunkCenter(context, Heightmap.Types.OCEAN_FLOOR_WG,
                 builder -> builder.addPiece(new Piece(context.random(),
                         context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ())));
@@ -124,9 +126,9 @@ public class SunkenTempleStructure extends SinglePieceStructure {
             }
             this.oceanFloorY = total / count;
 
-            // 水深校验:主体更大后仍只在生成阶段校验,避免 /locate 卡主线程。
-            if (!LakeBedPieceHelper.checkWaterDepth(level, generator,
-                    this.boundingBox.minX(), this.boundingBox.minZ(), WIDTH, DEPTH, 18, 9)) {
+            // 水深校验:大型足印跨多个区块,用噪声柱避免读取未就绪边角区块导致空现场。
+            if (!LakeBedPieceHelper.checkWaterDepthByNoise(level, generator,
+                    this.boundingBox.minX(), this.boundingBox.minZ(), WIDTH, DEPTH, 14, 7)) {
                 this.rejected = true;
                 return false;  // 落旱地,取消整座结构生成
             }
