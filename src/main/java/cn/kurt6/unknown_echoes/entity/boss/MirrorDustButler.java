@@ -158,6 +158,20 @@ public class MirrorDustButler extends MiniBossEntity {
     }
 
     @Override
+    protected void tickMechanicGuidance(ServerLevel level) {
+        if (this.isImage) {
+            return;
+        }
+        List<MirrorDustButler> bodies = new ArrayList<>();
+        bodies.add(this);
+        bodies.addAll(this.aliveImages(level));
+        for (MirrorDustButler body : bodies) {
+            BossFx.guidanceMarker(level, body.position().add(0, 0.9, 0), ParticleTypes.END_ROD);
+        }
+        this.sendTrueSightHint(level, 2);
+    }
+
+    @Override
     protected void grantSettlement(ServerPlayer player, boolean firstKill) {
         MiniBossRewardTable.grantMirrorDustButler(this, player, firstKill);
     }
@@ -210,7 +224,9 @@ public class MirrorDustButler extends MiniBossEntity {
         image.setPersistenceRequired();
         image.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()),
                 MobSpawnType.MOB_SUMMONED, null);
-        serverLevel.addFreshEntity(image);
+        if (!serverLevel.addFreshEntity(image)) {
+            return;
+        }
         this.imageUuids.add(image.getUUID());
         serverLevel.sendParticles(ParticleTypes.END_ROD,
                 spawn.x, spawn.y + 1.2, spawn.z, 12, 0.4, 0.6, 0.4, 0.02);
@@ -282,6 +298,11 @@ public class MirrorDustButler extends MiniBossEntity {
         }
         // 假像:任何玩家伤害直接击碎——爆镜尘 + 攻击者短暂视野遮挡,不开输出窗口
         if (this.isImage) {
+            // /kill、虚空等穿透伤害没有来源实体,直接消散,避免不可清理的残留假像
+            if (source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+                this.discard();
+                return true;
+            }
             if (source.getEntity() instanceof ServerPlayer attacker) {
                 this.shatterImage(serverLevel, attacker);
                 return true;
@@ -438,7 +459,7 @@ public class MirrorDustButler extends MiniBossEntity {
         Vec3 start = this.getEyePosition();
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(BOLT_RANGE),
-                e -> e != this && !(e instanceof Enemy) && e.isAlive())) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy) && e.isAlive())) {
             Vec3 toVictim = victim.getEyePosition().subtract(start);
             double along = toVictim.dot(this.boltDir);
             if (along < 0 || along > BOLT_RANGE) {
@@ -477,7 +498,7 @@ public class MirrorDustButler extends MiniBossEntity {
             float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.1F;
             for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                     this.getBoundingBox().inflate(2.8, 1.2, 2.8),
-                    e -> e != this && !(e instanceof Enemy) && e.isAlive())) {
+                    e -> e != this && !e.isSpectator() && !(e instanceof Enemy) && e.isAlive())) {
                 Vec3 toVictim = victim.position().subtract(this.position()).multiply(1, 0, 1);
                 if (toVictim.lengthSqr() > 1.0E-4 && facing.dot(toVictim.normalize()) < 0.3) {
                     continue;
@@ -499,7 +520,7 @@ public class MirrorDustButler extends MiniBossEntity {
         serverLevel.playSound(null, this.blockPosition(),
                 ModSounds.MIRROR_DUST_BUTLER_AMBIENT.get(), SoundSource.HOSTILE, 1.4F, 0.7F);
         for (Player player : serverLevel.getEntitiesOfClass(Player.class,
-                this.getBoundingBox().inflate(ARENA_RADIUS + 4))) {
+                this.getBoundingBox().inflate(ARENA_RADIUS + 4), p -> !p.isSpectator())) {
             player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, VEIL_DURATION_TICKS, 0));
         }
         int missing = 2 - this.aliveImages(serverLevel).size();
@@ -553,7 +574,8 @@ public class MirrorDustButler extends MiniBossEntity {
             return;
         }
         for (Player victim : serverLevel.getEntitiesOfClass(Player.class,
-                new net.minecraft.world.phys.AABB(this.orbPos, this.orbPos).inflate(1.0))) {
+                new net.minecraft.world.phys.AABB(this.orbPos, this.orbPos).inflate(1.0),
+                p -> !p.isSpectator())) {
             victim.hurt(this.damageSources().mobAttack(this),
                     (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.5F);
             victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
@@ -649,13 +671,9 @@ public class MirrorDustButler extends MiniBossEntity {
         super.readAdditionalSaveData(tag);
         this.isImage = tag.getBoolean("IsImage");
         this.openedFight = tag.getBoolean("OpenedFight");
-        this.exposedTicks = tag.getInt("ExposedTicks");
+        this.exposedTicks = BossNbtData.clampTimer(tag.getInt("ExposedTicks"), EXPOSED_TICKS_SHATTERED);
         this.ownerUuid = tag.hasUUID("OwnerUuid") ? tag.getUUID("OwnerUuid") : null;
-        this.imageUuids.clear();
-        for (net.minecraft.nbt.Tag entry : tag.getList("ImageUuids",
-                net.minecraft.nbt.Tag.TAG_INT_ARRAY)) {
-            this.imageUuids.add(net.minecraft.nbt.NbtUtils.loadUUID(entry));
-        }
+        BossNbtData.loadUuids(tag, "ImageUuids", this.imageUuids, BossNbtData.MAX_SUMMONS);
         if (this.isImage) {
             this.xpReward = 0;
         }

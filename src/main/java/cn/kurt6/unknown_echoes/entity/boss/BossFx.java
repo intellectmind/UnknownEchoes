@@ -41,9 +41,26 @@ public final class BossFx {
         level.sendParticles(ParticleTypes.POOF, c.x, c.y + 0.2, c.z, 12, 0.55, 0.2, 0.55, 0.05);
     }
 
-    /** 蓄力螺旋:绕中心上升的螺旋柱,蓄力/施法每 tick 调用形成聚拢感。t 用 tickCount 传入。 */
+    /** 多落点攻击使用的紧凑爆发，避免为每个落点重复发送完整命中演出的粒子包。 */
+    public static void areaBurst(ServerLevel level, Vec3 c, ParticleOptions theme) {
+        level.sendParticles(ParticleTypes.FLASH, c.x, c.y + 0.35D, c.z,
+                1, 0.0D, 0.0D, 0.0D, 0.0D);
+        level.sendParticles(theme, c.x, c.y + 0.3D, c.z,
+                24, 0.65D, 0.45D, 0.65D, 0.14D);
+        level.sendParticles(ParticleTypes.ELECTRIC_SPARK, c.x, c.y + 0.4D, c.z,
+                10, 0.55D, 0.35D, 0.55D, 0.08D);
+        ring(level, c, 2.7D, 12, 0.12D, theme);
+        level.sendParticles(ParticleTypes.POOF, c.x, c.y + 0.12D, c.z,
+                8, 0.45D, 0.12D, 0.45D, 0.04D);
+    }
+
+    /**
+     * 蓄力螺旋:绕中心上升的双臂螺旋柱。调用方可每 tick 调用，内部交错采样高度层，
+     * 在保持 20 TPS 动态轮廓的同时把逐点粒子广播包减半。t 用 tickCount 传入。
+     */
     public static void chargeSpiral(ServerLevel level, Vec3 c, double t, ParticleOptions theme) {
-        for (int h = 0; h < 8; h++) {
+        int heightParity = (int) (level.getGameTime() & 1L);
+        for (int h = heightParity; h < 8; h += 2) {
             double y = c.y + 0.25 + h * 0.35;
             double r = Math.max(0.18, 1.65 - h * 0.16);
             for (int arm = 0; arm < 2; arm++) {
@@ -51,7 +68,7 @@ public final class BossFx {
                 level.sendParticles(theme, c.x + Math.cos(a) * r, y, c.z + Math.sin(a) * r,
                         1, 0.0, 0.0, 0.0, 0.0);
             }
-            if (h % 2 == 0) {
+            if ((h & 3) == heightParity) {
                 level.sendParticles(ParticleTypes.GLOW, c.x, y, c.z, 1, 0.18, 0.12, 0.18, 0.02);
             }
         }
@@ -87,6 +104,49 @@ public final class BossFx {
                         c.x + Math.cos(a) * radius * 0.92, c.y + y + 0.08, c.z + Math.sin(a) * radius * 0.92,
                         1, 0.02, 0.02, 0.02, 0.0);
             }
+        }
+    }
+
+    public static void guidanceLink(ServerLevel level, Vec3 from, Vec3 to, ParticleOptions theme) {
+        guidanceFlow(level, from, to, ParticleTypes.GLOW, theme, level.getGameTime());
+    }
+
+    /**
+     * 流动引导线:亮色骨架保证光影下可读,脉冲沿起点向终点移动以明确方向。
+     * 适合每 5 tick 调用;age 传实体 tickCount 或世界时间,避免额外保存动画状态。
+     */
+    public static void guidanceFlow(ServerLevel level, Vec3 from, Vec3 to,
+                                    ParticleOptions trail, ParticleOptions pulse, long age) {
+        Vec3 delta = to.subtract(from);
+        int steps = Math.max(4, Math.min(10, (int) Math.ceil(delta.length() / 2.6D)));
+        for (int i = 0; i <= steps; i++) {
+            Vec3 point = from.add(delta.scale(i / (double) steps));
+            level.sendParticles(trail, point.x, point.y, point.z,
+                    1, 0.035, 0.035, 0.035, 0.0);
+        }
+        for (int i = 0; i < 2; i++) {
+            double progress = Math.floorMod(age * 8L + i * 50L, 100L) / 100.0D;
+            Vec3 point = from.add(delta.scale(progress));
+            level.sendParticles(pulse, point.x, point.y, point.z,
+                    2, 0.055, 0.055, 0.055, 0.015);
+        }
+    }
+
+    public static void guidanceMarker(ServerLevel level, Vec3 center, ParticleOptions theme) {
+        for (int i = 0; i < 4; i++) {
+            double angle = TAU * i / 4;
+            level.sendParticles(theme,
+                    center.x + Math.cos(angle) * 0.65, center.y + 0.12,
+                    center.z + Math.sin(angle) * 0.65, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+        level.sendParticles(theme, center.x, center.y + 0.7, center.z, 3, 0.03, 0.35, 0.03, 0.0);
+        if (theme != ParticleTypes.GLOW) {
+            level.sendParticles(ParticleTypes.GLOW, center.x, center.y + 0.45, center.z,
+                    2, 0.12, 0.24, 0.12, 0.0);
+        }
+        if (theme != ParticleTypes.END_ROD) {
+            level.sendParticles(ParticleTypes.END_ROD, center.x, center.y + 0.72, center.z,
+                    1, 0.04, 0.16, 0.04, 0.0);
         }
     }
 

@@ -1,0 +1,7 @@
+{
+  "parent": "unknown_echoes:block/deep_calibration_node_base",
+  "textures": {
+    "1": "unknown_echoes:block/mirror_sigil",
+    "particle": "unknown_echoes:block/mirror_sigil"
+  }
+}

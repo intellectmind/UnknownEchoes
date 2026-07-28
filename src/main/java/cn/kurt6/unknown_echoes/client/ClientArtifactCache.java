@@ -12,23 +12,26 @@ import java.util.Map;
  */
 public class ClientArtifactCache {
 
-    /** 单件神器的展示数据(同步条目 "id:level:tuning:serial:cooldownEnd" 解析结果)。 */
-    public record Entry(int level, String tuning, int serial, long cooldownEnd) {}
+    /** 单件神器的展示数据；耗能单位为 1/20 点。 */
+    public record Entry(int level, String tuning, int serial, long cooldownEnd,
+                        int energyCostTwentieths) {}
 
     private static final Map<String, Entry> ARTIFACTS = new HashMap<>();
     private static int energyTwentieths = -1;
     private static int maxEnergy = 100;
     private static int regenHundredthsPerTick = 100;
     private static long syncGameTime;
+    private static long localGameTimeAtSync;
 
     public static void update(ArtifactSyncPayload payload) {
         ARTIFACTS.clear();
         for (String line : payload.artifacts()) {
-            String[] parts = line.split(":", 5);
-            if (parts.length == 5) {
+            String[] parts = line.split(":", 6);
+            if (parts.length == 6) {
                 try {
                     ARTIFACTS.put(parts[0], new Entry(Integer.parseInt(parts[1]), parts[2],
-                            Integer.parseInt(parts[3]), Long.parseLong(parts[4])));
+                            Integer.parseInt(parts[3]), Long.parseLong(parts[4]),
+                            Integer.parseInt(parts[5])));
                 } catch (NumberFormatException ignored) {
                 }
             }
@@ -37,6 +40,8 @@ public class ClientArtifactCache {
         maxEnergy = payload.maxEnergy();
         regenHundredthsPerTick = payload.regenHundredthsPerTick();
         syncGameTime = payload.gameTime();
+        var level = Minecraft.getInstance().level;
+        localGameTimeAtSync = level == null ? 0L : level.getGameTime();
     }
 
     public static boolean isClaimed(String artifactId) {
@@ -57,7 +62,7 @@ public class ClientArtifactCache {
             return -1;
         }
         long now = currentGameTime();
-        long elapsed = Math.max(0, now - syncGameTime);
+        long elapsed = syncGameTime >= 0L && syncGameTime <= now ? now - syncGameTime : 0L;
         long value = Math.min((long) maxEnergy * 20,
                 energyTwentieths + elapsed * (long) regenHundredthsPerTick / 100L);
         return (int) (value / 20);
@@ -75,12 +80,18 @@ public class ClientArtifactCache {
 
     private static long currentGameTime() {
         var level = Minecraft.getInstance().level;
-        return level == null ? syncGameTime : level.getGameTime();
+        if (level == null) {
+            return syncGameTime;
+        }
+        return syncGameTime + Math.max(0L, level.getGameTime() - localGameTimeAtSync);
     }
 
     public static void clear() {
         ARTIFACTS.clear();
         energyTwentieths = -1;
+        maxEnergy = 100;
         regenHundredthsPerTick = 100;
+        syncGameTime = 0L;
+        localGameTimeAtSync = 0L;
     }
 }

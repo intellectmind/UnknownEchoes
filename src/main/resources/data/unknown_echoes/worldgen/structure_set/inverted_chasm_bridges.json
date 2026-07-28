@@ -1,0 +1,9 @@
+{
+  "structures": [{ "structure": "unknown_echoes:inverted_chasm_bridge", "weight": 1 }],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 32,
+    "separation": 10,
+    "salt": 1690072587
+  }
+}

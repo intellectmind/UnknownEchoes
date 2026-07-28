@@ -22,11 +22,9 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-/**
- * 风之回响体验能力:二段跳(客户端表现)。
- * 服务端通过 DoubleJumpPayload 校验能力并重置摔落距离;
- * 权限判定(风门等)始终在服务端,与本类无关。
- */
+import java.util.ArrayList;
+import java.util.List;
+
 @EventBusSubscriber(modid = UnknownEchoes.MODID, value = Dist.CLIENT)
 public class ClientGameEvents {
     private static boolean usedDoubleJump = false;
@@ -38,6 +36,17 @@ public class ClientGameEvents {
     private static final int WIND_PLATFORM_TAKEOFF_CHECK_HEIGHT = 24;
     private static BossMusicSound bossMusic = null;
     private static int bossMusicScanCooldown = 0;
+    private static net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> bossMusicDimension = null;
+    private static boolean silenceDomainActive = false;
+    private static int silenceDomainScanCooldown = 0;
+    private static final int TRUE_SIGHT_CACHE_REFRESH_TICKS = 40;
+    private static final int TRUE_SIGHT_CACHE_MOVE_DISTANCE = 8;
+    private static final int TRUE_SIGHT_CACHE_LIMIT = 64;
+    private static final int TRUE_SIGHT_PARTICLE_LIMIT = 6;
+    private static List<BlockPos> trueSightHiddenCache = List.of();
+    private static BlockPos trueSightCacheCenter = null;
+    private static net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> trueSightCacheDimension = null;
+    private static int trueSightCacheRange = -1;
 
     /** HUD 表现层查询。 */
     public static boolean isDoubleJumpUsed() {
@@ -63,10 +72,14 @@ public class ClientGameEvents {
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
-        if (player == null || mc.isPaused()) {
+        if (player == null) {
             usedDoubleJump = false;
             wasGrounded = true;
             glideTicks = 0;
+            return;
+        }
+        if (mc.isPaused()) {
+            // 暂停只挂起处理,不清空中状态——清了会让"空中按 Esc 再回来"白赚一次二段跳
             return;
         }
 
@@ -75,6 +88,48 @@ public class ClientGameEvents {
             if (mc.screen == null) {
                 mc.setScreen(new cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen(
                         cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.ModulePage.OVERVIEW));
+            }
+        }
+
+        // 武器战技键:客户端只发请求(主手优先),冷却与结算全在服务端
+        while (ClientModEvents.WEAPON_SKILL.consumeClick()) {
+            if (mc.screen != null || player.isSpectator()) {
+                continue;
+            }
+            var main = player.getMainHandItem();
+            var off = player.getOffhandItem();
+            if (main.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill
+                    && !player.getCooldowns().isOnCooldown(main.getItem())) {
+                PacketDistributor.sendToServer(cn.kurt6.unknown_echoes.network.WeaponSkillPayload.MAIN);
+            } else if (off.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill
+                    && !player.getCooldowns().isOnCooldown(off.getItem())) {
+                PacketDistributor.sendToServer(cn.kurt6.unknown_echoes.network.WeaponSkillPayload.OFF);
+            }
+        }
+
+        while (ClientModEvents.GRAVITY_ATTUNE.consumeClick()) {
+            if (mc.screen == null && !player.isSpectator()
+                    && ClientAbilityCache.hasAbility(EchoAbilityType.GRAVITY_ECHO)) {
+                PacketDistributor.sendToServer(
+                        cn.kurt6.unknown_echoes.network.EchoAbilityActionPayload.GRAVITY_ATTUNE);
+            }
+        }
+        while (ClientModEvents.VOID_STEP.consumeClick()) {
+            if (mc.screen == null && !player.isSpectator()
+                    && ClientAbilityCache.hasAbility(EchoAbilityType.VOID_ECHO)) {
+                PacketDistributor.sendToServer(
+                        cn.kurt6.unknown_echoes.network.EchoAbilityActionPayload.VOID_STEP);
+            }
+        }
+
+        while (ClientModEvents.ARTIFACT_USE.consumeClick()) {
+            if (mc.screen != null || player.isSpectator()) {
+                continue;
+            }
+            net.minecraft.world.InteractionHand hand = artifactHand(player);
+            if (hand != null) {
+                PacketDistributor.sendToServer(new cn.kurt6.unknown_echoes.network.ArtifactUsePayload(
+                        hand == net.minecraft.world.InteractionHand.OFF_HAND));
             }
         }
 
@@ -126,6 +181,21 @@ public class ClientGameEvents {
         }
         tickGlide(player);
         wasGrounded = grounded;
+    }
+
+    private static net.minecraft.world.InteractionHand artifactHand(LocalPlayer player) {
+        for (net.minecraft.world.InteractionHand hand : net.minecraft.world.InteractionHand.values()) {
+            var stack = player.getItemInHand(hand);
+            String id = stack.get(cn.kurt6.unknown_echoes.registry.ModDataComponents.ARTIFACT_ID.get());
+            Integer serial = stack.get(cn.kurt6.unknown_echoes.registry.ModDataComponents.CREDENTIAL_SERIAL.get());
+            String owner = stack.get(cn.kurt6.unknown_echoes.registry.ModDataComponents.ARTIFACT_OWNER.get());
+            ClientArtifactCache.Entry entry = id == null ? null : ClientArtifactCache.get(id);
+            if (entry != null && serial != null && serial == entry.serial()
+                    && (owner == null || owner.isBlank() || player.getUUID().toString().equals(owner))) {
+                return hand;
+            }
+        }
+        return null;
     }
 
     private static int airClickCount(LocalPlayer player, boolean grounded, int jumpClicks) {
@@ -201,26 +271,72 @@ public class ClientGameEvents {
 
     /** 真视回响体验层:基础只给近距隐纹微光;研究 1/2 提升感知效率,不解锁新权限。 */
     private static void tickTrueSightShimmer(LocalPlayer player) {
-        if (player.tickCount % 10 != 0
-                || !ClientAbilityCache.hasAbility(EchoAbilityType.TRUE_SIGHT_ECHO)
+        if (!ClientAbilityCache.hasAbility(EchoAbilityType.TRUE_SIGHT_ECHO)
                 || !ClientConfig.ENABLE_ECHO_PARTICLES.get()) {
+            clearTrueSightCache();
+            return;
+        }
+        if (player.tickCount % 10 != 0) {
             return;
         }
         int range = trueSightShimmerRange();
         var random = player.getRandom();
-        net.minecraft.core.BlockPos center = player.blockPosition();
-        for (net.minecraft.core.BlockPos pos : net.minecraft.core.BlockPos.betweenClosed(
-                center.offset(-range, -5, -range), center.offset(range, 5, range))) {
-            if (player.level().getBlockState(pos).is(
-                    cn.kurt6.unknown_echoes.registry.ModBlocks.HIDDEN_RUNE_BRICKS.get())
+        BlockPos center = player.blockPosition();
+        if (shouldRefreshTrueSightCache(player, center, range)) {
+            refreshTrueSightCache(player, center, range);
+        }
+        int particles = 0;
+        for (BlockPos pos : trueSightHiddenCache) {
+            if (player.level().getBlockState(pos).is(ModBlocks.HIDDEN_RUNE_BRICKS.get())
                     && random.nextFloat() < 0.35F) {
                 player.level().addParticle(ParticleTypes.END_ROD,
                         pos.getX() + random.nextDouble(),
                         pos.getY() + random.nextDouble(),
                         pos.getZ() + random.nextDouble(),
                         0.0, 0.01, 0.0);
+                if (++particles >= TRUE_SIGHT_PARTICLE_LIMIT) {
+                    break;
+                }
             }
         }
+    }
+
+    private static boolean shouldRefreshTrueSightCache(LocalPlayer player, BlockPos center, int range) {
+        return trueSightCacheCenter == null
+                || trueSightCacheRange != range
+                || !player.level().dimension().equals(trueSightCacheDimension)
+                || player.tickCount % TRUE_SIGHT_CACHE_REFRESH_TICKS == 0
+                || trueSightCacheCenter.distManhattan(center) >= TRUE_SIGHT_CACHE_MOVE_DISTANCE;
+    }
+
+    private static void refreshTrueSightCache(LocalPlayer player, BlockPos center, int range) {
+        List<BlockPos> found = new ArrayList<>();
+        int matches = 0;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                center.offset(-range, -5, -range), center.offset(range, 5, range))) {
+            if (player.level().getBlockState(pos).is(ModBlocks.HIDDEN_RUNE_BRICKS.get())) {
+                matches++;
+                if (found.size() < TRUE_SIGHT_CACHE_LIMIT) {
+                    found.add(pos.immutable());
+                } else {
+                    int replacement = player.getRandom().nextInt(matches);
+                    if (replacement < TRUE_SIGHT_CACHE_LIMIT) {
+                        found.set(replacement, pos.immutable());
+                    }
+                }
+            }
+        }
+        trueSightHiddenCache = List.copyOf(found);
+        trueSightCacheCenter = center.immutable();
+        trueSightCacheDimension = player.level().dimension();
+        trueSightCacheRange = range;
+    }
+
+    private static void clearTrueSightCache() {
+        trueSightHiddenCache = List.of();
+        trueSightCacheCenter = null;
+        trueSightCacheDimension = null;
+        trueSightCacheRange = -1;
     }
 
     /** 真视研究 1:幻象类敌人每 6 秒短暂显出镜边微光。
@@ -270,15 +386,29 @@ public class ClientGameEvents {
 
     /** 靠近存活的主线 Boss 时播放对应 Boss BGM,远离/Boss 死亡由音轨自身淡出。 */
     private static void tickBossMusic(Minecraft mc, LocalPlayer player) {
+        var dimension = player.level().dimension();
+        if (!dimension.equals(bossMusicDimension)) {
+            if (bossMusic != null) {
+                mc.getSoundManager().stop(bossMusic);
+                bossMusic = null;
+            }
+            bossMusicDimension = dimension;
+            bossMusicScanCooldown = 0;
+            silenceDomainActive = false;
+            silenceDomainScanCooldown = 0;
+        }
         if (bossMusic != null && !mc.getSoundManager().isActive(bossMusic)) {
             bossMusic = null;
         }
         // 静默领域(沉默祭司):领域内音乐被刻意压低/掐断——表现与机制一致(10.4.2)
-        boolean silenceDomain = !player.level().getEntitiesOfClass(
-                cn.kurt6.unknown_echoes.entity.boss.SilentPriest.class,
-                player.getBoundingBox().inflate(cn.kurt6.unknown_echoes.entity.boss.SilentPriest.DOMAIN_RADIUS),
-                priest -> priest.isAlive() && priest.isDomainActive()).isEmpty();
-        if (silenceDomain) {
+        if (--silenceDomainScanCooldown <= 0) {
+            silenceDomainScanCooldown = 10;
+            silenceDomainActive = !player.level().getEntitiesOfClass(
+                    cn.kurt6.unknown_echoes.entity.boss.SilentPriest.class,
+                    player.getBoundingBox().inflate(cn.kurt6.unknown_echoes.entity.boss.SilentPriest.DOMAIN_RADIUS),
+                    priest -> priest.isAlive() && priest.isDomainActive()).isEmpty();
+        }
+        if (silenceDomainActive) {
             mc.getMusicManager().stopPlaying();
             if (bossMusic != null) {
                 mc.getSoundManager().stop(bossMusic);
@@ -297,32 +427,41 @@ public class ClientGameEvents {
         }
         bossMusicScanCooldown = 20;
         var area = player.getBoundingBox().inflate(48.0D);
-        var colossi = player.level().getEntitiesOfClass(
-                cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus.class, area,
-                boss -> boss.isAlive());
-        if (!colossi.isEmpty()) {
-            startBossMusic(mc, new BossMusicSound(colossi.get(0),
-                    cn.kurt6.unknown_echoes.registry.ModSounds.COLOSSUS_MUSIC.get()));
-            return;
+        var nearbyBosses = player.level().getEntitiesOfClass(
+                net.minecraft.world.entity.LivingEntity.class, area,
+                boss -> boss.isAlive() && (boss instanceof cn.kurt6.unknown_echoes.entity.boss.VoidProphet
+                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.RiftWarden
+                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.WorldEcho
+                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus
+                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher
+                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian));
+        net.minecraft.world.entity.LivingEntity selected = null;
+        int selectedPriority = Integer.MAX_VALUE;
+        for (var boss : nearbyBosses) {
+            int priority = boss instanceof cn.kurt6.unknown_echoes.entity.boss.VoidProphet ? 0
+                    : boss instanceof cn.kurt6.unknown_echoes.entity.boss.RiftWarden ? 1
+                    : boss instanceof cn.kurt6.unknown_echoes.entity.boss.WorldEcho ? 2
+                    : boss instanceof cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus ? 3
+                    : boss instanceof cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher ? 4 : 5;
+            if (priority < selectedPriority) {
+                selected = boss;
+                selectedPriority = priority;
+            }
         }
-        var watchers = player.level().getEntitiesOfClass(
-                cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher.class, area,
-                boss -> boss.isAlive() && !boss.isClone());
-        if (!watchers.isEmpty()) {
-            startBossMusic(mc, new BossMusicSound(watchers.get(0),
-                    cn.kurt6.unknown_echoes.registry.ModSounds.ABYSS_WATCHER_MUSIC.get()));
-            return;
+        if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.VoidProphet) {
+            startBossMusic(mc, new BossMusicSound(selected, ModSounds.VOID_PROPHET_MUSIC.get()));
+        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.RiftWarden) {
+            startBossMusic(mc, new BossMusicSound(selected, ModSounds.RIFT_WARDEN_MUSIC.get()));
+        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.WorldEcho) {
+            startBossMusic(mc, new BossMusicSound(selected, ModSounds.WORLD_ECHO_MUSIC.get()));
+        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus) {
+            startBossMusic(mc, new BossMusicSound(selected, ModSounds.COLOSSUS_MUSIC.get()));
+        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher) {
+            startBossMusic(mc, new BossMusicSound(selected, ModSounds.ABYSS_WATCHER_MUSIC.get()));
+        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian) {
+            // 真假身份不同步客户端；假身不会活过真身，任一存活即可锚定 BGM。
+            startBossMusic(mc, new BossMusicSound(selected, ModSounds.MIRROR_GUARDIAN_MUSIC.get()));
         }
-        var guardians = player.level().getEntitiesOfClass(
-                cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian.class, area,
-                boss -> boss.isAlive() && !boss.isIllusion());
-        if (!guardians.isEmpty()) {
-            startBossMusic(mc, new BossMusicSound(guardians.get(0),
-                    ModSounds.MIRROR_GUARDIAN_MUSIC.get()));
-            return;
-        }
-        // Mini Boss 不再播放专属战斗 BGM:仅主线 Boss(遗忘巨像 / 深渊观测者 / 镜像守护者)有战斗音乐,
-        // 守护者只保留场地音效与原版氛围音(用户要求:只有 Boss 有战斗 BGM)。
     }
 
     private static void startBossMusic(Minecraft mc, BossMusicSound sound) {
@@ -333,12 +472,21 @@ public class ClientGameEvents {
 
     @SubscribeEvent
     public static void onLoggedOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        if (bossMusic != null) {
+            Minecraft.getInstance().getSoundManager().stop(bossMusic);
+        }
         ClientAbilityCache.clear();
         ClientArtifactCache.clear();
         ClientJournalCache.clear();
+        ClientTradeCache.clearSession();
         usedDoubleJump = false;
         wasGrounded = true;
         glideTicks = 0;
         bossMusic = null;
+        bossMusicScanCooldown = 0;
+        bossMusicDimension = null;
+        silenceDomainActive = false;
+        silenceDomainScanCooldown = 0;
+        clearTrueSightCache();
     }
 }

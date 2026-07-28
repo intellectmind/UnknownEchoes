@@ -11,6 +11,10 @@ public final class ModEntityTags {
             TagKey.create(Registries.ENTITY_TYPE, UnknownEchoes.id("illusion_mobs"));
     public static final TagKey<EntityType<?>> ECHO_REALM_HOSTILES =
             TagKey.create(Registries.ENTITY_TYPE, UnknownEchoes.id("echo_realm_hostiles"));
+    public static final TagKey<EntityType<?>> DEEP_ECHOES_HOSTILES =
+            TagKey.create(Registries.ENTITY_TYPE, UnknownEchoes.id("deep_echoes_hostiles"));
+    public static final TagKey<EntityType<?>> ECHO_BOSSES =
+            TagKey.create(Registries.ENTITY_TYPE, UnknownEchoes.id("echo_bosses"));
 
     private ModEntityTags() {
     }

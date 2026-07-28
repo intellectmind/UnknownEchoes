@@ -149,7 +149,8 @@ public class CrystalFeatherBird extends Animal implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.feedCooldown = tag.getInt("FeedCooldown");
+        this.feedCooldown = Math.max(0, Math.min(tag.getInt("FeedCooldown"),
+                ServerConfig.CRYSTAL_FEATHER_FEED_COOLDOWN.get()));
     }
 
     @Override

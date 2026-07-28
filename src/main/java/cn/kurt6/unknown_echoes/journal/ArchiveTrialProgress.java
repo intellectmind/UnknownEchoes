@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.journal;
 
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
+import cn.kurt6.unknown_echoes.block.archive.EchoArchiveTerminalBlockEntity;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -58,13 +59,37 @@ public final class ArchiveTrialProgress {
     }
 
     private static BlockPos findNearbyArchiveTerminal(Level level, BlockPos origin) {
-        BlockPos from = origin.offset(-TERMINAL_RANGE, -TERMINAL_RANGE, -TERMINAL_RANGE);
-        BlockPos to = origin.offset(TERMINAL_RANGE, TERMINAL_RANGE, TERMINAL_RANGE);
-        for (BlockPos pos : BlockPos.betweenClosed(from, to)) {
-            if (level.getBlockState(pos).is(ModBlocks.ECHO_ARCHIVE_TERMINAL.get())) {
-                return pos.immutable();
+        int minChunkX = (origin.getX() - TERMINAL_RANGE) >> 4;
+        int maxChunkX = (origin.getX() + TERMINAL_RANGE) >> 4;
+        int minChunkZ = (origin.getZ() - TERMINAL_RANGE) >> 4;
+        int maxChunkZ = (origin.getZ() + TERMINAL_RANGE) >> 4;
+        BlockPos nearest = null;
+        long nearestDistance = Long.MAX_VALUE;
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                if (!level.hasChunk(chunkX, chunkZ)) {
+                    continue;
+                }
+                for (var blockEntity : level.getChunk(chunkX, chunkZ).getBlockEntities().values()) {
+                    if (!(blockEntity instanceof EchoArchiveTerminalBlockEntity)
+                            || !blockEntity.getBlockState().is(ModBlocks.ECHO_ARCHIVE_TERMINAL.get())) {
+                        continue;
+                    }
+                    BlockPos pos = blockEntity.getBlockPos();
+                    int dx = Math.abs(pos.getX() - origin.getX());
+                    int dy = Math.abs(pos.getY() - origin.getY());
+                    int dz = Math.abs(pos.getZ() - origin.getZ());
+                    if (dx > TERMINAL_RANGE || dy > TERMINAL_RANGE || dz > TERMINAL_RANGE) {
+                        continue;
+                    }
+                    long distance = (long) dx * dx + (long) dy * dy + (long) dz * dz;
+                    if (distance < nearestDistance) {
+                        nearest = pos.immutable();
+                        nearestDistance = distance;
+                    }
+                }
             }
         }
-        return null;
+        return nearest;
     }
 }

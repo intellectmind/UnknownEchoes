@@ -26,11 +26,12 @@ import net.minecraft.world.level.block.state.BlockState;
 public class PuzzleCoreBlockEntity extends BlockEntity {
     /** 旧档/未显式设置时的默认序列长度。 */
     public static final int DEFAULT_SEQUENCE_LENGTH = 4;
+    private static final int[] DEFAULT_SEQUENCE = {0, 1, 2, 3};
     private static final int EFFECT_RADIUS = 10;
 
     private int progress = 0;
     /** 需要依次点击的 ORDER 序列(默认升序,结构生成时可乱序覆盖)。 */
-    private int[] sequence = {0, 1, 2, 3};
+    private int[] sequence = DEFAULT_SEQUENCE.clone();
 
     public PuzzleCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PUZZLE_CORE.get(), pos, state);
@@ -46,7 +47,7 @@ public class PuzzleCoreBlockEntity extends BlockEntity {
 
     /** 结构生成时写入乱序序列;同时重置进度。 */
     public void setSequence(int[] sequence) {
-        if (sequence != null && sequence.length > 0) {
+        if (isValidSequence(sequence)) {
             this.sequence = sequence.clone();
             this.progress = 0;
             this.setChanged();
@@ -60,6 +61,10 @@ public class PuzzleCoreBlockEntity extends BlockEntity {
             return;
         }
 
+        if (this.progress < 0 || this.progress >= this.sequence.length) {
+            this.progress = 0;
+            this.setChanged();
+        }
         if (order == this.sequence[this.progress]) {
             this.progress++;
             this.setChanged();
@@ -107,7 +112,8 @@ public class PuzzleCoreBlockEntity extends BlockEntity {
         }
         if (level instanceof ServerLevel serverLevel) {
             for (ServerPlayer nearby : serverLevel.players()) {
-                if (nearby.distanceToSqr(this.worldPosition.getX(), this.worldPosition.getY(),
+                if (!nearby.isSpectator()
+                        && nearby.distanceToSqr(this.worldPosition.getX(), this.worldPosition.getY(),
                         this.worldPosition.getZ()) <= 32 * 32) {
                     nearby.sendSystemMessage(
                             Component.translatable("message.unknown_echoes.puzzle_core.opened"));
@@ -141,11 +147,28 @@ public class PuzzleCoreBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        this.progress = tag.getInt("Progress");
+        this.sequence = DEFAULT_SEQUENCE.clone();
         int[] saved = tag.getIntArray("Sequence");
-        if (saved.length > 0) {
+        if (isValidSequence(saved)) {
             this.sequence = saved;
         }
+        int maxProgress = this.getBlockState().getValue(PuzzleCoreBlock.ACTIVE)
+                ? this.sequence.length : Math.max(0, this.sequence.length - 1);
+        this.progress = Math.max(0, Math.min(tag.getInt("Progress"), maxProgress));
         // 旧档无 Sequence 字段:保留默认 0→3 升序,行为与 V0.2 一致
+    }
+
+    private static boolean isValidSequence(int[] candidate) {
+        if (candidate == null || candidate.length == 0 || candidate.length > 8) {
+            return false;
+        }
+        boolean[] seen = new boolean[8];
+        for (int value : candidate) {
+            if (value < 0 || value >= seen.length || seen[value]) {
+                return false;
+            }
+            seen[value] = true;
+        }
+        return true;
     }
 }

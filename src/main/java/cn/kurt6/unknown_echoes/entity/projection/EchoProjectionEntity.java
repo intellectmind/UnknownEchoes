@@ -141,10 +141,10 @@ public class EchoProjectionEntity extends LivingEntity implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.lifeTicks = tag.getInt("LifeTicks");
-        if (tag.hasUUID("Owner")) {
-            this.ownerId = tag.getUUID("Owner");
-        }
+        this.lifeTicks = tag.contains("LifeTicks")
+                ? Math.max(0, Math.min(tag.getInt("LifeTicks"), DEFAULT_LIFETIME_TICKS))
+                : DEFAULT_LIFETIME_TICKS;
+        this.ownerId = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
     }
 
     @Override

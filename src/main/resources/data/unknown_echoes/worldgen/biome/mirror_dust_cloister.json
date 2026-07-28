@@ -37,11 +37,15 @@
     [],
     [],
     [
+      "unknown_echoes:mirror_dust_stone_disk",
+      "unknown_echoes:prism_dust_cluster_disk",
       "unknown_echoes:mirror_stone_disk"
     ],
     [],
     [],
     [
+      "unknown_echoes:glassveil_grass_patch",
+      "unknown_echoes:reflection_orchid_patch",
       "unknown_echoes:echo_flowers",
       "unknown_echoes:glow_fern_patch",
       "unknown_echoes:glow_grass_patch",

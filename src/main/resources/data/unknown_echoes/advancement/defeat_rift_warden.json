@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:ability_gravity_echo",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:rift_warden_spawn_egg"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.defeat_rift_warden.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.defeat_rift_warden.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -189,7 +189,9 @@ public class TideWaterShade extends Monster implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.lifeTicks = tag.contains("LifeTicks") ? tag.getInt("LifeTicks") : LIFESPAN_TICKS;
+        this.lifeTicks = tag.contains("LifeTicks")
+                ? Math.max(0, Math.min(tag.getInt("LifeTicks"), LIFESPAN_TICKS))
+                : LIFESPAN_TICKS;
         this.ownerUuid = tag.hasUUID("OwnerUuid") ? tag.getUUID("OwnerUuid") : null;
     }
 

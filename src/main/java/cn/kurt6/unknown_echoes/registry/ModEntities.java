@@ -9,10 +9,15 @@ import cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus;
 import cn.kurt6.unknown_echoes.entity.boss.LostRecorderChief;
 import cn.kurt6.unknown_echoes.entity.boss.MirrorDustButler;
 import cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian;
+import cn.kurt6.unknown_echoes.entity.boss.RiftWarden;
 import cn.kurt6.unknown_echoes.entity.boss.SilentPriest;
 import cn.kurt6.unknown_echoes.entity.boss.StormWeaver;
 import cn.kurt6.unknown_echoes.entity.boss.TideLanternKeeper;
+import cn.kurt6.unknown_echoes.entity.boss.VoidProphet;
+import cn.kurt6.unknown_echoes.entity.boss.WorldEcho;
 import cn.kurt6.unknown_echoes.entity.mob.BrokenBellCrow;
+import cn.kurt6.unknown_echoes.entity.mob.AbyssLurker;
+import cn.kurt6.unknown_echoes.entity.mob.AnchorShellBeast;
 import cn.kurt6.unknown_echoes.entity.mob.CrystalFeatherBird;
 import cn.kurt6.unknown_echoes.entity.mob.CrystalChimeSpirit;
 import cn.kurt6.unknown_echoes.entity.mob.CrystalNoiseWisp;
@@ -21,6 +26,7 @@ import cn.kurt6.unknown_echoes.entity.mob.DreamingDeer;
 import cn.kurt6.unknown_echoes.entity.mob.EchoDeer;
 import cn.kurt6.unknown_echoes.entity.mob.EchoRemnant;
 import cn.kurt6.unknown_echoes.entity.mob.EchoWanderer;
+import cn.kurt6.unknown_echoes.entity.mob.FoldpageBug;
 import cn.kurt6.unknown_echoes.entity.mob.GlowRabbit;
 import cn.kurt6.unknown_echoes.entity.mob.LostRecorder;
 import cn.kurt6.unknown_echoes.entity.mob.MirrorDustDecoy;
@@ -31,6 +37,7 @@ import cn.kurt6.unknown_echoes.entity.mob.TideWaterShade;
 import cn.kurt6.unknown_echoes.entity.mob.WaterShadow;
 import cn.kurt6.unknown_echoes.entity.mob.WindErodedSentinel;
 import cn.kurt6.unknown_echoes.entity.mob.WindSacMoth;
+import cn.kurt6.unknown_echoes.entity.mob.VoidWanderer;
 import cn.kurt6.unknown_echoes.entity.projection.EchoProjectionEntity;
 import cn.kurt6.unknown_echoes.entity.projectile.TideBoltEntity;
 import net.minecraft.core.registries.Registries;
@@ -65,6 +72,30 @@ public class ModEntities {
                             .clientTrackingRange(10)
                             .build("abyss_watcher"));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<VoidProphet>> VOID_PROPHET =
+            ENTITY_TYPES.register("void_prophet",
+                    () -> EntityType.Builder.of(VoidProphet::new, MobCategory.MONSTER)
+                            .sized(3.1F, 6.3F)
+                            .clientTrackingRange(12)
+                            .fireImmune()
+                            .build("void_prophet"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<RiftWarden>> RIFT_WARDEN =
+            ENTITY_TYPES.register("rift_warden",
+                    () -> EntityType.Builder.of(RiftWarden::new, MobCategory.MONSTER)
+                            .sized(3.8F, 6.0F)
+                            .clientTrackingRange(12)
+                            .fireImmune()
+                            .build("rift_warden"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<WorldEcho>> WORLD_ECHO =
+            ENTITY_TYPES.register("world_echo",
+                    () -> EntityType.Builder.of(WorldEcho::new, MobCategory.MONSTER)
+                            .sized(8.4F, 13.2F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("world_echo"));
+
     public static final DeferredHolder<EntityType<?>, EntityType<MirrorGuardian>> MIRROR_GUARDIAN =
             ENTITY_TYPES.register("mirror_guardian",
                     () -> EntityType.Builder.of(MirrorGuardian::new, MobCategory.MONSTER)
@@ -94,8 +125,6 @@ public class ModEntities {
                             .fireImmune()
                             .build("echo_projection"));
 
-    // ---- V0.6A Mini Boss ----
-
     public static final DeferredHolder<EntityType<?>, EntityType<StormWeaver>> STORM_WEAVER =
             ENTITY_TYPES.register("storm_weaver",
                     () -> EntityType.Builder.of(StormWeaver::new, MobCategory.MONSTER)
@@ -110,9 +139,6 @@ public class ModEntities {
                             .clientTrackingRange(10)
                             .build("silent_priest"));
 
-    // ---- V0.6B 弹射物 ----
-
-    /** 潮汐弩矢:潮汐弩专属弹射物(水下无衰减 + 符文方向标记)。 */
     public static final DeferredHolder<EntityType<?>, EntityType<TideBoltEntity>> TIDE_BOLT =
             ENTITY_TYPES.register("tide_bolt",
                     () -> EntityType.Builder.<TideBoltEntity>of(TideBoltEntity::new, MobCategory.MISC)
@@ -120,8 +146,6 @@ public class ModEntities {
                             .clientTrackingRange(4)
                             .updateInterval(20)
                             .build("tide_bolt"));
-
-    // ---- V0.6C 镜湖 Mini Boss ----
 
     public static final DeferredHolder<EntityType<?>, EntityType<TideLanternKeeper>> TIDE_LANTERN_KEEPER =
             ENTITY_TYPES.register("tide_lantern_keeper",
@@ -144,16 +168,12 @@ public class ModEntities {
                             .clientTrackingRange(10)
                             .build("mirror_dust_butler"));
 
-    // ---- V0.6D 迷途旅者 ----
-
     public static final DeferredHolder<EntityType<?>, EntityType<cn.kurt6.unknown_echoes.entity.mob.LostTraveler>> LOST_TRAVELER =
             ENTITY_TYPES.register("lost_traveler",
                     () -> EntityType.Builder.of(cn.kurt6.unknown_echoes.entity.mob.LostTraveler::new, MobCategory.CREATURE)
                             .sized(0.6F, 1.9F)
                             .clientTrackingRange(10)
                             .build("lost_traveler"));
-
-    // ---- V0.6F 普通环境生物(九章 9.1,只提供材料/食物/弱线索,不参与进度) ----
 
     public static final DeferredHolder<EntityType<?>, EntityType<EchoDeer>> ECHO_DEER =
             ENTITY_TYPES.register("echo_deer",
@@ -182,8 +202,6 @@ public class ModEntities {
                             .sized(1.0F, 0.5F)
                             .clientTrackingRange(8)
                             .build("moss_back_turtle"));
-
-    // ---- V0.7C 后期群系生态实体基础 ----
 
     public static final DeferredHolder<EntityType<?>, EntityType<DreamingDeer>> DREAMING_DEER =
             ENTITY_TYPES.register("dreaming_deer",
@@ -289,4 +307,33 @@ public class ModEntities {
                             .sized(0.95F, 2.6F)
                             .clientTrackingRange(10)
                             .build("lost_recorder_chief"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<FoldpageBug>> FOLDPAGE_BUG =
+            ENTITY_TYPES.register("foldpage_bug",
+                    () -> EntityType.Builder.of(FoldpageBug::new, MobCategory.CREATURE)
+                            .sized(0.85F, 0.45F)
+                            .clientTrackingRange(8)
+                            .build("foldpage_bug"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<AnchorShellBeast>> ANCHOR_SHELL_BEAST =
+            ENTITY_TYPES.register("anchor_shell_beast",
+                    () -> EntityType.Builder.of(AnchorShellBeast::new, MobCategory.CREATURE)
+                            .sized(1.35F, 1.1F)
+                            .clientTrackingRange(8)
+                            .build("anchor_shell_beast"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<AbyssLurker>> ABYSS_LURKER =
+            ENTITY_TYPES.register("abyss_lurker",
+                    () -> EntityType.Builder.of(AbyssLurker::new, MobCategory.MONSTER)
+                            .sized(1.45F, 0.75F)
+                            .clientTrackingRange(8)
+                            .build("abyss_lurker"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<VoidWanderer>> VOID_WANDERER =
+            ENTITY_TYPES.register("void_wanderer",
+                    () -> EntityType.Builder.of(VoidWanderer::new, MobCategory.MONSTER)
+                            .sized(1.2F, 1.8F)
+                            .clientTrackingRange(10)
+                            .fireImmune()
+                            .build("void_wanderer"));
 }

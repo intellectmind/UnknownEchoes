@@ -24,12 +24,12 @@ public record SyncAbilityPayload(List<String> abilities, List<String> beacons,
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SyncAbilityPayload> STREAM_CODEC =
             StreamCodec.composite(
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), SyncAbilityPayload::abilities,
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), SyncAbilityPayload::beacons,
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), SyncAbilityPayload::dimensions,
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), SyncAbilityPayload::research,
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), SyncAbilityPayload::ritualTokens,
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), SyncAbilityPayload::failures,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(16)), SyncAbilityPayload::abilities,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(1024)), SyncAbilityPayload::beacons,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(64)), SyncAbilityPayload::dimensions,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(32)), SyncAbilityPayload::research,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(16)), SyncAbilityPayload::ritualTokens,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(16)), SyncAbilityPayload::failures,
                     SyncAbilityPayload::new);
 
     @Override

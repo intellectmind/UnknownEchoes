@@ -46,7 +46,9 @@ import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -95,6 +97,8 @@ public class SilentPriest extends MiniBossEntity {
     /** 领域时长:基础 + 每根完好共鸣烛延长(4 根全在 = 110 tick,全碎 = 50 tick)。 */
     private static final int DOMAIN_BASE_TICKS = 50;
     private static final int DOMAIN_PER_CANDLE_TICKS = 15;
+    private static final int MAX_DOMAIN_CANDLES = 16;
+    private static final int GUIDANCE_CANDLE_BATCH = 4;
     private static final int DOMAIN_INTERVAL_WHISPER = 400;
     private static final int DOMAIN_INTERVAL_VOICELESS = 260;
     private static final int STAGGER_TICKS = 70;
@@ -113,6 +117,8 @@ public class SilentPriest extends MiniBossEntity {
     private int domainCooldown = 200;
     private int domainTicksRemaining = 0;
     private int candlesAtDomainStart = 0;
+    private final List<BlockPos> domainCandlePositions = new ArrayList<>();
+    private boolean domainCandlesInitialized = false;
     private int staggerTicksRemaining = 0;
 
     private int waveCooldown = 0;
@@ -201,6 +207,27 @@ public class SilentPriest extends MiniBossEntity {
     }
 
     @Override
+    protected void tickMechanicGuidance(ServerLevel level) {
+        Vec3 core = this.position().add(0, 1.2, 0);
+        int size = this.domainCandlePositions.size();
+        if (size == 0) {
+            return;
+        }
+        int start = Math.floorMod((this.tickCount / 5) * GUIDANCE_CANDLE_BATCH, size);
+        int guided = 0;
+        for (int i = 0; i < size && guided < GUIDANCE_CANDLE_BATCH; i++) {
+            BlockPos pos = this.domainCandlePositions.get((start + i) % size);
+            if (!(level.getBlockState(pos).getBlock() instanceof ResonanceCandleBlock)) {
+                continue;
+            }
+            Vec3 candle = Vec3.atCenterOf(pos).add(0, 0.35, 0);
+            BossFx.guidanceMarker(level, candle, ParticleTypes.SMALL_FLAME);
+            BossFx.guidanceLink(level, candle, core, ParticleTypes.NOTE);
+            guided++;
+        }
+    }
+
+    @Override
     protected void grantSettlement(ServerPlayer player, boolean firstKill) {
         MiniBossRewardTable.grantSilentPriest(this, player, firstKill);
     }
@@ -212,13 +239,26 @@ public class SilentPriest extends MiniBossEntity {
         return this.getHealth() <= this.getMaxHealth() * 0.5F;
     }
 
-    /** 数场地内完好的共鸣烛(打碎 = 缩短领域)。 */
-    private int countIntactCandles(ServerLevel serverLevel) {
+    private void initializeDomainCandles(ServerLevel serverLevel) {
+        this.domainCandlePositions.clear();
         BlockPos anchor = this.arenaAnchor();
-        int count = 0;
         for (BlockPos pos : BlockPos.betweenClosed(
                 anchor.offset(-ARENA_RADIUS, -3, -ARENA_RADIUS),
                 anchor.offset(ARENA_RADIUS, 4, ARENA_RADIUS))) {
+            if (serverLevel.getBlockState(pos).getBlock() instanceof ResonanceCandleBlock) {
+                this.domainCandlePositions.add(pos.immutable());
+                if (this.domainCandlePositions.size() >= MAX_DOMAIN_CANDLES) {
+                    break;
+                }
+            }
+        }
+        this.candlesAtDomainStart = this.domainCandlePositions.size();
+        this.domainCandlesInitialized = true;
+    }
+
+    private int countIntactCandles(ServerLevel serverLevel) {
+        int count = 0;
+        for (BlockPos pos : this.domainCandlePositions) {
             if (serverLevel.getBlockState(pos).getBlock() instanceof ResonanceCandleBlock) {
                 count++;
             }
@@ -228,7 +268,9 @@ public class SilentPriest extends MiniBossEntity {
 
     private void tickDomain(ServerLevel serverLevel) {
         if (this.domainTicksRemaining > 0) {
-            // 领域中打碎共鸣烛立即缩短剩余时间
+            if (!this.domainCandlesInitialized) {
+                initializeDomainCandles(serverLevel);
+            }
             int intact = countIntactCandles(serverLevel);
             if (intact < this.candlesAtDomainStart) {
                 this.domainTicksRemaining -= (this.candlesAtDomainStart - intact) * DOMAIN_PER_CANDLE_TICKS;
@@ -259,7 +301,7 @@ public class SilentPriest extends MiniBossEntity {
     }
 
     private void startDomain(ServerLevel serverLevel) {
-        this.candlesAtDomainStart = countIntactCandles(serverLevel);
+        initializeDomainCandles(serverLevel);
         this.domainTicksRemaining = DOMAIN_BASE_TICKS + this.candlesAtDomainStart * DOMAIN_PER_CANDLE_TICKS;
         this.setDomainActive(true);
         // 开启瞬间是最后一个"有声"提示:之后领域内一切提示音静默
@@ -271,6 +313,8 @@ public class SilentPriest extends MiniBossEntity {
 
     private void endDomain(ServerLevel serverLevel) {
         this.setDomainActive(false);
+        this.domainCandlePositions.clear();
+        this.domainCandlesInitialized = false;
         this.domainCooldown = this.isVoicelessPhase() ? DOMAIN_INTERVAL_VOICELESS : DOMAIN_INTERVAL_WHISPER;
         if (this.isVoicelessPhase()) {
             // 失声硬直:领域结束的明确输出窗口(10.4.2)
@@ -422,7 +466,7 @@ public class SilentPriest extends MiniBossEntity {
         }
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(this.waveRadius + 0.8, 1.5, this.waveRadius + 0.8),
-                e -> e != this && !(e instanceof Enemy)
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy)
                         && !this.waveHitVictims.contains(e.getUUID()))) {
             double dist = victim.position().subtract(this.position()).horizontalDistance();
             if (Math.abs(dist - this.waveRadius) > 1.2) {
@@ -452,7 +496,7 @@ public class SilentPriest extends MiniBossEntity {
         Vec3 facing = Vec3.directionFromRotation(0, this.yBodyRot).normalize();
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(SWEEP_RANGE, 1.5, SWEEP_RANGE),
-                e -> e != this && !(e instanceof Enemy))) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
             Vec3 toVictim = victim.position().subtract(this.position()).multiply(1, 0, 1);
             if (toVictim.lengthSqr() > 1.0E-4 && facing.dot(toVictim.normalize()) < 0.5) {
                 continue;
@@ -513,7 +557,7 @@ public class SilentPriest extends MiniBossEntity {
                             this.markPos.z - MARK_ZONE_RADIUS,
                             this.markPos.x + MARK_ZONE_RADIUS, this.markPos.y + 2.5,
                             this.markPos.z + MARK_ZONE_RADIUS),
-                    e -> e != this && !(e instanceof Enemy))) {
+                    e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
                 victim.hurt(this.damageSources().mobAttack(this),
                         (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.25F);
                 victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 1));
@@ -588,9 +632,14 @@ public class SilentPriest extends MiniBossEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.domainTicksRemaining = tag.getInt("DomainTicks");
-        this.domainCooldown = Math.max(60, tag.getInt("DomainCooldown"));
-        this.staggerTicksRemaining = tag.getInt("StaggerTicks");
+        this.domainTicksRemaining = Math.max(0, Math.min(
+                DOMAIN_BASE_TICKS + MAX_DOMAIN_CANDLES * DOMAIN_PER_CANDLE_TICKS,
+                tag.getInt("DomainTicks")));
+        this.domainCooldown = Math.max(60, Math.min(DOMAIN_INTERVAL_WHISPER,
+                tag.getInt("DomainCooldown")));
+        this.staggerTicksRemaining = Math.max(0, Math.min(STAGGER_TICKS, tag.getInt("StaggerTicks")));
+        this.domainCandlePositions.clear();
+        this.domainCandlesInitialized = false;
         this.setDomainActive(this.domainTicksRemaining > 0);
         this.setStaggered(this.staggerTicksRemaining > 0);
     }

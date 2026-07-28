@@ -12,7 +12,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -92,8 +91,8 @@ public class MirrorGuardian extends Monster implements GeoEntity {
 
     private static final EntityDataAccessor<Boolean> DATA_BROKEN =
             SynchedEntityData.defineId(MirrorGuardian.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> DATA_ILLUSION =
-            SynchedEntityData.defineId(MirrorGuardian.class, EntityDataSerializers.BOOLEAN);
+    /** 真假身份只存服务端(红线 #9):不入 SynchedEntityData,抓包/实体数据读不出真身。 */
+    private boolean illusion = false;
 
     private static final int ILLUSION_LIFETIME_TICKS = 1200;
     private static final double ILLUSION_MAX_HEALTH = 10.0D;
@@ -176,7 +175,6 @@ public class MirrorGuardian extends Monster implements GeoEntity {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_BROKEN, false);
-        builder.define(DATA_ILLUSION, false);
     }
 
     public boolean isBroken() {
@@ -188,12 +186,12 @@ public class MirrorGuardian extends Monster implements GeoEntity {
     }
 
     public boolean isIllusion() {
-        return this.entityData.get(DATA_ILLUSION);
+        return this.illusion;
     }
 
     /** 把这只实例标记为镜面假身:低血量、佯攻不造成伤害、无掉落无经验、限时碎裂。 */
     public void becomeIllusion() {
-        this.entityData.set(DATA_ILLUSION, true);
+        this.illusion = true;
         this.xpReward = 0;
         this.illusionLifeTicks = ILLUSION_LIFETIME_TICKS;
         var maxHealth = this.getAttribute(Attributes.MAX_HEALTH);
@@ -226,7 +224,9 @@ public class MirrorGuardian extends Monster implements GeoEntity {
             illusion.setTarget(this.getTarget());
             illusion.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(illusion.blockPosition()),
                     MobSpawnType.MOB_SUMMONED, null);
-            serverLevel.addFreshEntity(illusion);
+            if (!serverLevel.addFreshEntity(illusion)) {
+                continue;
+            }
             this.illusionIds.add(illusion.getUUID());
             // 半透明镜尘:假身出场演出
             serverLevel.sendParticles(ParticleTypes.WHITE_ASH,
@@ -321,7 +321,7 @@ public class MirrorGuardian extends Monster implements GeoEntity {
                 || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
-        this.participants.add(activator.getUUID());
+        BossNbtData.addParticipant(this.participants, activator.getUUID());
         List<BlockPos> realSigils = findNearbyRealSigils(serverLevel, activatedSigil);
         if (realSigils.isEmpty()) {
             return;
@@ -343,17 +343,9 @@ public class MirrorGuardian extends Monster implements GeoEntity {
 
     private List<BlockPos> findNearbyRealSigils(ServerLevel serverLevel, BlockPos center) {
         List<BlockPos> result = new ArrayList<>();
-        for (BlockPos pos : BlockPos.betweenClosed(
-                center.offset(-MirrorSigilBlockEntity.CLUSTER_RANGE_H,
-                        -MirrorSigilBlockEntity.CLUSTER_RANGE_V,
-                        -MirrorSigilBlockEntity.CLUSTER_RANGE_H),
-                center.offset(MirrorSigilBlockEntity.CLUSTER_RANGE_H,
-                        MirrorSigilBlockEntity.CLUSTER_RANGE_V,
-                        MirrorSigilBlockEntity.CLUSTER_RANGE_H))) {
-            var state = serverLevel.getBlockState(pos);
-            if (state.getBlock() instanceof MirrorSigilBlock
-                    && MirrorSigilBlockEntity.isReal(serverLevel, pos)) {
-                result.add(pos.immutable());
+        for (BlockPos pos : MirrorSigilBlockEntity.findCluster(serverLevel, center)) {
+            if (MirrorSigilBlockEntity.isReal(serverLevel, pos)) {
+                result.add(pos);
             }
         }
         return result;
@@ -490,7 +482,8 @@ public class MirrorGuardian extends Monster implements GeoEntity {
         Vec3 facing = Vec3.directionFromRotation(0, this.yBodyRot).normalize();
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(SLASH_RANGE, 2.0, SLASH_RANGE),
-                e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> e != this && !e.isSpectator()
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             Vec3 toVictim = victim.position().subtract(this.position()).multiply(1, 0, 1);
             if (toVictim.lengthSqr() > 1.0E-4 && facing.dot(toVictim.normalize()) < 0.5) {
                 continue;
@@ -547,7 +540,8 @@ public class MirrorGuardian extends Monster implements GeoEntity {
         Vec3 facing = Vec3.directionFromRotation(0, this.yHeadRot).normalize();
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(BARRAGE_RANGE, 3.0, BARRAGE_RANGE),
-                e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> e != this && !e.isSpectator()
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             Vec3 toVictim = victim.position().subtract(this.position()).multiply(1, 0, 1);
             if (toVictim.lengthSqr() > 1.0E-4 && facing.dot(toVictim.normalize()) < 0.64) {
                 continue;
@@ -600,7 +594,8 @@ public class MirrorGuardian extends Monster implements GeoEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.6F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(NOVA_BURST_RADIUS, 2.0, NOVA_BURST_RADIUS),
-                e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> e != this && !e.isSpectator()
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
             if (away.lengthSqr() > 1.0E-4) {
@@ -673,7 +668,8 @@ public class MirrorGuardian extends Monster implements GeoEntity {
                     new net.minecraft.world.phys.AABB(
                             p.x - 1.2, this.spikeOrigin.y - 1.0, p.z - 1.2,
                             p.x + 1.2, this.spikeOrigin.y + 2.5, p.z + 1.2),
-                    e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy)
+                    e -> e != this && !e.isSpectator()
+                            && !(e instanceof net.minecraft.world.entity.monster.Enemy)
                             && !this.spikeHitVictims.contains(e.getUUID()))) {
                 victim.hurt(this.damageSources().mobAttack(this), damage);
                 victim.setDeltaMovement(victim.getDeltaMovement().add(0.0, 0.4, 0.0));
@@ -763,12 +759,16 @@ public class MirrorGuardian extends Monster implements GeoEntity {
             }
         }
 
+        // 主线 Boss 在场心跳(挖掘/开箱封锁的快速预判依赖它;假身不上报,真身死亡后封锁 3 秒内解除)
+        if (this.tickCount % 20 == 0 && !this.isIllusion()) {
+            cn.kurt6.unknown_echoes.event.CommonEvents.noteMainBossPresence(serverLevel);
+        }
         // 参与者登记 + 多人扩容
         if (this.tickCount % 20 == 0 && this.getTarget() != null) {
             double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
             for (ServerPlayer player : serverLevel.players()) {
-                if (player.distanceToSqr(this) <= radius * radius) {
-                    this.participants.add(player.getUUID());
+                if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
+                    BossNbtData.addParticipant(this.participants, player.getUUID());
                 }
             }
             if (ServerConfig.BOSS_DYNAMIC_SCALING.get()) {
@@ -815,8 +815,9 @@ public class MirrorGuardian extends Monster implements GeoEntity {
         if (this.isIllusion()) {
             return super.hurt(source, amount);
         }
-        if (!this.level().isClientSide && source.getEntity() instanceof ServerPlayer attacker) {
-            this.participants.add(attacker.getUUID());
+        if (!this.level().isClientSide && source.getEntity() instanceof ServerPlayer attacker
+                && !attacker.isSpectator()) {
+            BossNbtData.addParticipant(this.participants, attacker.getUUID());
         }
         if (!this.level().isClientSide && !this.isBroken()
                 && BossPhaseGate.shouldCapMechanicDamage(source)) {
@@ -869,7 +870,8 @@ public class MirrorGuardian extends Monster implements GeoEntity {
         if (this.isIllusion()) {
             for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                     this.getBoundingBox().inflate(3.0, 1.5, 3.0),
-                    e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                    e -> e != this && !e.isSpectator()
+                            && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
                 victim.hurt(this.damageSources().mobAttack(this), 3.0F);
                 Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
                 if (away.lengthSqr() > 1.0E-4) {
@@ -901,7 +903,7 @@ public class MirrorGuardian extends Monster implements GeoEntity {
         // 设计红线 #4:奖励只发给死亡时仍在场地范围内的参与玩家
         double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
         for (ServerPlayer player : serverLevel.players()) {
-            if (this.participants.contains(player.getUUID())
+            if (!player.isSpectator() && this.participants.contains(player.getUUID())
                     && player.distanceToSqr(this) <= radius * radius) {
                 boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
                         EchoPermission.MIRROR_GUARDIAN_ID);
@@ -1000,23 +1002,20 @@ public class MirrorGuardian extends Monster implements GeoEntity {
         super.readAdditionalSaveData(tag);
         if (tag.getBoolean("IsIllusion")) {
             this.becomeIllusion();
-            this.illusionLifeTicks = tag.getInt("IllusionLife");
+            this.illusionLifeTicks = BossNbtData.clampTimer(
+                    tag.getInt("IllusionLife"), ILLUSION_LIFETIME_TICKS);
         }
         this.setBroken(tag.getBoolean("Broken"));
-        this.brokenTicksRemaining = tag.getInt("BrokenTicks");
-        this.brokenWindowHealthFloor = tag.getFloat("BrokenWindowHealthFloor");
-        this.scaledParticipants = Math.max(1, tag.getInt("ScaledParticipants"));
-        this.illusionIds.clear();
-        for (Tag entry : tag.getList("IllusionIds", Tag.TAG_INT_ARRAY)) {
-            this.illusionIds.add(NbtUtils.loadUUID(entry));
-        }
-        this.participants.clear();
-        for (Tag entry : tag.getList("Participants", Tag.TAG_INT_ARRAY)) {
-            this.participants.add(NbtUtils.loadUUID(entry));
-        }
-        int[] home = tag.getIntArray("HomePos");
-        if (home.length == 3) {
-            this.homePos = new BlockPos(home[0], home[1], home[2]);
+        this.brokenTicksRemaining = BossNbtData.clampTimer(tag.getInt("BrokenTicks"),
+                ServerConfig.BOSS_BROKEN_DURATION_TICKS.get());
+        this.brokenWindowHealthFloor = BossNbtData.clampHealthFloor(
+                tag.getFloat("BrokenWindowHealthFloor"), this.getMaxHealth());
+        this.scaledParticipants = BossNbtData.clampParticipantScale(tag.getInt("ScaledParticipants"));
+        BossNbtData.loadUuids(tag, "IllusionIds", this.illusionIds, BossNbtData.MAX_SUMMONS);
+        BossNbtData.loadUuids(tag, "Participants", this.participants, BossNbtData.MAX_PARTICIPANTS);
+        this.homePos = BossNbtData.loadPositionNear(tag, "HomePos", this.blockPosition(),
+                ARENA_RADIUS * 3, ARENA_RADIUS * 2);
+        if (this.homePos != null) {
             this.restrictTo(this.homePos, ARENA_RADIUS);
         }
         if (this.hasCustomName()) {

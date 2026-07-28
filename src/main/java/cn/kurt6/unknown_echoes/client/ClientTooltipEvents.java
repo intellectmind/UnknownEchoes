@@ -23,6 +23,14 @@ public class ClientTooltipEvents {
             return;
         }
         event.getToolTip().removeIf(ClientTooltipEvents::isMaterialSourceOrUseLine);
+        if ("gravity_field_core".equals(itemId.getPath())) {
+            event.getToolTip().add(Component.translatable(
+                    "tooltip.unknown_echoes.gravity_field_core.effect")
+                    .withStyle(ChatFormatting.AQUA));
+            event.getToolTip().add(Component.translatable(
+                    "tooltip.unknown_echoes.gravity_field_core.anchor")
+                    .withStyle(ChatFormatting.GRAY));
+        }
         String clueStructure = event.getItemStack().get(ModDataComponents.CLUE_STRUCTURE.get());
         if (clueStructure != null && !clueStructure.isBlank()) {
             ResourceLocation structureId = ResourceLocation.tryParse(clueStructure);

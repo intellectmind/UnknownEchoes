@@ -38,6 +38,7 @@ public class WindGlideTracker {
         boolean gliding;
         int glideTicksRemaining;
         int landingCooldown;
+        long lastGlideHoldSoundTick = -10L;
     }
 
     private static State state(ServerPlayer player) {
@@ -48,8 +49,17 @@ public class WindGlideTracker {
         STATES.remove(playerId);
     }
 
+    /** 服务器停止时清理瞬态飞行状态,避免单机世界切换串状态。 */
+    public static void clearAll() {
+        STATES.clear();
+    }
+
     /** 每个服务端玩家 tick 调用(CommonEvents):维护离地计数、滑翔倒计时与落地冷却。 */
     public static void tick(ServerPlayer player) {
+        if (player.isSpectator() || !EchoAbilityManager.hasAbility(player, EchoAbilityType.WIND_ECHO)) {
+            STATES.remove(player.getUUID());
+            return;
+        }
         State s = state(player);
         boolean grounded = isGroundedForWind(player);
         if (grounded) {
@@ -82,7 +92,7 @@ public class WindGlideTracker {
 
     /** DoubleJumpPayload 服务端入口:能力校验之外补状态/能量/冷却校验。 */
     public static void handle(ServerPlayer player, byte mode) {
-        if (!EchoAbilityManager.hasAbility(player, EchoAbilityType.WIND_ECHO)) {
+        if (player.isSpectator() || !EchoAbilityManager.hasAbility(player, EchoAbilityType.WIND_ECHO)) {
             return;
         }
         State s = state(player);
@@ -127,6 +137,7 @@ public class WindGlideTracker {
                     ArtifactManager.spendEnergy(player, cost);
                 }
                 s.gliding = true;
+                s.lastGlideHoldSoundTick = player.level().getGameTime();
                 // 聆听者 4 件:能力持续时间小幅延长(11.3,+20 tick);客户端公式同步加成
                 s.glideTicksRemaining = windGlideDuration(player)
                         + (EchoArmorSets.hasListenerAbilityBonus(player) ? 20 : 0)
@@ -142,8 +153,12 @@ public class WindGlideTracker {
                 }
                 player.fallDistance = 0.0F;
                 // 滑翔保持包每 10 tick 一次,低音量风声变体连成持续气流感
-                player.level().playSound(null, player.blockPosition(),
-                        ModSounds.WIND_GLIDE.get(), SoundSource.PLAYERS, 0.4F, 1.0F);
+                long now = player.level().getGameTime();
+                if (s.lastGlideHoldSoundTick > now || now - s.lastGlideHoldSoundTick >= 10L) {
+                    s.lastGlideHoldSoundTick = now;
+                    player.level().playSound(null, player.blockPosition(),
+                            ModSounds.WIND_GLIDE.get(), SoundSource.PLAYERS, 0.4F, 1.0F);
+                }
             }
             default -> {
             }
@@ -152,7 +167,8 @@ public class WindGlideTracker {
 
     /** 服务端是否认可该玩家正在滑翔(风流平台等机关复用)。 */
     public static boolean isGliding(ServerPlayer player) {
-        return state(player).gliding;
+        State state = STATES.get(player.getUUID());
+        return state != null && state.gliding;
     }
 
     private static void deny(ServerPlayer player, String reason) {

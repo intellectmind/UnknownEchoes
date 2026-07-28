@@ -116,8 +116,8 @@ public class MirrorTempleStructure extends SinglePieceStructure {
             }
             this.oceanFloorY = total / count;
 
-            // 水深校验:外廊 + Boss 场扩大后仍推迟到 postProcess,避免 /locate 采样过重。
-            if (!LakeBedPieceHelper.checkWaterDepth(level, generator,
+            // 水深校验:49×49 足印跨多区块,必须用噪声柱——边角区块可能未就绪,读方块会误判旱地整座取消(gotcha #30)
+            if (!LakeBedPieceHelper.checkWaterDepthByNoise(level, generator,
                     this.boundingBox.minX(), this.boundingBox.minZ(), WIDTH, DEPTH, 17, 9)) {
                 this.rejected = true;
                 return false;
@@ -265,6 +265,9 @@ public class MirrorTempleStructure extends SinglePieceStructure {
                     vault.setLootTable(ModLootTables.TRUE_SIGHT_VAULT, random.nextLong());
             }
             buildGuardianArena(level, box, bricks, runeBricks);
+            // 场地箱只给可重复材料；主 Boss 奖励由服务端按参与玩家结算。
+            buildAccessibleChest(level, random, box, WIDTH / 2 + 7, 1, DEPTH / 2 - 6,
+                    ModLootTables.T5_MINIBOSS_REPEAT);
             buildTrueSightRevisitDoor(level, random, box, hidden, anchored);
 
             // 镜像守护者:大殿中央(只生成一次)
@@ -277,8 +280,9 @@ public class MirrorTempleStructure extends SinglePieceStructure {
                 if (boss != null) {
                     boss.moveTo(bossX + 0.5D, bossY, bossZ + 0.5D, 0.0F, 0.0F);
                     boss.setPersistenceRequired();
-                    level.addFreshEntity(boss);
-                    this.spawnedBoss = true;
+                    if (level.addFreshEntity(boss)) {
+                        this.spawnedBoss = true;
+                    }
                 }
             }
         }

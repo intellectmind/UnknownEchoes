@@ -38,4 +38,15 @@ public class RubbleBlock extends Block {
     protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
         return level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), net.minecraft.core.Direction.UP);
     }
+
+    @Override
+    protected BlockState updateShape(BlockState state, net.minecraft.core.Direction direction,
+                                     BlockState neighborState, net.minecraft.world.level.LevelAccessor level,
+                                     BlockPos pos, BlockPos neighborPos) {
+        // 支撑被挖掉时随邻块更新消失,canSurvive 只在放置时检查
+        if (direction == net.minecraft.core.Direction.DOWN && !state.canSurvive(level, pos)) {
+            return net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+        }
+        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+    }
 }

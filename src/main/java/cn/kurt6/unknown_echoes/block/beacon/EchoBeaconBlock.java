@@ -8,6 +8,7 @@ import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -24,6 +25,7 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -79,8 +81,11 @@ public class EchoBeaconBlock extends Block {
 
     private static InteractionResult handleUse(Level level, BlockPos pos, ServerPlayer serverPlayer,
                                                ItemStack activationKey) {
+        if (serverPlayer.isSpectator()) {
+            return InteractionResult.CONSUME;
+        }
         // 在回声境域中:返回主世界
-        if (level.dimension() == ECHO_REALM) {
+        if (level.dimension().equals(ECHO_REALM)) {
             teleportBack(serverPlayer);
             return InteractionResult.CONSUME;
         }
@@ -124,35 +129,67 @@ public class EchoBeaconBlock extends Block {
             UnknownEchoes.LOGGER.error("Echo Realm dimension is missing: {}", ECHO_REALM.location());
             return;
         }
-        // 先准备目标维度(生成平台、预加载区块),再在下一 tick 传送,避免同步阻塞
-        ensureArrivalPlatform(realm);
-        realm.getChunkAt(REALM_ARRIVAL); // 强制加载目标区块
-        player.server.execute(() -> {
-            if (player.isRemoved() || !player.isAlive()) {
-                return; // 玩家在延迟期间离线/死亡,跳过传送
+        if (player.getCooldowns().isOnCooldown(ModItems.ECHO_KEY.get())) {
+            return;
+        }
+        player.getCooldowns().addCooldown(ModItems.ECHO_KEY.get(), 20);
+        realm.getChunkAt(REALM_ARRIVAL);
+        BlockPos arrival = ensureArrivalPlatform(realm)
+                ? REALM_ARRIVAL : findSafeArrival(realm);
+        if (arrival == null || !ensureReturnBeaconNear(realm, arrival)) {
+            UnknownEchoes.LOGGER.warn("Echo Realm arrival area is obstructed near {}", REALM_ARRIVAL);
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.realm.arrival_blocked"), true);
+            return;
+        }
+        // 同线程 server.execute 会立即执行,必须用 TickTask 排到下一 tick 才真正脱离交互 tick(gotcha #0)
+        player.server.tell(new net.minecraft.server.TickTask(player.server.getTickCount() + 1, () -> {
+            if (player.isRemoved() || !player.isAlive() || player.level() == realm) {
+                return;
             }
-            player.teleportTo(realm, REALM_ARRIVAL.getX() + 0.5, REALM_ARRIVAL.getY(),
-                    REALM_ARRIVAL.getZ() + 0.5, player.getYRot(), player.getXRot());
+            player.teleportTo(realm, arrival.getX() + 0.5, arrival.getY(),
+                    arrival.getZ() + 0.5, player.getYRot(), player.getXRot());
             player.displayClientMessage(Component.translatable("message.unknown_echoes.realm.entered"), true);
-            realm.playSound(null, REALM_ARRIVAL, SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 0.5F, 1.0F);
-        });
+            realm.playSound(null, arrival, SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 0.5F, 1.0F);
+        }));
     }
 
     public static void teleportBack(ServerPlayer player) {
         ServerLevel overworld = player.server.overworld();
         BlockPos target = player.getRespawnPosition() != null
-                && player.getRespawnDimension() == Level.OVERWORLD
+                && player.getRespawnDimension().equals(Level.OVERWORLD)
                 ? player.getRespawnPosition() : overworld.getSharedSpawnPos();
-        player.teleportTo(overworld, target.getX() + 0.5, target.getY() + 1.0,
-                target.getZ() + 0.5, player.getYRot(), player.getXRot());
-        player.displayClientMessage(Component.translatable("message.unknown_echoes.realm.returned"), true);
+        // gotcha #0:预加载目标区块;同线程 server.execute 是立即执行,用 TickTask 排到下一 tick
+        overworld.getChunkAt(target);
+        player.server.tell(new net.minecraft.server.TickTask(player.server.getTickCount() + 1, () -> {
+            if (player.isRemoved() || !player.isAlive() || player.level() == overworld) {
+                return;
+            }
+            player.teleportTo(overworld, target.getX() + 0.5, target.getY() + 1.0,
+                    target.getZ() + 0.5, player.getYRot(), player.getXRot());
+            player.displayClientMessage(Component.translatable("message.unknown_echoes.realm.returned"), true);
+        }));
     }
 
-    /** 首次进入时在固定坐标生成安全平台和返回信标,避免玩家落入虚空或卡入地形。 */
-    private static void ensureArrivalPlatform(ServerLevel realm) {
+    private static boolean ensureArrivalPlatform(ServerLevel realm) {
         BlockPos center = REALM_ARRIVAL.below();
-        if (realm.getBlockState(center).is(ModBlocks.ECHO_STONE_BRICKS.get())) {
-            return;
+        for (int x = -3; x <= 3; x++) {
+            for (int z = -3; z <= 3; z++) {
+                BlockPos base = center.offset(x, 0, z);
+                BlockState baseState = realm.getBlockState(base);
+                if (!baseState.is(ModBlocks.ECHO_STONE_BRICKS.get()) && !baseState.canBeReplaced()) {
+                    return false;
+                }
+                for (int y = 1; y <= 3; y++) {
+                    BlockPos clear = center.offset(x, y, z);
+                    BlockState clearState = realm.getBlockState(clear);
+                    boolean returnBeacon = clear.equals(center.offset(2, 1, 2))
+                            && clearState.is(ModBlocks.RESONANCE_BEACON.get());
+                    if (!returnBeacon && !clearState.canBeReplaced()) {
+                        return false;
+                    }
+                }
+            }
         }
         for (int x = -3; x <= 3; x++) {
             for (int z = -3; z <= 3; z++) {
@@ -160,12 +197,84 @@ public class EchoBeaconBlock extends Block {
                         ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState(), 3);
                 for (int y = 1; y <= 3; y++) {
                     BlockPos clear = center.offset(x, y, z);
-                    if (!realm.getBlockState(clear).isAir()) {
+                    if (!realm.getBlockState(clear).isAir()
+                            && !realm.getBlockState(clear).is(ModBlocks.RESONANCE_BEACON.get())) {
                         realm.setBlock(clear, Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }
         }
         realm.setBlock(center.offset(2, 1, 2), ModBlocks.RESONANCE_BEACON.get().defaultBlockState(), 3);
+        return isSafeArrival(realm, REALM_ARRIVAL);
+    }
+
+    private static BlockPos findSafeArrival(ServerLevel realm) {
+        if (isSafeArrival(realm, REALM_ARRIVAL)) {
+            return REALM_ARRIVAL;
+        }
+        for (int radius = 1; radius <= 8; radius++) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    if (Math.abs(x) != radius && Math.abs(z) != radius) {
+                        continue;
+                    }
+                    BlockPos candidate = REALM_ARRIVAL.offset(x, 0, z);
+                    if (realm.hasChunk(candidate.getX() >> 4, candidate.getZ() >> 4)
+                            && isSafeArrival(realm, candidate)) {
+                        return candidate;
+                    }
+                }
+            }
+        }
+        for (int radius = 0; radius <= 8; radius++) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    if (radius > 0 && Math.abs(x) != radius && Math.abs(z) != radius) {
+                        continue;
+                    }
+                    int worldX = REALM_ARRIVAL.getX() + x;
+                    int worldZ = REALM_ARRIVAL.getZ() + z;
+                    if (!realm.hasChunk(worldX >> 4, worldZ >> 4)) {
+                        continue;
+                    }
+                    int y = realm.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, worldX, worldZ);
+                    BlockPos candidate = new BlockPos(worldX, y, worldZ);
+                    if (isSafeArrival(realm, candidate)) {
+                        return candidate;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean ensureReturnBeaconNear(ServerLevel realm, BlockPos arrival) {
+        for (BlockPos pos : BlockPos.betweenClosed(arrival.offset(-4, -1, -4), arrival.offset(4, 1, 4))) {
+            if (realm.getBlockState(pos).is(ModBlocks.RESONANCE_BEACON.get())) {
+                return true;
+            }
+        }
+        for (int radius = 2; radius <= 4; radius++) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    if ((Math.abs(x) != radius && Math.abs(z) != radius) || (x == 0 && z == 0)) {
+                        continue;
+                    }
+                    BlockPos beaconPos = arrival.offset(x, 0, z);
+                    if (realm.getBlockState(beaconPos).isAir()
+                            && Block.canSupportCenter(realm, beaconPos.below(), Direction.UP)) {
+                        return realm.setBlock(beaconPos,
+                                ModBlocks.RESONANCE_BEACON.get().defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isSafeArrival(ServerLevel realm, BlockPos pos) {
+        return realm.getBlockState(pos).getCollisionShape(realm, pos).isEmpty()
+                && realm.getBlockState(pos.above()).getCollisionShape(realm, pos.above()).isEmpty()
+                && Block.canSupportCenter(realm, pos.below(), Direction.UP);
     }
 }

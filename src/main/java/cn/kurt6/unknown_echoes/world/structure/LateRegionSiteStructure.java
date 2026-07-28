@@ -205,7 +205,10 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
                 }
             }
             this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c - 5, 2, c - 34, box);
-            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState(), c, 2, c - 34, box);
+            // 干地放置:符文座默认 WATERLOGGED=TRUE 会漏水
+            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState()
+                    .setValue(cn.kurt6.unknown_echoes.block.tide.TideRuneSeatBlock.WATERLOGGED, Boolean.FALSE),
+                    c, 2, c - 34, box);
             this.placeBlock(level, ModBlocks.TRUE_SIGHT_STELE.get().defaultBlockState(), c + 5, 2, c - 34, box);
         }
 
@@ -230,7 +233,9 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
             buildBranchReward(level, random, box, c - 20, 2, c + 6, ModLootTables.T3_PUZZLE);
 
             platform(level, box, c + 9, 1, c - 8, 25, ModBlocks.TIDE_SMOOTH_STONE.get().defaultBlockState());
-            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState(), c + 15, 2, c, box);
+            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState()
+                    .setValue(cn.kurt6.unknown_echoes.block.tide.TideRuneSeatBlock.WATERLOGGED, Boolean.FALSE),
+                    c + 15, 2, c, box);
             for (int z = c - 6; z <= c + 6; z += 6) {
                 this.placeBlock(level, ModBlocks.TIDE_PILLAR.get().defaultBlockState(), c + 24, 2, z, box);
             }

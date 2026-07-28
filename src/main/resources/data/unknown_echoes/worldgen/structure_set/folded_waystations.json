@@ -1,0 +1,9 @@
+{
+  "structures": [{ "structure": "unknown_echoes:folded_waystation", "weight": 1 }],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 18,
+    "separation": 7,
+    "salt": 1187204639
+  }
+}

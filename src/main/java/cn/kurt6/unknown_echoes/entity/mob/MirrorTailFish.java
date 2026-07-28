@@ -1,7 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.block.truesight.MirrorSigilBlockEntity;
-import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -175,19 +174,32 @@ public class MirrorTailFish extends AbstractSchoolingFish implements GeoEntity {
             BlockPos center = this.fish.blockPosition();
             BlockPos best = null;
             double bestDist = Double.MAX_VALUE;
-            for (BlockPos pos : BlockPos.betweenClosed(
-                    center.offset(-SCAN_RADIUS_H, -SCAN_RADIUS_V, -SCAN_RADIUS_H),
-                    center.offset(SCAN_RADIUS_H, SCAN_RADIUS_V, SCAN_RADIUS_H))) {
-                if (!level.getBlockState(pos).is(ModBlocks.MIRROR_SIGIL.get())) {
-                    continue;
-                }
-                if (!MirrorSigilBlockEntity.isReal(level, pos)) {
-                    continue;
-                }
-                double dist = pos.distSqr(center);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    best = pos.immutable();
+            int minChunkX = (center.getX() - SCAN_RADIUS_H) >> 4;
+            int maxChunkX = (center.getX() + SCAN_RADIUS_H) >> 4;
+            int minChunkZ = (center.getZ() - SCAN_RADIUS_H) >> 4;
+            int maxChunkZ = (center.getZ() + SCAN_RADIUS_H) >> 4;
+            for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+                for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                    if (!level.hasChunk(chunkX, chunkZ)) {
+                        continue;
+                    }
+                    for (var blockEntity : level.getChunk(chunkX, chunkZ).getBlockEntities().values()) {
+                        if (!(blockEntity instanceof MirrorSigilBlockEntity)) {
+                            continue;
+                        }
+                        BlockPos pos = blockEntity.getBlockPos();
+                        if (Math.abs((long) pos.getX() - center.getX()) > SCAN_RADIUS_H
+                                || Math.abs((long) pos.getY() - center.getY()) > SCAN_RADIUS_V
+                                || Math.abs((long) pos.getZ() - center.getZ()) > SCAN_RADIUS_H
+                                || !MirrorSigilBlockEntity.isReal(level, pos)) {
+                            continue;
+                        }
+                        double dist = pos.distSqr(center);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            best = pos.immutable();
+                        }
+                    }
                 }
             }
             return best;

@@ -29,7 +29,7 @@ import net.minecraft.world.phys.Vec3;
  * 注:不绕过 Boss 破防/权限/机关(红线 §703)。音波命中晶歌音柱(CRYSTAL_SONG_CLUSTER)时,
  * 由就近的晶歌守谱者在服务端按节奏谜题判定"远程调音"(见 CrystalSongkeeper.onTonePillarClicked)。
  */
-public class CrystalSongStaffItem extends EchoMeleeWeaponItem {
+public class CrystalSongStaffItem extends EchoMeleeWeaponItem implements WeaponSkill {
     private static final int COOLDOWN_TICKS = 22;
     private static final double RANGE = 14.0;
     private static final float BOLT_DAMAGE = 5.0F;
@@ -41,12 +41,21 @@ public class CrystalSongStaffItem extends EchoMeleeWeaponItem {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
         if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-            fireSonicWave(serverLevel, serverPlayer);
+            this.activateSkill(serverLevel, serverPlayer, stack, hand);
         }
+        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+    }
+
+    @Override
+    public boolean activateSkill(ServerLevel level, ServerPlayer player, ItemStack stack, InteractionHand hand) {
+        if (player.getCooldowns().isOnCooldown(this)) {
+            return false;
+        }
+        player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
+        fireSonicWave(level, player);
         player.swing(hand, true);
-        return InteractionResultHolder.success(stack);
+        return true;
     }
 
     /** 瞬发音波射线:沿视线推进,被实体方块截断,命中首个敌怪结算伤害 + 缓速。 */

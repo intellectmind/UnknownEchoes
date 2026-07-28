@@ -12,7 +12,11 @@ public enum EchoResearchLine {
     WIND("wind", "wind_echo", EchoAbilityType.WIND_ECHO, Set.of(17, 18, 19, 20, 21, 22, 23, 24), Set.of()),
     TIDE("tide", "tide_echo", EchoAbilityType.TIDE_ECHO, Set.of(42, 43, 44, 45, 46, 47, 48, 49, 50, 51), Set.of()),
     TRUE_SIGHT("true_sight", "true_sight_echo", EchoAbilityType.TRUE_SIGHT_ECHO,
-            Set.of(56, 57, 58, 59, 60, 61, 62, 63, 64, 65), Set.of());
+            Set.of(56, 57, 58, 59, 60, 61, 62, 63, 64, 65), Set.of()),
+    GRAVITY("gravity", "gravity_echo", EchoAbilityType.GRAVITY_ECHO,
+            Set.of(130, 131, 136, 137, 138, 139), Set.of()),
+    VOID("void", "void_echo", EchoAbilityType.VOID_ECHO,
+            Set.of(132, 135, 140, 141, 142, 143), Set.of());
 
     private final String id;
     private final String legacyResearchKey;

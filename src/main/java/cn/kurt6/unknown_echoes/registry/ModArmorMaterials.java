@@ -15,12 +15,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * V0.6F 套装盔甲材质(11.3):
- * - 探索者:早期套装,皮革级偏上;材料 回响纤维/回响碎片/回响石砖,无 Boss 前置。
- * - 聆听者:中期套装,锁链~铁级;材料 镜湖碎片/晶羽/回响金属。
- * - 区域 Boss 套:裸防略高于下界合金,强度主要来自场景效果与能力联动。
  * 件数效果不在材质里,见 ability/EchoArmorSets(服务端判定)。
- * 深渊行者(V0.8 深层材料线)与共鸣者(V1.0 终局材料线)按二十三章版本规划后置。
+ * 深渊行者为 V0.8 深层材料线;共鸣者(V1.0 终局材料线)继续后置。
  */
 public class ModArmorMaterials {
     public static final DeferredRegister<ArmorMaterial> ARMOR_MATERIALS =
@@ -38,12 +34,12 @@ public class ModArmorMaterials {
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> LISTENER =
             ARMOR_MATERIALS.register("listener", () -> new ArmorMaterial(
-                    defense(2, 5, 4, 2),
+                    defense(3, 6, 5, 3),
                     18,
                     SoundEvents.ARMOR_EQUIP_CHAIN,
                     () -> Ingredient.of(ModItems.ECHO_METAL_INGOT.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("listener"))),
-                    0.5F,
+                    1.0F,
                     0.0F));
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> ECHO_TRAVELER =
@@ -98,13 +94,23 @@ public class ModArmorMaterials {
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> ECHO_OATH =
             ARMOR_MATERIALS.register("echo_oath", () -> new ArmorMaterial(
-                    defense(5, 10, 9, 5),
-                    24,
+                    defense(5, 11, 10, 5),
+                    25,
                     SoundEvents.ARMOR_EQUIP_NETHERITE,
                     () -> Ingredient.of(ModItems.ECHO_REALM_INGOT.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("echo_oath"))),
-                    3.5F,
-                    0.08F));
+                    3.75F,
+                    0.10F));
+
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> ABYSS_WALKER =
+            ARMOR_MATERIALS.register("abyss_walker", () -> new ArmorMaterial(
+                    defense(6, 12, 10, 6),
+                    24,
+                    SoundEvents.ARMOR_EQUIP_NETHERITE,
+                    () -> Ingredient.of(ModItems.DEEP_ALLOY_INGOT.get()),
+                    List.of(new ArmorMaterial.Layer(UnknownEchoes.id("abyss_walker"))),
+                    4.25F,
+                    0.12F));
 
     private static Map<ArmorItem.Type, Integer> defense(int boots, int chest, int leggings, int helmet) {
         EnumMap<ArmorItem.Type, Integer> map = new EnumMap<>(ArmorItem.Type.class);

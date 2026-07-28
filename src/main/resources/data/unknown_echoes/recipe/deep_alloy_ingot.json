@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:deep_ore_scrap" },
+    { "item": "unknown_echoes:deep_ore_scrap" },
+    { "item": "unknown_echoes:space_anchor_shard" },
+    { "item": "unknown_echoes:folded_carapace" },
+    { "item": "unknown_echoes:echo_metal_ingot" }
+  ],
+  "result": { "id": "unknown_echoes:deep_alloy_ingot", "count": 2 }
+}

@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.ability;
 
 import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import cn.kurt6.unknown_echoes.journal.JournalManager;
+import cn.kurt6.unknown_echoes.journal.EchoCompletionManager;
 import cn.kurt6.unknown_echoes.network.SyncAbilityPayload;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.research.EchoResearchManager;
@@ -52,7 +53,7 @@ public class EchoAbilityManager {
     }
 
     public static void activateBeacon(ServerPlayer player, ResourceLocation beaconId) {
-        if (getData(player).getActivatedBeacons().add(beaconId.toString())) {
+        if (getData(player).activateBeacon(beaconId.toString())) {
             syncToClient(player);
         }
     }
@@ -62,7 +63,7 @@ public class EchoAbilityManager {
     }
 
     public static void markBossDefeated(ServerPlayer player, ResourceLocation bossId) {
-        if (getData(player).getDefeatedBosses().add(bossId.toString())) {
+        if (getData(player).markBossDefeated(bossId.toString())) {
             syncToClient(player);
             ModAdvancements.awardBossDefeat(player, bossId.getPath());
             // 守护者首杀研究点(V0.6B:研究进度来源之一;重复击败只走结算的普通奖励/拓片)
@@ -73,7 +74,7 @@ public class EchoAbilityManager {
     }
 
     public static void unlockDimension(ServerPlayer player, ResourceLocation dimensionId) {
-        if (getData(player).getUnlockedDimensions().add(dimensionId.toString())) {
+        if (getData(player).unlockDimension(dimensionId.toString())) {
             syncToClient(player);
         }
     }
@@ -87,8 +88,8 @@ public class EchoAbilityManager {
         return getData(player).getActivatedMechanisms().contains(mechanismKey);
     }
 
-    public static void activateMechanism(ServerPlayer player, String mechanismKey) {
-        getData(player).getActivatedMechanisms().add(mechanismKey);
+    public static boolean activateMechanism(ServerPlayer player, String mechanismKey) {
+        return getData(player).activateMechanism(mechanismKey);
     }
 
     public static void deactivateMechanism(ServerPlayer player, String mechanismKey) {
@@ -156,6 +157,7 @@ public class EchoAbilityManager {
                 research.add(line.getLegacyResearchKey() + ":" + level);
             }
         }
+        research.add("@puzzle_score:" + EchoCompletionManager.puzzleCompletionScore(player));
         for (EchoAbilityType type : EchoAbilityType.values()) {
             // 凭据与誓记页(5.8/V0.6E):只同步"该能力核心机关是否完成"这一布尔事实,
             // 不泄露机关坐标等隐藏数据(红线 #9)
@@ -172,7 +174,7 @@ public class EchoAbilityManager {
                 List.copyOf(data.getActivatedBeacons()),
                 List.copyOf(data.getUnlockedDimensions()),
                 research, tokens, failures));
-        // 配方解锁链(V0.6B):能力/研究变化都会经过这里,顺带核对一次武器配方解锁
+        // 能力/研究变化和登录同步时顺带核对一次配方书解锁。
         RecipeUnlocks.checkAndUnlock(player);
     }
 }

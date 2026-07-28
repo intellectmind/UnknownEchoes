@@ -22,6 +22,7 @@ import cn.kurt6.unknown_echoes.item.tool.EchoPickaxeItem;
 import cn.kurt6.unknown_echoes.item.tool.EchoShearsItem;
 import cn.kurt6.unknown_echoes.item.tool.EchoShovelItem;
 import cn.kurt6.unknown_echoes.item.weapon.CrystalSongStaffItem;
+import cn.kurt6.unknown_echoes.item.weapon.DeepMeleeWeaponItem;
 import cn.kurt6.unknown_echoes.item.weapon.EchoBowItem;
 import cn.kurt6.unknown_echoes.item.weapon.EchoMeleeWeaponItem;
 import cn.kurt6.unknown_echoes.item.weapon.TideCrossbowItem;
@@ -196,6 +197,18 @@ public class ModItems {
             ITEMS.register("echo_lens", () -> new GenericArtifactItem(ArtifactType.ECHO_LENS,
                     new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
+    public static final DeferredItem<GenericArtifactItem> TIME_HOURGLASS =
+            ITEMS.register("time_hourglass", () -> new GenericArtifactItem(ArtifactType.TIME_HOURGLASS,
+                    new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final DeferredItem<GenericArtifactItem> DIMENSION_ANCHOR =
+            ITEMS.register("dimension_anchor", () -> new GenericArtifactItem(ArtifactType.DIMENSION_ANCHOR,
+                    new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final DeferredItem<GenericArtifactItem> RIFT_ANCHOR =
+            ITEMS.register("rift_anchor", () -> new GenericArtifactItem(ArtifactType.RIFT_ANCHOR,
+                    new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
     /** 线索地图:迷途旅者出售,阅读后做一次有界定位写入个人日志线索(ClueMapItem)。 */
     public static final DeferredItem<cn.kurt6.unknown_echoes.item.ClueMapItem> CLUE_MAP =
             ITEMS.register("clue_map", () -> new cn.kurt6.unknown_echoes.item.ClueMapItem(
@@ -225,26 +238,28 @@ public class ModItems {
             ITEMS.register("true_sight_research_rubbing", () -> new ResearchRubbingItem("true_sight",
                     new Item.Properties().rarity(Rarity.UNCOMMON)));
 
-    // ---- V0.7A/D 文档规范研究材料 ID ----
+    // ---- V0.7A/D 文档规范研究材料 ID(残篇页=誊清拓片,单次阅读可推进两级,媒材逐级照扣) ----
 
     public static final DeferredItem<ResearchRubbingItem> WIND_FRAGMENT_PAGE =
-            ITEMS.register("wind_fragment_page", () -> new ResearchRubbingItem("wind",
+            ITEMS.register("wind_fragment_page", () -> new ResearchRubbingItem("wind", 2,
                     new Item.Properties().rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<ResearchRubbingItem> TIDE_FRAGMENT_PAGE =
-            ITEMS.register("tide_fragment_page", () -> new ResearchRubbingItem("tide",
+            ITEMS.register("tide_fragment_page", () -> new ResearchRubbingItem("tide", 2,
                     new Item.Properties().rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<ResearchRubbingItem> TRUE_SIGHT_FRAGMENT_PAGE =
-            ITEMS.register("true_sight_fragment_page", () -> new ResearchRubbingItem("true_sight",
+            ITEMS.register("true_sight_fragment_page", () -> new ResearchRubbingItem("true_sight", 2,
                     new Item.Properties().rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<Item> INSCRIPTION_RUBBING_PAPER =
             ITEMS.register("inscription_rubbing_paper",
                     () -> new EchoMaterialItem("inscription_rubbing_paper", new Item.Properties()));
 
-    public static final DeferredItem<Item> ECHO_INDEX = ITEMS.register("echo_index",
-            () -> new EchoMaterialItem("echo_index", new Item.Properties().rarity(Rarity.UNCOMMON)));
+    /** 回响索引:右键阅读闭环进度并领取 T7 个人奖励(EchoIndexItem,不消耗)。 */
+    public static final DeferredItem<cn.kurt6.unknown_echoes.item.EchoIndexItem> ECHO_INDEX =
+            ITEMS.register("echo_index", () -> new cn.kurt6.unknown_echoes.item.EchoIndexItem(
+                    new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
     // ---- V0.7A/D 文档规范强化核心 ID ----
 
@@ -323,7 +338,7 @@ public class ModItems {
 
     public static final DeferredItem<WindSpearItem> WIND_SPEAR =
             ITEMS.register("wind_spear", () -> new WindSpearItem(12.0, 1.40, 140, 1.65,
-                    9.9F, new Item.Properties().durability(2625).rarity(Rarity.RARE)));
+                    14.4F, new Item.Properties().durability(2625).rarity(Rarity.RARE)));
 
     public static final DeferredItem<TideCrossbowItem> TIDE_CROSSBOW =
             ITEMS.register("tide_crossbow", () -> new TideCrossbowItem(4.6, 2,
@@ -350,8 +365,18 @@ public class ModItems {
                     new Item.Properties().durability(1200).rarity(Rarity.RARE)));
 
     public static final DeferredItem<EchoMeleeWeaponItem> ECHO_OATHBLADE =
-            ITEMS.register("echo_oathblade", () -> new EchoMeleeWeaponItem(13.0, 1.6,
-                    "echo_oathblade", new Item.Properties().durability(3750).rarity(Rarity.EPIC)));
+            ITEMS.register("echo_oathblade", () -> new EchoMeleeWeaponItem(15.0, 1.70,
+                    "echo_oathblade", new Item.Properties().durability(4000).rarity(Rarity.EPIC)));
+
+    public static final DeferredItem<DeepMeleeWeaponItem> GRAVITY_HAMMER =
+            ITEMS.register("gravity_hammer", () -> new DeepMeleeWeaponItem(
+                    DeepMeleeWeaponItem.Kind.GRAVITY_HAMMER, 20.0, 0.85, "gravity_hammer",
+                    new Item.Properties().durability(4200).rarity(Rarity.EPIC)));
+
+    public static final DeferredItem<DeepMeleeWeaponItem> RIFT_DAGGER =
+            ITEMS.register("rift_dagger", () -> new DeepMeleeWeaponItem(
+                    DeepMeleeWeaponItem.Kind.RIFT_DAGGER, 16.0, 2.20, "rift_dagger",
+                    new Item.Properties().durability(4400).rarity(Rarity.EPIC)));
 
     // ---- V0.7U 回响基础采集工具:只改善采集体验,不授予进度权限 ----
 
@@ -431,6 +456,16 @@ public class ModItems {
                     cn.kurt6.unknown_echoes.ability.EchoAbilityType.TRUE_SIGHT_ECHO,
                     new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
 
+    public static final DeferredItem<cn.kurt6.unknown_echoes.item.ResonanceTokenItem> GRAVITY_RESONANCE_TOKEN =
+            ITEMS.register("gravity_resonance_token", () -> new cn.kurt6.unknown_echoes.item.ResonanceTokenItem(
+                    cn.kurt6.unknown_echoes.ability.EchoAbilityType.GRAVITY_ECHO,
+                    new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final DeferredItem<cn.kurt6.unknown_echoes.item.ResonanceTokenItem> VOID_RESONANCE_TOKEN =
+            ITEMS.register("void_resonance_token", () -> new cn.kurt6.unknown_echoes.item.ResonanceTokenItem(
+                    cn.kurt6.unknown_echoes.ability.EchoAbilityType.VOID_ECHO,
+                    new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
     // ---- V0.6F 普通环境生物材料(九章 9.1;普通材料允许掉落,用途见 11.2/11.3) ----
 
     /** 回响纤维:回声鹿掉落,探索者套装与基础合成材料。 */
@@ -440,6 +475,32 @@ public class ModItems {
     /** 荧光皮:荧光兔掉落,装饰与合成材料(微光质感)。 */
     public static final DeferredItem<Item> GLOW_HIDE = ITEMS.register("glow_hide",
             () -> new EchoMaterialItem("glow_hide", new Item.Properties()));
+
+    // ---- 深层回响普通生态材料 ----
+
+    /** 折页甲片:折页虫蜕落的轻薄甲页,用于装饰与诱饵。 */
+    public static final DeferredItem<Item> FOLDED_CARAPACE = ITEMS.register("folded_carapace",
+            () -> new EchoMaterialItem("folded_carapace", new Item.Properties()));
+
+    /** 空间锚片:深层机关与维度锚配方的普通辅料,不代表个人进度。 */
+    public static final DeferredItem<Item> SPACE_ANCHOR_SHARD = ITEMS.register("space_anchor_shard",
+            () -> new EchoMaterialItem("space_anchor_shard", new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    /** 深层矿碎屑:深渊潜伏者携带的未精炼深层矿物。 */
+    public static final DeferredItem<Item> DEEP_ORE_SCRAP = ITEMS.register("deep_ore_scrap",
+            () -> new EchoMaterialItem("deep_ore_scrap", new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    /** 虚空裂隙片:虚空漫游者的低概率普通掉落,不授予虚空回响。 */
+    public static final DeferredItem<Item> VOID_RIFT_SHARD = ITEMS.register("void_rift_shard",
+            () -> new EchoMaterialItem("void_rift_shard", new Item.Properties().rarity(Rarity.RARE)));
+
+    /** 深层合金锭:把生态材料稳定成装备级中间材料。 */
+    public static final DeferredItem<Item> DEEP_ALLOY_INGOT = ITEMS.register("deep_alloy_ingot",
+            () -> new EchoMaterialItem("deep_alloy_ingot", new Item.Properties().rarity(Rarity.RARE)));
+
+    /** 重力核心碎片:虚空先知留下的普通装备材料,不承载重力回响权限。 */
+    public static final DeferredItem<Item> GRAVITY_CORE_FRAGMENT = ITEMS.register("gravity_core_fragment",
+            () -> new EchoMaterialItem("gravity_core_fragment", new Item.Properties().rarity(Rarity.EPIC)));
 
     // ---- V0.7B 后期群系材料 ----
 
@@ -697,22 +758,57 @@ public class ModItems {
 
     public static final DeferredItem<EchoSetArmorItem> ECHO_OATH_HELMET = ITEMS.register("echo_oath_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_OATH, ArmorItem.Type.HELMET, "echo_oath",
-                    armorProperties(ArmorItem.Type.HELMET, 59, Rarity.EPIC)));
+                    armorProperties(ArmorItem.Type.HELMET, 64, Rarity.EPIC)));
     public static final DeferredItem<EchoSetArmorItem> ECHO_OATH_CHESTPLATE = ITEMS.register("echo_oath_chestplate",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_OATH, ArmorItem.Type.CHESTPLATE, "echo_oath",
-                    armorProperties(ArmorItem.Type.CHESTPLATE, 59, Rarity.EPIC)));
+                    armorProperties(ArmorItem.Type.CHESTPLATE, 64, Rarity.EPIC)));
     public static final DeferredItem<EchoSetArmorItem> ECHO_OATH_LEGGINGS = ITEMS.register("echo_oath_leggings",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_OATH, ArmorItem.Type.LEGGINGS, "echo_oath",
-                    armorProperties(ArmorItem.Type.LEGGINGS, 59, Rarity.EPIC)));
+                    armorProperties(ArmorItem.Type.LEGGINGS, 64, Rarity.EPIC)));
     public static final DeferredItem<EchoSetArmorItem> ECHO_OATH_BOOTS = ITEMS.register("echo_oath_boots",
             () -> new EchoSetArmorItem(ModArmorMaterials.ECHO_OATH, ArmorItem.Type.BOOTS, "echo_oath",
-                    armorProperties(ArmorItem.Type.BOOTS, 59, Rarity.EPIC)));
+                    armorProperties(ArmorItem.Type.BOOTS, 64, Rarity.EPIC)));
+
+    // ---- V0.8 深层回响装备 ----
+
+    public static final DeferredItem<EchoSetArmorItem> ABYSS_WALKER_HELMET = ITEMS.register("abyss_walker_helmet",
+            () -> new EchoSetArmorItem(ModArmorMaterials.ABYSS_WALKER, ArmorItem.Type.HELMET, "abyss_walker",
+                    armorProperties(ArmorItem.Type.HELMET, 72, Rarity.EPIC)));
+    public static final DeferredItem<EchoSetArmorItem> ABYSS_WALKER_CHESTPLATE = ITEMS.register("abyss_walker_chestplate",
+            () -> new EchoSetArmorItem(ModArmorMaterials.ABYSS_WALKER, ArmorItem.Type.CHESTPLATE, "abyss_walker",
+                    armorProperties(ArmorItem.Type.CHESTPLATE, 72, Rarity.EPIC)));
+    public static final DeferredItem<EchoSetArmorItem> ABYSS_WALKER_LEGGINGS = ITEMS.register("abyss_walker_leggings",
+            () -> new EchoSetArmorItem(ModArmorMaterials.ABYSS_WALKER, ArmorItem.Type.LEGGINGS, "abyss_walker",
+                    armorProperties(ArmorItem.Type.LEGGINGS, 72, Rarity.EPIC)));
+    public static final DeferredItem<EchoSetArmorItem> ABYSS_WALKER_BOOTS = ITEMS.register("abyss_walker_boots",
+            () -> new EchoSetArmorItem(ModArmorMaterials.ABYSS_WALKER, ArmorItem.Type.BOOTS, "abyss_walker",
+                    armorProperties(ArmorItem.Type.BOOTS, 72, Rarity.EPIC)));
 
     // BlockItems
     public static final DeferredItem<BlockItem> ECHO_STONE_BRICKS = ITEMS.registerSimpleBlockItem("echo_stone_bricks", ModBlocks.ECHO_STONE_BRICKS);
     public static final DeferredItem<BlockItem> CRACKED_ECHO_STONE_BRICKS = ITEMS.registerSimpleBlockItem("cracked_echo_stone_bricks", ModBlocks.CRACKED_ECHO_STONE_BRICKS);
     public static final DeferredItem<BlockItem> ECHO_RUNE_BRICKS = ITEMS.registerSimpleBlockItem("echo_rune_bricks", ModBlocks.ECHO_RUNE_BRICKS);
     public static final DeferredItem<BlockItem> RESONANCE_BEACON = ITEMS.registerSimpleBlockItem("resonance_beacon", ModBlocks.RESONANCE_BEACON);
+    public static final DeferredItem<BlockItem> ABYSS_BEACON = ITEMS.registerSimpleBlockItem("abyss_beacon", ModBlocks.ABYSS_BEACON);
+    public static final DeferredItem<BlockItem> DEEP_ROUTE_NODE = ITEMS.registerSimpleBlockItem("deep_route_node", ModBlocks.DEEP_ROUTE_NODE);
+    public static final DeferredItem<BlockItem> DEEP_CALIBRATION_NODE = ITEMS.registerSimpleBlockItem(
+            "deep_calibration_node", ModBlocks.DEEP_CALIBRATION_NODE);
+    public static final DeferredItem<BlockItem> GRAVITY_CORE_ALTAR = ITEMS.registerSimpleBlockItem(
+            "gravity_core_altar", ModBlocks.GRAVITY_CORE_ALTAR);
+    public static final DeferredItem<BlockItem> GRAVITY_FOLD_DOOR = ITEMS.registerSimpleBlockItem(
+            "gravity_fold_door", ModBlocks.GRAVITY_FOLD_DOOR);
+    public static final DeferredItem<BlockItem> GRAVITY_FIELD_CORE = ITEMS.registerSimpleBlockItem(
+            "gravity_field_core", ModBlocks.GRAVITY_FIELD_CORE);
+    public static final DeferredItem<BlockItem> SPACE_ANCHOR = ITEMS.registerSimpleBlockItem(
+            "space_anchor", ModBlocks.SPACE_ANCHOR);
+    public static final DeferredItem<BlockItem> VOID_STABILIZER = ITEMS.registerSimpleBlockItem(
+            "void_stabilizer", ModBlocks.VOID_STABILIZER);
+    public static final DeferredItem<BlockItem> VOID_CORE_ALTAR = ITEMS.registerSimpleBlockItem(
+            "void_core_altar", ModBlocks.VOID_CORE_ALTAR);
+    public static final DeferredItem<BlockItem> WORLD_RESONANCE_ALTAR = ITEMS.registerSimpleBlockItem(
+            "world_resonance_altar", ModBlocks.WORLD_RESONANCE_ALTAR);
+    public static final DeferredItem<BlockItem> ENDING_RECORD_TABLE = ITEMS.registerSimpleBlockItem(
+            "ending_record_table", ModBlocks.ENDING_RECORD_TABLE);
     public static final DeferredItem<BlockItem> WIND_DOOR = ITEMS.registerSimpleBlockItem("wind_door", ModBlocks.WIND_DOOR);
     public static final DeferredItem<BlockItem> MEMORY_PILLAR = ITEMS.registerSimpleBlockItem("memory_pillar", ModBlocks.MEMORY_PILLAR);
     public static final DeferredItem<BlockItem> REWARD_ALTAR = ITEMS.registerSimpleBlockItem("reward_altar", ModBlocks.REWARD_ALTAR);
@@ -761,6 +857,66 @@ public class ModItems {
     public static final DeferredItem<BlockItem> STAR_MIST_BLOOM = ITEMS.registerSimpleBlockItem("star_mist_bloom", ModBlocks.STAR_MIST_BLOOM);
     public static final DeferredItem<BlockItem> MIRROR_LOTUS = ITEMS.registerSimpleBlockItem("mirror_lotus", ModBlocks.MIRROR_LOTUS);
     public static final DeferredItem<BlockItem> ASH_CHIME_GRASS = ITEMS.registerSimpleBlockItem("ash_chime_grass", ModBlocks.ASH_CHIME_GRASS);
+    public static final DeferredItem<BlockItem> FOLDED_SPOREBLOOM = ITEMS.registerSimpleBlockItem(
+            "folded_sporebloom", ModBlocks.FOLDED_SPOREBLOOM);
+    public static final DeferredItem<BlockItem> GRAVITY_BELL = ITEMS.registerSimpleBlockItem(
+            "gravity_bell", ModBlocks.GRAVITY_BELL);
+    public static final DeferredItem<BlockItem> HUSH_THORN = ITEMS.registerSimpleBlockItem(
+            "hush_thorn", ModBlocks.HUSH_THORN);
+    public static final DeferredItem<BlockItem> MIRROR_DUST_STONE = ITEMS.registerSimpleBlockItem("mirror_dust_stone", ModBlocks.MIRROR_DUST_STONE);
+    public static final DeferredItem<BlockItem> MIRROR_DUST_BRICKS = ITEMS.registerSimpleBlockItem("mirror_dust_bricks", ModBlocks.MIRROR_DUST_BRICKS);
+    public static final DeferredItem<BlockItem> FRACTURED_MIRROR_TILE = ITEMS.registerSimpleBlockItem("fractured_mirror_tile", ModBlocks.FRACTURED_MIRROR_TILE);
+    public static final DeferredItem<BlockItem> PRISM_DUST_CLUSTER = ITEMS.registerSimpleBlockItem("prism_dust_cluster", ModBlocks.PRISM_DUST_CLUSTER);
+    public static final DeferredItem<BlockItem> GLASSVEIL_GRASS = ITEMS.registerSimpleBlockItem("glassveil_grass", ModBlocks.GLASSVEIL_GRASS);
+    public static final DeferredItem<BlockItem> REFLECTION_ORCHID = ITEMS.registerSimpleBlockItem("reflection_orchid", ModBlocks.REFLECTION_ORCHID);
+    public static final DeferredItem<BlockItem> ECHO_STRATA = ITEMS.registerSimpleBlockItem("echo_strata", ModBlocks.ECHO_STRATA);
+    public static final DeferredItem<BlockItem> ECHO_STRATA_BRICKS = ITEMS.registerSimpleBlockItem("echo_strata_bricks", ModBlocks.ECHO_STRATA_BRICKS);
+    public static final DeferredItem<BlockItem> CHISELED_ECHO_STRATA = ITEMS.registerSimpleBlockItem("chiseled_echo_strata", ModBlocks.CHISELED_ECHO_STRATA);
+    public static final DeferredItem<BlockItem> RESONANT_CLIFF_CRYSTAL = ITEMS.registerSimpleBlockItem("resonant_cliff_crystal", ModBlocks.RESONANT_CLIFF_CRYSTAL);
+    public static final DeferredItem<BlockItem> CLIFF_HEATHER = ITEMS.registerSimpleBlockItem("cliff_heather", ModBlocks.CLIFF_HEATHER);
+    public static final DeferredItem<BlockItem> ARCHIVE_LICHEN = ITEMS.registerSimpleBlockItem("archive_lichen", ModBlocks.ARCHIVE_LICHEN);
+    public static final DeferredItem<BlockItem> SONGSTONE = ITEMS.registerSimpleBlockItem("songstone", ModBlocks.SONGSTONE);
+    public static final DeferredItem<BlockItem> SONGSTONE_BRICKS = ITEMS.registerSimpleBlockItem("songstone_bricks", ModBlocks.SONGSTONE_BRICKS);
+    public static final DeferredItem<BlockItem> CHISELED_SONGSTONE = ITEMS.registerSimpleBlockItem("chiseled_songstone", ModBlocks.CHISELED_SONGSTONE);
+    public static final DeferredItem<BlockItem> RESONANT_GEODE = ITEMS.registerSimpleBlockItem("resonant_geode", ModBlocks.RESONANT_GEODE);
+    public static final DeferredItem<BlockItem> TUNING_GRASS = ITEMS.registerSimpleBlockItem("tuning_grass", ModBlocks.TUNING_GRASS);
+    public static final DeferredItem<BlockItem> CRYSTAL_BELLFLOWER = ITEMS.registerSimpleBlockItem("crystal_bellflower", ModBlocks.CRYSTAL_BELLFLOWER);
+    public static final DeferredItem<BlockItem> ASHEN_BELLSTONE = ITEMS.registerSimpleBlockItem("ashen_bellstone", ModBlocks.ASHEN_BELLSTONE);
+    public static final DeferredItem<BlockItem> ASHEN_BELLSTONE_BRICKS = ITEMS.registerSimpleBlockItem("ashen_bellstone_bricks", ModBlocks.ASHEN_BELLSTONE_BRICKS);
+    public static final DeferredItem<BlockItem> RUSTED_BELLSTONE = ITEMS.registerSimpleBlockItem("rusted_bellstone", ModBlocks.RUSTED_BELLSTONE);
+    public static final DeferredItem<BlockItem> CLOCKWORK_SCRAP_BLOCK = ITEMS.registerSimpleBlockItem("clockwork_scrap_block", ModBlocks.CLOCKWORK_SCRAP_BLOCK);
+    public static final DeferredItem<BlockItem> CINDER_REED = ITEMS.registerSimpleBlockItem("cinder_reed", ModBlocks.CINDER_REED);
+    public static final DeferredItem<BlockItem> CLOCKWORK_THISTLE = ITEMS.registerSimpleBlockItem("clockwork_thistle", ModBlocks.CLOCKWORK_THISTLE);
+    public static final DeferredItem<BlockItem> REEF_LIMESTONE = ITEMS.registerSimpleBlockItem("reef_limestone", ModBlocks.REEF_LIMESTONE);
+    public static final DeferredItem<BlockItem> REEF_LIMESTONE_BRICKS = ITEMS.registerSimpleBlockItem("reef_limestone_bricks", ModBlocks.REEF_LIMESTONE_BRICKS);
+    public static final DeferredItem<BlockItem> TIDEWORN_REEFSTONE = ITEMS.registerSimpleBlockItem("tideworn_reefstone", ModBlocks.TIDEWORN_REEFSTONE);
+    public static final DeferredItem<BlockItem> TIDELIGHT_CORAL_BLOCK = ITEMS.registerSimpleBlockItem("tidelight_coral_block", ModBlocks.TIDELIGHT_CORAL_BLOCK);
+    public static final DeferredItem<BlockItem> LANTERN_SEAFAN = ITEMS.registerSimpleBlockItem("lantern_seafan", ModBlocks.LANTERN_SEAFAN);
+    public static final DeferredItem<BlockItem> SHELL_BLOOM = ITEMS.registerSimpleBlockItem("shell_bloom", ModBlocks.SHELL_BLOOM);
+    public static final DeferredItem<BlockItem> SILENT_MUDSTONE = ITEMS.registerSimpleBlockItem("silent_mudstone", ModBlocks.SILENT_MUDSTONE);
+    public static final DeferredItem<BlockItem> SILENT_MUDSTONE_BRICKS = ITEMS.registerSimpleBlockItem("silent_mudstone_bricks", ModBlocks.SILENT_MUDSTONE_BRICKS);
+    public static final DeferredItem<BlockItem> ROOTBOUND_MUDSTONE = ITEMS.registerSimpleBlockItem("rootbound_mudstone", ModBlocks.ROOTBOUND_MUDSTONE);
+    public static final DeferredItem<BlockItem> BOGLIGHT_STONE = ITEMS.registerSimpleBlockItem("boglight_stone", ModBlocks.BOGLIGHT_STONE);
+    public static final DeferredItem<BlockItem> MUTE_REED = ITEMS.registerSimpleBlockItem("mute_reed", ModBlocks.MUTE_REED);
+    public static final DeferredItem<BlockItem> MIRE_BELL = ITEMS.registerSimpleBlockItem("mire_bell", ModBlocks.MIRE_BELL);
+    public static final DeferredItem<BlockItem> FOLDED_SLATE = ITEMS.registerSimpleBlockItem("folded_slate", ModBlocks.FOLDED_SLATE);
+    public static final DeferredItem<BlockItem> FOLDED_SLATE_BRICKS = ITEMS.registerSimpleBlockItem("folded_slate_bricks", ModBlocks.FOLDED_SLATE_BRICKS);
+    public static final DeferredItem<BlockItem> CHISELED_FOLDED_SLATE = ITEMS.registerSimpleBlockItem("chiseled_folded_slate", ModBlocks.CHISELED_FOLDED_SLATE);
+    public static final DeferredItem<BlockItem> RESONANT_FOLDED_SLATE = ITEMS.registerSimpleBlockItem("resonant_folded_slate", ModBlocks.RESONANT_FOLDED_SLATE);
+    public static final DeferredItem<BlockItem> SEAM_GRASS = ITEMS.registerSimpleBlockItem("seam_grass", ModBlocks.SEAM_GRASS);
+    public static final DeferredItem<BlockItem> ARCHIVE_FUNGUS = ITEMS.registerSimpleBlockItem("archive_fungus", ModBlocks.ARCHIVE_FUNGUS);
+    public static final DeferredItem<BlockItem> GRAVITY_SHALE = ITEMS.registerSimpleBlockItem("gravity_shale", ModBlocks.GRAVITY_SHALE);
+    public static final DeferredItem<BlockItem> GRAVITY_SHALE_BRICKS = ITEMS.registerSimpleBlockItem("gravity_shale_bricks", ModBlocks.GRAVITY_SHALE_BRICKS);
+    public static final DeferredItem<BlockItem> BANDED_GRAVITY_SHALE = ITEMS.registerSimpleBlockItem("banded_gravity_shale", ModBlocks.BANDED_GRAVITY_SHALE);
+    public static final DeferredItem<BlockItem> SUSPENDED_CRYSTAL = ITEMS.registerSimpleBlockItem("suspended_crystal", ModBlocks.SUSPENDED_CRYSTAL);
+    public static final DeferredItem<BlockItem> INVERSION_REED = ITEMS.registerSimpleBlockItem("inversion_reed", ModBlocks.INVERSION_REED);
+    public static final DeferredItem<BlockItem> WEIGHTLESS_BLOOM = ITEMS.registerSimpleBlockItem("weightless_bloom", ModBlocks.WEIGHTLESS_BLOOM);
+    public static final DeferredItem<BlockItem> ABYSSAL_STONE = ITEMS.registerSimpleBlockItem("abyssal_stone", ModBlocks.ABYSSAL_STONE);
+    public static final DeferredItem<BlockItem> ABYSSAL_STONE_BRICKS = ITEMS.registerSimpleBlockItem("abyssal_stone_bricks", ModBlocks.ABYSSAL_STONE_BRICKS);
+    public static final DeferredItem<BlockItem> VEINED_ABYSSAL_STONE = ITEMS.registerSimpleBlockItem("veined_abyssal_stone", ModBlocks.VEINED_ABYSSAL_STONE);
+    public static final DeferredItem<BlockItem> MUTE_CRYSTAL = ITEMS.registerSimpleBlockItem("mute_crystal", ModBlocks.MUTE_CRYSTAL);
+    public static final DeferredItem<BlockItem> HUSH_GRASS = ITEMS.registerSimpleBlockItem("hush_grass", ModBlocks.HUSH_GRASS);
+    public static final DeferredItem<BlockItem> VOIDCAP = ITEMS.registerSimpleBlockItem("voidcap", ModBlocks.VOIDCAP);
     public static final DeferredItem<BlockItem> ECHO_MOSSY_STONE = ITEMS.registerSimpleBlockItem("echo_mossy_stone", ModBlocks.ECHO_MOSSY_STONE);
     public static final DeferredItem<BlockItem> WIND_CHISELED_STONE = ITEMS.registerSimpleBlockItem("wind_chiseled_stone", ModBlocks.WIND_CHISELED_STONE);
     public static final DeferredItem<BlockItem> SKY_LAMP_GLASS = ITEMS.registerSimpleBlockItem("sky_lamp_glass", ModBlocks.SKY_LAMP_GLASS);
@@ -788,6 +944,16 @@ public class ModItems {
 
     public static final DeferredItem<DeferredSpawnEggItem> ABYSS_WATCHER_SPAWN_EGG = ITEMS.register("abyss_watcher_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.ABYSS_WATCHER, 0x1E4058, 0x78CDFF, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> VOID_PROPHET_SPAWN_EGG = ITEMS.register("void_prophet_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.VOID_PROPHET, 0x140D24, 0xD94CFF, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> RIFT_WARDEN_SPAWN_EGG = ITEMS.register("rift_warden_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.RIFT_WARDEN, 0x171722, 0x7842E8, new Item.Properties()));
+
+    // 仅供手动刷怪蛋测试，不接入自然生成或正式召唤流程。
+    public static final DeferredItem<DeferredSpawnEggItem> WORLD_ECHO_SPAWN_EGG = ITEMS.register("world_echo_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.WORLD_ECHO, 0x0C0C14, 0xF0B84E, new Item.Properties()));
 
     public static final DeferredItem<DeferredSpawnEggItem> MIRROR_GUARDIAN_SPAWN_EGG = ITEMS.register("mirror_guardian_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.MIRROR_GUARDIAN, 0xBCD4DE, 0x2C3E4E, new Item.Properties()));
@@ -882,6 +1048,28 @@ public class ModItems {
             ITEMS.register("lost_recorder_chief_spawn_egg",
                     () -> new DeferredSpawnEggItem(ModEntities.LOST_RECORDER_CHIEF,
                             0x263044, 0xD6C8A4, new Item.Properties()));
+
+    // ---- 深层回响生态实体刷怪蛋 ----
+
+    public static final DeferredItem<DeferredSpawnEggItem> FOLDPAGE_BUG_SPAWN_EGG =
+            ITEMS.register("foldpage_bug_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.FOLDPAGE_BUG,
+                            0x4C544B, 0x9E8651, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> ANCHOR_SHELL_BEAST_SPAWN_EGG =
+            ITEMS.register("anchor_shell_beast_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.ANCHOR_SHELL_BEAST,
+                            0x343A38, 0x9B713A, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> ABYSS_LURKER_SPAWN_EGG =
+            ITEMS.register("abyss_lurker_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.ABYSS_LURKER,
+                            0x221D2A, 0x649A91, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> VOID_WANDERER_SPAWN_EGG =
+            ITEMS.register("void_wanderer_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.VOID_WANDERER,
+                            0x181923, 0x6FB8AE, new Item.Properties()));
 
     private static Item.Properties armorProperties(ArmorItem.Type type, int durabilityMultiplier, Rarity rarity) {
         return new Item.Properties().durability(type.getDurability(durabilityMultiplier)).rarity(rarity);

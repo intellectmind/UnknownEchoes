@@ -36,12 +36,16 @@
     [],
     [],
     [
+      "unknown_echoes:ashen_bellstone_disk",
+      "unknown_echoes:clockwork_scrap_block_disk",
       "unknown_echoes:broken_bell_ore_disk",
       "unknown_echoes:wind_etched_stone_disk"
     ],
     [],
     [],
     [
+      "unknown_echoes:cinder_reed_patch",
+      "unknown_echoes:clockwork_thistle_patch",
       "unknown_echoes:ash_chime_grass_patch",
       "unknown_echoes:broken_bell_thorn_patch",
       "unknown_echoes:glow_grass_patch",

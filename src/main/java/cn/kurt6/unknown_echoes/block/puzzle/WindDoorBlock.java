@@ -195,7 +195,7 @@ public class WindDoorBlock extends Block {
         Deque<BlockPos> queue = new ArrayDeque<>();
         queue.add(origin);
         visited.add(origin);
-        while (!queue.isEmpty() && visited.size() <= MAX_CONNECTED) {
+        while (!queue.isEmpty()) {
             BlockPos pos = queue.poll();
             BlockState state = level.getBlockState(pos);
             if (!state.is(this)) {
@@ -206,7 +206,10 @@ public class WindDoorBlock extends Block {
             }
             for (Direction direction : Direction.values()) {
                 BlockPos next = pos.relative(direction);
-                if (visited.add(next) && level.getBlockState(next).is(this)) {
+                if (visited.size() < MAX_CONNECTED && !visited.contains(next)
+                        && level.hasChunk(next.getX() >> 4, next.getZ() >> 4)
+                        && level.getBlockState(next).is(this)) {
+                    visited.add(next);
                     queue.add(next);
                 }
             }

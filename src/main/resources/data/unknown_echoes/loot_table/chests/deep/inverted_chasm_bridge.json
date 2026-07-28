@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 130 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 131 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 138 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 139 } } ] },
+        { "type": "minecraft:empty", "weight": 2 }
+      ]
+    },
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 2, "max": 4 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:space_anchor_shard", "weight": 7, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_ore_scrap", "weight": 6, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_metal_ingot", "weight": 3 },
+        { "type": "minecraft:item", "name": "minecraft:ender_pearl", "weight": 2 },
+        { "type": "minecraft:item", "name": "minecraft:experience_bottle", "weight": 2 }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/deep/inverted_chasm_bridge"
+}

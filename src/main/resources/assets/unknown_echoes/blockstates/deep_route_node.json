@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "route=wind": { "model": "unknown_echoes:block/deep_route_node_wind" },
+    "route=tide": { "model": "unknown_echoes:block/deep_route_node_tide" },
+    "route=true_sight": { "model": "unknown_echoes:block/deep_route_node_true_sight" }
+  }
+}

@@ -11,6 +11,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffect;
@@ -80,6 +81,8 @@ public class EchoArmorSetEvents {
 
         boolean inEchoRealm = player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID);
         applyEchoRealmSetEffects(player, inEchoRealm);
+        boolean inDeepEchoes = player.level().dimension().location().equals(EchoPermission.DEEP_ECHOES_ID);
+        applyDeepSetEffects(player, inDeepEchoes);
     }
 
     private static void applyEchoRealmSetEffects(ServerPlayer player, boolean inEchoRealm) {
@@ -124,15 +127,25 @@ public class EchoArmorSetEvents {
         }
 
         boolean oathActive = oath >= 4 && inEchoRealm;
-        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), OATH_SPEED_ID, 0.04D,
+        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), OATH_SPEED_ID, 0.05D,
                 AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, oath >= 2 && inEchoRealm);
-        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_TOUGHNESS_ID, 1.0D,
+        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_TOUGHNESS_ID, 2.0D,
                 AttributeModifier.Operation.ADD_VALUE, oathActive);
-        applyModifier(player.getAttribute(Attributes.ARMOR), OATH_ARMOR_ID, 1.0D,
+        applyModifier(player.getAttribute(Attributes.ARMOR), OATH_ARMOR_ID, 2.0D,
                 AttributeModifier.Operation.ADD_VALUE, oathActive);
         if (oath >= 2 && inEchoRealm) {
             reduceMinorControl(player);
         }
+    }
+
+    private static void applyDeepSetEffects(ServerPlayer player, boolean inDeepEchoes) {
+        if (!inDeepEchoes || EchoArmorSets.abyssWalkerPieces(player) < 4) {
+            return;
+        }
+        shortenEffect(player, MobEffects.DARKNESS, 40);
+        shortenEffect(player, MobEffects.WEAKNESS, 40);
+        shortenEffect(player, MobEffects.MOVEMENT_SLOWDOWN, 40);
+        shortenEffect(player, MobEffects.DIG_SLOWDOWN, 40);
     }
 
     private static void sendNearbyResourceHints(ServerPlayer player) {
@@ -157,18 +170,23 @@ public class EchoArmorSetEvents {
     }
 
     private static void reduceMinorControl(ServerPlayer player) {
-        shortenEffect(player, MobEffects.MOVEMENT_SLOWDOWN);
-        shortenEffect(player, MobEffects.WEAKNESS);
-        shortenEffect(player, MobEffects.DIG_SLOWDOWN);
-        shortenEffect(player, MobEffects.BLINDNESS);
+        shortenEffect(player, MobEffects.MOVEMENT_SLOWDOWN, 60);
+        shortenEffect(player, MobEffects.WEAKNESS, 60);
+        shortenEffect(player, MobEffects.DIG_SLOWDOWN, 60);
+        shortenEffect(player, MobEffects.BLINDNESS, 60);
     }
 
     private static void shortenEffect(ServerPlayer player, Holder<MobEffect> effect) {
+        shortenEffect(player, effect, 80);
+    }
+
+    private static void shortenEffect(ServerPlayer player, Holder<MobEffect> effect, int maxDuration) {
         MobEffectInstance instance = player.getEffect(effect);
-        if (instance == null || instance.getDuration() <= 80 || instance.getAmplifier() > 1) {
+        if (instance == null || instance.getDuration() <= maxDuration || instance.getAmplifier() > 1) {
             return;
         }
-        player.addEffect(new MobEffectInstance(effect, 80, instance.getAmplifier(),
+        player.removeEffect(effect);
+        player.addEffect(new MobEffectInstance(effect, maxDuration, instance.getAmplifier(),
                 instance.isAmbient(), instance.isVisible(), instance.showIcon()));
     }
 
@@ -212,11 +230,17 @@ public class EchoArmorSetEvents {
 
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player
-                && (EchoArmorSets.windWalkerPieces(player) >= 2
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        if ((EchoArmorSets.windWalkerPieces(player) >= 2
                 || EchoArmorSets.echoTravelerPieces(player) >= 2)
                 && player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID)) {
             event.setDamageMultiplier(event.getDamageMultiplier() * 0.85F);
+        }
+        if (EchoArmorSets.abyssWalkerPieces(player) >= 2
+                && player.level().dimension().location().equals(EchoPermission.DEEP_ECHOES_ID)) {
+            event.setDamageMultiplier(event.getDamageMultiplier() * 0.65F);
         }
     }
 
@@ -238,6 +262,7 @@ public class EchoArmorSetEvents {
             return;
         }
         boolean inEchoRealm = player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID);
+        boolean inDeepEchoes = player.level().dimension().location().equals(EchoPermission.DEEP_ECHOES_ID);
         if (inEchoRealm && EchoArmorSets.echoTravelerPieces(player) >= 2
                 && isEnvironmentalDamage(event.getSource())) {
             event.setAmount(event.getAmount() * 0.85F);
@@ -249,12 +274,21 @@ public class EchoArmorSetEvents {
         }
         if (inEchoRealm && EchoArmorSets.echoOathPieces(player) >= 2
                 && isEnvironmentalDamage(event.getSource())) {
-            event.setAmount(event.getAmount() * 0.80F);
+            event.setAmount(event.getAmount() * 0.75F);
         }
         if (inEchoRealm && EchoArmorSets.echoOathPieces(player) >= 4
                 && event.getSource().getEntity() != null
                 && !(event.getSource().getEntity() instanceof Player)) {
-            event.setAmount(event.getAmount() * 0.90F);
+            event.setAmount(event.getAmount() * 0.85F);
+        }
+        if (inDeepEchoes && EchoArmorSets.abyssWalkerPieces(player) >= 2) {
+            if (isEnvironmentalDamage(event.getSource())
+                    && !event.getSource().is(DamageTypeTags.IS_FALL)) {
+                event.setAmount(event.getAmount() * 0.70F);
+            } else if (event.getSource().getEntity() != null
+                    && event.getSource().getEntity().getType().is(ModEntityTags.DEEP_ECHOES_HOSTILES)) {
+                event.setAmount(event.getAmount() * 0.85F);
+            }
         }
     }
 

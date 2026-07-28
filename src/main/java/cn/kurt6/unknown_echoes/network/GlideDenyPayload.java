@@ -17,7 +17,7 @@ public record GlideDenyPayload(String reason) implements CustomPacketPayload {
             new CustomPacketPayload.Type<>(UnknownEchoes.id("glide_deny"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, GlideDenyPayload> STREAM_CODEC =
-            StreamCodec.composite(ByteBufCodecs.STRING_UTF8, GlideDenyPayload::reason, GlideDenyPayload::new);
+            StreamCodec.composite(ByteBufCodecs.stringUtf8(16), GlideDenyPayload::reason, GlideDenyPayload::new);
 
     @Override
     public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {

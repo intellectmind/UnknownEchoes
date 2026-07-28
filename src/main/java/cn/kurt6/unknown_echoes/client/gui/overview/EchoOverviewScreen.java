@@ -3,10 +3,14 @@ package cn.kurt6.unknown_echoes.client.gui.overview;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.client.ClientAbilityCache;
+import cn.kurt6.unknown_echoes.client.ClientArtifactCache;
 import cn.kurt6.unknown_echoes.client.ClientJournalCache;
 import cn.kurt6.unknown_echoes.config.ClientConfig;
+import cn.kurt6.unknown_echoes.artifact.ArtifactType;
 import cn.kurt6.unknown_echoes.journal.AncientPageCatalog;
+import cn.kurt6.unknown_echoes.journal.DeepEchoesProgressCatalog;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
+import cn.kurt6.unknown_echoes.world.DeepEchoesBiomeCatalog;
 import cn.kurt6.unknown_echoes.world.EchoRealmBiomeCatalog;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -16,10 +20,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,32 +97,108 @@ public class EchoOverviewScreen extends Screen {
         final String id;
         /** false = 暂未苏醒的模块入口。 */
         final boolean awake;
+        private final Component title;
+        private final Component subtitle;
+        private final Component note;
 
         ModulePage(String id, boolean awake) {
             this.id = id;
             this.awake = awake;
+            this.title = Component.translatable("overview.unknown_echoes.page." + id);
+            this.subtitle = Component.translatable("overview.unknown_echoes.subtitle." + id);
+            this.note = Component.translatable("overview.unknown_echoes.note." + id);
         }
 
         Component title() {
-            return Component.translatable("overview.unknown_echoes.page." + this.id);
+            return this.title;
+        }
+
+        Component subtitle() {
+            return this.subtitle;
+        }
+
+        Component note() {
+            return this.note;
         }
     }
 
     /** 探索日志章节(原 JournalBookScreen 章节迁入,5.8"回响档案")。 */
     private enum JournalChapter {
-        SUMMARY, BIOMES, STRUCTURES, MOBS, ABILITIES, PAGES, REVISIT
+        SUMMARY, BIOMES, STRUCTURES, MOBS, BOSSES, ABILITIES, PAGES, REVISIT
     }
+
+    private static final ModulePage[] MODULE_PAGES = ModulePage.values();
+    private static final ModulePage[] OVERVIEW_PAGES = {
+            ModulePage.ABILITY, ModulePage.JOURNAL, ModulePage.RESEARCH,
+            ModulePage.ARTIFACT, ModulePage.TRADE, ModulePage.INDEX, ModulePage.OPTIONS
+    };
+    private static final JournalChapter[] JOURNAL_CHAPTERS = JournalChapter.values();
+    private static final EchoAbilityType[] ABILITY_TYPES = EchoAbilityType.values();
+    private static final ArtifactType[] ARTIFACT_TYPES = ArtifactType.values();
+    private static final EchoAbilityType[] CREDENTIAL_ABILITIES = {
+            EchoAbilityType.WIND_ECHO, EchoAbilityType.TIDE_ECHO, EchoAbilityType.TRUE_SIGHT_ECHO,
+            EchoAbilityType.GRAVITY_ECHO, EchoAbilityType.VOID_ECHO
+    };
+    private static final Component[] ABILITY_NAMES = abilityComponents("ability.unknown_echoes.");
+    private static final Component[] ABILITY_HINTS = abilityComponents("screen.unknown_echoes.ability_panel.hint.");
+    private static final Component[] ARTIFACT_NAMES = artifactComponents("artifact.unknown_echoes.");
+    private static final Component[] ARTIFACT_HINTS = artifactComponents("overview.unknown_echoes.artifact.hint.");
+    private static final Component[] CREDENTIAL_TOKEN_NAMES = abilityComponents(
+            "overview.unknown_echoes.credentials.token.");
+    private static final Component NOTE_HEADER =
+            Component.translatable("overview.unknown_echoes.note.header");
+    private static final Component NOTE_NEXT =
+            Component.translatable("overview.unknown_echoes.note.next");
+    private static final Component NAV_TITLE_TOP = Component.literal("UNKNOWN");
+    private static final Component NAV_TITLE_BOTTOM = Component.literal("ECHOES");
+    private static final Component POPUP_CLOSE =
+            Component.translatable("overview.unknown_echoes.popup.close");
+    private static final Component ENERGY_POOL =
+            Component.translatable("overview.unknown_echoes.energy.pool");
+    private static final Component ABILITY_UNLOCKED =
+            Component.translatable("screen.unknown_echoes.ability_panel.unlocked");
+    private static final Component ABILITY_LOCKED =
+            Component.translatable("screen.unknown_echoes.ability_panel.locked");
+    private static final Component ARTIFACT_UNTUNED =
+            Component.translatable("overview.unknown_echoes.artifact.untuned");
+    private static final Component ARTIFACT_READY =
+            Component.translatable("overview.unknown_echoes.artifact.ready");
+    private static final Component ARTIFACT_UNCLAIMED =
+            Component.translatable("overview.unknown_echoes.artifact.unclaimed");
+    private static final Component CLUE_START =
+            Component.translatable("overview.unknown_echoes.clue.start");
+    private static final Component CLUE_LIGHTHOUSE =
+            Component.translatable("overview.unknown_echoes.clue.lighthouse");
+    private static final Component CLUE_CLOISTER =
+            Component.translatable("overview.unknown_echoes.clue.cloister");
+    private static final Component CLUE_TIDE =
+            Component.translatable("overview.unknown_echoes.clue.tide");
+    private static final Component CLUE_SIGHT =
+            Component.translatable("overview.unknown_echoes.clue.sight");
+    private static final Component CLUE_RESEARCH =
+            Component.translatable("overview.unknown_echoes.clue.research");
+    private static final Component SCREEN_TITLE =
+            Component.translatable("overview.unknown_echoes.title");
 
     private static final String[] KNOWN_STRUCTURES = {
             "small_echo_ruin", "resonance_beacon_structure", "rune_puzzle_room",
             "memory_pillar_courtyard", "echo_temple", "sunken_temple", "mirror_temple",
             "reflection_vault", "silent_hut", "silent_ring",
             "sky_observatory", "broken_archive", "wind_eroded_tower",
-            "tide_lighthouse_reef", "mirror_dust_cloister", "submerged_record_room"
+            "tide_lighthouse_reef", "mirror_dust_cloister", "submerged_record_room",
+            "abyss_beacon_structure", "folded_archive", "calibration_hall",
+            "inverted_mountains", "inverted_chasm_bridge", "silent_abyss_anchor",
+            "spatial_rift", "void_vein_chamber", "folded_waystation",
+            "gravity_shard_spire", "hushed_refuge", "world_resonance_hall"
     };
-    private static final List<String> KNOWN_BIOMES = EchoRealmBiomeCatalog.PATHS;
+    private static final List<String> KNOWN_BIOMES = java.util.stream.Stream.concat(
+            EchoRealmBiomeCatalog.PATHS.stream(), DeepEchoesBiomeCatalog.PATHS.stream()).toList();
     private static final String[] KNOWN_MOBS = {
-            "echo_wanderer", "silent_walker", "crystal_feather_bird"
+            "echo_wanderer", "silent_walker", "crystal_feather_bird", "dreaming_deer",
+            "crystal_chime_spirit", "broken_bell_guard", "crystal_noise_wisp",
+            "broken_bell_crow", "lost_recorder", "wind_sac_moth",
+            "wind_eroded_sentinel", "echo_remnant", "water_shadow", "mirror_dust_decoy",
+            "foldpage_bug", "anchor_shell_beast", "abyss_lurker", "void_wanderer"
     };
     /** 守护者记录页:主线 Boss 在前,区域守护者(Mini Boss)在后。 */
     private static final String[] MAIN_BOSSES = {
@@ -125,6 +207,12 @@ public class EchoOverviewScreen extends Screen {
     private static final String[] MINI_BOSSES = {
             "storm_weaver", "tide_lantern_keeper", "mirror_dust_butler", "silent_priest",
             "crystal_songkeeper", "broken_bell_keeper", "dream_bloom_keeper", "lost_recorder_chief"
+    };
+    private static final String[] JOURNAL_BOSSES = {
+            "forgotten_colossus", "abyss_watcher", "mirror_guardian",
+            "storm_weaver", "tide_lantern_keeper", "mirror_dust_butler", "silent_priest",
+            "crystal_songkeeper", "broken_bell_keeper", "dream_bloom_keeper", "lost_recorder_chief",
+            "void_prophet", "rift_warden", "world_echo"
     };
 
     private static final int NAV_WIDTH = 118;
@@ -140,23 +228,40 @@ public class EchoOverviewScreen extends Screen {
     private static final int T7_REQUIRED_MINI_BOSSES = 6;
     private static final int T7_REQUIRED_SCORE = 150;
     private static final int INDEX_EXPANSION_ONE_PAGES = 60;
-    private static final int INDEX_EXPANSION_TWO_PAGES = 72;
-    private static final int INDEX_EXPANSION_TWO_SCORE = 160;
     /** 回响聚焦动效时长(tick,5.8 交互主张:短暂扫亮,不做花哨长动画)。 */
     private static final int FOCUS_TICKS = 8;
+    private static final String[] MODULE_INDICES = {"01", "02", "03", "04", "05", "06", "07"};
 
     private ModulePage page;
     private JournalChapter chapter = JournalChapter.SUMMARY;
     private int scroll = 0;
     private int focusTicks = 0;
     private int navFocus = -1;
+    private final Component[] overviewStatusCache = new Component[MODULE_PAGES.length];
+    private Component statusRegion = Component.empty();
+    private Component statusEnergy = Component.empty();
+    private Component statusSync = Component.empty();
+    private Component nextClue = CLUE_START;
+    private boolean statusEnergyDormant = true;
+    private boolean statusSynced = false;
 
     /** 内容区缓存行(滚动列表;每行可带点击动作)。 */
     private final List<Line> lines = new ArrayList<>();
     /** 自绘按钮/页签/开关交互区。 */
     private final List<ActionButton> actionButtons = new ArrayList<>();
+    private final Map<ArtifactType, ItemStack> artifactIcons = new EnumMap<>(ArtifactType.class);
     /** 阅读弹层:null = 未打开。 */
     private ReadingPopup popup = null;
+    /** 神器/交易页像素滚动(rebuild 时行与按钮一起偏移)。 */
+    private int pageScroll = 0;
+    /** 弹层文本分行缓存(换弹层才重排,不每帧 split)。 */
+    private ReadingPopup popupLinesFor = null;
+    private List<FormattedCharSequence> popupLines = List.of();
+    /** 旁注文本分行缓存(tick 刷新)。 */
+    private List<FormattedCharSequence> sideNoteLines = List.of();
+    private List<FormattedCharSequence> sideClueLines = List.of();
+    /** 凭据信物持有状态缓存(tick 刷新,替代每帧全背包扫描)。 */
+    private final boolean[] credentialHolding = new boolean[CREDENTIAL_ABILITIES.length];
 
     /** 残页右键直接打开阅读弹层(AncientPageItem 客户端分支调用)。 */
     public static void openAncientPage(int pageId) {
@@ -191,7 +296,7 @@ public class EchoOverviewScreen extends Screen {
     }
 
     public EchoOverviewScreen(ModulePage initialPage) {
-        super(Component.translatable("overview.unknown_echoes.title"));
+        super(SCREEN_TITLE);
         this.page = initialPage;
     }
 
@@ -239,11 +344,7 @@ public class EchoOverviewScreen extends Screen {
 
     @Override
     protected void init() {
-        this.clearWidgets();
-        this.lines.clear();
-        this.actionButtons.clear();
-        this.scroll = 0;
-        buildPage();
+        rebuildWithPageScroll(0);
     }
 
     private void switchPage(ModulePage target) {
@@ -258,17 +359,73 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private void rebuild() {
+        rebuildWithPageScroll(0);
+    }
+
+    /** 滚动/同步刷新用:保留滚动量重建。 */
+    private void rebuildKeepingScroll() {
+        rebuildWithPageScroll(Math.max(0, Math.min(this.pageScroll, pageScrollMax())));
+    }
+
+    /** pageScroll 必须在 buildPage 之前设好:按钮坐标在构建期算入滚动偏移,否则与卡片错位。 */
+    private void rebuildWithPageScroll(int targetScroll) {
         this.clearWidgets();
         this.lines.clear();
         this.actionButtons.clear();
         this.scroll = 0;
+        this.pageScroll = targetScroll;
         buildPage();
+        refreshDynamicText();
+    }
+
+    /** ArtifactSyncPayload 到达后刷新打开中的神器页——按钮供给读的是构建时状态。 */
+    public static void onArtifactSync() {
+        if (Minecraft.getInstance().screen instanceof EchoOverviewScreen open
+                && open.page == ModulePage.ARTIFACT) {
+            open.rebuildKeepingScroll();
+        }
     }
 
     @Override
     public void tick() {
         if (this.focusTicks < FOCUS_TICKS) {
             this.focusTicks++;
+        }
+        refreshDynamicText();
+    }
+
+    private void refreshDynamicText() {
+        if (this.page == ModulePage.OVERVIEW) {
+            for (ModulePage entry : OVERVIEW_PAGES) {
+                this.overviewStatusCache[entry.ordinal()] = overviewStatus(entry);
+            }
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        String dimension = minecraft.level == null
+                ? "unknown" : minecraft.level.dimension().location().getPath();
+        this.statusRegion = Component.translatable("overview.unknown_echoes.status.region",
+                Component.translatableWithFallback("dimension.unknown_echoes." + dimension, dimension));
+        int energy = ClientArtifactCache.getEnergy();
+        this.statusEnergyDormant = energy < 0;
+        this.statusEnergy = this.statusEnergyDormant
+                ? Component.translatable("overview.unknown_echoes.status.energy_dormant")
+                : Component.translatable("overview.unknown_echoes.status.energy",
+                        energy, ClientArtifactCache.getMaxEnergy());
+        this.statusSynced = !ClientJournalCache.structures().isEmpty()
+                || !ClientJournalCache.pages().isEmpty()
+                || ClientAbilityCache.hasAbility(EchoAbilityType.WIND_ECHO)
+                || ClientAbilityCache.hasAbility(EchoAbilityType.TIDE_ECHO);
+        this.statusSync = Component.translatable(this.statusSynced
+                ? "overview.unknown_echoes.status.synced"
+                : "overview.unknown_echoes.status.unsynced");
+        this.nextClue = nextClue();
+        this.sideNoteLines = this.font.split(this.page.note(), NOTE_WIDTH - 10);
+        this.sideClueLines = this.nextClue == null
+                ? List.of() : this.font.split(this.nextClue, NOTE_WIDTH - 10);
+        if (this.page == ModulePage.ARTIFACT) {
+            for (int i = 0; i < CREDENTIAL_ABILITIES.length; i++) {
+                this.credentialHolding[i] = clientHasToken(CREDENTIAL_ABILITIES[i]);
+            }
         }
     }
 
@@ -311,15 +468,30 @@ public class EchoOverviewScreen extends Screen {
         addWrapped(Component.empty(), null);
         addWrapped(Component.translatable("overview.unknown_echoes.index.deep_header")
                 .withStyle(ChatFormatting.GOLD), null);
-        addIndexLine("overview.unknown_echoes.index.deep_pages", ClientJournalCache.pages().size(),
-                Math.max(ClientJournalCache.knownPages(), 80), INDEX_EXPANSION_TWO_PAGES);
-        addIndexLine("overview.unknown_echoes.index.deep_score", score,
-                INDEX_EXPANSION_TWO_SCORE, INDEX_EXPANSION_TWO_SCORE);
-        addIndexLine("overview.unknown_echoes.index.deep_artifacts", artifactUpgradeSteps(),
-                cn.kurt6.unknown_echoes.artifact.ArtifactType.values().length
-                        * (cn.kurt6.unknown_echoes.artifact.ArtifactType.MAX_LEVEL - 1),
-                cn.kurt6.unknown_echoes.artifact.ArtifactType.values().length
-                        * (cn.kurt6.unknown_echoes.artifact.ArtifactType.MAX_LEVEL - 1));
+        addIndexLine("overview.unknown_echoes.index.deep_abilities", deepAbilityCount(),
+                DeepEchoesProgressCatalog.ABILITIES.size(), DeepEchoesProgressCatalog.ABILITIES.size());
+        addIndexLine("overview.unknown_echoes.index.deep_bosses", deepBossCount(),
+                DeepEchoesProgressCatalog.BOSS_IDS.size(), DeepEchoesProgressCatalog.BOSS_IDS.size());
+        addIndexLine("overview.unknown_echoes.index.deep_biomes",
+                DeepEchoesProgressCatalog.countKnown(ClientJournalCache.biomes(),
+                        DeepEchoesProgressCatalog.BIOME_IDS),
+                DeepEchoesProgressCatalog.BIOME_IDS.size(), DeepEchoesProgressCatalog.BIOME_IDS.size());
+        addIndexLine("overview.unknown_echoes.index.deep_structures",
+                DeepEchoesProgressCatalog.countKnown(ClientJournalCache.structures(),
+                        DeepEchoesProgressCatalog.STRUCTURE_IDS),
+                DeepEchoesProgressCatalog.STRUCTURE_IDS.size(),
+                DeepEchoesProgressCatalog.STRUCTURE_IDS.size());
+        addIndexLine("overview.unknown_echoes.index.deep_mobs",
+                DeepEchoesProgressCatalog.countKnown(ClientJournalCache.mobs(),
+                        DeepEchoesProgressCatalog.MOB_IDS),
+                DeepEchoesProgressCatalog.MOB_IDS.size(), DeepEchoesProgressCatalog.MOB_IDS.size());
+        addIndexLine("overview.unknown_echoes.index.deep_pages",
+                DeepEchoesProgressCatalog.countPages(ClientJournalCache.pages()),
+                DeepEchoesProgressCatalog.PAGE_COUNT, DeepEchoesProgressCatalog.PAGE_COUNT);
+        int deepArtifactSteps = DeepEchoesProgressCatalog.ARTIFACTS.size()
+                * (ArtifactType.MAX_LEVEL - 1);
+        addIndexLine("overview.unknown_echoes.index.deep_artifacts", deepArtifactUpgradeSteps(),
+                deepArtifactSteps, deepArtifactSteps);
     }
 
     private void addIndexLine(String key, int have, int total, int need) {
@@ -332,8 +504,7 @@ public class EchoOverviewScreen extends Screen {
 
     /** 神器页(V0.6D,5.8):记录台=领取/复领;升级台=升级/调谐;台外只是誊录,按钮不可用。 */
     private void buildArtifactPage() {
-        cn.kurt6.unknown_echoes.artifact.ArtifactType[] types =
-                cn.kurt6.unknown_echoes.artifact.ArtifactType.values();
+        cn.kurt6.unknown_echoes.artifact.ArtifactType[] types = ARTIFACT_TYPES;
         for (int i = 0; i < types.length; i++) {
             cn.kurt6.unknown_echoes.artifact.ArtifactType type = types[i];
             int rowY = artifactRowY(i);
@@ -350,10 +521,11 @@ public class EchoOverviewScreen extends Screen {
                         false));
             } else if (this.stationMode == cn.kurt6.unknown_echoes.network.OpenArtifactStationPayload.MODE_TUNING) {
                 var entry = cn.kurt6.unknown_echoes.client.ClientArtifactCache.get(type.getId());
-                int level = entry == null ? 0 : entry.level();
                 addActionButton(new ActionButton(contentRight() - 96, rowY + 6, 88, 18,
                         Component.translatable("overview.unknown_echoes.artifact.upgrade"),
-                        () -> claimed && level < cn.kurt6.unknown_echoes.artifact.ArtifactType.MAX_LEVEL,
+                        // 供给实时读缓存:升级/调谐结果同步到达后按钮状态立即正确
+                        () -> ClientArtifactCache.isClaimed(type.getId())
+                                && artifactLevel(type) < cn.kurt6.unknown_echoes.artifact.ArtifactType.MAX_LEVEL,
                         () -> sendArtifactAction(
                                 cn.kurt6.unknown_echoes.network.ArtifactActionPayload.ACTION_UPGRADE,
                                 type, ""),
@@ -371,7 +543,7 @@ public class EchoOverviewScreen extends Screen {
                             "artifact.unknown_echoes." + type.getId() + ".tuning." + word);
                     int w = Math.max(64, this.font.width(label) + 18);
                     addActionButton(new ActionButton(wx, rowY + 50, w, 18, label,
-                            () -> claimed && level >= 2,
+                            () -> ClientArtifactCache.isClaimed(type.getId()) && artifactLevel(type) >= 2,
                             () -> sendArtifactAction(
                                     cn.kurt6.unknown_echoes.network.ArtifactActionPayload.ACTION_TUNE,
                                     type, word),
@@ -382,8 +554,31 @@ public class EchoOverviewScreen extends Screen {
         }
     }
 
+    private static int artifactLevel(ArtifactType type) {
+        var entry = ClientArtifactCache.get(type.getId());
+        return entry == null ? 0 : entry.level();
+    }
+
+    private static Component artifactEnergyCost(ClientArtifactCache.Entry entry) {
+        return Component.translatable("overview.unknown_echoes.artifact.energy_cost",
+                formatEnergyCost(entry.energyCostTwentieths()));
+    }
+
+    private static String formatEnergyCost(int twentieths) {
+        int safe = Math.max(0, twentieths);
+        int whole = safe / 20;
+        int hundredths = safe % 20 * 5;
+        if (hundredths == 0) {
+            return Integer.toString(whole);
+        }
+        if (hundredths % 10 == 0) {
+            return whole + "." + hundredths / 10;
+        }
+        return whole + "." + (hundredths < 10 ? "0" : "") + hundredths;
+    }
+
     private int artifactRowY(int index) {
-        return contentTop() + 8 + index * 82;
+        return contentTop() + 8 + index * 82 - this.pageScroll;
     }
 
     private void sendArtifactAction(int action, cn.kurt6.unknown_echoes.artifact.ArtifactType type,
@@ -424,7 +619,7 @@ public class EchoOverviewScreen extends Screen {
     private void buildJournalPage() {
         // 章节标签:横向一排小按钮(5.8:模块切换横向滑移感)
         int x = contentLeft();
-        for (JournalChapter c : JournalChapter.values()) {
+        for (JournalChapter c : JOURNAL_CHAPTERS) {
             Component label = Component.translatable("overview.unknown_echoes.journal." + c.name().toLowerCase());
             int w = this.font.width(label) + 16;
             if (x + w > contentRight()) {
@@ -476,8 +671,14 @@ public class EchoOverviewScreen extends Screen {
                             Component.translatable("entity.unknown_echoes." + mob)));
                 }
             }
+            case BOSSES -> {
+                for (String boss : JOURNAL_BOSSES) {
+                    content.add(discoveredEntry(ClientJournalCache.bosses().contains(id(boss)),
+                            Component.translatable("entity.unknown_echoes." + boss)));
+                }
+            }
             case ABILITIES -> {
-                for (EchoAbilityType type : EchoAbilityType.values()) {
+                for (EchoAbilityType type : ABILITY_TYPES) {
                     boolean unlocked = ClientAbilityCache.hasAbility(type);
                     Component name = Component.translatable("ability.unknown_echoes." + type.getId());
                     if (unlocked) {
@@ -726,8 +927,7 @@ public class EchoOverviewScreen extends Screen {
             graphics.drawString(this.font, this.page.title(), x, y, COL_GOLD, true);
         }
         graphics.drawString(this.font,
-                Component.translatable("overview.unknown_echoes.subtitle." + this.page.id)
-                        .withStyle(ChatFormatting.ITALIC),
+                this.page.subtitle().copy().withStyle(ChatFormatting.ITALIC),
                 x + this.font.width(this.page.title()) + 8, y, COL_DIM, false);
         drawFineDivider(graphics, x, y + 13, contentRight(), COL_ACCENT_DIM);
         graphics.fill(x, y + 14, x + Math.max(24, contentWidth() / 5), y + 15, COL_ACCENT);
@@ -744,14 +944,13 @@ public class EchoOverviewScreen extends Screen {
         graphics.fill(x + NAV_WIDTH, top, x + NAV_WIDTH + 1, panelBottom(), COL_EDGE);
         graphics.fill(x + NAV_WIDTH - 2, top + 6, x + NAV_WIDTH - 1, panelBottom() - 8, COL_ACCENT_HAZE);
         graphics.fillGradient(x + 6, top + 5, x + NAV_WIDTH - 8, top + 28, 0x2538A59E, 0x0003050A);
-        graphics.drawString(this.font, Component.literal("UNKNOWN"),
+        graphics.drawString(this.font, NAV_TITLE_TOP,
                 x + 7, top + 6, COL_GOLD_DIM, false);
-        graphics.drawString(this.font, Component.literal("ECHOES"),
+        graphics.drawString(this.font, NAV_TITLE_BOTTOM,
                 x + 18, top + 16, COL_ACCENT_DIM, false);
         drawFineDivider(graphics, x + 7, top + 29, x + NAV_WIDTH - 8, COL_EDGE_SOFT);
-        ModulePage[] pages = ModulePage.values();
-        for (int i = 0; i < pages.length; i++) {
-            ModulePage entry = pages[i];
+        for (int i = 0; i < MODULE_PAGES.length; i++) {
+            ModulePage entry = MODULE_PAGES[i];
             int rowY = navRowY(i);
             boolean hovered = mouseX >= x && mouseX < x + NAV_WIDTH
                     && mouseY >= rowY && mouseY < rowY + 20;
@@ -879,15 +1078,13 @@ public class EchoOverviewScreen extends Screen {
         graphics.renderOutline(contentLeft() + 52, cy - 28, 56, 56, 0x5538A59E);
         drawCornerMarks(graphics, contentLeft() + 12, contentTop() + 12,
                 contentLeft() + 166, contentBottom() - 12, COL_EDGE_FAINT);
-        graphics.drawString(this.font, Component.translatable("overview.unknown_echoes.title"),
+        graphics.drawString(this.font, SCREEN_TITLE,
                 contentLeft() + 28, contentTop() + 18, COL_GOLD, true);
-        graphics.drawString(this.font, Component.translatable("overview.unknown_echoes.subtitle.overview"),
+        graphics.drawString(this.font, ModulePage.OVERVIEW.subtitle(),
                 contentLeft() + 28, contentTop() + 31, COL_DIM, false);
         drawFineDivider(graphics, contentLeft() + 30, contentTop() + 44, contentLeft() + 150, COL_ACCENT_DIM);
         drawRuneTick(graphics, contentLeft() + 137, contentTop() + 31, COL_GOLD_DIM);
 
-        ModulePage[] entries = {ModulePage.ABILITY, ModulePage.JOURNAL, ModulePage.RESEARCH,
-                ModulePage.ARTIFACT, ModulePage.TRADE, ModulePage.INDEX, ModulePage.OPTIONS};
         int cols = 2;
         int cardW = Math.min(138, Math.max(100, (contentWidth() - 190) / 2));
         int cardH = 42;
@@ -900,8 +1097,8 @@ public class EchoOverviewScreen extends Screen {
         drawCornerMarks(graphics, startX - 8, startY - 8,
                 startX + cols * cardW + gap + 8, Math.min(contentBottom() - 10, startY + 4 * (cardH + gap) + 4),
                 COL_EDGE_FAINT);
-        for (int i = 0; i < entries.length; i++) {
-            ModulePage entry = entries[i];
+        for (int i = 0; i < OVERVIEW_PAGES.length; i++) {
+            ModulePage entry = OVERVIEW_PAGES[i];
             int x = startX + (i % cols) * (cardW + gap);
             int y = startY + (i / cols) * (cardH + gap);
             boolean hovered = mouseX >= x && mouseX < x + cardW && mouseY >= y && mouseY < y + cardH;
@@ -931,10 +1128,13 @@ public class EchoOverviewScreen extends Screen {
             graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
             graphics.drawString(this.font, entry.title(), x + 42, y + 7,
                     entry.awake ? COL_TEXT : COL_SILHOUETTE, false);
-            Component status = overviewStatus(entry);
+            Component status = this.overviewStatusCache[entry.ordinal()];
+            if (status == null) {
+                status = overviewStatus(entry);
+            }
             graphics.drawString(this.font, status, x + 42, y + 21,
                     entry.awake ? COL_DIM : COL_SILHOUETTE, false);
-            String index = String.format("%02d", i + 1);
+            String index = MODULE_INDICES[i];
             graphics.drawString(this.font, index, x + cardW - 18, y + 5,
                     hovered ? COL_GOLD : COL_EDGE, false);
             if (hovered) {
@@ -948,13 +1148,13 @@ public class EchoOverviewScreen extends Screen {
         return switch (entry) {
             case ABILITY -> {
                 int unlocked = 0;
-                for (EchoAbilityType type : EchoAbilityType.values()) {
+                for (EchoAbilityType type : ABILITY_TYPES) {
                     if (ClientAbilityCache.hasAbility(type)) {
                         unlocked++;
                     }
                 }
                 yield Component.translatable("overview.unknown_echoes.status.ability",
-                        unlocked, EchoAbilityType.values().length);
+                        unlocked, ABILITY_TYPES.length);
             }
             case JOURNAL -> Component.translatable("overview.unknown_echoes.status.journal",
                     ClientJournalCache.structures().size(), ClientJournalCache.totalStructures());
@@ -962,13 +1162,13 @@ public class EchoOverviewScreen extends Screen {
                     ClientJournalCache.pages().size(), ClientJournalCache.knownPages());
             case ARTIFACT -> {
                 int claimed = 0;
-                for (var type : cn.kurt6.unknown_echoes.artifact.ArtifactType.values()) {
+                for (var type : ARTIFACT_TYPES) {
                     if (cn.kurt6.unknown_echoes.client.ClientArtifactCache.isClaimed(type.getId())) {
                         claimed++;
                     }
                 }
                 yield Component.translatable("overview.unknown_echoes.status.artifact",
-                        claimed, cn.kurt6.unknown_echoes.artifact.ArtifactType.values().length);
+                        claimed, ARTIFACT_TYPES.length);
             }
             case TRADE -> Component.translatable(
                     cn.kurt6.unknown_echoes.client.ClientTradeCache.hasSession()
@@ -1002,7 +1202,7 @@ public class EchoOverviewScreen extends Screen {
 
     /** 能力页:图标行 + 解锁状态 + 研究刻度 + 悬停提示(原 AbilityPanelScreen 迁入)。 */
     private void renderAbilityRows(GuiGraphics graphics, int mouseX, int mouseY) {
-        EchoAbilityType[] types = EchoAbilityType.values();
+        EchoAbilityType[] types = ABILITY_TYPES;
         int x = contentLeft() + 2;
         int rowY = contentTop() + 8;
         java.util.List<Component> tooltip = null;
@@ -1030,12 +1230,10 @@ public class EchoOverviewScreen extends Screen {
                     ABILITY_ICON_ATLAS_WIDTH, ICON_SIZE);
             graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
 
-            Component name = Component.translatable("ability.unknown_echoes." + type.getId());
+            Component name = ABILITY_NAMES[type.ordinal()];
             graphics.drawString(this.font, name, x + 44, rowY + 4,
                     unlocked ? COL_TEXT : COL_SILHOUETTE, true);
-            Component status = Component.translatable(unlocked
-                    ? "screen.unknown_echoes.ability_panel.unlocked"
-                    : "screen.unknown_echoes.ability_panel.locked");
+            Component status = unlocked ? ABILITY_UNLOCKED : ABILITY_LOCKED;
             graphics.drawString(this.font, status, x + 44, rowY + 14,
                     unlocked ? COL_ACCENT : COL_SILHOUETTE, false);
             // 最近失败提示(V0.6E,5.7:含蓄文案,服务端同步;无记录则不占行)
@@ -1059,7 +1257,7 @@ public class EchoOverviewScreen extends Screen {
                 }
             }
             if (hovered) {
-                Component hint = Component.translatable("screen.unknown_echoes.ability_panel.hint." + type.getId())
+                Component hint = ABILITY_HINTS[type.ordinal()].copy()
                         .withStyle(unlocked ? ChatFormatting.GRAY : ChatFormatting.DARK_GRAY);
                 tooltip = unlocked
                         ? java.util.List.of(Component.translatable("overview.unknown_echoes.ability.tip.research",
@@ -1078,7 +1276,7 @@ public class EchoOverviewScreen extends Screen {
         int barX = contentLeft() + 2;
         int barW = contentRight() - 10 - barX;
         graphics.drawString(this.font,
-                Component.translatable("overview.unknown_echoes.energy.pool"),
+                ENERGY_POOL,
                 barX, barY - 11, COL_GOLD_DIM, false);
         graphics.fillGradient(barX - 2, barY - 2, barX + barW + 2, barY + 10, 0x66101824, 0xAA03050A);
         graphics.fill(barX, barY, barX + barW, barY + 8, 0xFF0B1118);
@@ -1097,8 +1295,9 @@ public class EchoOverviewScreen extends Screen {
 
     /** 神器页(V0.6D):凭据卡片——等级刻度/调谐词条/冷却;数据全部来自 ArtifactSyncPayload。 */
     private void renderArtifactPage(GuiGraphics graphics, int mouseX, int mouseY) {
-        var types = cn.kurt6.unknown_echoes.artifact.ArtifactType.values();
+        var types = ARTIFACT_TYPES;
         java.util.List<Component> artifactHoverTip = null;
+        graphics.enableScissor(contentLeft(), contentTop(), contentRight(), contentBottom() - 16);
         for (int i = 0; i < types.length; i++) {
             var type = types[i];
             int rowY = artifactRowY(i);
@@ -1122,9 +1321,9 @@ public class EchoOverviewScreen extends Screen {
                     0x77101824, 0xAA03050A);
             graphics.renderOutline(contentLeft() + 5, rowY + 3, 22, 22,
                     claimed ? COL_GOLD_DIM : COL_EDGE_SOFT);
-            graphics.renderItem(new net.minecraft.world.item.ItemStack(
-                    type.getCredentialItem()), contentLeft() + 8, rowY + 6);
-            Component name = Component.translatable("artifact.unknown_echoes." + type.getId());
+            graphics.renderItem(artifactIcons.computeIfAbsent(type,
+                    key -> new ItemStack(key.getCredentialItem())), contentLeft() + 8, rowY + 6);
+            Component name = ARTIFACT_NAMES[type.ordinal()];
             graphics.drawString(this.font, name, contentLeft() + 32, rowY + 2,
                     claimed ? COL_TEXT : COL_SILHOUETTE, true);
             if (claimed) {
@@ -1138,7 +1337,7 @@ public class EchoOverviewScreen extends Screen {
                     graphics.renderOutline(px, rowY + 14, 8, 6, pip < entry.level() ? COL_GOLD_DIM : COL_EDGE);
                 }
                 Component tuning = entry.tuning().isEmpty()
-                        ? Component.translatable("overview.unknown_echoes.artifact.untuned")
+                        ? ARTIFACT_UNTUNED
                         : Component.translatable("artifact.unknown_echoes." + type.getId()
                                 + ".tuning." + entry.tuning());
                 graphics.drawString(this.font,
@@ -1149,19 +1348,24 @@ public class EchoOverviewScreen extends Screen {
                         .getCooldownSeconds(type.getId());
                 Component state = cooldown > 0
                         ? Component.translatable("overview.unknown_echoes.artifact.cooldown", cooldown)
-                        : Component.translatable("overview.unknown_echoes.artifact.ready");
+                        : ARTIFACT_READY;
                 graphics.drawString(this.font, state, contentLeft() + 32, rowY + 34,
                         cooldown > 0 ? COL_DIM : COL_ACCENT, false);
+                Component energyCost = artifactEnergyCost(entry);
+                graphics.drawString(this.font, energyCost,
+                        contentRight() - 10 - this.font.width(energyCost), rowY + 34,
+                        COL_GOLD_DIM, false);
             } else {
                 graphics.drawString(this.font,
-                        Component.translatable("overview.unknown_echoes.artifact.unclaimed"),
+                        ARTIFACT_UNCLAIMED,
                         contentLeft() + 32, rowY + 16, COL_SILHOUETTE, false);
                 graphics.drawString(this.font,
-                        Component.translatable("overview.unknown_echoes.artifact.hint." + type.getId()),
+                        ARTIFACT_HINTS[type.ordinal()],
                         contentLeft() + 32, rowY + 28, COL_DIM, false);
             }
             if (mouseX >= contentLeft() && mouseX <= contentRight() - 4
-                    && mouseY >= rowY - 2 && mouseY < cardBottom) {
+                    && mouseY >= Math.max(rowY - 2, contentTop())
+                    && mouseY < Math.min(cardBottom, contentBottom() - 16)) {
                 java.util.List<Component> tip = new ArrayList<>();
                 tip.add(name.copy().withStyle(claimed ? ChatFormatting.GOLD : ChatFormatting.GRAY));
                 if (claimed) {
@@ -1170,6 +1374,7 @@ public class EchoOverviewScreen extends Screen {
                             .withStyle(ChatFormatting.GOLD));
                     tip.add(Component.translatable("overview.unknown_echoes.artifact." + type.getId() + ".l" + lvl)
                             .withStyle(ChatFormatting.AQUA));
+                    tip.add(artifactEnergyCost(entry).copy().withStyle(ChatFormatting.DARK_AQUA));
                     if (lvl < cn.kurt6.unknown_echoes.artifact.ArtifactType.MAX_LEVEL) {
                         tip.add(Component.translatable("overview.unknown_echoes.artifact.tip.next", lvl + 1)
                                 .withStyle(ChatFormatting.DARK_GRAY));
@@ -1186,7 +1391,36 @@ public class EchoOverviewScreen extends Screen {
                 artifactHoverTip = tip;
             }
         }
-        // 台座上下文提示(底部一行)
+        // ---- 凭据与誓记(V0.6E,5.8):共鸣信物与神器凭据的状态登记 ----
+        int credY = artifactRowY(types.length) + 4;
+        graphics.drawString(this.font,
+                Component.translatable("overview.unknown_echoes.credentials.header"),
+                contentLeft() + 4, credY, COL_GOLD, true);
+        graphics.fill(contentLeft() + 4, credY + 10, contentRight() - 8, credY + 11, COL_EDGE_SOFT);
+        credY += 15;
+        for (int credIndex = 0; credIndex < CREDENTIAL_ABILITIES.length; credIndex++) {
+            EchoAbilityType ability = CREDENTIAL_ABILITIES[credIndex];
+            if (credY > contentBottom() - 16) {
+                break;
+            }
+            boolean fulfilled = ClientAbilityCache.hasAbility(ability);
+            boolean ritual = ClientAbilityCache.hasRitualRecord(ability);
+            boolean holding = this.credentialHolding[credIndex];
+            String stateKey = fulfilled ? "fulfilled" : holding ? "holding"
+                    : ritual ? "reclaimable" : "dormant";
+            boolean lit = fulfilled || ritual || holding;
+            Component line = Component.literal(lit ? "✦ " : "◇ ")
+                    .withStyle(lit ? ChatFormatting.DARK_AQUA : ChatFormatting.GRAY)
+                    .append(CREDENTIAL_TOKEN_NAMES[ability.ordinal()])
+                    .append(Component.literal(" — ").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.translatable("overview.unknown_echoes.credentials." + stateKey)
+                            .withStyle(lit ? ChatFormatting.AQUA : ChatFormatting.DARK_GRAY));
+            graphics.drawString(this.font, line, contentLeft() + 8, credY,
+                    lit ? COL_TEXT : COL_SILHOUETTE, false);
+            credY += 12;
+        }
+        graphics.disableScissor();
+        // 台座上下文提示(底部固定行,不随滚动)
         String contextKey = switch (this.stationMode) {
             case 0 -> "overview.unknown_echoes.artifact.at_record";
             case 1 -> "overview.unknown_echoes.artifact.at_tuning";
@@ -1195,36 +1429,6 @@ public class EchoOverviewScreen extends Screen {
         graphics.drawString(this.font, Component.translatable(contextKey)
                         .withStyle(ChatFormatting.ITALIC),
                 contentLeft() + 4, contentBottom() - 12, COL_DIM, false);
-
-        // ---- 凭据与誓记(V0.6E,5.8):共鸣信物与神器凭据的状态登记 ----
-        int credY = artifactRowY(types.length) + 4;
-        graphics.drawString(this.font,
-                Component.translatable("overview.unknown_echoes.credentials.header"),
-                contentLeft() + 4, credY, COL_GOLD, true);
-        graphics.fill(contentLeft() + 4, credY + 10, contentRight() - 8, credY + 11, COL_EDGE_SOFT);
-        credY += 15;
-        for (EchoAbilityType ability : new EchoAbilityType[]{EchoAbilityType.WIND_ECHO,
-                EchoAbilityType.TIDE_ECHO, EchoAbilityType.TRUE_SIGHT_ECHO}) {
-            if (credY > contentBottom() - 26) {
-                break;
-            }
-            boolean fulfilled = ClientAbilityCache.hasAbility(ability);
-            boolean ritual = ClientAbilityCache.hasRitualRecord(ability);
-            boolean holding = clientHasToken(ability);
-            String stateKey = fulfilled ? "fulfilled" : holding ? "holding"
-                    : ritual ? "reclaimable" : "dormant";
-            boolean lit = fulfilled || ritual || holding;
-            Component line = Component.literal(lit ? "✦ " : "◇ ")
-                    .withStyle(lit ? ChatFormatting.DARK_AQUA : ChatFormatting.GRAY)
-                    .append(Component.translatable("overview.unknown_echoes.credentials.token."
-                            + ability.getId()))
-                    .append(Component.literal(" — ").withStyle(ChatFormatting.DARK_GRAY))
-                    .append(Component.translatable("overview.unknown_echoes.credentials." + stateKey)
-                            .withStyle(lit ? ChatFormatting.AQUA : ChatFormatting.DARK_GRAY));
-            graphics.drawString(this.font, line, contentLeft() + 8, credY,
-                    lit ? COL_TEXT : COL_SILHOUETTE, false);
-            credY += 12;
-        }
         if (artifactHoverTip != null) {
             graphics.renderComponentTooltip(this.font, artifactHoverTip, mouseX, mouseY);
         }
@@ -1267,10 +1471,14 @@ public class EchoOverviewScreen extends Screen {
         graphics.drawString(this.font,
                 Component.translatable("overview.unknown_echoes.trade.header"),
                 contentLeft() + 4, contentTop() + 6, COL_GOLD, true);
+        graphics.enableScissor(contentLeft(), contentTop() + 16, contentRight(), contentBottom() - 14);
         for (int i = 0; i < cache.size(); i++) {
             var entry = cache.get(i);
             int rowY = tradeRowY(i);
-            if (rowY + 22 > contentBottom() - 14) {
+            if (rowY + 22 <= contentTop() + 16) {
+                continue;
+            }
+            if (rowY > contentBottom() - 14) {
                 break;
             }
             boolean soldOut = entry.usesLeft() == 0;
@@ -1302,6 +1510,7 @@ public class EchoOverviewScreen extends Screen {
                     contentRight() - this.font.width(uses) - 10, rowY + 7,
                     soldOut ? COL_SILHOUETTE : COL_DIM, false);
         }
+        graphics.disableScissor();
         graphics.drawString(this.font,
                 Component.translatable("overview.unknown_echoes.trade.footer")
                         .withStyle(ChatFormatting.ITALIC),
@@ -1309,7 +1518,23 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private int tradeRowY(int index) {
-        return contentTop() + 22 + index * 24;
+        return contentTop() + 22 + index * 24 - this.pageScroll;
+    }
+
+    /** 神器/交易页的最大滚动量(其余页面走 lines 滚动)。 */
+    private int pageScrollMax() {
+        if (this.page == ModulePage.TRADE) {
+            if (!cn.kurt6.unknown_echoes.client.ClientTradeCache.hasSession()) {
+                return 0;
+            }
+            int count = cn.kurt6.unknown_echoes.client.ClientTradeCache.getEntries().size();
+            return Math.max(0, 22 + count * 24 + 16 - contentHeight());
+        }
+        if (this.page == ModulePage.ARTIFACT) {
+            int credentials = 4 + 15 + CREDENTIAL_ABILITIES.length * 12 + 18;
+            return Math.max(0, 8 + ARTIFACT_TYPES.length * 82 + credentials - contentHeight());
+        }
+        return 0;
     }
 
     private void renderTradeCosts(GuiGraphics graphics, List<net.minecraft.world.item.ItemStack> costs,
@@ -1342,17 +1567,15 @@ public class EchoOverviewScreen extends Screen {
         int textX = x + 5;
         int y = top + 5;
         graphics.drawString(this.font,
-                Component.translatable("overview.unknown_echoes.note.header"), textX, y, COL_GOLD, false);
+                NOTE_HEADER, textX, y, COL_GOLD, false);
         drawFineDivider(graphics, textX, y + 10, panelRight() - 8, COL_EDGE_SOFT);
         y += 13;
-        Component note = Component.translatable("overview.unknown_echoes.note." + this.page.id);
-        for (FormattedCharSequence seq : this.font.split(note, NOTE_WIDTH - 10)) {
+        for (FormattedCharSequence seq : this.sideNoteLines) {
             graphics.drawString(this.font, seq, textX, y, COL_DIM, false);
             y += 10;
         }
         y += 4;
-        Component next = nextClue();
-        if (next != null) {
+        if (!this.sideClueLines.isEmpty()) {
             int boxTop = y - 2;
             int boxBottom = Math.min(contentBottom() - 7, boxTop + 52);
             graphics.fillGradient(textX - 2, boxTop, panelRight() - 8, boxBottom,
@@ -1360,9 +1583,9 @@ public class EchoOverviewScreen extends Screen {
             graphics.renderOutline(textX - 2, boxTop, panelRight() - textX - 6,
                     boxBottom - boxTop, COL_EDGE_FAINT);
             graphics.drawString(this.font,
-                    Component.translatable("overview.unknown_echoes.note.next"), textX, y, COL_GOLD, false);
+                    NOTE_NEXT, textX, y, COL_GOLD, false);
             y += 12;
-            for (FormattedCharSequence seq : this.font.split(next, NOTE_WIDTH - 10)) {
+            for (FormattedCharSequence seq : this.sideClueLines) {
                 graphics.drawString(this.font, seq, textX, y, COL_ACCENT_DIM, false);
                 y += 10;
             }
@@ -1375,21 +1598,21 @@ public class EchoOverviewScreen extends Screen {
         boolean tide = ClientAbilityCache.hasAbility(EchoAbilityType.TIDE_ECHO);
         boolean sight = ClientAbilityCache.hasAbility(EchoAbilityType.TRUE_SIGHT_ECHO);
         if (!wind && !tide && !sight) {
-            return Component.translatable("overview.unknown_echoes.clue.start");
+            return CLUE_START;
         }
         if (tide && !ClientJournalCache.structures().contains(id("tide_lighthouse_reef"))) {
-            return Component.translatable("overview.unknown_echoes.clue.lighthouse");
+            return CLUE_LIGHTHOUSE;
         }
         if (sight && !ClientJournalCache.structures().contains(id("mirror_dust_cloister"))) {
-            return Component.translatable("overview.unknown_echoes.clue.cloister");
+            return CLUE_CLOISTER;
         }
         if (!tide) {
-            return Component.translatable("overview.unknown_echoes.clue.tide");
+            return CLUE_TIDE;
         }
         if (!sight) {
-            return Component.translatable("overview.unknown_echoes.clue.sight");
+            return CLUE_SIGHT;
         }
-        return Component.translatable("overview.unknown_echoes.clue.research");
+        return CLUE_RESEARCH;
     }
 
     /** 底部"同步状态条":区域 / 能量摘要(V0.6D 前为占位)/ 同步状态(5.8.0)。 */
@@ -1404,30 +1627,13 @@ public class EchoOverviewScreen extends Screen {
                 0x255BE8D8, 0x0003050A);
         graphics.fillGradient(contentLeft() - 2, y + 2, contentLeft() + 160, panelBottom() - 2,
                 0x16E2C276, 0x00101824);
-        Minecraft mc = Minecraft.getInstance();
-        String dimension = mc.level != null
-                ? mc.level.dimension().location().getPath() : "unknown";
-        Component left = Component.translatable("overview.unknown_echoes.status.region",
-                Component.translatableWithFallback("dimension.unknown_echoes." + dimension, dimension));
-        graphics.drawString(this.font, left, contentLeft(), y + 3, COL_DIM, false);
-        int energyNow = cn.kurt6.unknown_echoes.client.ClientArtifactCache.getEnergy();
-        Component energy = energyNow < 0
-                ? Component.translatable("overview.unknown_echoes.status.energy_dormant")
-                : Component.translatable("overview.unknown_echoes.status.energy",
-                        energyNow, cn.kurt6.unknown_echoes.client.ClientArtifactCache.getMaxEnergy());
-        graphics.drawString(this.font, energy,
-                (panelLeft() + panelRight()) / 2 - this.font.width(energy) / 2 + NAV_WIDTH / 2,
-                y + 3, energyNow < 0 ? COL_SILHOUETTE : COL_ACCENT_DIM, false);
-        boolean synced = !ClientJournalCache.structures().isEmpty()
-                || !ClientJournalCache.pages().isEmpty()
-                || ClientAbilityCache.hasAbility(EchoAbilityType.WIND_ECHO)
-                || ClientAbilityCache.hasAbility(EchoAbilityType.TIDE_ECHO);
-        Component sync = Component.translatable(synced
-                ? "overview.unknown_echoes.status.synced"
-                : "overview.unknown_echoes.status.unsynced");
-        graphics.drawString(this.font, sync,
-                panelRight() - this.font.width(sync) - 6, y + 3,
-                synced ? COL_ACCENT_DIM : COL_SILHOUETTE, false);
+        graphics.drawString(this.font, this.statusRegion, contentLeft(), y + 3, COL_DIM, false);
+        graphics.drawString(this.font, this.statusEnergy,
+                (panelLeft() + panelRight()) / 2 - this.font.width(this.statusEnergy) / 2 + NAV_WIDTH / 2,
+                y + 3, this.statusEnergyDormant ? COL_SILHOUETTE : COL_ACCENT_DIM, false);
+        graphics.drawString(this.font, this.statusSync,
+                panelRight() - this.font.width(this.statusSync) - 6, y + 3,
+                this.statusSynced ? COL_ACCENT_DIM : COL_SILHOUETTE, false);
     }
 
     /** 阅读弹层:残页/拓片的单页书面阅读(5.8 残页与研究)。 */
@@ -1442,21 +1648,27 @@ public class EchoOverviewScreen extends Screen {
         graphics.blit(PAPER, x, y, 0, 0, w, h, w, h);
         graphics.drawCenteredString(this.font, this.popup.title.copy().withStyle(ChatFormatting.BOLD),
                 x + w / 2, y + 10, 0xFF6B5018);
-        List<FormattedCharSequence> split = this.font.split(this.popup.text, w - 24);
+        if (this.popupLinesFor != this.popup) {
+            this.popupLinesFor = this.popup;
+            this.popupLines = this.font.split(this.popup.text, w - 24);
+        }
         int textY = y + 30;
-        for (FormattedCharSequence seq : split) {
+        for (FormattedCharSequence seq : this.popupLines) {
             if (textY > y + h - 16) {
                 break;
             }
             graphics.drawString(this.font, seq, x + 12, textY, 0xFF3A372E, false);
             textY += 10;
         }
-        Component close = Component.translatable("overview.unknown_echoes.popup.close");
-        graphics.drawCenteredString(this.font, close, x + w / 2, y + h + 6, COL_DIM);
+        graphics.drawCenteredString(this.font, POPUP_CLOSE, x + w / 2, y + h + 6, COL_DIM);
     }
 
     /** 自绘按钮:统一替换原版灰按钮,保留 Minecraft GUI 的轻量输入模型。 */
     private void renderActionButtons(GuiGraphics graphics, int mouseX, int mouseY) {
+        boolean clip = this.page == ModulePage.ARTIFACT;
+        if (clip) {
+            graphics.enableScissor(contentLeft(), contentTop(), contentRight(), contentBottom() - 16);
+        }
         for (ActionButton button : this.actionButtons) {
             boolean enabled = button.enabled.getAsBoolean();
             boolean hovered = enabled && button.contains(mouseX, mouseY);
@@ -1485,29 +1697,35 @@ public class EchoOverviewScreen extends Screen {
             graphics.drawCenteredString(this.font, button.label,
                     button.x + button.width / 2, button.y + (button.height - 8) / 2, color);
         }
+        if (clip) {
+            graphics.disableScissor();
+        }
     }
 
     // ---- 输入 ----
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button != 0) {
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
         if (this.popup != null) {
             this.popup = null;
             return true;
         }
         for (ActionButton actionButton : this.actionButtons) {
-            if (actionButton.enabled.getAsBoolean() && actionButton.contains(mouseX, mouseY)) {
+            if (actionButton.enabled.getAsBoolean() && actionButton.contains(mouseX, mouseY)
+                    && isActionButtonClickable(actionButton, mouseY)) {
                 actionButton.action.run();
                 return true;
             }
         }
         // 共鸣脊线导航
-        ModulePage[] pages = ModulePage.values();
-        for (int i = 0; i < pages.length; i++) {
+        for (int i = 0; i < MODULE_PAGES.length; i++) {
             int rowY = navRowY(i);
             if (mouseX >= panelLeft() && mouseX < panelLeft() + NAV_WIDTH
                     && mouseY >= rowY && mouseY < rowY + 20) {
-                switchPage(pages[i]);
+                switchPage(MODULE_PAGES[i]);
                 return true;
             }
         }
@@ -1525,11 +1743,15 @@ public class EchoOverviewScreen extends Screen {
             var entries = cn.kurt6.unknown_echoes.client.ClientTradeCache.getEntries();
             for (int i = 0; i < entries.size(); i++) {
                 int rowY = tradeRowY(i);
-                if (rowY + 22 > contentBottom() - 14) {
+                if (rowY + 22 <= contentTop() + 16) {
+                    continue;
+                }
+                if (rowY > contentBottom() - 14) {
                     break;
                 }
                 if (mouseX >= contentLeft() && mouseX < contentRight() - 4
-                        && mouseY >= rowY && mouseY < rowY + 22) {
+                        && mouseY >= Math.max(rowY, contentTop() + 16)
+                        && mouseY < Math.min(rowY + 22, contentBottom() - 14)) {
                     if (entries.get(i).usesLeft() != 0) {
                         net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                                 new cn.kurt6.unknown_echoes.network.TradeRequestPayload(
@@ -1561,26 +1783,45 @@ public class EchoOverviewScreen extends Screen {
     private ModulePage overviewCardAt(double mouseX, double mouseY) {
         int cx = (contentLeft() + contentRight()) / 2;
         int cy = (contentTop() + contentBottom()) / 2;
-        ModulePage[] entries = {ModulePage.ABILITY, ModulePage.JOURNAL, ModulePage.RESEARCH,
-                ModulePage.ARTIFACT, ModulePage.TRADE, ModulePage.INDEX, ModulePage.OPTIONS};
         int cols = 2;
         int cardW = Math.min(138, Math.max(100, (contentWidth() - 190) / 2));
         int cardH = 42;
         int gap = 8;
         int startX = Math.max(contentLeft() + 174, contentRight() - (cols * cardW + gap) - 12);
         int startY = contentTop() + 18;
-        for (int i = 0; i < entries.length; i++) {
+        for (int i = 0; i < OVERVIEW_PAGES.length; i++) {
             int x = startX + (i % cols) * (cardW + gap);
             int y = startY + (i / cols) * (cardH + gap);
             if (mouseX >= x && mouseX < x + cardW && mouseY >= y && mouseY < y + cardH) {
-                return entries[i];
+                return OVERVIEW_PAGES[i];
             }
         }
         return null;
     }
 
+    /** 神器页按钮随页滚动:点击点必须落在内容区内,滚出/被裁剪的部分不可点。 */
+    private boolean isActionButtonClickable(ActionButton button, double mouseY) {
+        if (this.page != ModulePage.ARTIFACT) {
+            return true;
+        }
+        return mouseY >= contentTop() && mouseY < contentBottom() - 16
+                && button.y + button.height > contentTop() && button.y < contentBottom() - 16;
+    }
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        if (this.popup == null
+                && (this.page == ModulePage.ARTIFACT || this.page == ModulePage.TRADE)) {
+            int max = pageScrollMax();
+            if (max > 0) {
+                int target = Mth.clamp(this.pageScroll - (int) Math.signum(deltaY) * 26, 0, max);
+                if (target != this.pageScroll) {
+                    this.pageScroll = target;
+                    rebuildKeepingScroll();
+                }
+                return true;
+            }
+        }
         if (this.popup == null && !this.lines.isEmpty()) {
             this.scroll = Math.max(0, this.scroll - (int) Math.signum(deltaY) * 3);
             return true;
@@ -1608,11 +1849,11 @@ public class EchoOverviewScreen extends Screen {
             int delta = keyCode == GLFW.GLFW_KEY_DOWN ? 1 : -1;
             this.navFocus = Math.floorMod(
                     (this.navFocus < 0 ? this.page.ordinal() : this.navFocus) + delta,
-                    ModulePage.values().length);
+                    MODULE_PAGES.length);
             return true;
         }
         if ((keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) && this.navFocus >= 0) {
-            switchPage(ModulePage.values()[this.navFocus]);
+            switchPage(MODULE_PAGES[this.navFocus]);
             this.navFocus = -1;
             return true;
         }
@@ -1752,6 +1993,21 @@ public class EchoOverviewScreen extends Screen {
         return count;
     }
 
+    private static int deepAbilityCount() {
+        int count = 0;
+        for (EchoAbilityType type : DeepEchoesProgressCatalog.ABILITIES) {
+            if (ClientAbilityCache.hasAbility(type)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static int deepBossCount() {
+        return DeepEchoesProgressCatalog.countKnown(ClientJournalCache.bosses(),
+                DeepEchoesProgressCatalog.BOSS_IDS);
+    }
+
     private static int miniBossCount() {
         int count = 0;
         for (String boss : MINI_BOSSES) {
@@ -1764,7 +2020,7 @@ public class EchoOverviewScreen extends Screen {
 
     private static int artifactUnlocks() {
         int count = 0;
-        for (var type : cn.kurt6.unknown_echoes.artifact.ArtifactType.values()) {
+        for (var type : ARTIFACT_TYPES) {
             if (cn.kurt6.unknown_echoes.client.ClientArtifactCache.isClaimed(type.getId())) {
                 count++;
             }
@@ -1774,8 +2030,17 @@ public class EchoOverviewScreen extends Screen {
 
     private static int artifactUpgradeSteps() {
         int count = 0;
-        for (var type : cn.kurt6.unknown_echoes.artifact.ArtifactType.values()) {
+        for (var type : ARTIFACT_TYPES) {
             var entry = cn.kurt6.unknown_echoes.client.ClientArtifactCache.get(type.getId());
+            count += entry == null ? 0 : Math.max(0, entry.level() - 1);
+        }
+        return count;
+    }
+
+    private static int deepArtifactUpgradeSteps() {
+        int count = 0;
+        for (ArtifactType type : DeepEchoesProgressCatalog.ARTIFACTS) {
+            var entry = ClientArtifactCache.get(type.getId());
             count += entry == null ? 0 : Math.max(0, entry.level() - 1);
         }
         return count;
@@ -1785,6 +2050,7 @@ public class EchoOverviewScreen extends Screen {
         int score = 0;
         score += Math.min(EchoRealmBiomeCatalog.countKnown(ClientJournalCache.biomes()) * 3, 30);
         score += Math.min(ClientJournalCache.structures().size() * 2, 40);
+        score += ClientAbilityCache.getPuzzleScore();
         score += Math.min(miniBossCount() * 6, 48);
         score += Math.min(ClientJournalCache.pages().size(), 80);
         score += Math.min(visibleResearchStages() * 5, 45);
@@ -1801,6 +2067,22 @@ public class EchoOverviewScreen extends Screen {
         return sum;
     }
 
+    private static Component[] abilityComponents(String prefix) {
+        Component[] components = new Component[ABILITY_TYPES.length];
+        for (EchoAbilityType type : ABILITY_TYPES) {
+            components[type.ordinal()] = Component.translatable(prefix + type.getId());
+        }
+        return components;
+    }
+
+    private static Component[] artifactComponents(String prefix) {
+        Component[] components = new Component[ARTIFACT_TYPES.length];
+        for (ArtifactType type : ARTIFACT_TYPES) {
+            components[type.ordinal()] = Component.translatable(prefix + type.getId());
+        }
+        return components;
+    }
+
     private static String visibleBackfillTarget() {
         if (ClientJournalCache.pages().size() < Math.max(T7_REQUIRED_PAGES, INDEX_EXPANSION_ONE_PAGES)) {
             return "pages";
@@ -1808,7 +2090,7 @@ public class EchoOverviewScreen extends Screen {
         if (miniBossCount() < MINI_BOSSES.length) {
             return "mini_bosses";
         }
-        if (artifactUpgradeSteps() < cn.kurt6.unknown_echoes.artifact.ArtifactType.values().length
+        if (artifactUpgradeSteps() < ARTIFACT_TYPES.length
                 * (cn.kurt6.unknown_echoes.artifact.ArtifactType.MAX_LEVEL - 1)) {
             return "artifacts";
         }

@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:gravity_shard_spire",
+  "biomes": "#unknown_echoes:has_gravity_shard_spire",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

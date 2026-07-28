@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "calibration=wind": { "model": "unknown_echoes:block/deep_route_node_wind" },
+    "calibration=tide": { "model": "unknown_echoes:block/deep_route_node_tide" },
+    "calibration=true_sight": { "model": "unknown_echoes:block/deep_route_node_true_sight" }
+  }
+}

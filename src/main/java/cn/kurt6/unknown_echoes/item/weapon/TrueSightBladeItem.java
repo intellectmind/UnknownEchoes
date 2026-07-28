@@ -61,8 +61,9 @@ public class TrueSightBladeItem extends SwordItem {
                 .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
     }
 
-    public void applyDamageEventEffect(ServerLevel level, ServerPlayer player, LivingEntity target) {
-        this.tickMirrorMark(level, player, target);
+    /** 返回并入本次伤害事件的追加伤害(镜痕破碎;嵌套 hurt 会被无敌帧吞掉,由 CommonEvents setAmount 落账)。 */
+    public float applyDamageEventEffect(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        float bonus = this.tickMirrorMark(level, player, target);
         if (!player.getCooldowns().isOnCooldown(this)) {
             LivingEntity real = findRealBody(level, target);
             if (real != null) {
@@ -77,6 +78,7 @@ public class TrueSightBladeItem extends SwordItem {
                         Component.translatable("message.unknown_echoes.true_sight_blade.reveal"), true);
             }
         }
+        return bonus;
     }
 
     /**
@@ -84,29 +86,33 @@ public class TrueSightBladeItem extends SwordItem {
      * 第 3 层破碎——额外爆发伤害(幻象类双倍)+ 短暂发光 + 碎镜环。
      * 层数存目标 persistentData(服务端),超窗自动重计。
      */
-    private void tickMirrorMark(ServerLevel level, ServerPlayer player, LivingEntity target) {
+    private float tickMirrorMark(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        if (!(target instanceof net.minecraft.world.entity.monster.Enemy)) {
+            return 0.0F;
+        }
         var data = target.getPersistentData();
+        String suffix = "_" + player.getUUID();
+        String countKey = MARK_COUNT_KEY + suffix;
+        String timeKey = MARK_TIME_KEY + suffix;
         long now = level.getGameTime();
-        int count = data.getInt(MARK_COUNT_KEY);
-        long last = data.getLong(MARK_TIME_KEY);
-        count = (now - last > markWindowTicks) ? 1 : count + 1;
-        data.putLong(MARK_TIME_KEY, now);
+        long last = data.getLong(timeKey);
+        int count = Math.max(0, Math.min(2, data.getInt(countKey)));
+        boolean continues = last >= 0L && last <= now && now - last <= markWindowTicks;
+        count = continues ? count + 1 : 1;
+        data.putLong(timeKey, now);
         if (count < 3) {
-            data.putInt(MARK_COUNT_KEY, count);
+            data.putInt(countKey, count);
             // 叠层提示:目标身上的裂镜微光逐层变密
             level.sendParticles(ParticleTypes.END_ROD,
                     target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(),
                     count * 3, 0.3, 0.4, 0.3, 0.02);
             level.playSound(null, target.blockPosition(),
                     SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8F, 1.0F + count * 0.3F);
-            return;
+            return 0.0F;
         }
         // 第 3 层:镜痕破碎
-        data.putInt(MARK_COUNT_KEY, 0);
+        data.putInt(countKey, 0);
         boolean illusion = target.getType().is(ModEntityTags.ILLUSION_MOBS);
-        WeaponEffectGuard.run(player,
-                () -> target.hurt(player.damageSources().playerAttack(player),
-                        illusion ? shatterDamage * 2.0F : shatterDamage));
         target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 40, 0, false, false, false));
         for (int i = 0; i < 18; i++) {
             double angle = Math.PI * 2 * i / 18;
@@ -120,6 +126,7 @@ public class TrueSightBladeItem extends SwordItem {
                 14, 0.4, 0.4, 0.4, 0.15);
         level.playSound(null, target.blockPosition(),
                 SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.1F, 1.5F);
+        return illusion ? shatterDamage * 2.0F : shatterDamage;
     }
 
     /** 命中的是分身/假身时,返回场上的真身;否则 null。 */

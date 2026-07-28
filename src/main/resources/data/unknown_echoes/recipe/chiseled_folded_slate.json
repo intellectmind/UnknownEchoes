@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:folded_slate"
+  },
+  "result": {
+    "id": "unknown_echoes:chiseled_folded_slate",
+    "count": 1
+  }
+}

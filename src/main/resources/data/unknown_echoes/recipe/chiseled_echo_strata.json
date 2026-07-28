@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:echo_strata"
+  },
+  "result": {
+    "id": "unknown_echoes:chiseled_echo_strata",
+    "count": 1
+  }
+}

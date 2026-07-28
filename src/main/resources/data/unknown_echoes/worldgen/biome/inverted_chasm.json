@@ -1,0 +1,54 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.15,
+  "downfall": 0.0,
+  "effects": {
+    "fog_color": 2242116,
+    "sky_color": 1640990,
+    "water_color": 2643020,
+    "water_fog_color": 1053720,
+    "grass_color": 3695436,
+    "foliage_color": 3236166,
+    "ambient_particle": {
+      "options": { "type": "minecraft:white_ash" },
+      "probability": 0.008
+    },
+    "mood_sound": {
+      "sound": "minecraft:ambient.basalt_deltas.mood",
+      "tick_delay": 8000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    }
+  },
+  "carvers": {
+    "air": ["minecraft:cave", "minecraft:cave_extra_underground", "minecraft:canyon"]
+  },
+  "features": [
+    [], [], [], [], [], [],
+    ["unknown_echoes:gravity_shale_disk", "unknown_echoes:suspended_crystal_disk", "unknown_echoes:echo_amber_ore_disk", "unknown_echoes:sky_quartz_ore_disk"],
+    [], [],
+    ["unknown_echoes:inversion_reed_patch", "unknown_echoes:weightless_bloom_patch", "unknown_echoes:wind_eroded_rubble_patch", "unknown_echoes:gravity_bell_patch", "unknown_echoes:star_mist_bloom_patch"],
+    []
+  ],
+  "spawners": {
+    "monster": [
+      {
+        "type": "unknown_echoes:void_wanderer",
+        "weight": 12,
+        "minCount": 1,
+        "maxCount": 1
+      }
+    ],
+    "creature": [
+      {
+        "type": "unknown_echoes:anchor_shell_beast",
+        "weight": 18,
+        "minCount": 1,
+        "maxCount": 2
+      }
+    ],
+    "ambient": [], "axolotls": [],
+    "underground_water_creature": [], "water_creature": [], "water_ambient": [], "misc": []
+  },
+  "spawn_costs": {}
+}

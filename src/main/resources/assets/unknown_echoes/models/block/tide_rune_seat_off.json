@@ -1,77 +1,8 @@
 {
-  "render_type": "minecraft:cutout",
+  "parent": "unknown_echoes:block/tide_rune_seat",
   "textures": {
-    "particle": "unknown_echoes:block/tide_rune_seat_off",
-    "all": "unknown_echoes:block/tide_rune_seat_off"
-  },
-  "elements": [
-    {
-      "from": [
-        2,
-        0,
-        2
-      ],
-      "to": [
-        14,
-        10,
-        14
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            2,
-            6,
-            14,
-            16
-          ],
-          "texture": "#all"
-        },
-        "south": {
-          "uv": [
-            2,
-            6,
-            14,
-            16
-          ],
-          "texture": "#all"
-        },
-        "east": {
-          "uv": [
-            2,
-            6,
-            14,
-            16
-          ],
-          "texture": "#all"
-        },
-        "west": {
-          "uv": [
-            2,
-            6,
-            14,
-            16
-          ],
-          "texture": "#all"
-        },
-        "up": {
-          "uv": [
-            2,
-            2,
-            14,
-            14
-          ],
-          "texture": "#all"
-        },
-        "down": {
-          "uv": [
-            2,
-            2,
-            14,
-            14
-          ],
-          "texture": "#all"
-        }
-      }
-    }
-  ]
+    "1": "unknown_echoes:block/tide_rune_seat_off",
+    "2": "unknown_echoes:block/tide_rune_seat_off",
+    "particle": "unknown_echoes:block/tide_rune_seat_off"
+  }
 }

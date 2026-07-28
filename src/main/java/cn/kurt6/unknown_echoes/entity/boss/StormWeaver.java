@@ -202,6 +202,15 @@ public class StormWeaver extends MiniBossEntity {
     }
 
     @Override
+    protected void tickMechanicGuidance(ServerLevel level) {
+        if (this.diveMark == null) {
+            return;
+        }
+        BossFx.guidanceMarker(level, this.diveMark, ParticleTypes.GLOW);
+        BossFx.guidanceLink(level, this.position().add(0, 0.6, 0), this.diveMark, ParticleTypes.ELECTRIC_SPARK);
+    }
+
+    @Override
     protected void grantSettlement(ServerPlayer player, boolean firstKill) {
         MiniBossRewardTable.grantStormWeaver(this, player, firstKill);
     }
@@ -350,7 +359,7 @@ public class StormWeaver extends MiniBossEntity {
             BossFx.sparkSpray(serverLevel, p, this.bladeDir, 2.2, ParticleTypes.ELECTRIC_SPARK);
             for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                     new AABB(p.x - 1.2, p.y - 1.2, p.z - 1.2, p.x + 1.2, p.y + 1.2, p.z + 1.2),
-                    e -> e != this && !(e instanceof Enemy)
+                    e -> e != this && !e.isSpectator() && !(e instanceof Enemy)
                             && !this.bladeHitVictims.contains(e.getUUID()))) {
                 victim.hurt(this.damageSources().mobAttack(this), damage);
                 this.bladeHitVictims.add(victim.getUUID());
@@ -422,7 +431,7 @@ public class StormWeaver extends MiniBossEntity {
                 for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                         new AABB(cyclone.pos.x - CYCLONE_RADIUS, cyclone.pos.y - 0.5, cyclone.pos.z - CYCLONE_RADIUS,
                                 cyclone.pos.x + CYCLONE_RADIUS, cyclone.pos.y + 3.0, cyclone.pos.z + CYCLONE_RADIUS),
-                        e -> e != this && !(e instanceof Enemy))) {
+                        e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
                     Vec3 away = victim.position().subtract(cyclone.pos).multiply(1, 0, 1);
                     Vec3 dir = away.lengthSqr() > 1.0E-4 ? away.normalize()
                             : new Vec3(this.random.nextDouble() - 0.5, 0, this.random.nextDouble() - 0.5).normalize();
@@ -493,7 +502,7 @@ public class StormWeaver extends MiniBossEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.2F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(3.0, 1.5, 3.0),
-                e -> e != this && !(e instanceof Enemy))) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
             if (away.lengthSqr() > 1.0E-4) {
@@ -583,7 +592,8 @@ public class StormWeaver extends MiniBossEntity {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.setBroken(tag.getBoolean("Broken"));
-        this.brokenTicksRemaining = tag.getInt("BrokenTicks");
+        this.brokenTicksRemaining = BossNbtData.clampTimer(
+                tag.getInt("BrokenTicks"), BROKEN_WINDOW_TICKS);
     }
 
     // ---- GeckoLib ----

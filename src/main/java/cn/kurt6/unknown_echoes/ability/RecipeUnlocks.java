@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.ability;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,7 +13,7 @@ import java.util.List;
 /**
  * 配方解锁链(V0.6B,11.7 既定规则落地):
  * 能力研究不再驱动武器配方;武器进度只由图纸、材料与合成线承担。
- * 这里仅保留非武器的便利配方书提示,避免把能力升级误做成武器升级树。
+ * 配方书只负责显示；深层装备/武器按材料链解锁，不把能力等级当作合成权限。
  * 当前实现基线:配方书可见性解锁;硬性合成封锁仅在 doLimitedCrafting 规则开启时由原版生效。
  */
 public final class RecipeUnlocks {
@@ -31,7 +32,20 @@ public final class RecipeUnlocks {
             new Entry("listener_set", List.of(
                     UnknownEchoes.id("listener_helmet"), UnknownEchoes.id("listener_chestplate"),
                     UnknownEchoes.id("listener_leggings"), UnknownEchoes.id("listener_boots")),
-                    ANY_ABILITY)
+                    ANY_ABILITY),
+            new Entry("deep_gravity_equipment", List.of(
+                    UnknownEchoes.id("deep_alloy_ingot"),
+                    UnknownEchoes.id("abyss_walker_helmet"), UnknownEchoes.id("abyss_walker_chestplate"),
+                    UnknownEchoes.id("abyss_walker_leggings"), UnknownEchoes.id("abyss_walker_boots")),
+                    player -> hasInInventory(player, ModItems.DEEP_ORE_SCRAP.get())
+                            && hasInInventory(player, ModItems.SPACE_ANCHOR_SHARD.get())
+                            && hasInInventory(player, ModItems.FOLDED_CARAPACE.get())),
+            new Entry("gravity_hammer", List.of(UnknownEchoes.id("gravity_hammer")),
+                    player -> hasInInventory(player, ModItems.DEEP_ALLOY_INGOT.get())
+                            && hasInInventory(player, ModItems.GRAVITY_CORE_FRAGMENT.get())),
+            new Entry("rift_dagger", List.of(UnknownEchoes.id("rift_dagger")),
+                    player -> hasInInventory(player, ModItems.DEEP_ALLOY_INGOT.get())
+                            && hasInInventory(player, ModItems.VOID_RIFT_SHARD.get()))
     );
 
     private RecipeUnlocks() {
@@ -58,5 +72,9 @@ public final class RecipeUnlocks {
             player.sendSystemMessage(Component.translatable(
                     "message.unknown_echoes.recipe_unlocked." + entry.unlockKey()));
         }
+    }
+
+    private static boolean hasInInventory(ServerPlayer player, net.minecraft.world.item.Item item) {
+        return player.getInventory().contains(item.getDefaultInstance());
     }
 }

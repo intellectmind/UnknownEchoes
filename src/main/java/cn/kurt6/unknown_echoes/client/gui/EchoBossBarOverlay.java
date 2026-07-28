@@ -26,6 +26,7 @@ public final class EchoBossBarOverlay {
     private static final int PROGRESS_Y = 17;
     private static final int BAR_INCREMENT = 24;
     private static final int SEGMENT_WIDTH = 18;
+    private static final String[] PERCENT_LABELS = createPercentLabels();
 
     private EchoBossBarOverlay() {
     }
@@ -47,7 +48,8 @@ public final class EchoBossBarOverlay {
         int y = Math.max(2, vanillaY - 11);
         float progress = Mth.clamp(bossEvent.getProgress(), 0.0F, 1.0F);
         int fillWidth = Mth.ceil(PROGRESS_WIDTH * progress);
-        long time = Minecraft.getInstance().level == null ? 0L : Minecraft.getInstance().level.getGameTime();
+        Minecraft minecraft = Minecraft.getInstance();
+        long time = minecraft.level == null ? 0L : minecraft.level.getGameTime();
         boolean dangerPulse = progress <= 0.25F && (time / 5L) % 2L == 0L;
 
         renderAura(graphics, x, y, theme, dangerPulse);
@@ -70,7 +72,7 @@ public final class EchoBossBarOverlay {
         if (dangerPulse) {
             graphics.renderOutline(x + 6, y + 6, TEXTURE_WIDTH - 12, TEXTURE_HEIGHT - 8, 0xAAFF6F5A);
         }
-        renderText(graphics, Minecraft.getInstance().font, bossEvent.getName(), x, y, progress, theme);
+        renderText(graphics, minecraft.font, bossEvent.getName(), x, y, progress, theme);
     }
 
     private static void renderAura(GuiGraphics graphics, int x, int y, BossBarTheme theme, boolean dangerPulse) {
@@ -78,8 +80,10 @@ public final class EchoBossBarOverlay {
                 dangerPulse ? 0x44FF6F5A : theme.auraColor, 0x00000000);
         graphics.fillGradient(x + 18, y + TEXTURE_HEIGHT - 5, x + TEXTURE_WIDTH - 18, y + TEXTURE_HEIGHT - 3,
                 0x00FFFFFF, theme.glintColor);
-        graphics.renderOutline(x + 8, y + 7, TEXTURE_WIDTH - 16, TEXTURE_HEIGHT - 10,
-                dangerPulse ? 0xFFFF9E8A : theme.frameColor);
+        if (theme != BossBarTheme.RIFT_WARDEN) {
+            graphics.renderOutline(x + 8, y + 7, TEXTURE_WIDTH - 16, TEXTURE_HEIGHT - 10,
+                    dangerPulse ? 0xFFFF9E8A : theme.frameColor);
+        }
     }
 
     private static void renderSegments(GuiGraphics graphics, int x, int y, BossBarTheme theme, int fillWidth) {
@@ -96,23 +100,42 @@ public final class EchoBossBarOverlay {
     private static void renderText(GuiGraphics graphics, Font font, Component name,
                                    int x, int y, float progress, BossBarTheme theme) {
         graphics.drawCenteredString(font, name, graphics.guiWidth() / 2, y + 3, theme.titleColor);
-        String percent = Math.round(progress * 100.0F) + "%";
+        String percent = PERCENT_LABELS[Mth.clamp(Math.round(progress * 100.0F), 0, 100)];
         int textX = x + TEXTURE_WIDTH - font.width(percent) - 15;
         graphics.drawString(font, percent, textX, y + 14, theme.percentColor, false);
     }
 
+    private static String[] createPercentLabels() {
+        String[] labels = new String[101];
+        for (int i = 0; i < labels.length; i++) {
+            labels[i] = i + "%";
+        }
+        return labels;
+    }
+
     private enum BossBarTheme {
-        // 自绘 BossBar 只覆盖5大主线 Boss;
+        // 自绘 BossBar 只覆盖主线 Boss;
         // Mini Boss 一律使用原版 BossBar——主线战斗的仪式感与可选战斗的轻量感由此区分,
         COLOSSUS("entity.unknown_echoes.forgotten_colossus", BossEvent.BossBarColor.PURPLE,
                 "遗忘巨像", "Forgotten Colossus", "forgotten_colossus", 0xFFF8EBC7, 0xFFEFE6FF,
                 0x449873FF, 0xFF8D7440, 0x88F8EBC7, 0xAAD8B76A),
+        VOID_PROPHET("entity.unknown_echoes.void_prophet", BossEvent.BossBarColor.PURPLE,
+                "虚空先知", "Void Prophet", "void_prophet", 0xFFE9F7FF, 0xFFF1E9FF,
+                0x55582B8C, 0xFF5B3B88, 0xAA79E6FF, 0xFFC48BFF),
+        RIFT_WARDEN("entity.unknown_echoes.rift_warden", BossEvent.BossBarColor.PURPLE,
+                "裂隙看守者", "Rift Warden", "rift_warden", 0xFFF1F8FF, 0xFFD9F8FF,
+                0x55304C62, 0xFF69B8C9, 0xAAEF63CE, 0xFFF05BCB),
         ABYSS("entity.unknown_echoes.abyss_watcher", BossEvent.BossBarColor.BLUE,
                 "深渊观测者", "Abyss Watcher", "abyss_watcher", 0xFFE0FDFF, 0xFFE6FBFF,
                 0x4438B8FF, 0xFF2D8B86, 0x88E0FDFF, 0xAA62E6D8),
         MIRROR("entity.unknown_echoes.mirror_guardian", BossEvent.BossBarColor.WHITE,
                 "镜像守护者", "Mirror Guardian", "mirror_guardian", 0xFFFFFFFF, 0xFFF0F7FF,
                 0x44D6F4FF, 0xFFBFC8D6, 0x99FFFFFF, 0xAAF0F7FF);
+
+        private static final BossBarTheme[] VALUES = values();
+        /** 逐帧 match 按事件实例缓存,避免每帧 getString 解析;上限触发时整体重解析一次。 */
+        private static final java.util.Map<LerpingBossEvent, java.util.Optional<BossBarTheme>> MATCH_CACHE =
+                new java.util.IdentityHashMap<>();
 
         private final String translationKey;
         private final BossEvent.BossBarColor color;
@@ -146,18 +169,23 @@ public final class EchoBossBarOverlay {
         }
 
         private static BossBarTheme match(LerpingBossEvent event) {
-            String key = translationKey(event.getName());
-            for (BossBarTheme theme : values()) {
-                if (theme.translationKey.equals(key)) {
-                    return theme;
-                }
+            if (MATCH_CACHE.size() > 16) {
+                MATCH_CACHE.clear();
             }
-            return matchLocalizedName(event);
+            return MATCH_CACHE.computeIfAbsent(event, e -> {
+                String key = translationKey(e.getName());
+                for (BossBarTheme theme : VALUES) {
+                    if (theme.translationKey.equals(key)) {
+                        return java.util.Optional.of(theme);
+                    }
+                }
+                return java.util.Optional.ofNullable(matchLocalizedName(e));
+            }).orElse(null);
         }
 
         private static BossBarTheme matchLocalizedName(LerpingBossEvent event) {
             String name = event.getName().getString();
-            for (BossBarTheme theme : values()) {
+            for (BossBarTheme theme : VALUES) {
                 if (theme.color == event.getColor()
                         && (theme.zhName.equals(name) || theme.enName.equals(name))) {
                     return theme;

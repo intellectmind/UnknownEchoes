@@ -8,8 +8,17 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
 public class ModNetworking {
+
+    private static final Map<UUID, Long> LAST_UI_ACTION_TICK = new HashMap<>();
+    private static final Map<UUID, Long> LAST_MOBILITY_ACTION_TICK = new HashMap<>();
+    private static final Map<UUID, Long> LAST_SKILL_ACTION_TICK = new HashMap<>();
+    private static final Map<UUID, Long> LAST_ARTIFACT_USE_TICK = new HashMap<>();
 
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
@@ -25,8 +34,10 @@ public class ModNetworking {
         // ---- V0.6D 神器/能量 ----
 
         registrar.playToClient(ArtifactSyncPayload.TYPE, ArtifactSyncPayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() ->
-                        cn.kurt6.unknown_echoes.client.ClientArtifactCache.update(payload)));
+                (payload, context) -> context.enqueueWork(() -> {
+                    cn.kurt6.unknown_echoes.client.ClientArtifactCache.update(payload);
+                    cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.onArtifactSync();
+                }));
 
         registrar.playToClient(OpenArtifactStationPayload.TYPE, OpenArtifactStationPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() ->
@@ -35,7 +46,7 @@ public class ModNetworking {
 
         registrar.playToServer(ArtifactActionPayload.TYPE, ArtifactActionPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
-                    if (context.player() instanceof ServerPlayer player) {
+                    if (context.player() instanceof ServerPlayer player && allowUiAction(player)) {
                         handleArtifactAction(player, payload);
                     }
                 }));
@@ -48,7 +59,7 @@ public class ModNetworking {
 
         registrar.playToServer(TradeRequestPayload.TYPE, TradeRequestPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
-                    if (context.player() instanceof ServerPlayer player) {
+                    if (context.player() instanceof ServerPlayer player && allowUiAction(player)) {
                         cn.kurt6.unknown_echoes.trade.EchoTradeManager.handleTradeRequest(
                                 player, payload.entityId(), payload.tradeIndex());
                     }
@@ -56,9 +67,31 @@ public class ModNetworking {
 
         registrar.playToServer(DoubleJumpPayload.TYPE, DoubleJumpPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
-                    if (context.player() instanceof ServerPlayer player) {
+                    if (context.player() instanceof ServerPlayer player && allowMobilityAction(player)) {
                         // V0.6E:能力 + 空中状态 + 能量/冷却全部在 WindGlideTracker 服务端校验
                         cn.kurt6.unknown_echoes.ability.WindGlideTracker.handle(player, payload.mode());
+                    }
+                }));
+
+        registrar.playToServer(ArtifactUsePayload.TYPE, ArtifactUsePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player && allowArtifactUse(player)) {
+                        handleArtifactUse(player, payload);
+                    }
+                }));
+
+        registrar.playToServer(EchoAbilityActionPayload.TYPE, EchoAbilityActionPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player && allowMobilityAction(player)) {
+                        cn.kurt6.unknown_echoes.ability.DeepEchoAbilityHandler.handle(player, payload.action());
+                    }
+                }));
+
+        // 战技键 → 手持武器主动技能:冷却与结算全在服务端(物品实现 WeaponSkill)
+        registrar.playToServer(WeaponSkillPayload.TYPE, WeaponSkillPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player && allowSkillAction(player)) {
+                        handleWeaponSkill(player, payload);
                     }
                 }));
 
@@ -68,8 +101,110 @@ public class ModNetworking {
                         cn.kurt6.unknown_echoes.client.ClientGameEvents.onGlideDenied(payload.reason())));
     }
 
+    public static void clearRateLimit(UUID playerId) {
+        LAST_UI_ACTION_TICK.remove(playerId);
+        LAST_MOBILITY_ACTION_TICK.remove(playerId);
+        LAST_SKILL_ACTION_TICK.remove(playerId);
+        LAST_ARTIFACT_USE_TICK.remove(playerId);
+    }
+
+    public static void clearAllRateLimits() {
+        LAST_UI_ACTION_TICK.clear();
+        LAST_MOBILITY_ACTION_TICK.clear();
+        LAST_SKILL_ACTION_TICK.clear();
+        LAST_ARTIFACT_USE_TICK.clear();
+    }
+
+    private static boolean allowUiAction(ServerPlayer player) {
+        if (!player.isAlive() || player.isSpectator()) {
+            return false;
+        }
+        long now = player.level().getGameTime();
+        Long previous = LAST_UI_ACTION_TICK.put(player.getUUID(), now);
+        return previous == null || previous != now;
+    }
+
+    /** 移动类包限频:每 tick 允许 3 个(跳+滑翔开始+保持可能挤进同一服务器 tick,单包限频会静默吞包)。 */
+    private static boolean allowMobilityAction(ServerPlayer player) {
+        if (!player.isAlive() || player.isSpectator()) {
+            return false;
+        }
+        long now = player.level().getGameTime();
+        long encoded = LAST_MOBILITY_ACTION_TICK.getOrDefault(player.getUUID(), Long.MIN_VALUE);
+        long tick = encoded >> 3;
+        int count = (int) (encoded & 7L);
+        if (tick != now) {
+            LAST_MOBILITY_ACTION_TICK.put(player.getUUID(), (now << 3) | 1L);
+            return true;
+        }
+        if (count >= 3) {
+            return false;
+        }
+        LAST_MOBILITY_ACTION_TICK.put(player.getUUID(), (now << 3) | (count + 1L));
+        return true;
+    }
+
+    private static boolean allowSkillAction(ServerPlayer player) {
+        if (!player.isAlive() || player.isSpectator()) {
+            return false;
+        }
+        long now = player.level().getGameTime();
+        Long previous = LAST_SKILL_ACTION_TICK.put(player.getUUID(), now);
+        return previous == null || previous != now;
+    }
+
+    private static void handleWeaponSkill(ServerPlayer player, WeaponSkillPayload payload) {
+        if (!player.isAlive()
+                || !(player.level() instanceof net.minecraft.server.level.ServerLevel level)) {
+            return;
+        }
+        if (payload.hand() != WeaponSkillPayload.HAND_MAIN
+                && payload.hand() != WeaponSkillPayload.HAND_OFF) {
+            return;
+        }
+        net.minecraft.world.InteractionHand hand = payload.hand() == WeaponSkillPayload.HAND_OFF
+                ? net.minecraft.world.InteractionHand.OFF_HAND
+                : net.minecraft.world.InteractionHand.MAIN_HAND;
+        net.minecraft.world.item.ItemStack stack = player.getItemInHand(hand);
+        if (stack.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill skill) {
+            skill.activateSkill(level, player, stack, hand);
+        }
+    }
+
+    private static boolean allowArtifactUse(ServerPlayer player) {
+        if (!player.isAlive() || player.isSpectator()) {
+            return false;
+        }
+        long now = player.level().getGameTime();
+        Long previous = LAST_ARTIFACT_USE_TICK.put(player.getUUID(), now);
+        return previous == null || previous != now;
+    }
+
+    private static void handleArtifactUse(ServerPlayer player, ArtifactUsePayload payload) {
+        if (!player.isAlive() || player.isSpectator()) {
+            return;
+        }
+        var stack = player.getItemInHand(payload.offhand()
+                ? net.minecraft.world.InteractionHand.OFF_HAND
+                : net.minecraft.world.InteractionHand.MAIN_HAND);
+        var type = cn.kurt6.unknown_echoes.artifact.ArtifactType.byId(
+                stack.get(cn.kurt6.unknown_echoes.registry.ModDataComponents.ARTIFACT_ID.get()));
+        if (type == null || !cn.kurt6.unknown_echoes.artifact.ArtifactManager.validateCredential(player, type, stack)) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                    "message.unknown_echoes.artifact.not_yours"), true);
+            return;
+        }
+        cn.kurt6.unknown_echoes.artifact.ArtifactEffectManager.useFromKey(player, type,
+                payload.offhand() ? net.minecraft.world.InteractionHand.OFF_HAND
+                        : net.minecraft.world.InteractionHand.MAIN_HAND);
+    }
+
     /** 神器页操作(C2S):UI 只发请求,这里校验台座与距离后经 ArtifactManager 落账(5.8 边界)。 */
     private static void handleArtifactAction(ServerPlayer player, ArtifactActionPayload payload) {
+        if (payload.action() < ArtifactActionPayload.ACTION_CLAIM
+                || payload.action() > ArtifactActionPayload.ACTION_TUNE) {
+            return;
+        }
         var type = cn.kurt6.unknown_echoes.artifact.ArtifactType.byId(payload.artifactId());
         if (type == null) {
             return;

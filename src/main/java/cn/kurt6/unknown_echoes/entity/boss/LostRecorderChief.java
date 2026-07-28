@@ -5,7 +5,6 @@ import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -40,10 +39,7 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * 迷失记录者首席:破损档案室 Mini Boss(回声峭壁,T7 前区域首席)。
@@ -78,6 +74,7 @@ public class LostRecorderChief extends MiniBossEntity {
     private static final int ARENA_RADIUS = 14;
     private static final int EXPOSED_WINDOW = 180;   // 打断审阅后的暴露窗口 9s
     private static final int READ_TIMEOUT = 500;     // 审阅读条上限(放任不管自行完成)
+    private static final int PAGE_COUNT = 3;
     private static final double INK_RANGE = 16.0;
 
     /** 散落的残页位置;非空 = 正在审阅且受护。 */
@@ -136,6 +133,16 @@ public class LostRecorderChief extends MiniBossEntity {
     }
 
     @Override
+    protected void tickMechanicGuidance(ServerLevel level) {
+        Vec3 core = this.position().add(0, 1.4, 0);
+        for (Vec3 page : this.scatteredPages) {
+            Vec3 marker = page.add(0, 0.7, 0);
+            BossFx.guidanceMarker(level, marker, ParticleTypes.ENCHANT);
+            BossFx.guidanceLink(level, marker, core, ParticleTypes.SCRAPE);
+        }
+    }
+
+    @Override
     protected void grantSettlement(ServerPlayer player, boolean firstKill) {
         MiniBossRewardTable.grantLostRecorderChief(this, player, firstKill);
     }
@@ -175,19 +182,9 @@ public class LostRecorderChief extends MiniBossEntity {
                 serverLevel.sendParticles(ParticleTypes.ENCHANT,
                         page.x, page.y + 1.0, page.z, 3, 0.3, 0.6, 0.3, 0.0);
             }
-            // 残页向首席回流的审阅光带
-            if (this.tickCount % 10 == 0) {
-                Vec3 d = this.position().add(0, 1.4, 0).subtract(page);
-                int steps = Math.max(2, (int) d.length());
-                for (int i = 0; i <= steps; i += 2) {
-                    Vec3 p = page.add(d.scale(i / (double) steps));
-                    serverLevel.sendParticles(ParticleTypes.SCRAPE, p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0.0);
-                }
-            }
         }
         // 归还:玩家靠近(2.2 格内)残页即归位
-        this.scatteredPages.removeIf(page -> serverLevel.players().stream().anyMatch(
-                p -> p.isAlive() && p.distanceToSqr(page.x, page.y, page.z) <= 4.8));
+        this.scatteredPages.removeIf(page -> hasNearbyAlivePlayer(serverLevel, page, 4.8D));
 
         if (this.scatteredPages.isEmpty()) {
             // 被打断:进入暴露窗口
@@ -218,15 +215,23 @@ public class LostRecorderChief extends MiniBossEntity {
         this.playSound(ModSounds.LOST_RECORDER_CHIEF_REVIEW.get(), 1.4F, 0.6F);
         this.readTicks = 0;
         Vec3 anchor = Vec3.atCenterOf(this.arenaAnchor());
-        int count = 3;
-        for (int i = 0; i < count; i++) {
-            double angle = Math.PI * 2 * i / count + this.random.nextDouble() * 0.5;
+        for (int i = 0; i < PAGE_COUNT; i++) {
+            double angle = Math.PI * 2 * i / PAGE_COUNT + this.random.nextDouble() * 0.5;
             double dist = 5.0 + this.random.nextDouble() * (ARENA_RADIUS - 7);
             Vec3 page = new Vec3(anchor.x + Math.cos(angle) * dist, anchor.y, anchor.z + Math.sin(angle) * dist);
             this.scatteredPages.add(page);
             serverLevel.sendParticles(ParticleTypes.ENCHANT, page.x, page.y + 1.0, page.z, 16, 0.4, 0.8, 0.4, 0.1);
         }
         this.broadcastHint(serverLevel, "message.unknown_echoes.lost_recorder_chief.guarded");
+    }
+
+    private static boolean hasNearbyAlivePlayer(ServerLevel level, Vec3 pos, double rangeSqr) {
+        for (ServerPlayer player : level.players()) {
+            if (!player.isSpectator() && player.isAlive() && player.distanceToSqr(pos) <= rangeSqr) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void tickSpecialAttacks(ServerLevel serverLevel) {
@@ -255,18 +260,25 @@ public class LostRecorderChief extends MiniBossEntity {
         }
         dir = dir.normalize();
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.5F;
-        Set<UUID> hit = new HashSet<>();
         for (double d = 1.0; d <= INK_RANGE; d += 1.0) {
             Vec3 p = origin.add(dir.scale(d));
             serverLevel.sendParticles(ParticleTypes.SQUID_INK, p.x, p.y, p.z, 2, 0.12, 0.12, 0.12, 0.0);
             serverLevel.sendParticles(ParticleTypes.ENCHANT, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
-            for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                    new AABB(p.x - 1.1, p.y - 1.1, p.z - 1.1, p.x + 1.1, p.y + 1.1, p.z + 1.1),
-                    e -> e != this && !(e instanceof Enemy) && !hit.contains(e.getUUID()))) {
-                victim.hurt(this.damageSources().mobAttack(this), damage);
-                victim.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 80, 0), this);
-                hit.add(victim.getUUID());
+        }
+        Vec3 end = origin.add(dir.scale(INK_RANGE));
+        for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
+                new AABB(origin, end).inflate(1.1D),
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy) && e.isAlive())) {
+            Vec3 victimCenter = victim.position().add(0, victim.getBbHeight() * 0.5, 0);
+            Vec3 toVictim = victimCenter.subtract(origin);
+            double along = toVictim.dot(dir);
+            double hitRadius = 1.1D + victim.getBbWidth() * 0.5D;
+            if (along < 0.0D || along > INK_RANGE
+                    || toVictim.subtract(dir.scale(along)).lengthSqr() > hitRadius * hitRadius) {
+                continue;
             }
+            victim.hurt(this.damageSources().mobAttack(this), damage);
+            victim.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 80, 0), this);
         }
         BossFx.sparkSpray(serverLevel, origin, dir, INK_RANGE, ParticleTypes.SQUID_INK);
     }
@@ -279,7 +291,7 @@ public class LostRecorderChief extends MiniBossEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.5F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(4.0, 2.0, 4.0),
-                e -> e != this && !(e instanceof Enemy))) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 0), this);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
@@ -360,15 +372,10 @@ public class LostRecorderChief extends MiniBossEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.exposedTicks = tag.getInt("ExposedTicks");
-        this.readTicks = tag.getInt("ReadTicks");
-        this.scatteredPages.clear();
-        for (Tag entry : tag.getList("ScatteredPages", Tag.TAG_COMPOUND)) {
-            if (entry instanceof CompoundTag pageTag) {
-                this.scatteredPages.add(new Vec3(
-                        pageTag.getDouble("X"), pageTag.getDouble("Y"), pageTag.getDouble("Z")));
-            }
-        }
+        this.exposedTicks = BossNbtData.clampTimer(tag.getInt("ExposedTicks"), EXPOSED_WINDOW);
+        this.readTicks = BossNbtData.clampTimer(tag.getInt("ReadTicks"), READ_TIMEOUT);
+        BossNbtData.loadVec3sNear(tag, "ScatteredPages", this.scatteredPages, PAGE_COUNT,
+                Vec3.atCenterOf(this.arenaAnchor()), ARENA_RADIUS, ARENA_RADIUS);
         if (!this.scatteredPages.isEmpty()) {
             this.exposedTicks = 0;
         } else if (tag.getInt("PageCount") > 0) {

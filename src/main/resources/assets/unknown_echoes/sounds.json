@@ -145,6 +145,35 @@
       }
     ]
   },
+  "music.void_prophet": {
+    "sounds": [
+      {
+        "name": "minecraft:music_disc.ward",
+        "type": "event",
+        "volume": 0.55
+      }
+    ]
+  },
+  "music.rift_warden": {
+    "sounds": [
+      {
+        "name": "minecraft:music_disc.ward",
+        "type": "event",
+        "pitch": 0.85,
+        "volume": 0.58
+      }
+    ]
+  },
+  "music.world_echo": {
+    "sounds": [
+      {
+        "name": "minecraft:music_disc.ward",
+        "type": "event",
+        "pitch": 0.72,
+        "volume": 0.62
+      }
+    ]
+  },
   "music.abyss_watcher": {
     "sounds": [
       {

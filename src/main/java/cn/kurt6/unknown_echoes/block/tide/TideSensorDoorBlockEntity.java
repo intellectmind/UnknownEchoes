@@ -48,22 +48,34 @@ public class TideSensorDoorBlockEntity extends BlockEntity {
     public static void serverTick(Level level, BlockPos pos, BlockState state,
                                   TideSensorDoorBlockEntity door) {
         if (state.getValue(TideSensorDoorBlock.OPEN)) {
-            if (door.openTicksRemaining > 0 && --door.openTicksRemaining <= 0) {
+            if (door.openTicksRemaining <= 0) {
                 closeGroup(level, pos);
+            } else {
+                door.openTicksRemaining--;
+                if (door.openTicksRemaining == 0 || door.openTicksRemaining % 20 == 0) {
+                    door.setChanged();
+                }
+                if (door.openTicksRemaining == 0) {
+                    closeGroup(level, pos);
+                }
             }
             return;
         }
-        if (level.getGameTime() % 10 != 0 || !(level instanceof ServerLevel serverLevel)) {
+        if (!(level instanceof ServerLevel serverLevel)
+                || Math.floorMod(level.getGameTime() + pos.asLong(), 10L) != 0L) {
             return;
         }
         AABB area = new AABB(pos).inflate(SENSE_RANGE);
-        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class, area)) {
+        for (ServerPlayer player : serverLevel.players()) {
+            if (player.isSpectator() || !player.getBoundingBox().intersects(area)) {
+                continue;
+            }
             if (EchoPermission.canUseTideMechanism(player)) {
                 openGroup(level, pos, player);
                 return;
             }
             // 无权限:贴近才给含蓄提示,且按时间节流,避免刷屏(红线 #7)
-            if (level.getGameTime() % HINT_INTERVAL_TICKS == 0
+            if (Math.floorMod(level.getGameTime() + pos.asLong(), HINT_INTERVAL_TICKS) == 0L
                     && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)
                             <= HINT_RANGE * HINT_RANGE) {
                 serverLevel.sendParticles(ParticleTypes.UNDERWATER,
@@ -109,7 +121,7 @@ public class TideSensorDoorBlockEntity extends BlockEntity {
         Deque<BlockPos> queue = new ArrayDeque<>();
         queue.add(origin);
         visited.add(origin);
-        while (!queue.isEmpty() && visited.size() <= TideSensorDoorBlock.MAX_CONNECTED) {
+        while (!queue.isEmpty()) {
             BlockPos pos = queue.poll();
             BlockState state = level.getBlockState(pos);
             if (!(state.getBlock() instanceof TideSensorDoorBlock)) {
@@ -125,8 +137,10 @@ public class TideSensorDoorBlockEntity extends BlockEntity {
             }
             for (Direction direction : Direction.values()) {
                 BlockPos next = pos.relative(direction);
-                if (visited.add(next)
+                if (visited.size() < TideSensorDoorBlock.MAX_CONNECTED
+                        && !visited.contains(next)
                         && level.getBlockState(next).getBlock() instanceof TideSensorDoorBlock) {
+                    visited.add(next);
                     queue.add(next);
                 }
             }
@@ -143,6 +157,8 @@ public class TideSensorDoorBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        this.openTicksRemaining = tag.getInt("OpenTicks");
+        int maximum = Math.max(ServerConfig.TIDE_DOOR_HOLD_TICKS.get(),
+                ServerConfig.TIDE_DOOR_HOLD_TICKS_RESEARCH3.get());
+        this.openTicksRemaining = Math.max(0, Math.min(tag.getInt("OpenTicks"), maximum));
     }
 }

@@ -1,0 +1,9 @@
+{
+  "structures": [{ "structure": "unknown_echoes:silent_abyss_anchor", "weight": 1 }],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 36,
+    "separation": 12,
+    "salt": 1690072593
+  }
+}

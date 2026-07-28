@@ -172,7 +172,8 @@ public class MossBackTurtle extends Animal implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.shearCooldown = tag.getInt("ShearCooldown");
+        this.shearCooldown = Math.max(0, Math.min(tag.getInt("ShearCooldown"),
+                ServerConfig.MOSS_TURTLE_SHEAR_COOLDOWN.get()));
     }
 
     @Override

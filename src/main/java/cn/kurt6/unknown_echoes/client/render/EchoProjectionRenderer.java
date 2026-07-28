@@ -15,6 +15,8 @@ import software.bernie.geckolib.util.Color;
  */
 public class EchoProjectionRenderer extends GeoEntityRenderer<EchoProjectionEntity> {
 
+    private static final Color HOLOGRAM_TINT = Color.ofRGBA(190, 255, 248, 215);
+
     public EchoProjectionRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("echo_projection"), true));
         this.shadowRadius = 0.0F;
@@ -30,6 +32,6 @@ public class EchoProjectionRenderer extends GeoEntityRenderer<EchoProjectionEnti
 
     @Override
     public Color getRenderColor(EchoProjectionEntity animatable, float partialTick, int packedLight) {
-        return Color.ofRGBA(190, 255, 248, 215);
+        return HOLOGRAM_TINT;
     }
 }

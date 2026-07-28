@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:mirror_dust_stone"
+  },
+  "result": {
+    "id": "unknown_echoes:fractured_mirror_tile",
+    "count": 1
+  }
+}

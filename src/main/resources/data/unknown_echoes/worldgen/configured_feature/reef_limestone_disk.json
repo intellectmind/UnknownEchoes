@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:disk",
+  "config": {
+    "state_provider": {
+      "fallback": {
+        "type": "minecraft:simple_state_provider",
+        "state": {
+          "Name": "unknown_echoes:reef_limestone"
+        }
+      },
+      "rules": []
+    },
+    "target": {
+      "type": "minecraft:matching_blocks",
+      "blocks": [
+        "minecraft:stone",
+        "minecraft:sand",
+        "minecraft:gravel",
+        "minecraft:clay",
+        "unknown_echoes:mirror_stone",
+        "unknown_echoes:tide_smooth_stone",
+        "unknown_echoes:mirror_sand"
+      ]
+    },
+    "half_height": 2,
+    "radius": {
+      "type": "minecraft:uniform",
+      "min_inclusive": 4,
+      "max_inclusive": 7
+    }
+  }
+}

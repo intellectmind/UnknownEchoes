@@ -57,6 +57,22 @@ public class RegionSiteStructure extends SinglePieceStructure {
     }
 
     @Override
+    public java.util.Optional<GenerationStub> findGenerationPoint(GenerationContext context) {
+        if (!kind.underwater) {
+            return super.findGenerationPoint(context);
+        }
+        // 湖底场点:SinglePieceStructure 默认拒绝水下(gotcha #16)——五点高度图预判后直接锚湖床
+        int centerDepth = kind == Kind.LAKEBED_LIGHTHOUSE_RUINS ? 4 : kind == Kind.REEF_HUT ? 3 : 2;
+        int edgeDepth = kind == Kind.LAKEBED_LIGHTHOUSE_RUINS ? 2 : 1;
+        if (!LakeBedPlacement.hasSubmergedFootprint(context, kind.size, centerDepth, edgeDepth)) {
+            return java.util.Optional.empty();
+        }
+        return onTopOfChunkCenter(context, net.minecraft.world.level.levelgen.Heightmap.Types.OCEAN_FLOOR_WG,
+                builder -> builder.addPiece(new Piece(kind, context.random(),
+                        context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ())));
+    }
+
+    @Override
     public StructureType<?> type() {
         return switch (kind) {
             case MEMORY_PILLAR_COURTYARD -> ModStructures.MEMORY_PILLAR_COURTYARD.get();
@@ -88,9 +104,9 @@ public class RegionSiteStructure extends SinglePieceStructure {
         WIND_RUNE_STONE_CIRCLE("wind_rune_stone_circle", 21, 10),
         REFLECTION_WELL("reflection_well", 17, 10),
         MIRROR_LAKE_CACHE("mirror_lake_cache", 15, 8),
-        TIDE_BUOY_ARRAY("tide_buoy_array", 21, 8),
-        REEF_HUT("reef_hut", 17, 9),
-        LAKEBED_LIGHTHOUSE_RUINS("lakebed_lighthouse_ruins", 23, 14),
+        TIDE_BUOY_ARRAY("tide_buoy_array", 21, 8, true),
+        REEF_HUT("reef_hut", 17, 9, true),
+        LAKEBED_LIGHTHOUSE_RUINS("lakebed_lighthouse_ruins", 23, 14, true),
         ILLUSION_WALL_CHAMBER("illusion_wall_chamber", 21, 9),
         MOSSBACK_TURTLE_NEST("mossback_turtle_nest", 17, 7),
         UNDERGROUND_GREENHOUSE("underground_greenhouse", 27, 12),
@@ -103,11 +119,18 @@ public class RegionSiteStructure extends SinglePieceStructure {
         final String id;
         final int size;
         final int height;
+        /** 湖底生成:findGenerationPoint 锚湖床,postProcess 不清空水体。 */
+        final boolean underwater;
 
         Kind(String id, int size, int height) {
+            this(id, size, height, false);
+        }
+
+        Kind(String id, int size, int height, boolean underwater) {
             this.id = id;
             this.size = size;
             this.height = height;
+            this.underwater = underwater;
         }
 
         static Kind byId(String id) {
@@ -140,10 +163,16 @@ public class RegionSiteStructure extends SinglePieceStructure {
         public void postProcess(WorldGenLevel level, StructureManager structureManager,
                                 ChunkGenerator generator, RandomSource random, BoundingBox box,
                                 ChunkPos chunkPos, BlockPos pos) {
-            if (!this.updateAverageGroundHeight(level, box, 0)) {
+            boolean anchored = kind.underwater
+                    ? this.updateLakeFloorHeight(level, box)
+                    : this.updateAverageGroundHeight(level, box, 0);
+            if (!anchored) {
                 return;
             }
-            clearPlayableVolume(level, box);
+            if (!kind.underwater) {
+                // 水下场点不清空体积——那会在湖里挖出一个空气盒
+                clearPlayableVolume(level, box);
+            }
             int c = kind.size / 2;
             switch (kind) {
                 case MEMORY_PILLAR_COURTYARD -> memoryCourtyard(level, random, box, c);
@@ -167,6 +196,32 @@ public class RegionSiteStructure extends SinglePieceStructure {
             }
         }
 
+        /** 水下场点锚湖床(OCEAN_FLOOR):沿用父类 heightPosition 的一次性调整协议。 */
+        private boolean updateLakeFloorHeight(WorldGenLevel level, BoundingBox bounds) {
+            if (this.heightPosition >= 0) {
+                return true;
+            }
+            int total = 0;
+            int count = 0;
+            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+            for (int z = this.boundingBox.minZ(); z <= this.boundingBox.maxZ(); z++) {
+                for (int x = this.boundingBox.minX(); x <= this.boundingBox.maxX(); x++) {
+                    cursor.set(x, 64, z);
+                    if (bounds.isInside(cursor)) {
+                        total += level.getHeight(
+                                net.minecraft.world.level.levelgen.Heightmap.Types.OCEAN_FLOOR_WG, x, z);
+                        count++;
+                    }
+                }
+            }
+            if (count == 0) {
+                return false;
+            }
+            this.heightPosition = total / count;
+            this.boundingBox.move(0, this.heightPosition - this.boundingBox.minY() - 1, 0);
+            return true;
+        }
+
         private void memoryCourtyard(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
             BlockState moss = ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState();
             BlockState brick = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
@@ -182,8 +237,9 @@ public class RegionSiteStructure extends SinglePieceStructure {
                 if (boss != null) {
                     boss.moveTo(bossPos.getX() + 0.5D, bossPos.getY(), bossPos.getZ() + 0.5D, 0.0F, 0.0F);
                     boss.setPersistenceRequired();
-                    level.addFreshEntity(boss);
-                    this.spawnedMainBoss = true;
+                    if (level.addFreshEntity(boss)) {
+                        this.spawnedMainBoss = true;
+                    }
                 }
             }
         }
@@ -213,7 +269,8 @@ public class RegionSiteStructure extends SinglePieceStructure {
             pillar(level, box, c + 2, 2, c, 3, ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState());
             this.placeBlock(level, ModBlocks.REWARD_ALTAR.get().defaultBlockState(), c, 2, c - 8, box);
             this.placeBlock(level, ModBlocks.ARTIFACT_RECORD_TABLE.get().defaultBlockState(), c, 2, c + 8, box);
-            buildAccessibleChest(level, random, box, c - 6, 2, c - 7, ModLootTables.T4_REGION_CORE);
+            buildAccessibleChest(level, random, box, c - 6, 2, c - 7,
+                    ModLootTables.T5_MINIBOSS_REPEAT);
         }
 
         private void buildMemoryRetryShortcut(WorldGenLevel level, BoundingBox box, int c) {
@@ -397,6 +454,10 @@ public class RegionSiteStructure extends SinglePieceStructure {
             for (int y = 1; y <= 10; y++) {
                 ring(level, box, c, y, c, Math.max(3, 6 - y / 3), y % 3 == 0 ? Blocks.SEA_LANTERN.defaultBlockState() : ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
             }
+            // 潮汐柱必须成对出现:无柱祭坛会把机关判定为已完成,绕过共鸣机关(V0.6E 修复的旁路)
+            this.placeBlock(level, ModBlocks.TIDE_PILLAR.get().defaultBlockState(), c - 4, 1, c - 4, box);
+            this.placeBlock(level, ModBlocks.TIDE_PILLAR.get().defaultBlockState(), c + 4, 1, c - 4, box);
+            this.placeBlock(level, ModBlocks.TIDE_PILLAR.get().defaultBlockState(), c, 1, c + 5, box);
             this.placeBlock(level, ModBlocks.TIDE_CORE_ALTAR.get().defaultBlockState(), c, 1, c, box);
             buildAccessibleChest(level, random, box, c + 5, 1, c, ModLootTables.TIDE_LIGHTHOUSE_REEF_CHEST);
         }

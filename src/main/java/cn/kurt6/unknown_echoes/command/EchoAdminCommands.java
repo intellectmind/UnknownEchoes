@@ -53,7 +53,11 @@ public class EchoAdminCommands {
                 suggestions.add("boss:silent_priest");
                 suggestions.add("boss:tide_lantern_keeper");
                 suggestions.add("boss:mirror_dust_butler");
+                suggestions.add("boss:void_prophet");
+                suggestions.add("boss:rift_warden");
                 suggestions.add("dimension:unknown_echoes:echo_realm");
+                suggestions.add("dimension:unknown_echoes:deep_echoes");
+                suggestions.add("mechanism:deep:void_route_ready");
                 suggestions.add("t7:reward");
                 suggestions.add("t7:core");
                 suggestions.add("t7:deep_clue");
@@ -96,18 +100,23 @@ public class EchoAdminCommands {
         var journal = JournalManager.getData(target);
         String name = target.getGameProfile().getName();
 
-        source.sendSuccess(() -> Component.literal("== " + name + " =="), false);
-        source.sendSuccess(() -> Component.literal("abilities=" + ability.getUnlockedAbilities()), false);
-        source.sendSuccess(() -> Component.literal("beacons=" + ability.getActivatedBeacons()), false);
-        source.sendSuccess(() -> Component.literal("bosses=" + ability.getDefeatedBosses()), false);
-        source.sendSuccess(() -> Component.literal("dimensions=" + ability.getUnlockedDimensions()), false);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.header", name), false);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.abilities",
+                ability.getUnlockedAbilities()), false);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.beacons",
+                ability.getActivatedBeacons()), false);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.bosses",
+                ability.getDefeatedBosses()), false);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.dimensions",
+                ability.getUnlockedDimensions()), false);
         StringBuilder research = new StringBuilder();
         for (EchoResearchLine line : EchoResearchLine.values()) {
             research.append(line.getId()).append('=')
                     .append(EchoResearchManager.getResearchLevel(target, line)).append(' ');
         }
         String researchLine = research.toString();
-        source.sendSuccess(() -> Component.literal("research: " + researchLine), false);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.research",
+                researchLine), false);
         StringBuilder artifactLine = new StringBuilder();
         for (ArtifactType type : ArtifactType.values()) {
             if (artifacts.isClaimed(type)) {
@@ -117,12 +126,13 @@ public class EchoAdminCommands {
             }
         }
         String artifactsOut = artifactLine.isEmpty() ? "(none)" : artifactLine.toString();
-        source.sendSuccess(() -> Component.literal("artifacts: " + artifactsOut), false);
-        source.sendSuccess(() -> Component.literal("energy=" + ArtifactManager.getEnergy(target)
-                + "/" + ArtifactManager.getMaxEnergy()), false);
-        source.sendSuccess(() -> Component.literal("journal: structures=" + journal.getStructures().size()
-                + " biomes=" + journal.getBiomes().size() + " mobs=" + journal.getMobs().size()
-                + " pages=" + journal.getPages().size() + " clues=" + journal.getClues().size()), false);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.artifacts",
+                artifactsOut), false);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.energy",
+                ArtifactManager.getEnergy(target), ArtifactManager.getMaxEnergy()), false);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.journal",
+                journal.getStructures().size(), journal.getBiomes().size(), journal.getMobs().size(),
+                journal.getPages().size(), journal.getClues().size()), false);
         return 1;
     }
 
@@ -130,7 +140,7 @@ public class EchoAdminCommands {
     private static int modify(CommandSourceStack source, ServerPlayer target, String progress, boolean grant) {
         String[] parts = progress.split(":", 2);
         if (parts.length < 2) {
-            source.sendFailure(Component.literal("进度项格式: <category>:<value>,见 tab 补全"));
+            source.sendFailure(Component.translatable("command.unknown_echoes.admin.progress_format"));
             return 0;
         }
         String category = parts[0];
@@ -191,7 +201,7 @@ public class EchoAdminCommands {
                     yield false;
                 }
                 if (grant) {
-                    ArtifactManager.adminGrant(target, type);
+                    yield ArtifactManager.adminGrant(target, type);
                 } else {
                     ArtifactManager.adminRevoke(target, type);
                 }
@@ -216,12 +226,18 @@ public class EchoAdminCommands {
                 yield true;
             }
             case "mechanism" -> {
+                boolean changed;
                 if (grant) {
-                    EchoAbilityManager.activateMechanism(target, value);
-                    yield true;
+                    changed = EchoAbilityManager.activateMechanism(target, value);
+                } else {
+                    EchoAbilityManager.deactivateMechanism(target, value);
+                    changed = true;
                 }
-                EchoAbilityManager.deactivateMechanism(target, value);
-                yield true;
+                // 仪式记录(resonance_ritual:*)派生进同步包,补一次同步防客户端面板陈旧
+                if (changed) {
+                    EchoAbilityManager.syncToClient(target);
+                }
+                yield changed;
             }
             case "t7" -> {
                 yield EchoCompletionManager.adminSetT7ClaimState(target, value, grant);
@@ -229,11 +245,14 @@ public class EchoAdminCommands {
             default -> false;
         };
         if (!ok) {
-            source.sendFailure(Component.literal("无法" + (grant ? "授予" : "撤销") + ": " + progress));
+            source.sendFailure(Component.translatable(grant
+                    ? "command.unknown_echoes.admin.grant_failed"
+                    : "command.unknown_echoes.admin.revoke_failed", progress));
             return 0;
         }
-        source.sendSuccess(() -> Component.literal((grant ? "已授予 " : "已撤销 ") + progress
-                + " → " + target.getGameProfile().getName()), true);
+        source.sendSuccess(() -> Component.translatable(grant
+                ? "command.unknown_echoes.admin.granted"
+                : "command.unknown_echoes.admin.revoked", progress, target.getGameProfile().getName()), true);
         return 1;
     }
 
@@ -242,8 +261,8 @@ public class EchoAdminCommands {
         EchoAbilityManager.syncToClient(target); // 内部顺带核对配方解锁链
         JournalManager.syncJournal(target);
         ArtifactManager.syncToClient(target);    // 内部完成能量惰性结算
-        source.sendSuccess(() -> Component.literal("已重新同步 "
-                + target.getGameProfile().getName() + " 的全部回响进度"), true);
+        source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.repaired",
+                target.getGameProfile().getName()), true);
         return 1;
     }
 }

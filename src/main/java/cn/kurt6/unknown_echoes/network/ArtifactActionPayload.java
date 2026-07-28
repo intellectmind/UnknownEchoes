@@ -18,6 +18,8 @@ public record ArtifactActionPayload(int action, String artifactId, String word, 
     public static final int ACTION_CLAIM = 0;
     public static final int ACTION_UPGRADE = 1;
     public static final int ACTION_TUNE = 2;
+    private static final int MAX_ARTIFACT_ID_LENGTH = 32;
+    private static final int MAX_TUNING_WORD_LENGTH = 32;
 
     public static final CustomPacketPayload.Type<ArtifactActionPayload> TYPE =
             new CustomPacketPayload.Type<>(UnknownEchoes.id("artifact_action"));
@@ -25,8 +27,8 @@ public record ArtifactActionPayload(int action, String artifactId, String word, 
     public static final StreamCodec<RegistryFriendlyByteBuf, ArtifactActionPayload> STREAM_CODEC =
             StreamCodec.composite(
                     ByteBufCodecs.VAR_INT, ArtifactActionPayload::action,
-                    ByteBufCodecs.STRING_UTF8, ArtifactActionPayload::artifactId,
-                    ByteBufCodecs.STRING_UTF8, ArtifactActionPayload::word,
+                    ByteBufCodecs.stringUtf8(MAX_ARTIFACT_ID_LENGTH), ArtifactActionPayload::artifactId,
+                    ByteBufCodecs.stringUtf8(MAX_TUNING_WORD_LENGTH), ArtifactActionPayload::word,
                     BlockPos.STREAM_CODEC, ArtifactActionPayload::stationPos,
                     ArtifactActionPayload::new);
 

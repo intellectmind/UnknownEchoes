@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:inverted_chasm_bridge",
+  "biomes": "#unknown_echoes:has_inverted_chasm_bridge",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

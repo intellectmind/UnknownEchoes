@@ -153,7 +153,7 @@ public class SunkenTempleStructure extends SinglePieceStructure {
 
             buildTempleShell(level, random, box, bricks, stone, rune);
             buildSurfaceTower(level, box, bricks, rune);
-            buildBubbleCorridor(level, box, bricks);
+            buildBubbleCorridor(level, random, box, bricks);
             buildTidePillarCourt(level, box, bricks, pillar, altar);
             buildWatcherArena(level, box, random, bricks, rune);
             buildRevisitReservoir(level, box, random, bricks);
@@ -204,19 +204,23 @@ public class SunkenTempleStructure extends SinglePieceStructure {
             }
         }
 
-        private void buildBubbleCorridor(WorldGenLevel level, BoundingBox box, BlockState bricks) {
+        private void buildBubbleCorridor(WorldGenLevel level, RandomSource random,
+                                         BoundingBox box, BlockState bricks) {
             for (int z = 10; z <= CENTER_Z - 11; z++) {
                 for (int x = CENTER_X - 2; x <= CENTER_X + 2; x++) {
                     this.placeBlock(level, bricks, x, 1, z, box);
                 }
                 if (z % 6 == 0) {
+                    // 气泡柱必须坐在灵魂沙上:砖面上的 BUBBLE_COLUMN 首次方块更新就退化成普通水
+                    this.placeBlock(level, net.minecraft.world.level.block.Blocks.SOUL_SAND.defaultBlockState(),
+                            CENTER_X, 1, z, box);
                     this.placeBlock(level, net.minecraft.world.level.block.Blocks.BUBBLE_COLUMN.defaultBlockState(),
                             CENTER_X, 2, z, box);
                     this.placeBlock(level, net.minecraft.world.level.block.Blocks.SEA_LANTERN.defaultBlockState(),
                             CENTER_X - 2, 2, z, box);
                 }
             }
-            buildAccessibleChest(level, RandomSource.create(0), box, CENTER_X + 5, 1, 17, ModLootTables.MIRROR_LAKE_CACHE);
+            buildAccessibleChest(level, random, box, CENTER_X + 5, 1, 17, ModLootTables.MIRROR_LAKE_CACHE);
         }
 
         private void buildTidePillarCourt(WorldGenLevel level, BoundingBox box,
@@ -243,10 +247,13 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                 }
             }
             for (int dx : new int[]{-10, 10}) {
+                this.placeBlock(level, net.minecraft.world.level.block.Blocks.SOUL_SAND.defaultBlockState(),
+                        CENTER_X + dx, 1, CENTER_Z + 16, box);
                 this.placeBlock(level, net.minecraft.world.level.block.Blocks.BUBBLE_COLUMN.defaultBlockState(),
                         CENTER_X + dx, 2, CENTER_Z + 16, box);
             }
-            buildAccessibleChest(level, random, box, CENTER_X - 7, 2, CENTER_Z + 22, ModLootTables.T4_REGION_CORE);
+            buildAccessibleChest(level, random, box, CENTER_X - 7, 2, CENTER_Z + 22,
+                    ModLootTables.T5_MINIBOSS_REPEAT);
         }
 
         private void buildRevisitReservoir(WorldGenLevel level, BoundingBox box, RandomSource random, BlockState bricks) {
@@ -269,8 +276,9 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                 if (boss != null) {
                     boss.moveTo(bossX + 0.5D, bossY, bossZ + 0.5D, 0.0F, 0.0F);
                     boss.setPersistenceRequired();
-                    level.addFreshEntity(boss);
-                    this.spawnedBoss = true;
+                    if (level.addFreshEntity(boss)) {
+                        this.spawnedBoss = true;
+                    }
                 }
             }
         }

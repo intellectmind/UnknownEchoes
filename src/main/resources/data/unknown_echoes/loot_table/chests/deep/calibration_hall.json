@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 133 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 134 } } ] },
+        { "type": "minecraft:empty", "weight": 2 }
+      ]
+    },
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 3, "max": 5 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_ore_scrap", "weight": 8, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 4 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:space_anchor_shard", "weight": 5, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_armor_plate", "weight": 2 },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_weapon_frame", "weight": 2 },
+        { "type": "minecraft:item", "name": "minecraft:experience_bottle", "weight": 4, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } } ] }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/deep/calibration_hall"
+}

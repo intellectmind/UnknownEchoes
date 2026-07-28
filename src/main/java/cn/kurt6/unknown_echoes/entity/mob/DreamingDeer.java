@@ -110,7 +110,7 @@ public class DreamingDeer extends Animal implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.nectarCooldown = tag.getInt("NectarCooldown");
+        this.nectarCooldown = Math.max(0, Math.min(tag.getInt("NectarCooldown"), NECTAR_COOLDOWN_TICKS));
     }
 
     @Override

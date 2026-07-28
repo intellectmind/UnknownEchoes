@@ -1,22 +1,26 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shapeless",
   "category": "misc",
-  "pattern": [
-    " R ",
-    "RIR",
-    " C "
-  ],
-  "key": {
-    "R": {
+  "ingredients": [
+    {
       "item": "unknown_echoes:echo_realm_ingot"
     },
-    "I": {
-      "item": "unknown_echoes:echo_metal_ingot"
+    {
+      "item": "unknown_echoes:echo_realm_ingot"
     },
-    "C": {
+    {
+      "item": "unknown_echoes:memory_stone_slab"
+    },
+    {
+      "item": "unknown_echoes:black_tide_thread"
+    },
+    {
+      "item": "unknown_echoes:broken_reflection"
+    },
+    {
       "item": "unknown_echoes:echo_core"
     }
-  },
+  ],
   "result": {
     "id": "unknown_echoes:oathbound_alloy",
     "count": 2

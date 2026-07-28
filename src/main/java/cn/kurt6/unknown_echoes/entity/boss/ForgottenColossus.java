@@ -113,6 +113,8 @@ public class ForgottenColossus extends Monster implements GeoEntity {
     private int simonDemoStep = 0;
     private int simonDemoTimer = 0;
     private int simonInputProgress = 0;
+    /** 记忆柱不足时的重扫退避(tick)。 */
+    private int pillarRescanCooldown = 0;
 
     // ---- 特殊攻击(蓄力挥砸 slam / 重踏震波 stomp / 记忆碎石雨 rockrain / 核心光束 beam):动画先行,伤害延迟到落点帧 ----
     private static final int SLAM_HIT_DELAY = 17;    // 0.85s,对应动画砸地帧
@@ -190,7 +192,7 @@ public class ForgottenColossus extends Monster implements GeoEntity {
         if (this.level().isClientSide || this.isBroken()) {
             return;
         }
-        this.participants.add(activator.getUUID());
+        BossNbtData.addParticipant(this.participants, activator.getUUID());
         // 还没进入"复现"阶段:点柱即开启/等待本轮演示,给含蓄提示
         if (this.simonPhase != SimonPhase.INPUT) {
             if (this.simonPhase == SimonPhase.IDLE) {
@@ -242,7 +244,9 @@ public class ForgottenColossus extends Monster implements GeoEntity {
         }
         switch (this.simonPhase) {
             case IDLE -> {
-                if (this.tickCount % 20 == 0 && hasArenaParticipant()) {
+                if (this.pillarRescanCooldown > 0) {
+                    this.pillarRescanCooldown--;
+                } else if (this.tickCount % 20 == 0 && hasArenaParticipant()) {
                     startSimonRound();
                 }
             }
@@ -254,7 +258,9 @@ public class ForgottenColossus extends Monster implements GeoEntity {
     private void startSimonRound() {
         List<BlockPos> pillars = scanAllPillars();
         if (pillars.size() < 2) {
+            // 场地记忆柱不足:退避,避免每秒 4 万方块的重复扫描
             this.simonPhase = SimonPhase.IDLE;
+            this.pillarRescanCooldown = 600;
             return;
         }
         BlockPos center = this.blockPosition();
@@ -351,8 +357,9 @@ public class ForgottenColossus extends Monster implements GeoEntity {
         if (this.level() instanceof ServerLevel ritualLevel) {
             double ritualRadius = ServerConfig.BOSS_REWARD_RADIUS.get();
             for (ServerPlayer participant : ritualLevel.players()) {
-                if (participant.distanceToSqr(this) <= ritualRadius * ritualRadius) {
-                    this.participants.add(participant.getUUID());
+                if (!participant.isSpectator()
+                        && participant.distanceToSqr(this) <= ritualRadius * ritualRadius) {
+                    BossNbtData.addParticipant(this.participants, participant.getUUID());
                     cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.grantRitual(
                             participant, cn.kurt6.unknown_echoes.ability.EchoAbilityType.WIND_ECHO);
                 }
@@ -396,7 +403,8 @@ public class ForgottenColossus extends Monster implements GeoEntity {
         }
         double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
         for (ServerPlayer player : serverLevel.players()) {
-            if (player.isAlive() && player.distanceToSqr(this) <= radius * radius) {
+            if (!player.isSpectator() && player.isAlive()
+                    && player.distanceToSqr(this) <= radius * radius) {
                 return true;
             }
         }
@@ -459,7 +467,7 @@ public class ForgottenColossus extends Monster implements GeoEntity {
         if (this.level() instanceof ServerLevel serverLevel) {
             double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
             for (ServerPlayer player : serverLevel.players()) {
-                if (player.distanceToSqr(this) <= radius * radius) {
+                if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
                     player.sendSystemMessage(message);
                 }
             }
@@ -600,7 +608,8 @@ public class ForgottenColossus extends Monster implements GeoEntity {
             for (net.minecraft.world.entity.LivingEntity victim : serverLevel.getEntitiesOfClass(
                     net.minecraft.world.entity.LivingEntity.class,
                     new net.minecraft.world.phys.AABB(pos).inflate(2.0, 2.0, 2.0),
-                    e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                    e -> e != this && !e.isSpectator()
+                            && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
                 victim.hurt(this.damageSources().mobAttack(this), damage);
             }
             serverLevel.sendParticles(
@@ -650,7 +659,8 @@ public class ForgottenColossus extends Monster implements GeoEntity {
         for (net.minecraft.world.entity.LivingEntity victim : serverLevel.getEntitiesOfClass(
                 net.minecraft.world.entity.LivingEntity.class,
                 this.getBoundingBox().inflate(18.0, 4.0, 18.0),
-                e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> e != this && !e.isSpectator()
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             net.minecraft.world.phys.Vec3 toVictim = victim.position()
                     .add(0, victim.getBbHeight() * 0.5, 0).subtract(from);
             double along = toVictim.dot(this.beamDirection);
@@ -712,7 +722,8 @@ public class ForgottenColossus extends Monster implements GeoEntity {
         for (net.minecraft.world.entity.LivingEntity victim : serverLevel.getEntitiesOfClass(
                 net.minecraft.world.entity.LivingEntity.class,
                 this.getBoundingBox().inflate(6.0D, 2.0D, 6.0D),
-                e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> e != this && !e.isSpectator()
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             net.minecraft.world.phys.Vec3 away = victim.position().subtract(this.position())
                     .multiply(1, 0, 1).normalize();
@@ -773,7 +784,8 @@ public class ForgottenColossus extends Monster implements GeoEntity {
         for (net.minecraft.world.entity.LivingEntity victim : serverLevel.getEntitiesOfClass(
                 net.minecraft.world.entity.LivingEntity.class,
                 this.getBoundingBox().inflate(6.0D, 2.0D, 6.0D),
-                e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> e != this && !e.isSpectator()
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             net.minecraft.world.phys.Vec3 toVictim = victim.position().subtract(this.position())
                     .multiply(1, 0, 1);
             if (toVictim.length() > 6.5) {
@@ -864,13 +876,17 @@ public class ForgottenColossus extends Monster implements GeoEntity {
                 restoreMemoryGuard();
             }
         }
+        // 主线 Boss 在场心跳(挖掘/开箱封锁的快速预判依赖它)
+        if (this.tickCount % 20 == 0 && this.level() instanceof ServerLevel heartbeatLevel) {
+            cn.kurt6.unknown_echoes.event.CommonEvents.noteMainBossPresence(heartbeatLevel);
+        }
         // 战斗期间(有目标时)周期登记场地内玩家为参与者
         if (this.tickCount % 20 == 0 && this.getTarget() != null
                 && this.level() instanceof ServerLevel serverLevel) {
             double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
             for (ServerPlayer player : serverLevel.players()) {
-                if (player.distanceToSqr(this) <= radius * radius) {
-                    this.participants.add(player.getUUID());
+                if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
+                    BossNbtData.addParticipant(this.participants, player.getUUID());
                 }
             }
             if (ServerConfig.BOSS_DYNAMIC_SCALING.get()) {
@@ -903,8 +919,9 @@ public class ForgottenColossus extends Monster implements GeoEntity {
                 && source.getEntity() instanceof net.minecraft.world.entity.monster.Enemy) {
             return false;
         }
-        if (!this.level().isClientSide && source.getEntity() instanceof ServerPlayer attacker) {
-            this.participants.add(attacker.getUUID());
+        if (!this.level().isClientSide && source.getEntity() instanceof ServerPlayer attacker
+                && !attacker.isSpectator()) {
+            BossNbtData.addParticipant(this.participants, attacker.getUUID());
         }
         if (!this.level().isClientSide && !this.isBroken()
                 && BossPhaseGate.shouldCapMechanicDamage(source)) {
@@ -965,13 +982,17 @@ public class ForgottenColossus extends Monster implements GeoEntity {
             // 设计红线 #4:奖励只发给"死亡时仍在场地范围内"的参与玩家(伤害/机关/在场任一记录过)
             double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
             for (ServerPlayer player : serverLevel.players()) {
-                if (this.participants.contains(player.getUUID())
+                if (!player.isSpectator() && this.participants.contains(player.getUUID())
                         && player.distanceToSqr(this) <= radius * radius) {
                     boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
                             EchoPermission.FORGOTTEN_COLOSSUS_ID);
                     EchoAbilityManager.markBossDefeated(player, EchoPermission.FORGOTTEN_COLOSSUS_ID);
                     if (firstKill) {
                         BossMaterialRewards.givePersonal(player, EchoPermission.FORGOTTEN_COLOSSUS_ID,
+                                new ItemStack(ModItems.COLOSSUS_MEMORY_CORE.get()));
+                    } else {
+                        // 重复击败也发 1 枚核心(普通材料语义):守誓套按件消耗,仅靠首杀凑不齐
+                        BossMaterialRewards.giveOrdinary(player,
                                 new ItemStack(ModItems.COLOSSUS_MEMORY_CORE.get()));
                     }
                     BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.MEMORY_STONE_SLAB.get(),
@@ -1053,22 +1074,15 @@ public class ForgottenColossus extends Monster implements GeoEntity {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.setBroken(tag.getBoolean("Broken"));
-        this.brokenTicksRemaining = tag.getInt("BrokenTicks");
-        this.brokenWindowHealthFloor = tag.getFloat("BrokenWindowHealthFloor");
-        this.activePillars.clear();
-        ListTag pillars = tag.getList("ActivePillars", Tag.TAG_INT_ARRAY);
-        for (int i = 0; i < pillars.size(); i++) {
-            int[] coords = pillars.getIntArray(i);
-            if (coords.length == 3) {
-                this.activePillars.add(new BlockPos(coords[0], coords[1], coords[2]));
-            }
-        }
-        this.participants.clear();
-        ListTag participantsTag = tag.getList("Participants", Tag.TAG_INT_ARRAY);
-        for (Tag entry : participantsTag) {
-            this.participants.add(net.minecraft.nbt.NbtUtils.loadUUID(entry));
-        }
-        this.scaledParticipants = Math.max(1, tag.getInt("ScaledParticipants"));
+        this.brokenTicksRemaining = BossNbtData.clampTimer(tag.getInt("BrokenTicks"),
+                ServerConfig.BOSS_BROKEN_DURATION_TICKS.get());
+        this.brokenWindowHealthFloor = BossNbtData.clampHealthFloor(
+                tag.getFloat("BrokenWindowHealthFloor"), this.getMaxHealth());
+        BossNbtData.loadPositionsNear(tag, "ActivePillars", this.activePillars,
+                BossNbtData.MAX_ARENA_POSITIONS, this.blockPosition(),
+                PILLAR_SCAN_RADIUS * 2, PILLAR_SCAN_HEIGHT * 2);
+        BossNbtData.loadUuids(tag, "Participants", this.participants, BossNbtData.MAX_PARTICIPANTS);
+        this.scaledParticipants = BossNbtData.clampParticipantScale(tag.getInt("ScaledParticipants"));
         this.awakened = tag.getBoolean("Awakened");
         this.enrageAnnounced = tag.getBoolean("EnrageAnnounced");
         if (this.hasCustomName()) {

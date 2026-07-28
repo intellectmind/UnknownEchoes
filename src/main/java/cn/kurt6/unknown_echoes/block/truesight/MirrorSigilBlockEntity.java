@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -52,31 +53,33 @@ public class MirrorSigilBlockEntity extends BlockEntity {
         if (!(level.getBlockEntity(pos) instanceof MirrorSigilBlockEntity sigil)) {
             return false;
         }
+        ensureInitialized(level, pos, sigil);
+        return sigil.initialized && sigil.real;
+    }
+
+    /** 旧档簇未完整加载时暂不判定,避免把真符印误当成假符印。 */
+    public static boolean ensureInitialized(ServerLevel level, BlockPos pos) {
+        if (!(level.getBlockEntity(pos) instanceof MirrorSigilBlockEntity sigil)) {
+            return false;
+        }
+        return ensureInitialized(level, pos, sigil);
+    }
+
+    private static boolean ensureInitialized(ServerLevel level, BlockPos pos,
+                                             MirrorSigilBlockEntity sigil) {
         if (!sigil.initialized) {
             ensureClusterInitialized(level, pos);
         }
-        return sigil.real;
+        return sigil.initialized;
     }
 
     /** 旧档迁移:收集本簇全部符印,按簇最小角派生的确定性随机重抽真符印。 */
     private static void ensureClusterInitialized(ServerLevel level, BlockPos center) {
-        List<BlockPos> cluster = new ArrayList<>();
-        BlockPos min = null;
-        for (BlockPos pos : BlockPos.betweenClosed(
-                center.offset(-CLUSTER_RANGE_H, -CLUSTER_RANGE_V, -CLUSTER_RANGE_H),
-                center.offset(CLUSTER_RANGE_H, CLUSTER_RANGE_V, CLUSTER_RANGE_H))) {
-            if (level.getBlockState(pos).getBlock() instanceof MirrorSigilBlock) {
-                BlockPos immutable = pos.immutable();
-                cluster.add(immutable);
-                if (min == null || immutable.asLong() < min.asLong()) {
-                    min = immutable;
-                }
-            }
-        }
-        if (cluster.isEmpty() || min == null) {
+        List<BlockPos> cluster = findClusterForMigration(level, center);
+        if (cluster.isEmpty()) {
             return;
         }
-        // 跨调用确定性:同一簇无论从哪枚符印触发,重排结果一致(gotchas #15 同思路)
+        BlockPos min = cluster.getFirst();
         RandomSource random = RandomSource.create(min.getX() * 341873128712L ^ min.getZ() * 132897987541L);
         List<BlockPos> shuffled = new ArrayList<>(cluster);
         for (int i = shuffled.size() - 1; i > 0; i--) {
@@ -85,13 +88,75 @@ public class MirrorSigilBlockEntity extends BlockEntity {
             shuffled.set(i, shuffled.get(j));
             shuffled.set(j, tmp);
         }
-        int realCount = Math.min(REAL_PER_CLUSTER, Math.max(1, shuffled.size() / 3));
+        int realCount = shuffled.size() >= 10
+                ? REAL_PER_CLUSTER
+                : Math.max(1, shuffled.size() / 3);
         for (int i = 0; i < shuffled.size(); i++) {
             if (level.getBlockEntity(shuffled.get(i)) instanceof MirrorSigilBlockEntity sigil
                     && !sigil.initialized) {
                 sigil.setReal(i < realCount);
             }
         }
+    }
+
+    private static List<BlockPos> findClusterForMigration(ServerLevel level, BlockPos center) {
+        if (!isClusterRangeLoaded(level, center)) {
+            return List.of();
+        }
+        List<BlockPos> cluster = new ArrayList<>();
+        for (BlockPos pos : BlockPos.betweenClosed(
+                center.offset(-CLUSTER_RANGE_H, -CLUSTER_RANGE_V, -CLUSTER_RANGE_H),
+                center.offset(CLUSTER_RANGE_H, CLUSTER_RANGE_V, CLUSTER_RANGE_H))) {
+            if (level.getBlockState(pos).getBlock() instanceof MirrorSigilBlock) {
+                cluster.add(pos.immutable());
+            }
+        }
+        cluster.sort(Comparator.comparingLong(BlockPos::asLong));
+        return cluster;
+    }
+
+    /** 只枚举已加载区块;范围未完整加载时返回空,避免漏算符印或触发区块加载。 */
+    public static List<BlockPos> findCluster(ServerLevel level, BlockPos center) {
+        if (!isClusterRangeLoaded(level, center)) {
+            return List.of();
+        }
+        int minChunkX = (center.getX() - CLUSTER_RANGE_H) >> 4;
+        int maxChunkX = (center.getX() + CLUSTER_RANGE_H) >> 4;
+        int minChunkZ = (center.getZ() - CLUSTER_RANGE_H) >> 4;
+        int maxChunkZ = (center.getZ() + CLUSTER_RANGE_H) >> 4;
+        List<BlockPos> cluster = new ArrayList<>();
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                for (BlockEntity blockEntity : level.getChunk(chunkX, chunkZ).getBlockEntities().values()) {
+                    if (!(blockEntity instanceof MirrorSigilBlockEntity)) {
+                        continue;
+                    }
+                    BlockPos pos = blockEntity.getBlockPos();
+                    if (Math.abs((long) pos.getX() - center.getX()) <= CLUSTER_RANGE_H
+                            && Math.abs((long) pos.getY() - center.getY()) <= CLUSTER_RANGE_V
+                            && Math.abs((long) pos.getZ() - center.getZ()) <= CLUSTER_RANGE_H) {
+                        cluster.add(pos.immutable());
+                    }
+                }
+            }
+        }
+        cluster.sort(Comparator.comparingLong(BlockPos::asLong));
+        return cluster;
+    }
+
+    private static boolean isClusterRangeLoaded(ServerLevel level, BlockPos center) {
+        int minChunkX = (center.getX() - CLUSTER_RANGE_H) >> 4;
+        int maxChunkX = (center.getX() + CLUSTER_RANGE_H) >> 4;
+        int minChunkZ = (center.getZ() - CLUSTER_RANGE_H) >> 4;
+        int maxChunkZ = (center.getZ() + CLUSTER_RANGE_H) >> 4;
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                if (!level.hasChunk(chunkX, chunkZ)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     @Override

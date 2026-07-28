@@ -31,6 +31,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.Animation;
@@ -91,6 +92,8 @@ public class CrystalSongkeeper extends MiniBossEntity {
     private int demoStep = 0;
     private int demoTimer = 0;
     private int inputProgress = 0;
+    /** 音柱不足时的重扫退避(tick)。 */
+    private int pillarRescanCooldown = 0;
     private int staggerTicks = 0;           // >0 = 失衡窗口(可被全额伤害)
 
     private int soundwaveCooldown = 100;
@@ -141,6 +144,23 @@ public class CrystalSongkeeper extends MiniBossEntity {
     @Override
     protected String guardedHintKey() {
         return "message.unknown_echoes.crystal_songkeeper.guarded";
+    }
+
+    @Override
+    protected void tickMechanicGuidance(ServerLevel level) {
+        if (this.tunePhase != TunePhase.INPUT) {
+            return;
+        }
+        Vec3 core = this.position().add(0, 1.2, 0);
+        // 只引导本轮序列涉及的音柱(演示阶段已公开),野生晶簇不标记也不刷包
+        for (int index : this.tuneSequence) {
+            if (index < 0 || index >= this.orderedPillars.size()) {
+                continue;
+            }
+            Vec3 pillar = Vec3.atCenterOf(this.orderedPillars.get(index)).add(0, 0.7, 0);
+            BossFx.guidanceMarker(level, pillar, ParticleTypes.ENCHANT);
+            BossFx.guidanceLink(level, pillar, core, ParticleTypes.GLOW);
+        }
     }
 
     @Override
@@ -220,7 +240,9 @@ public class CrystalSongkeeper extends MiniBossEntity {
         }
         switch (this.tunePhase) {
             case IDLE -> {
-                if (this.tickCount % 20 == 0 && this.getTarget() != null && hasArenaPlayer(level)) {
+                if (this.pillarRescanCooldown > 0) {
+                    this.pillarRescanCooldown--;
+                } else if (this.tickCount % 20 == 0 && this.getTarget() != null && hasArenaPlayer(level)) {
                     startTuneRound(level);
                 }
             }
@@ -232,7 +254,9 @@ public class CrystalSongkeeper extends MiniBossEntity {
     private void startTuneRound(ServerLevel level) {
         java.util.List<BlockPos> pillars = scanPillars(level);
         if (pillars.size() < 2) {
+            // 音柱不足:退避,避免每秒重复上万方块扫描
             this.tunePhase = TunePhase.IDLE;
+            this.pillarRescanCooldown = 600;
             return;
         }
         BlockPos center = this.blockPosition();
@@ -281,7 +305,7 @@ public class CrystalSongkeeper extends MiniBossEntity {
                 || !(this.level() instanceof ServerLevel level)) {
             return;
         }
-        this.participants.add(player.getUUID());
+            BossNbtData.addParticipant(this.participants, player.getUUID());
         if (this.tunePhase != TunePhase.INPUT) {
             // 还没到复现阶段:点柱即提示"先听演示"(IDLE + 有目标时顺便开一轮)
             if (this.tunePhase == TunePhase.IDLE && this.getTarget() != null) {
@@ -352,7 +376,7 @@ public class CrystalSongkeeper extends MiniBossEntity {
     private boolean hasArenaPlayer(ServerLevel level) {
         double radius = settlementRadius();
         for (ServerPlayer p : level.players()) {
-            if (p.isAlive() && p.distanceToSqr(this) <= radius * radius) {
+            if (!p.isSpectator() && p.isAlive() && p.distanceToSqr(this) <= radius * radius) {
                 return true;
             }
         }
@@ -395,7 +419,7 @@ public class CrystalSongkeeper extends MiniBossEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.55F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(5.0, 2.0, 5.0),
-                e -> e != this && !(e instanceof Enemy))) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             double dx = victim.getX() - this.getX();
             double dz = victim.getZ() - this.getZ();
@@ -445,7 +469,7 @@ public class CrystalSongkeeper extends MiniBossEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.1F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(ARENA_RADIUS, 4.0, ARENA_RADIUS),
-                e -> e != this && !(e instanceof Enemy))) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1), this);
         }
@@ -509,8 +533,8 @@ public class CrystalSongkeeper extends MiniBossEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.chargeTicks = tag.getInt("ChargeTicks");
-        this.staggerTicks = tag.getInt("StaggerTicks");
+        this.chargeTicks = BossNbtData.clampTimer(tag.getInt("ChargeTicks"), CHARGE_TICKS);
+        this.staggerTicks = BossNbtData.clampTimer(tag.getInt("StaggerTicks"), STAGGER_TICKS);
     }
 
     @Override

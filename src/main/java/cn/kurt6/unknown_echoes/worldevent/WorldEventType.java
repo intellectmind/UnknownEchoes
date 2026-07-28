@@ -19,7 +19,7 @@ public enum WorldEventType {
     /** 风暴前兆:漂浮群岛,远雷与上升气流(风暴编织者场地氛围铺垫)。 */
     STORM_OMEN("storm_omen", true, UnknownEchoes.id("floating_isles")),
 
-    /** 失落商队(16.4):主世界安全位置出现迷途旅者临时营地;结束后留下熄灭的篝火。 */
+    /** 失落商队(16.4):主世界安全位置出现迷途旅者；只用实体和粒子表现临时营地。 */
     LOST_CARAVAN("lost_caravan", false, null);
 
     private final String id;

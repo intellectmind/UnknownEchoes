@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:reef_limestone"
+  },
+  "result": {
+    "id": "unknown_echoes:tideworn_reefstone",
+    "count": 1
+  }
+}

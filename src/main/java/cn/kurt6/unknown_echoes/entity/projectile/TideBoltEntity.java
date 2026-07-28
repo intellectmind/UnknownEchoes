@@ -2,13 +2,16 @@ package cn.kurt6.unknown_echoes.entity.projectile;
 
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
+import cn.kurt6.unknown_echoes.registry.ModEntityTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -31,10 +34,19 @@ import java.util.UUID;
  */
 public class TideBoltEntity extends AbstractArrow {
 
-    /** 符文方向标记冷却(tick/玩家):设定基线 12 秒。瞬态表现层数据,不入存档。 */
+    /** 符文方向搜索冷却(tick/玩家):设定基线 12 秒。瞬态表现层数据,不入存档。 */
     private static final int MARK_COOLDOWN_TICKS = 240;
     private static final int RUNE_SEARCH_RADIUS = 16;
-    private static final Map<UUID, Long> LAST_MARK = new HashMap<>();
+    private static final Map<UUID, Long> NEXT_MARK_SEARCH = new HashMap<>();
+
+    public static void clearMarkCooldown(UUID playerId) {
+        NEXT_MARK_SEARCH.remove(playerId);
+    }
+
+    /** 服务器停止时清理瞬态线索冷却,避免单机世界切换串状态。 */
+    public static void clearAllMarkCooldowns() {
+        NEXT_MARK_SEARCH.clear();
+    }
 
     /** 潮爆半径与伤害系数(相对直击伤害)。 */
     private static final double BURST_RADIUS = 2.5;
@@ -54,6 +66,10 @@ public class TideBoltEntity extends AbstractArrow {
         super(ModEntities.TIDE_BOLT.get(), owner, level, pickupStack, firedFromWeapon);
     }
 
+    public void setVirtualAmmo() {
+        this.pickup = Pickup.CREATIVE_ONLY;
+    }
+
     @Override
     protected ItemStack getDefaultPickupItem() {
         return new ItemStack(Items.ARROW);
@@ -67,40 +83,45 @@ public class TideBoltEntity extends AbstractArrow {
 
     @Override
     protected void onHitEntity(net.minecraft.world.phys.EntityHitResult result) {
+        double impactSpeed = this.getDeltaMovement().length();
         // 潮汐弩武器特性:水中目标直击 +25%。
+        double originalBaseDamage = this.getBaseDamage();
         if (result.getEntity().isInWater()) {
-            this.setBaseDamage(this.getBaseDamage() * WET_BONUS);
+            this.setBaseDamage(originalBaseDamage * WET_BONUS);
         }
         super.onHitEntity(result);
+        this.setBaseDamage(originalBaseDamage);
         this.tideBurst(result.getEntity().position()
-                .add(0, result.getEntity().getBbHeight() * 0.5, 0), result.getEntity());
+                .add(0, result.getEntity().getBbHeight() * 0.5, 0), result.getEntity(), impactSpeed);
     }
 
     @Override
     protected void onHitBlock(net.minecraft.world.phys.BlockHitResult result) {
+        // 命中速度必须在 super 前取:super.onHitBlock 会把 deltaMovement 改写成命中点偏移量
+        double impactSpeed = this.getDeltaMovement().length();
         super.onHitBlock(result);
-        this.tideBurst(result.getLocation(), null);
+        this.tideBurst(result.getLocation(), null, impactSpeed);
     }
 
     /** 潮爆(V0.6C):命中点水压炸裂,范围伤害 + 径向冲开 + 水花环演出。 */
-    private void tideBurst(Vec3 center, @Nullable net.minecraft.world.entity.Entity directHit) {
+    private void tideBurst(Vec3 center, @Nullable net.minecraft.world.entity.Entity directHit,
+                           double impactSpeed) {
         if (this.burstDone || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
         this.burstDone = true;
         double burstRadius = BURST_RADIUS;
-        float burstDamage = (float) (this.getBaseDamage()
-                * this.getDeltaMovement().length() * BURST_DAMAGE_FACTOR);
+        float burstDamage = (float) (this.getBaseDamage() * impactSpeed * BURST_DAMAGE_FACTOR);
         burstDamage = Math.max(2.0F, Math.min(burstDamage, 6.5F));
         var owner = this.getOwner();
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 new net.minecraft.world.phys.AABB(center, center).inflate(burstRadius),
-                e -> e != owner && e != directHit && e.isAlive()
+                e -> e != owner && e != directHit && e instanceof Enemy && e.isAlive()
                         && !(owner instanceof LivingEntity living && e.isAlliedTo(living)))) {
             victim.hurt(owner instanceof LivingEntity living
                             ? this.damageSources().mobProjectile(this, living)
                             : this.damageSources().generic(),
-                    victim.isInWater() ? burstDamage * WET_BONUS : burstDamage);
+                    burstDamage);
             Vec3 away = victim.position().subtract(center).multiply(1, 0, 1);
             if (away.lengthSqr() > 1.0E-4) {
                 Vec3 dir = away.normalize();
@@ -132,18 +153,23 @@ public class TideBoltEntity extends AbstractArrow {
     protected void doPostHurtEffects(LivingEntity target) {
         super.doPostHurtEffects(target);
         if (!(this.level() instanceof ServerLevel serverLevel)
-                || !(this.getOwner() instanceof ServerPlayer player)) {
+                || !(this.getOwner() instanceof ServerPlayer player)
+                || !(target instanceof Enemy)
+                || target.getType().is(ModEntityTags.ECHO_BOSSES)) {
             return;
         }
         long now = serverLevel.getGameTime();
-        Long last = LAST_MARK.get(player.getUUID());
-        if (last != null && now - last < MARK_COOLDOWN_TICKS) {
+        Long nextSearch = NEXT_MARK_SEARCH.get(player.getUUID());
+        if (nextSearch != null && now < nextSearch) {
             return;
         }
+        NEXT_MARK_SEARCH.put(player.getUUID(),
+                now > Long.MAX_VALUE - MARK_COOLDOWN_TICKS
+                        ? Long.MAX_VALUE : now + MARK_COOLDOWN_TICKS);
         BlockPos.findClosestMatch(target.blockPosition(), RUNE_SEARCH_RADIUS, 8,
-                pos -> serverLevel.getBlockState(pos).is(ModBlocks.TIDE_RUNE.get()))
+                pos -> serverLevel.isLoaded(pos)
+                        && serverLevel.getBlockState(pos).is(ModBlocks.TIDE_RUNE.get()))
                 .ifPresent(runePos -> {
-                    LAST_MARK.put(player.getUUID(), now);
                     Vec3 from = target.position().add(0, target.getBbHeight() * 0.5, 0);
                     Vec3 dir = Vec3.atCenterOf(runePos).subtract(from).normalize();
                     // 聆听者 2 件:线索显示时间延长(11.3)——轨迹更长更密
@@ -157,5 +183,17 @@ public class TideBoltEntity extends AbstractArrow {
                     player.displayClientMessage(Component.translatable(
                             "message.unknown_echoes.tide_crossbow.marked"), true);
                 });
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putBoolean("BurstDone", this.burstDone);
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        this.burstDone = tag.getBoolean("BurstDone");
     }
 }

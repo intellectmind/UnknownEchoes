@@ -36,11 +36,15 @@
     [],
     [],
     [
+      "unknown_echoes:silent_mudstone_disk",
+      "unknown_echoes:boglight_stone_disk",
       "unknown_echoes:muffle_moss_disk"
     ],
     [],
     [],
     [
+      "unknown_echoes:mute_reed_patch",
+      "unknown_echoes:mire_bell_patch",
       "minecraft:brown_mushroom_normal",
       "minecraft:red_mushroom_normal",
       "unknown_echoes:glow_fern_patch",

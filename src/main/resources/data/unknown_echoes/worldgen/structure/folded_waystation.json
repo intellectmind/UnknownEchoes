@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:folded_waystation",
+  "biomes": "#unknown_echoes:has_folded_waystation",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

@@ -185,10 +185,17 @@ public class WorldWonderStructure extends SinglePieceStructure {
                 int dx = direction.getStepX() * 9;
                 int dz = direction.getStepZ() * 9;
                 platform(level, box, c + dx - 1, 25, c + dz - 1, 3, ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
-                this.placeBlock(level, ModBlocks.TIDE_BUOY.get().defaultBlockState(), c + dx, 26, c + dz, box);
+                // 干地/空中放置:浮标默认 WATERLOGGED=TRUE,不清掉会往外漏水
+                this.placeBlock(level, ModBlocks.TIDE_BUOY.get().defaultBlockState()
+                        .setValue(cn.kurt6.unknown_echoes.block.tide.TideBuoyBlock.WATERLOGGED, Boolean.FALSE),
+                        c + dx, 26, c + dz, box);
             }
-            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState(), c, 2, c, box);
-            this.placeBlock(level, ModBlocks.TIDE_BUOY.get().defaultBlockState(), c + 8, 1, c, box);
+            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState()
+                    .setValue(cn.kurt6.unknown_echoes.block.tide.TideRuneSeatBlock.WATERLOGGED, Boolean.FALSE),
+                    c, 2, c, box);
+            this.placeBlock(level, ModBlocks.TIDE_BUOY.get().defaultBlockState()
+                    .setValue(cn.kurt6.unknown_echoes.block.tide.TideBuoyBlock.WATERLOGGED, Boolean.FALSE),
+                    c + 8, 1, c, box);
             buildAccessibleChest(level, random, box, c - 2, 2, c, ModLootTables.T4_REGION_CORE);
             buildAccessibleChest(level, random, box, c + 10, 1, c + 1, ModLootTables.MIRROR_LAKE_CACHE);
             decorateLighthouse(level, box, c);
@@ -216,7 +223,9 @@ public class WorldWonderStructure extends SinglePieceStructure {
             }
             platform(level, box, c - 3, 2, c - 3, 7, ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
             this.placeBlock(level, ModBlocks.TRUE_SIGHT_STELE.get().defaultBlockState(), c, 3, c, box);
-            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState(), c + 3, 3, c, box);
+            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState()
+                    .setValue(cn.kurt6.unknown_echoes.block.tide.TideRuneSeatBlock.WATERLOGGED, Boolean.FALSE),
+                    c + 3, 3, c, box);
             this.placeBlock(level, ModBlocks.TRUE_SIGHT_CHEST.get().defaultBlockState(), c - 3, 3, c + 3, box);
             configureTrueSightVault(level, box, random, c - 3, 3, c + 3);
             buildAccessibleChest(level, random, box, c + 5, 2, c - 5, ModLootTables.T4_REGION_CORE);
@@ -295,6 +304,8 @@ public class WorldWonderStructure extends SinglePieceStructure {
             this.placeBlock(level, ModBlocks.ECHO_ARCHIVE_TERMINAL.get().defaultBlockState(), c + 10, 2, c, box);
             buildAccessibleChest(level, random, box, c - 10, 2, c, ModLootTables.T4_REGION_CORE);
             buildAccessibleChest(level, random, box, c + 18, 2, c + 3, ModLootTables.SILENT_HUT_CHEST);
+            // 奇观只提供区域探索材料；终局奖励由个人完成流程结算。
+            buildAccessibleChest(level, random, box, c - 6, 7, c - 2, ModLootTables.T4_REGION_CORE);
             decorateSilentBoat(level, box, c);
         }
 
@@ -324,6 +335,8 @@ public class WorldWonderStructure extends SinglePieceStructure {
             this.placeBlock(level, ModBlocks.RESONANCE_CANDLE.get().defaultBlockState(), c, 79, c, box);
             buildAccessibleChest(level, random, box, c + 3, 3, c, ModLootTables.T5_MINIBOSS_REPEAT);
             buildAccessibleChest(level, random, box, c - 5, 79, c, ModLootTables.BROKEN_ARCHIVE_CHEST);
+            // 登塔奖励保留，但不越过个人终局结算。
+            buildAccessibleChest(level, random, box, c, 84, c + 2, ModLootTables.T4_REGION_CORE);
             buildTrueSightVaultNiche(level, random, box, c + 6, 79, c + 6, Direction.NORTH);
             decorateBellTower(level, box, c);
         }

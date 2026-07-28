@@ -34,13 +34,23 @@ public class ModCreativeTabs {
                         output.accept(ModItems.REVEALING_POWDER.get());
                         output.accept(ModItems.MEMORY_ECHO_STONE.get());
                         output.accept(ModItems.ECHO_KEY.get());
-                        output.accept(ModItems.WIND_ECHO_MARK.get());
                         output.accept(ModItems.ECHO_PROJECTOR.get());
                         output.accept(ModItems.ANCIENT_PAGE.get());
                         output.accept(ModItems.ECHO_STONE_BRICKS.get());
                         output.accept(ModItems.CRACKED_ECHO_STONE_BRICKS.get());
                         output.accept(ModItems.ECHO_RUNE_BRICKS.get());
                         output.accept(ModItems.RESONANCE_BEACON.get());
+                        output.accept(ModItems.ABYSS_BEACON.get());
+                        output.accept(ModItems.DEEP_ROUTE_NODE.get());
+                        output.accept(ModItems.DEEP_CALIBRATION_NODE.get());
+                        output.accept(ModItems.GRAVITY_CORE_ALTAR.get());
+                        output.accept(ModItems.GRAVITY_FOLD_DOOR.get());
+                        output.accept(ModItems.GRAVITY_FIELD_CORE.get());
+                        output.accept(ModItems.SPACE_ANCHOR.get());
+                        output.accept(ModItems.VOID_STABILIZER.get());
+                        output.accept(ModItems.VOID_CORE_ALTAR.get());
+                        output.accept(ModItems.WORLD_RESONANCE_ALTAR.get());
+                        output.accept(ModItems.ENDING_RECORD_TABLE.get());
                         output.accept(ModItems.WIND_DOOR.get());
                         output.accept(ModItems.MEMORY_PILLAR.get());
                         output.accept(ModItems.REWARD_ALTAR.get());
@@ -91,25 +101,6 @@ public class ModCreativeTabs {
                         output.accept(ModItems.WIND_SPEAR_BLUEPRINT.get());
                         output.accept(ModItems.TIDE_CROSSBOW_BLUEPRINT.get());
                         output.accept(ModItems.TRUE_SIGHT_BLADE_BLUEPRINT.get());
-                        output.accept(ModItems.ECHO_BROADSWORD.get());
-                        output.accept(ModItems.ECHO_BATTLEAXE.get());
-                        output.accept(ModItems.ECHO_LONGBOW.get());
-                        output.accept(ModItems.WIND_SPEAR.get());
-                        output.accept(ModItems.TIDE_CROSSBOW.get());
-                        output.accept(ModItems.TRUE_SIGHT_BLADE.get());
-                        output.accept(ModItems.SILENCE_SCYTHE.get());
-                        output.accept(ModItems.CRYSTAL_SONG_STAFF.get());
-                        output.accept(ModItems.BROKEN_BELL_HAMMER.get());
-                        output.accept(ModItems.DREAM_BLOOM_BOW.get());
-                        output.accept(ModItems.ECHO_OATHBLADE.get());
-                        output.accept(ModItems.ECHO_PICKAXE.get());
-                        output.accept(ModItems.ECHO_SHOVEL.get());
-                        output.accept(ModItems.ECHO_HATCHET.get());
-                        output.accept(ModItems.ECHO_HOE.get());
-                        output.accept(ModItems.ECHO_SHEARS.get());
-                        output.accept(ModItems.ECHO_FISHING_ROD.get());
-                        output.accept(ModItems.ECHO_BRUSH.get());
-                        output.accept(ModItems.ECHO_IGNITER.get());
                         output.accept(ModItems.WIND_RESEARCH_RUBBING.get());
                         output.accept(ModItems.TIDE_RESEARCH_RUBBING.get());
                         output.accept(ModItems.TRUE_SIGHT_RESEARCH_RUBBING.get());
@@ -119,9 +110,6 @@ public class ModCreativeTabs {
                         output.accept(ModItems.INSCRIPTION_RUBBING_PAPER.get());
                         output.accept(ModItems.ECHO_INDEX.get());
                         output.accept(ModItems.STORM_COMPASS_PART.get());
-                        output.accept(ModItems.STORM_COMPASS.get());
-                        output.accept(ModItems.TIDE_LANTERN.get());
-                        output.accept(ModItems.ECHO_LENS.get());
                         output.accept(ModItems.CLUE_MAP.get());
                         output.accept(ModItems.RECORD_TRACING_PAPER.get());
                         output.accept(ModItems.WIND_ENHANCE_CORE.get());
@@ -150,28 +138,24 @@ public class ModCreativeTabs {
                         output.accept(ModItems.CRACKED_MIRROR_BRICKS.get());
                         output.accept(ModItems.ARTIFACT_RECORD_TABLE.get());
                         output.accept(ModItems.ARTIFACT_TUNING_TABLE.get());
-                        // V0.6E 三能力补完与共鸣信物
+                        // 五种核心能力的共鸣信物
                         output.accept(ModItems.WIND_RESONANCE_TOKEN.get());
                         output.accept(ModItems.TIDE_RESONANCE_TOKEN.get());
                         output.accept(ModItems.TRUE_SIGHT_RESONANCE_TOKEN.get());
+                        output.accept(ModItems.GRAVITY_RESONANCE_TOKEN.get());
+                        output.accept(ModItems.VOID_RESONANCE_TOKEN.get());
                         output.accept(ModItems.WIND_CURRENT_PLATFORM.get());
                         output.accept(ModItems.TIDE_SENSOR_DOOR.get());
                         output.accept(ModItems.TRUE_SIGHT_STELE.get());
                         output.accept(ModItems.TRUE_SIGHT_CHEST.get());
-                        output.accept(ModItems.ECHO_WANDERER_SPAWN_EGG.get());
-                        output.accept(ModItems.FORGOTTEN_COLOSSUS_SPAWN_EGG.get());
-                        output.accept(ModItems.ABYSS_WATCHER_SPAWN_EGG.get());
-                        output.accept(ModItems.MIRROR_GUARDIAN_SPAWN_EGG.get());
-                        output.accept(ModItems.SILENT_WALKER_SPAWN_EGG.get());
-                        output.accept(ModItems.CRYSTAL_FEATHER_BIRD_SPAWN_EGG.get());
-                        output.accept(ModItems.STORM_WEAVER_SPAWN_EGG.get());
-                        output.accept(ModItems.SILENT_PRIEST_SPAWN_EGG.get());
-                        output.accept(ModItems.TIDE_LANTERN_KEEPER_SPAWN_EGG.get());
-                        output.accept(ModItems.TIDE_WATER_SHADE_SPAWN_EGG.get());
-                        output.accept(ModItems.MIRROR_DUST_BUTLER_SPAWN_EGG.get());
-                        output.accept(ModItems.LOST_TRAVELER_SPAWN_EGG.get());
                         // V0.6F 普通环境生物与材料
                         output.accept(ModItems.GLOW_HIDE.get());
+                        output.accept(ModItems.FOLDED_CARAPACE.get());
+                        output.accept(ModItems.SPACE_ANCHOR_SHARD.get());
+                        output.accept(ModItems.DEEP_ORE_SCRAP.get());
+                        output.accept(ModItems.VOID_RIFT_SHARD.get());
+                        output.accept(ModItems.DEEP_ALLOY_INGOT.get());
+                        output.accept(ModItems.GRAVITY_CORE_FRAGMENT.get());
                         output.accept(ModItems.CRYSTAL_SONG_SHARD.get());
                         output.accept(ModItems.RESONANT_CRYSTAL_NOTE.get());
                         output.accept(ModItems.SKY_QUARTZ.get());
@@ -204,6 +188,124 @@ public class ModCreativeTabs {
                         output.accept(ModItems.TIDE_KELP_WRAP.get());
                         output.accept(ModItems.MIRROR_TAIL_FISH.get());
                         output.accept(ModItems.MIRROR_TAIL_FISH_BUCKET.get());
+                        output.accept(ModItems.WIND_ERODED_RUBBLE.get());
+                        output.accept(ModItems.MIRROR_REED.get());
+                        output.accept(ModItems.CRYSTAL_SONG_CLUSTER.get());
+                        output.accept(ModItems.RESONANT_MUSHROOM.get());
+                        output.accept(ModItems.DREAM_FLOWER.get());
+                        output.accept(ModItems.ECHO_AMBER_ORE.get());
+                        output.accept(ModItems.DREAM_MIST_VINE.get());
+                        output.accept(ModItems.BROKEN_BELL_ORE.get());
+                        output.accept(ModItems.TIDE_SALT_ORE.get());
+                        output.accept(ModItems.BROKEN_BELL_THORN.get());
+                        output.accept(ModItems.SKY_QUARTZ_ORE.get());
+                        output.accept(ModItems.ECHO_CLIFF_STONE.get());
+                        output.accept(ModItems.ECHO_ARCHIVE_TERMINAL.get());
+                        output.accept(ModItems.TIDE_GRASS.get());
+                        output.accept(ModItems.PEARL_ANEMONE.get());
+                        output.accept(ModItems.STAR_MIST_BLOOM.get());
+                        output.accept(ModItems.MIRROR_LOTUS.get());
+                        output.accept(ModItems.ASH_CHIME_GRASS.get());
+                        output.accept(ModItems.FOLDED_SPOREBLOOM.get());
+                        output.accept(ModItems.GRAVITY_BELL.get());
+                        output.accept(ModItems.HUSH_THORN.get());
+                        output.accept(ModItems.MIRROR_DUST_STONE.get());
+                        output.accept(ModItems.MIRROR_DUST_BRICKS.get());
+                        output.accept(ModItems.FRACTURED_MIRROR_TILE.get());
+                        output.accept(ModItems.PRISM_DUST_CLUSTER.get());
+                        output.accept(ModItems.GLASSVEIL_GRASS.get());
+                        output.accept(ModItems.REFLECTION_ORCHID.get());
+                        output.accept(ModItems.ECHO_STRATA.get());
+                        output.accept(ModItems.ECHO_STRATA_BRICKS.get());
+                        output.accept(ModItems.CHISELED_ECHO_STRATA.get());
+                        output.accept(ModItems.RESONANT_CLIFF_CRYSTAL.get());
+                        output.accept(ModItems.CLIFF_HEATHER.get());
+                        output.accept(ModItems.ARCHIVE_LICHEN.get());
+                        output.accept(ModItems.SONGSTONE.get());
+                        output.accept(ModItems.SONGSTONE_BRICKS.get());
+                        output.accept(ModItems.CHISELED_SONGSTONE.get());
+                        output.accept(ModItems.RESONANT_GEODE.get());
+                        output.accept(ModItems.TUNING_GRASS.get());
+                        output.accept(ModItems.CRYSTAL_BELLFLOWER.get());
+                        output.accept(ModItems.ASHEN_BELLSTONE.get());
+                        output.accept(ModItems.ASHEN_BELLSTONE_BRICKS.get());
+                        output.accept(ModItems.RUSTED_BELLSTONE.get());
+                        output.accept(ModItems.CLOCKWORK_SCRAP_BLOCK.get());
+                        output.accept(ModItems.CINDER_REED.get());
+                        output.accept(ModItems.CLOCKWORK_THISTLE.get());
+                        output.accept(ModItems.REEF_LIMESTONE.get());
+                        output.accept(ModItems.REEF_LIMESTONE_BRICKS.get());
+                        output.accept(ModItems.TIDEWORN_REEFSTONE.get());
+                        output.accept(ModItems.TIDELIGHT_CORAL_BLOCK.get());
+                        output.accept(ModItems.LANTERN_SEAFAN.get());
+                        output.accept(ModItems.SHELL_BLOOM.get());
+                        output.accept(ModItems.SILENT_MUDSTONE.get());
+                        output.accept(ModItems.SILENT_MUDSTONE_BRICKS.get());
+                        output.accept(ModItems.ROOTBOUND_MUDSTONE.get());
+                        output.accept(ModItems.BOGLIGHT_STONE.get());
+                        output.accept(ModItems.MUTE_REED.get());
+                        output.accept(ModItems.MIRE_BELL.get());
+                        output.accept(ModItems.FOLDED_SLATE.get());
+                        output.accept(ModItems.FOLDED_SLATE_BRICKS.get());
+                        output.accept(ModItems.CHISELED_FOLDED_SLATE.get());
+                        output.accept(ModItems.RESONANT_FOLDED_SLATE.get());
+                        output.accept(ModItems.SEAM_GRASS.get());
+                        output.accept(ModItems.ARCHIVE_FUNGUS.get());
+                        output.accept(ModItems.GRAVITY_SHALE.get());
+                        output.accept(ModItems.GRAVITY_SHALE_BRICKS.get());
+                        output.accept(ModItems.BANDED_GRAVITY_SHALE.get());
+                        output.accept(ModItems.SUSPENDED_CRYSTAL.get());
+                        output.accept(ModItems.INVERSION_REED.get());
+                        output.accept(ModItems.WEIGHTLESS_BLOOM.get());
+                        output.accept(ModItems.ABYSSAL_STONE.get());
+                        output.accept(ModItems.ABYSSAL_STONE_BRICKS.get());
+                        output.accept(ModItems.VEINED_ABYSSAL_STONE.get());
+                        output.accept(ModItems.MUTE_CRYSTAL.get());
+                        output.accept(ModItems.HUSH_GRASS.get());
+                        output.accept(ModItems.VOIDCAP.get());
+                        output.accept(ModItems.ECHO_MOSSY_STONE.get());
+                        output.accept(ModItems.WIND_CHISELED_STONE.get());
+                        output.accept(ModItems.SKY_LAMP_GLASS.get());
+                        output.accept(ModItems.TIDE_SMOOTH_STONE.get());
+                        output.accept(ModItems.MIRROR_SAND.get());
+                        output.accept(ModItems.PEARL_CORAL_BLOCK.get());
+                    })
+                    .build());
+
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> EQUIPMENT_TAB =
+            CREATIVE_MODE_TABS.register("unknown_echoes_equipment", () -> CreativeModeTab.builder()
+                    .title(Component.translatable("itemGroup.unknown_echoes.equipment"))
+                    .withTabsAfter(UNKNOWN_ECHOES_TAB.getKey())
+                    .withTabsBefore(CreativeModeTabs.COMBAT)
+                    .icon(() -> ModItems.ECHO_OATHBLADE.get().getDefaultInstance())
+                    .displayItems((parameters, output) -> {
+                        output.accept(ModItems.ECHO_BROADSWORD.get());
+                        output.accept(ModItems.ECHO_BATTLEAXE.get());
+                        output.accept(ModItems.ECHO_LONGBOW.get());
+                        output.accept(ModItems.WIND_SPEAR.get());
+                        output.accept(ModItems.TIDE_CROSSBOW.get());
+                        output.accept(ModItems.TRUE_SIGHT_BLADE.get());
+                        output.accept(ModItems.SILENCE_SCYTHE.get());
+                        output.accept(ModItems.CRYSTAL_SONG_STAFF.get());
+                        output.accept(ModItems.BROKEN_BELL_HAMMER.get());
+                        output.accept(ModItems.DREAM_BLOOM_BOW.get());
+                        output.accept(ModItems.ECHO_OATHBLADE.get());
+                        output.accept(ModItems.GRAVITY_HAMMER.get());
+                        output.accept(ModItems.RIFT_DAGGER.get());
+                        output.accept(ModItems.ECHO_PICKAXE.get());
+                        output.accept(ModItems.ECHO_SHOVEL.get());
+                        output.accept(ModItems.ECHO_HATCHET.get());
+                        output.accept(ModItems.ECHO_HOE.get());
+                        output.accept(ModItems.ECHO_SHEARS.get());
+                        output.accept(ModItems.ECHO_FISHING_ROD.get());
+                        output.accept(ModItems.ECHO_BRUSH.get());
+                        output.accept(ModItems.ECHO_IGNITER.get());
+                        output.accept(ModItems.STORM_COMPASS.get());
+                        output.accept(ModItems.TIDE_LANTERN.get());
+                        output.accept(ModItems.ECHO_LENS.get());
+                        output.accept(ModItems.TIME_HOURGLASS.get());
+                        output.accept(ModItems.DIMENSION_ANCHOR.get());
+                        output.accept(ModItems.RIFT_ANCHOR.get());
                         output.accept(ModItems.EXPLORER_HELMET.get());
                         output.accept(ModItems.EXPLORER_CHESTPLATE.get());
                         output.accept(ModItems.EXPLORER_LEGGINGS.get());
@@ -236,30 +338,35 @@ public class ModCreativeTabs {
                         output.accept(ModItems.ECHO_OATH_CHESTPLATE.get());
                         output.accept(ModItems.ECHO_OATH_LEGGINGS.get());
                         output.accept(ModItems.ECHO_OATH_BOOTS.get());
-                        output.accept(ModItems.WIND_ERODED_RUBBLE.get());
-                        output.accept(ModItems.MIRROR_REED.get());
-                        output.accept(ModItems.CRYSTAL_SONG_CLUSTER.get());
-                        output.accept(ModItems.RESONANT_MUSHROOM.get());
-                        output.accept(ModItems.DREAM_FLOWER.get());
-                        output.accept(ModItems.ECHO_AMBER_ORE.get());
-                        output.accept(ModItems.DREAM_MIST_VINE.get());
-                        output.accept(ModItems.BROKEN_BELL_ORE.get());
-                        output.accept(ModItems.TIDE_SALT_ORE.get());
-                        output.accept(ModItems.BROKEN_BELL_THORN.get());
-                        output.accept(ModItems.SKY_QUARTZ_ORE.get());
-                        output.accept(ModItems.ECHO_CLIFF_STONE.get());
-                        output.accept(ModItems.ECHO_ARCHIVE_TERMINAL.get());
-                        output.accept(ModItems.TIDE_GRASS.get());
-                        output.accept(ModItems.PEARL_ANEMONE.get());
-                        output.accept(ModItems.STAR_MIST_BLOOM.get());
-                        output.accept(ModItems.MIRROR_LOTUS.get());
-                        output.accept(ModItems.ASH_CHIME_GRASS.get());
-                        output.accept(ModItems.ECHO_MOSSY_STONE.get());
-                        output.accept(ModItems.WIND_CHISELED_STONE.get());
-                        output.accept(ModItems.SKY_LAMP_GLASS.get());
-                        output.accept(ModItems.TIDE_SMOOTH_STONE.get());
-                        output.accept(ModItems.MIRROR_SAND.get());
-                        output.accept(ModItems.PEARL_CORAL_BLOCK.get());
+                        output.accept(ModItems.ABYSS_WALKER_HELMET.get());
+                        output.accept(ModItems.ABYSS_WALKER_CHESTPLATE.get());
+                        output.accept(ModItems.ABYSS_WALKER_LEGGINGS.get());
+                        output.accept(ModItems.ABYSS_WALKER_BOOTS.get());
+                    })
+                    .build());
+
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> SPAWN_EGGS_TAB =
+            CREATIVE_MODE_TABS.register("unknown_echoes_spawn_eggs", () -> CreativeModeTab.builder()
+                    .title(Component.translatable("itemGroup.unknown_echoes.spawn_eggs"))
+                    .withTabsAfter(EQUIPMENT_TAB.getKey())
+                    .withTabsBefore(CreativeModeTabs.COMBAT)
+                    .icon(() -> ModItems.ECHO_WANDERER_SPAWN_EGG.get().getDefaultInstance())
+                    .displayItems((parameters, output) -> {
+                        output.accept(ModItems.ECHO_WANDERER_SPAWN_EGG.get());
+                        output.accept(ModItems.FORGOTTEN_COLOSSUS_SPAWN_EGG.get());
+                        output.accept(ModItems.ABYSS_WATCHER_SPAWN_EGG.get());
+                        output.accept(ModItems.VOID_PROPHET_SPAWN_EGG.get());
+                        output.accept(ModItems.RIFT_WARDEN_SPAWN_EGG.get());
+                        output.accept(ModItems.WORLD_ECHO_SPAWN_EGG.get());
+                        output.accept(ModItems.MIRROR_GUARDIAN_SPAWN_EGG.get());
+                        output.accept(ModItems.SILENT_WALKER_SPAWN_EGG.get());
+                        output.accept(ModItems.CRYSTAL_FEATHER_BIRD_SPAWN_EGG.get());
+                        output.accept(ModItems.STORM_WEAVER_SPAWN_EGG.get());
+                        output.accept(ModItems.SILENT_PRIEST_SPAWN_EGG.get());
+                        output.accept(ModItems.TIDE_LANTERN_KEEPER_SPAWN_EGG.get());
+                        output.accept(ModItems.TIDE_WATER_SHADE_SPAWN_EGG.get());
+                        output.accept(ModItems.MIRROR_DUST_BUTLER_SPAWN_EGG.get());
+                        output.accept(ModItems.LOST_TRAVELER_SPAWN_EGG.get());
                         output.accept(ModItems.ECHO_DEER_SPAWN_EGG.get());
                         output.accept(ModItems.GLOW_RABBIT_SPAWN_EGG.get());
                         output.accept(ModItems.MIRROR_TAIL_FISH_SPAWN_EGG.get());
@@ -279,6 +386,10 @@ public class ModCreativeTabs {
                         output.accept(ModItems.BROKEN_BELL_KEEPER_SPAWN_EGG.get());
                         output.accept(ModItems.DREAM_BLOOM_KEEPER_SPAWN_EGG.get());
                         output.accept(ModItems.LOST_RECORDER_CHIEF_SPAWN_EGG.get());
+                        output.accept(ModItems.FOLDPAGE_BUG_SPAWN_EGG.get());
+                        output.accept(ModItems.ANCHOR_SHELL_BEAST_SPAWN_EGG.get());
+                        output.accept(ModItems.ABYSS_LURKER_SPAWN_EGG.get());
+                        output.accept(ModItems.VOID_WANDERER_SPAWN_EGG.get());
                     })
                     .build());
 }

@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:hushed_refuge",
+  "biomes": "#unknown_echoes:has_hushed_refuge",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

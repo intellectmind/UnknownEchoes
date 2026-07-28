@@ -1,8 +1,10 @@
 package cn.kurt6.unknown_echoes.advancement;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.research.EchoResearchManager;
+import cn.kurt6.unknown_echoes.world.DeepEchoesBiomeCatalog;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,6 +28,9 @@ public class ModAdvancements {
     public static final String GRAND_ARCHIVE = "grand_archive";
     public static final String ECHO_REALM_COMPLETE = "echo_realm_complete";
     public static final String ECHO_REALM_GRADUATION = "echo_realm_graduation";
+    public static final String ENTER_DEEP_ECHOES = "enter_deep_echoes";
+    public static final String ALL_DEEP_BIOMES = "all_deep_biomes";
+    public static final String DEEP_MICRO_SITES = "deep_micro_sites";
 
     private static final Set<String> WORLD_WONDERS = Set.of(
             "unknown_echoes:echo_world_tree",
@@ -35,6 +40,10 @@ public class ModAdvancements {
             "unknown_echoes:sky_rift",
             "unknown_echoes:silent_great_boat",
             "unknown_echoes:broken_bell_tower");
+    private static final Set<String> DEEP_MICRO_SITE_IDS = Set.of(
+            "unknown_echoes:folded_waystation",
+            "unknown_echoes:gravity_shard_spire",
+            "unknown_echoes:hushed_refuge");
 
     /** 按路径授予成就(advancement JSON 的 criteria 全部补完)。 */
     public static void award(ServerPlayer player, String path) {
@@ -73,6 +82,21 @@ public class ModAdvancements {
         long foundWonders = WORLD_WONDERS.stream().filter(discovered::contains).count();
         if (foundWonders >= 5) {
             award(player, "all_wonders");
+        }
+    }
+
+    /** 根据服务端日志补发深层探索成就，不改变任何玩法权限。 */
+    public static void checkDeepExplorationAdvancements(ServerPlayer player,
+                                                        Set<String> discoveredStructures,
+                                                        Set<String> visitedBiomes) {
+        if (!EchoPermission.canEnterDeepEchoes(player)) {
+            return;
+        }
+        if (DeepEchoesBiomeCatalog.hasVisitedAll(visitedBiomes)) {
+            award(player, ALL_DEEP_BIOMES);
+            if (discoveredStructures.containsAll(DEEP_MICRO_SITE_IDS)) {
+                award(player, DEEP_MICRO_SITES);
+            }
         }
     }
 

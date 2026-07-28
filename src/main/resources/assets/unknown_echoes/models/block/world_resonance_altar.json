@@ -1,0 +1,72 @@
+{
+  "textures": {
+    "alloy": "unknown_echoes:block/deep_alloy",
+    "rune": "unknown_echoes:block/echo_rune_bricks",
+    "flux": "unknown_echoes:block/resonance_flux",
+    "particle": "unknown_echoes:block/deep_alloy"
+  },
+  "elements": [
+    { "from": [0, 0, 0], "to": [16, 3, 16], "faces": {
+      "north": { "texture": "#alloy" }, "east": { "texture": "#alloy" },
+      "south": { "texture": "#alloy" }, "west": { "texture": "#alloy" },
+      "up": { "texture": "#rune" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [2, 3, 2], "to": [14, 5, 14], "faces": {
+      "north": { "texture": "#rune" }, "east": { "texture": "#rune" },
+      "south": { "texture": "#rune" }, "west": { "texture": "#rune" },
+      "up": { "texture": "#alloy" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [5, 5, 5], "to": [11, 8, 11], "faces": {
+      "north": { "texture": "#alloy" }, "east": { "texture": "#alloy" },
+      "south": { "texture": "#alloy" }, "west": { "texture": "#alloy" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [6, 8, 6], "to": [10, 14, 10], "rotation": {
+      "angle": 45, "axis": "y", "origin": [8, 10, 8]
+    }, "faces": {
+      "north": { "texture": "#flux" }, "east": { "texture": "#flux" },
+      "south": { "texture": "#flux" }, "west": { "texture": "#flux" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#flux" }
+    }},
+    { "from": [7, 7, 1], "to": [9, 13, 3], "rotation": {
+      "angle": -22.5, "axis": "x", "origin": [8, 8, 8]
+    }, "faces": {
+      "north": { "texture": "#rune" }, "east": { "texture": "#alloy" },
+      "south": { "texture": "#rune" }, "west": { "texture": "#alloy" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [12, 7, 4], "to": [14, 13, 6], "rotation": {
+      "angle": 22.5, "axis": "z", "origin": [8, 8, 8]
+    }, "faces": {
+      "north": { "texture": "#alloy" }, "east": { "texture": "#rune" },
+      "south": { "texture": "#alloy" }, "west": { "texture": "#rune" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [10, 7, 11], "to": [12, 13, 13], "rotation": {
+      "angle": 22.5, "axis": "x", "origin": [8, 8, 8]
+    }, "faces": {
+      "north": { "texture": "#rune" }, "east": { "texture": "#alloy" },
+      "south": { "texture": "#rune" }, "west": { "texture": "#alloy" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [2, 7, 9], "to": [4, 13, 11], "rotation": {
+      "angle": -22.5, "axis": "z", "origin": [8, 8, 8]
+    }, "faces": {
+      "north": { "texture": "#alloy" }, "east": { "texture": "#rune" },
+      "south": { "texture": "#alloy" }, "west": { "texture": "#rune" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [2, 7, 4], "to": [4, 13, 6], "rotation": {
+      "angle": -22.5, "axis": "z", "origin": [8, 8, 8]
+    }, "faces": {
+      "north": { "texture": "#alloy" }, "east": { "texture": "#rune" },
+      "south": { "texture": "#alloy" }, "west": { "texture": "#rune" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#alloy" }
+    }}
+  ],
+  "display": {
+    "gui": { "rotation": [30, 225, 0], "translation": [0, -1, 0], "scale": [0.7, 0.7, 0.7] },
+    "ground": { "translation": [0, 3, 0], "scale": [0.35, 0.35, 0.35] },
+    "fixed": { "scale": [0.65, 0.65, 0.65] }
+  }
+}

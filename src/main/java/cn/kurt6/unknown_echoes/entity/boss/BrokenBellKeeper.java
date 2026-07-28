@@ -137,6 +137,20 @@ public class BrokenBellKeeper extends MiniBossEntity {
     }
 
     @Override
+    protected void tickMechanicGuidance(ServerLevel level) {
+        if (this.windupTicks <= 0) {
+            return;
+        }
+        Vec3 core = this.position().add(0, 1.3, 0);
+        BossFx.guidanceMarker(level, core, ParticleTypes.END_ROD);
+        for (int i = 0; i < 4; i++) {
+            double angle = Math.PI * 0.5 * i;
+            Vec3 outer = core.add(Math.cos(angle) * 2.8, 0, Math.sin(angle) * 2.8);
+            BossFx.guidanceLink(level, outer, core, ParticleTypes.CRIT);
+        }
+    }
+
+    @Override
     protected void grantSettlement(ServerPlayer player, boolean firstKill) {
         MiniBossRewardTable.grantBrokenBellKeeper(this, player, firstKill);
     }
@@ -216,7 +230,7 @@ public class BrokenBellKeeper extends MiniBossEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.6F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(6.0, 2.0, 6.0),
-                e -> e != this && !(e instanceof Enemy))) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1), this);
         }
@@ -299,7 +313,7 @@ public class BrokenBellKeeper extends MiniBossEntity {
             for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                     new AABB(bomb.pos.x - 2.5, bomb.pos.y - 1.5, bomb.pos.z - 2.5,
                             bomb.pos.x + 2.5, bomb.pos.y + 2.0, bomb.pos.z + 2.5),
-                    e -> e != this && !(e instanceof Enemy))) {
+                    e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
                 victim.hurt(this.damageSources().mobAttack(this), damage);
                 Vec3 away = victim.position().subtract(bomb.pos).multiply(1, 0, 1);
                 if (away.lengthSqr() > 1.0E-4) {
@@ -325,7 +339,7 @@ public class BrokenBellKeeper extends MiniBossEntity {
                 float splash = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.4F;
                 for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                         primary.getBoundingBox().inflate(2.0),
-                        e -> e != this && e != primary && !(e instanceof Enemy))) {
+                        e -> e != this && e != primary && !e.isSpectator() && !(e instanceof Enemy))) {
                     victim.hurt(this.damageSources().mobAttack(this), splash);
                 }
                 serverLevel.sendParticles(ParticleTypes.CRIT,
@@ -373,8 +387,8 @@ public class BrokenBellKeeper extends MiniBossEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.exposedTicks = tag.getInt("ExposedTicks");
-        this.windupTicks = tag.getInt("WindupTicks");
+        this.exposedTicks = BossNbtData.clampTimer(tag.getInt("ExposedTicks"), EXPOSED_WINDOW);
+        this.windupTicks = BossNbtData.clampTimer(tag.getInt("WindupTicks"), WINDUP_TICKS);
     }
 
     @Override

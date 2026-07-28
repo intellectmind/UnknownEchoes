@@ -47,7 +47,7 @@ public class GenericArtifactItem extends Item {
             actionbar(serverPlayer, "message.unknown_echoes.artifact.generic_cooldown");
             return InteractionResultHolder.consume(stack);
         }
-        if (!ArtifactEffectManager.use(serverPlayer, type)) {
+        if (!ArtifactEffectManager.use(serverPlayer, type, hand)) {
             return InteractionResultHolder.consume(stack);
         }
         return InteractionResultHolder.consume(stack);
@@ -61,8 +61,6 @@ public class GenericArtifactItem extends Item {
             tooltip.add(Component.translatable("tooltip.unknown_echoes.artifact.serial", serial)
                     .withStyle(ChatFormatting.DARK_GRAY));
         }
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.artifact." + type.getId() + ".hint")
-                .withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.ITALIC));
     }
 
     private static void actionbar(ServerPlayer player, String key) {

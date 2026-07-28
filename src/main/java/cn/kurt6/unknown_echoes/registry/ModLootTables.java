@@ -78,6 +78,20 @@ public class ModLootTables {
     public static final ResourceKey<LootTable> SPATIAL_RIFT_CHEST =
             ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/spatial_rift"));
 
+    public static final ResourceKey<LootTable> FOLDED_ARCHIVE_CHEST = chest("deep/folded_archive");
+    public static final ResourceKey<LootTable> INVERTED_CHASM_CHEST = chest("deep/inverted_chasm_bridge");
+    public static final ResourceKey<LootTable> SILENT_ABYSS_CHEST = chest("deep/silent_abyss_anchor");
+    public static final ResourceKey<LootTable> CALIBRATION_HALL_CHEST = chest("deep/calibration_hall");
+    public static final ResourceKey<LootTable> VOID_VEIN_CHEST = chest("deep/void_vein_chamber");
+    public static final ResourceKey<LootTable> WORLD_RESONANCE_HALL_CHEST =
+            chest("deep/world_resonance_hall");
+    public static final ResourceKey<LootTable> FOLDED_WAYSTATION_CHEST =
+            chest("deep/folded_waystation");
+    public static final ResourceKey<LootTable> GRAVITY_SHARD_SPIRE_CHEST =
+            chest("deep/gravity_shard_spire");
+    public static final ResourceKey<LootTable> HUSHED_REFUGE_CHEST =
+            chest("deep/hushed_refuge");
+
     private static ResourceKey<LootTable> chest(String path) {
         return ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/" + path));
     }

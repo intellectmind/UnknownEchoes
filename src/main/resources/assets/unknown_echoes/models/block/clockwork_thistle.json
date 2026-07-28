@@ -1,0 +1,7 @@
+{
+  "parent": "unknown_echoes:block/emissive_cross",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "cross": "unknown_echoes:block/clockwork_thistle"
+  }
+}

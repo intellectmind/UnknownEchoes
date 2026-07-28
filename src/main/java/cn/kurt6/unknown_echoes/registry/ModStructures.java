@@ -2,6 +2,8 @@ package cn.kurt6.unknown_echoes.registry;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.world.structure.BrokenArchiveStructure;
+import cn.kurt6.unknown_echoes.world.structure.AbyssBeaconStructure;
+import cn.kurt6.unknown_echoes.world.structure.DeepRegionStructure;
 import cn.kurt6.unknown_echoes.world.structure.EchoTempleStructure;
 import cn.kurt6.unknown_echoes.world.structure.LateRegionSiteStructure;
 import cn.kurt6.unknown_echoes.world.structure.MirrorDustCloisterStructure;
@@ -42,6 +44,44 @@ public class ModStructures {
 
     public static final DeferredHolder<StructureType<?>, StructureType<ResonanceBeaconStructure>> RESONANCE_BEACON_STRUCTURE =
             STRUCTURE_TYPES.register("resonance_beacon_structure", () -> () -> ResonanceBeaconStructure.CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<AbyssBeaconStructure>> ABYSS_BEACON_STRUCTURE =
+            STRUCTURE_TYPES.register("abyss_beacon_structure", () -> () -> AbyssBeaconStructure.CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> FOLDED_ARCHIVE =
+            STRUCTURE_TYPES.register("folded_archive", () -> () -> DeepRegionStructure.FOLDED_ARCHIVE_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> INVERTED_CHASM_BRIDGE =
+            STRUCTURE_TYPES.register("inverted_chasm_bridge",
+                    () -> () -> DeepRegionStructure.INVERTED_CHASM_BRIDGE_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> SILENT_ABYSS_ANCHOR =
+            STRUCTURE_TYPES.register("silent_abyss_anchor",
+                    () -> () -> DeepRegionStructure.SILENT_ABYSS_ANCHOR_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> CALIBRATION_HALL =
+            STRUCTURE_TYPES.register("calibration_hall",
+                    () -> () -> DeepRegionStructure.CALIBRATION_HALL_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> VOID_VEIN_CHAMBER =
+            STRUCTURE_TYPES.register("void_vein_chamber",
+                    () -> () -> DeepRegionStructure.VOID_VEIN_CHAMBER_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> WORLD_RESONANCE_HALL =
+            STRUCTURE_TYPES.register("world_resonance_hall",
+                    () -> () -> DeepRegionStructure.WORLD_RESONANCE_HALL_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> FOLDED_WAYSTATION =
+            STRUCTURE_TYPES.register("folded_waystation",
+                    () -> () -> DeepRegionStructure.FOLDED_WAYSTATION_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> GRAVITY_SHARD_SPIRE =
+            STRUCTURE_TYPES.register("gravity_shard_spire",
+                    () -> () -> DeepRegionStructure.GRAVITY_SHARD_SPIRE_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> HUSHED_REFUGE =
+            STRUCTURE_TYPES.register("hushed_refuge",
+                    () -> () -> DeepRegionStructure.HUSHED_REFUGE_CODEC);
 
     public static final DeferredHolder<StructureType<?>, StructureType<RunePuzzleRoomStructure>> RUNE_PUZZLE_ROOM =
             STRUCTURE_TYPES.register("rune_puzzle_room", () -> () -> RunePuzzleRoomStructure.CODEC);
@@ -183,6 +223,14 @@ public class ModStructures {
     public static final DeferredHolder<StructurePieceType, StructurePieceType> RESONANCE_BEACON_PIECE =
             STRUCTURE_PIECE_TYPES.register("resonance_beacon_piece",
                     () -> (StructurePieceType.ContextlessType) ResonanceBeaconStructure.Piece::new);
+
+    public static final DeferredHolder<StructurePieceType, StructurePieceType> ABYSS_BEACON_PIECE =
+            STRUCTURE_PIECE_TYPES.register("abyss_beacon_piece",
+                    () -> (StructurePieceType.ContextlessType) AbyssBeaconStructure.Piece::new);
+
+    public static final DeferredHolder<StructurePieceType, StructurePieceType> DEEP_REGION_SITE_PIECE =
+            STRUCTURE_PIECE_TYPES.register("deep_region_site_piece",
+                    () -> (StructurePieceType.ContextlessType) DeepRegionStructure.Piece::new);
 
     public static final DeferredHolder<StructurePieceType, StructurePieceType> RUNE_PUZZLE_ROOM_PIECE =
             STRUCTURE_PIECE_TYPES.register("rune_puzzle_room_piece",

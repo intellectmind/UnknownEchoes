@@ -19,7 +19,9 @@ public class EchoArchiveTerminalBlockEntity extends BlockEntity {
     }
 
     public void recordAccess() {
-        this.accessCount++;
+        if (this.accessCount < Integer.MAX_VALUE) {
+            this.accessCount++;
+        }
         this.lastAccessGameTime = this.level == null ? 0L : this.level.getGameTime();
         this.setChanged();
     }
@@ -42,7 +44,7 @@ public class EchoArchiveTerminalBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        this.accessCount = tag.getInt("AccessCount");
-        this.lastAccessGameTime = tag.getLong("LastAccessGameTime");
+        this.accessCount = Math.max(0, tag.getInt("AccessCount"));
+        this.lastAccessGameTime = Math.max(0L, tag.getLong("LastAccessGameTime"));
     }
 }

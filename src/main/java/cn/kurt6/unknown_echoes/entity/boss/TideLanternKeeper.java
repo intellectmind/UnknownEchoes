@@ -4,6 +4,7 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.block.tide.TideBuoyBlock;
+import cn.kurt6.unknown_echoes.block.tide.TideRuneSeatBlock;
 import cn.kurt6.unknown_echoes.entity.mob.TideWaterShade;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModItems;
@@ -45,6 +46,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
@@ -54,7 +56,10 @@ import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 潮汐执灯者:镜湖湖底灯塔废墟区域守护者 / Mini Boss(V0.6C,设计文档 10.4.2)。
@@ -92,6 +97,10 @@ public class TideLanternKeeper extends MiniBossEntity {
             SynchedEntityData.defineId(TideLanternKeeper.class, EntityDataSerializers.BOOLEAN);
 
     private static final int ARENA_RADIUS = 10;
+    private static final int MECHANIC_SCAN_RADIUS = 16;
+    private static final int MECHANIC_SCAN_HEIGHT = 8;
+    private static final int MECHANIC_ANCHOR_CAP = 8;
+    private static final int GUIDANCE_ANCHOR_BATCH = 3;
 
     /** 灯熄时长(浮标破灯):7 秒。 */
     private static final int LANTERN_OUT_TICKS = 140;
@@ -124,9 +133,13 @@ public class TideLanternKeeper extends MiniBossEntity {
     private int dashTelegraphTicks = 0;
     private int dashTicks = 0;
     private Vec3 dashDir = null;
+    private final Set<java.util.UUID> dashHitVictims = new HashSet<>();
 
     private int tailCooldown = 0;
     private int surgeCooldown = 0;
+    private final List<BlockPos> guidanceBuoys = new ArrayList<>();
+    private final List<BlockPos> guidanceRuneSeats = new ArrayList<>();
+    private boolean guidanceAnchorsScanned = false;
 
     public TideLanternKeeper(EntityType<? extends Monster> type, Level level) {
         super(type, level, BossEvent.BossBarColor.BLUE);
@@ -219,6 +232,45 @@ public class TideLanternKeeper extends MiniBossEntity {
     }
 
     @Override
+    protected void tickMechanicGuidance(ServerLevel level) {
+        if (!this.guidanceAnchorsScanned) {
+            this.scanGuidanceAnchors(level);
+        }
+        Vec3 core = this.position().add(0, this.getBbHeight() * 0.55, 0);
+        int buoyStart = guidanceBatchStart(this.guidanceBuoys.size());
+        int guidedBuoys = 0;
+        for (int i = 0; i < this.guidanceBuoys.size() && guidedBuoys < GUIDANCE_ANCHOR_BATCH; i++) {
+            BlockPos pos = this.guidanceBuoys.get((buoyStart + i) % this.guidanceBuoys.size());
+            BlockState state = level.getBlockState(pos);
+            if (state.getBlock() instanceof TideBuoyBlock && state.getValue(TideBuoyBlock.LIT)) {
+                Vec3 buoy = Vec3.atCenterOf(pos).add(0, 0.45, 0);
+                BossFx.guidanceMarker(level, buoy, ParticleTypes.GLOW);
+                BossFx.guidanceLink(level, core, buoy, ParticleTypes.BUBBLE_COLUMN_UP);
+                guidedBuoys++;
+            }
+        }
+        int runeStart = guidanceBatchStart(this.guidanceRuneSeats.size());
+        int guidedRunes = 0;
+        for (int i = 0; i < this.guidanceRuneSeats.size() && guidedRunes < GUIDANCE_ANCHOR_BATCH; i++) {
+            BlockPos pos = this.guidanceRuneSeats.get((runeStart + i) % this.guidanceRuneSeats.size());
+            BlockState state = level.getBlockState(pos);
+            if (state.getBlock() instanceof TideRuneSeatBlock && state.getValue(TideRuneSeatBlock.LIT)) {
+                Vec3 rune = Vec3.atCenterOf(pos).add(0, 0.35, 0);
+                BossFx.guidanceMarker(level, rune, ParticleTypes.END_ROD);
+                BossFx.guidanceLink(level, rune, core, ParticleTypes.GLOW);
+                guidedRunes++;
+            }
+        }
+    }
+
+    private int guidanceBatchStart(int size) {
+        if (size <= 0) {
+            return 0;
+        }
+        return Math.floorMod((this.tickCount / 5) * GUIDANCE_ANCHOR_BATCH, size);
+    }
+
+    @Override
     protected void grantSettlement(ServerPlayer player, boolean firstKill) {
         MiniBossRewardTable.grantTideLanternKeeper(this, player, firstKill);
     }
@@ -281,6 +333,27 @@ public class TideLanternKeeper extends MiniBossEntity {
         this.dashTelegraphTicks = 0;
         this.dashTicks = 0;
         this.dashDir = null;
+        this.dashHitVictims.clear();
+    }
+
+    private void scanGuidanceAnchors(ServerLevel level) {
+        this.guidanceAnchorsScanned = true;
+        BlockPos anchor = this.arenaAnchor();
+        for (BlockPos pos : BlockPos.betweenClosed(
+                anchor.offset(-MECHANIC_SCAN_RADIUS, -MECHANIC_SCAN_HEIGHT, -MECHANIC_SCAN_RADIUS),
+                anchor.offset(MECHANIC_SCAN_RADIUS, MECHANIC_SCAN_HEIGHT, MECHANIC_SCAN_RADIUS))) {
+            BlockState state = level.getBlockState(pos);
+            if (state.getBlock() instanceof TideBuoyBlock && this.guidanceBuoys.size() < MECHANIC_ANCHOR_CAP) {
+                this.guidanceBuoys.add(pos.immutable());
+            } else if (state.getBlock() instanceof TideRuneSeatBlock
+                    && this.guidanceRuneSeats.size() < MECHANIC_ANCHOR_CAP) {
+                this.guidanceRuneSeats.add(pos.immutable());
+            }
+            if (this.guidanceBuoys.size() >= MECHANIC_ANCHOR_CAP
+                    && this.guidanceRuneSeats.size() >= MECHANIC_ANCHOR_CAP) {
+                break;
+            }
+        }
     }
 
     // ---- 主循环 ----
@@ -335,8 +408,9 @@ public class TideLanternKeeper extends MiniBossEntity {
         this.surgeCooldown = 160;
         // 以本体为中心的旋向脉冲:把水中玩家往切线方向推一把
         boolean clockwise = (this.tickCount / 160) % 2 == 0;
-        for (Player player : serverLevel.getEntitiesOfClass(Player.class,
-                this.getBoundingBox().inflate(ARENA_RADIUS + 4, 6, ARENA_RADIUS + 4))) {
+        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(ARENA_RADIUS + 4, 6, ARENA_RADIUS + 4),
+                p -> !p.isSpectator())) {
             if (!player.isInWater()) {
                 continue;
             }
@@ -349,7 +423,7 @@ public class TideLanternKeeper extends MiniBossEntity {
             player.setDeltaMovement(player.getDeltaMovement().add(
                     tangent.x * 0.7, 0.1, tangent.z * 0.7));
             player.hurtMarked = true;
-            ((ServerPlayer) player).displayClientMessage(
+            player.displayClientMessage(
                     Component.translatable("message.unknown_echoes.tide_lantern_keeper.surge"), true);
         }
         for (int i = 0; i < 24; i++) {
@@ -409,6 +483,7 @@ public class TideLanternKeeper extends MiniBossEntity {
             this.dashDir = lockPos.subtract(this.position()).normalize();
             this.dashTelegraphTicks = DASH_TELEGRAPH_TICKS;
             this.dashCooldown = 200;
+            this.dashHitVictims.clear();
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "attack");
         }
@@ -439,24 +514,27 @@ public class TideLanternKeeper extends MiniBossEntity {
         }
         Vec3 start = this.getEyePosition();
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.1F;
+        double beamReach = BEAM_RANGE;
         for (double d = 0.5; d <= BEAM_RANGE; d += 0.5) {
             Vec3 point = start.add(this.beamDir.scale(d));
-            serverLevel.sendParticles(ParticleTypes.GLOW,
-                    point.x, point.y, point.z, 2, 0.1, 0.1, 0.1, 0.0);
-            if (!serverLevel.getBlockState(BlockPos.containing(point)).isAir()
-                    && serverLevel.getBlockState(BlockPos.containing(point)).isSolidRender(
-                    serverLevel, BlockPos.containing(point))) {
+            BlockPos pointPos = BlockPos.containing(point);
+            BlockState pointState = serverLevel.getBlockState(pointPos);
+            if (!pointState.isAir() && pointState.isSolidRender(serverLevel, pointPos)) {
+                beamReach = Math.max(0.0D, d - 0.5D);
                 break;
             }
+            serverLevel.sendParticles(ParticleTypes.GLOW,
+                    point.x, point.y, point.z, 2, 0.1, 0.1, 0.1, 0.0);
         }
-        BossFx.sparkSpray(serverLevel, start, this.beamDir, BEAM_RANGE, ParticleTypes.GLOW);
+        BossFx.sparkSpray(serverLevel, start, this.beamDir, beamReach, ParticleTypes.GLOW);
+        Vec3 end = start.add(this.beamDir.scale(beamReach));
         List<LivingEntity> victims = serverLevel.getEntitiesOfClass(LivingEntity.class,
-                this.getBoundingBox().inflate(BEAM_RANGE),
-                e -> e != this && !(e instanceof Enemy) && e.isAlive());
+                new AABB(start, end).inflate(1.3D),
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy) && e.isAlive());
         for (LivingEntity victim : victims) {
             Vec3 toVictim = victim.getEyePosition().subtract(start);
             double along = toVictim.dot(this.beamDir);
-            if (along < 0 || along > BEAM_RANGE) {
+            if (along < 0 || along > beamReach) {
                 continue;
             }
             double offLine = toVictim.subtract(this.beamDir.scale(along)).length();
@@ -496,6 +574,7 @@ public class TideLanternKeeper extends MiniBossEntity {
     private void tickDash(ServerLevel serverLevel) {
         if (this.dashDir == null) {
             this.dashTicks = 0;
+            this.dashHitVictims.clear();
             return;
         }
         this.dashTicks--;
@@ -522,9 +601,11 @@ public class TideLanternKeeper extends MiniBossEntity {
         // 玩家判定:冲刺撞人 = 伤害 + 击退
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(0.6),
-                e -> e != this && !(e instanceof Enemy) && e.isAlive())) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy) && e.isAlive()
+                        && !this.dashHitVictims.contains(e.getUUID()))) {
             victim.hurt(this.damageSources().mobAttack(this),
                     (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE));
+            this.dashHitVictims.add(victim.getUUID());
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
             if (away.lengthSqr() > 1.0E-4) {
                 Vec3 dir = away.normalize();
@@ -538,6 +619,7 @@ public class TideLanternKeeper extends MiniBossEntity {
         }
         if (this.dashTicks <= 0) {
             this.dashDir = null;
+            this.dashHitVictims.clear();
         }
     }
 
@@ -548,7 +630,7 @@ public class TideLanternKeeper extends MiniBossEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.8F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(TAIL_RANGE, 1.5, TAIL_RANGE),
-                e -> e != this && !(e instanceof Enemy) && e.isAlive())) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy) && e.isAlive())) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
             if (away.lengthSqr() > 1.0E-4) {
@@ -583,7 +665,9 @@ public class TideLanternKeeper extends MiniBossEntity {
         shade.setTarget(target);
         shade.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()),
                 MobSpawnType.MOB_SUMMONED, null);
-        serverLevel.addFreshEntity(shade);
+        if (!serverLevel.addFreshEntity(shade)) {
+            return;
+        }
         serverLevel.sendParticles(ParticleTypes.SQUID_INK,
                 spawn.x, spawn.y + 0.8, spawn.z, 10, 0.3, 0.4, 0.3, 0.02);
     }
@@ -665,9 +749,10 @@ public class TideLanternKeeper extends MiniBossEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.lanternOutTicks = tag.getInt("LanternOutTicks");
-        this.blindTicks = tag.getInt("BlindTicks");
-        this.staggerTicks = tag.getInt("StaggerTicks");
+        this.lanternOutTicks = BossNbtData.clampTimer(tag.getInt("LanternOutTicks"), LANTERN_OUT_TICKS);
+        this.blindTicks = BossNbtData.clampTimer(tag.getInt("BlindTicks"), BLIND_TICKS);
+        this.staggerTicks = BossNbtData.clampTimer(
+                tag.getInt("StaggerTicks"), STAGGER_TICKS + STAGGER_BONUS_TICKS);
         this.setLanternLit(this.lanternOutTicks <= 0);
         this.entityData.set(DATA_STAGGERED, this.staggerTicks > 0);
     }

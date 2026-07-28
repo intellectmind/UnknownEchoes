@@ -9,7 +9,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -46,6 +45,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -69,7 +69,7 @@ import java.util.UUID;
  * - 黑潮守卫:侵蚀圣殿水下符文,并分裂出"黑潮拟影"分别守卫——符文 5 格内有存活拟影时无法净化,
  *   玩家需要击杀或引开守卫(拟影脱岗超过 8 格会回防)。拟影不伪装本体:周身缠绕墨丝、躯体暗沉,一眼可辨。
  *   未破防时伤害 = min(伤害 x 5%, 上限 4.0)。
- * - 潮汐破防:玩家净化全部被侵蚀的水下符文 → 本体短暂暴露,正常受伤;超时重新侵蚀并恢复帷幕。
+ * - 潮汐破防:玩家净化全部被指定的水下符文 → 本体短暂暴露,正常受伤;超时重新侵蚀并恢复帷幕。
  *   (场地没有符文时退化为"清空拟影破防",保证刷怪蛋/空旷水域也能完整战斗。)
  * 攻击:潮汐冲刺(水纹预警线→突进)/ 齐射水刃(本体高伤、拟影低伤,全部直线光束预警)/
  *       深水牵引(漩涡拖拽)/ 深渊脉冲(近身爆发驱离)。全部动画先行、伤害延迟到命中帧。
@@ -122,6 +122,8 @@ public class AbyssWatcher extends Monster implements GeoEntity {
     private int outOfCombatTicks = 0;
     private BlockPos homePos = null;
     private final List<UUID> cloneIds = new ArrayList<>();
+    /** 无符文场地的重扫退避:避免每 10 tick 全量扫描 6 万+方块。 */
+    private int runeRescanCooldown = 0;
     private final Set<UUID> participants = new HashSet<>();
 
     // ---- 特殊攻击:动画先行,伤害延迟到命中帧 ----
@@ -149,7 +151,14 @@ public class AbyssWatcher extends Monster implements GeoEntity {
     // ---- 破防机关:被侵蚀的水下符文(净化全部 → 破防窗口) ----
     private static final int RUNE_SCAN_RADIUS = 30;
     private static final int RUNE_SCAN_HEIGHT = 10;
+    private static final int RUNE_MECHANIC_COUNT = 6;
+    private static final int RUNE_PREFERRED_MIN_RADIUS = 10;
+    private static final int RUNE_PREFERRED_MAX_RADIUS = 22;
+    private static final int RUNE_PREFERRED_MAX_HEIGHT = 4;
+    private static final double RUNE_PREFERRED_RADIUS = 14.0D;
     private final List<BlockPos> corruptedRunes = new ArrayList<>();
+    /** 旧存档可能记录了整圈装饰符文,加载后只迁移一次。 */
+    private boolean runeSelectionNeedsRefresh = false;
     private int cloneRespawnCooldown = 0;
 
     /** 多人扩容:参与者每多一人,血量上限 +150(只升不降,NBT 持久化防重载重复回血)。 */
@@ -321,7 +330,9 @@ public class AbyssWatcher extends Monster implements GeoEntity {
             clone.setTarget(this.getTarget());
             clone.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(clone.blockPosition()),
                     MobSpawnType.MOB_SUMMONED, null);
-            serverLevel.addFreshEntity(clone);
+            if (!serverLevel.addFreshEntity(clone)) {
+                continue;
+            }
             this.cloneIds.add(clone.getUUID());
             serverLevel.sendParticles(ParticleTypes.SQUID_INK,
                     clone.getX(), clone.getY() + 0.8, clone.getZ(), 16, 0.5, 0.5, 0.5, 0.06);
@@ -468,7 +479,8 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         Vec3 start = this.position().add(0, this.getBbHeight() * 0.5, 0);
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(DASH_RANGE, 4.0, DASH_RANGE),
-                e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> e != this && !e.isSpectator()
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             Vec3 toVictim = victim.position().add(0, victim.getBbHeight() * 0.5, 0).subtract(start);
             double along = toVictim.dot(this.dashDirection);
             if (along < 0 || along > DASH_RANGE) {
@@ -533,7 +545,8 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         Vec3 dir = delta.normalize();
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(BLADE_RANGE, 6.0, BLADE_RANGE),
-                e -> !(e instanceof AbyssWatcher) && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> !e.isSpectator() && !(e instanceof AbyssWatcher)
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             Vec3 toVictim = victim.position().add(0, victim.getBbHeight() * 0.5, 0).subtract(from);
             double along = toVictim.dot(dir);
             if (along < 0 || along > length + 2.0) {
@@ -585,7 +598,8 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.6F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(VORTEX_RANGE, VORTEX_RANGE * 0.6, VORTEX_RANGE),
-                e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> e != this && !e.isSpectator()
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             Vec3 pull = this.position().add(0, this.getBbHeight() * 0.5, 0)
                     .subtract(victim.position());
             if (pull.lengthSqr() < 1.0E-4) {
@@ -621,7 +635,8 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.2F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(BURST_RANGE, 2.0, BURST_RANGE),
-                e -> e != this && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+                e -> e != this && !e.isSpectator()
+                        && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
             if (away.lengthSqr() > 1.0E-4) {
@@ -688,6 +703,9 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         if (this.veiledMessageCooldown > 0) {
             this.veiledMessageCooldown--;
         }
+        if (!this.isBroken() && this.runeSelectionNeedsRefresh) {
+            this.corruptRunes(serverLevel, false);
+        }
 
         // 状态演出:帷幕期辉光螺旋环绕;破防期裂纹火花迸发(按 5 tick 节流,不逐 tick 广播)
         if (this.isAlive() && this.tickCount % 5 == 0) {
@@ -713,36 +731,54 @@ public class AbyssWatcher extends Monster implements GeoEntity {
             }
         }
 
+        boolean hasNearbyRuneViewer = this.hasNearbyRuneViewer(serverLevel);
         if (this.isBroken()) {
             if (--this.brokenTicksRemaining <= 0 && this.isAlive()) {
                 restoreTideVeil(serverLevel);
             }
-        } else if (this.tickCount % 10 == 0 && this.getTarget() != null) {
-            if (this.cloneRespawnCooldown > 0) {
-                this.cloneRespawnCooldown -= 10;
+        } else {
+            // 创造模式测试或 AI 尚未锁定时也初始化符文,否则列表为空会让引导永久缺席。
+            if (this.tickCount % 10 == 0 && hasNearbyRuneViewer && this.corruptedRunes.isEmpty()) {
+                if (this.runeRescanCooldown > 0) {
+                    this.runeRescanCooldown -= 10;
+                } else {
+                    this.corruptRunes(serverLevel);
+                    if (this.corruptedRunes.isEmpty()) {
+                        this.runeRescanCooldown = 600;
+                    }
+                }
             }
-            // 破防机关:先确保场地符文处于侵蚀状态(拟影按"仍被侵蚀的符文"分派岗位,顺序不能反)
-            if (this.corruptedRunes.isEmpty()) {
-                this.corruptRunes(serverLevel);
+            if (this.tickCount % 10 == 0 && this.getTarget() != null) {
+                if (this.cloneRespawnCooldown > 0) {
+                    this.cloneRespawnCooldown -= 10;
+                }
                 // 场地没有符文时退化为"清空拟影破防"
                 if (this.corruptedRunes.isEmpty() && !anyCloneAlive(serverLevel)
                         && this.cloneRespawnCooldown > 0) {
                     this.triggerBroken(serverLevel);
                 }
-            }
-            // 黑潮守卫:保持拟影在岗(被清掉后隔一段时间重新分裂)
-            if (!anyCloneAlive(serverLevel) && this.cloneRespawnCooldown <= 0) {
-                this.summonClones(serverLevel);
-                this.cloneRespawnCooldown = 200;
+                // 黑潮守卫:保持拟影在岗(被清掉后隔一段时间重新分裂)
+                if (!anyCloneAlive(serverLevel) && this.cloneRespawnCooldown <= 0) {
+                    this.summonClones(serverLevel);
+                    this.cloneRespawnCooldown = 200;
+                }
             }
         }
+        if (!this.isBroken() && hasNearbyRuneViewer
+                && !this.corruptedRunes.isEmpty() && this.tickCount % 5 == 0) {
+            this.tickRuneGuidance(serverLevel);
+        }
 
+        // 主线 Boss 在场心跳(挖掘/开箱封锁的快速预判依赖它)
+        if (this.tickCount % 20 == 0) {
+            cn.kurt6.unknown_echoes.event.CommonEvents.noteMainBossPresence(serverLevel);
+        }
         // 战斗期间周期登记场地内玩家为参与者 + 多人血量扩容
         if (this.tickCount % 20 == 0 && this.getTarget() != null) {
             double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
             for (ServerPlayer player : serverLevel.players()) {
-                if (player.distanceToSqr(this) <= radius * radius) {
-                    this.participants.add(player.getUUID());
+                if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
+                    BossNbtData.addParticipant(this.participants, player.getUUID());
                 }
             }
             if (ServerConfig.BOSS_DYNAMIC_SCALING.get()) {
@@ -769,31 +805,172 @@ public class AbyssWatcher extends Monster implements GeoEntity {
 
     // ---- 破防机关:侵蚀/净化水下符文 ----
 
-    /** 侵蚀场地内全部水下符文(黑潮漫上符文,等待玩家净化)。 */
+    /** 从竞技场边缘均匀指定机制符文,避免把整圈装饰符文都变成净化目标。 */
     private void corruptRunes(ServerLevel serverLevel) {
+        this.corruptRunes(serverLevel, true);
+    }
+
+    private void corruptRunes(ServerLevel serverLevel, boolean announce) {
         this.corruptedRunes.clear();
         BlockPos center = arenaAnchor();
+        List<BlockPos> candidates = new ArrayList<>();
         for (BlockPos pos : BlockPos.betweenClosed(
                 center.offset(-RUNE_SCAN_RADIUS, -RUNE_SCAN_HEIGHT, -RUNE_SCAN_RADIUS),
                 center.offset(RUNE_SCAN_RADIUS, RUNE_SCAN_HEIGHT, RUNE_SCAN_RADIUS))) {
             var state = serverLevel.getBlockState(pos);
             if (state.getBlock() instanceof cn.kurt6.unknown_echoes.block.tide.TideRuneBlock) {
+                candidates.add(pos.immutable());
+            }
+        }
+
+        this.corruptedRunes.addAll(selectMechanicRunes(center, candidates));
+        Set<BlockPos> selected = new HashSet<>(this.corruptedRunes);
+        for (BlockPos pos : candidates) {
+            var state = serverLevel.getBlockState(pos);
+            boolean shouldBeCorrupted = selected.contains(pos);
+            if (state.getValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED)
+                    != shouldBeCorrupted) {
                 serverLevel.setBlock(pos,
-                        state.setValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED, Boolean.TRUE), 3);
-                this.corruptedRunes.add(pos.immutable());
+                        state.setValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED,
+                                shouldBeCorrupted), 3);
+            }
+            if (announce && shouldBeCorrupted) {
                 serverLevel.sendParticles(ParticleTypes.SQUID_INK,
                         pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5, 12, 0.3, 0.3, 0.3, 0.04);
             }
         }
-        if (!this.corruptedRunes.isEmpty()) {
+        this.runeSelectionNeedsRefresh = false;
+        if (announce && !this.corruptedRunes.isEmpty()) {
             serverLevel.playSound(null, center,
                     SoundEvents.ELDER_GUARDIAN_CURSE, SoundSource.HOSTILE, 1.6F, 0.7F);
             broadcastNearby(Component.translatable("message.unknown_echoes.watcher.runes_corrupted"));
         }
     }
 
+    private static List<BlockPos> selectMechanicRunes(BlockPos center, List<BlockPos> candidates) {
+        int targetCount = Math.min(RUNE_MECHANIC_COUNT, candidates.size());
+        if (targetCount == 0) {
+            return List.of();
+        }
+
+        List<BlockPos> preferred = new ArrayList<>();
+        double minRadiusSq = RUNE_PREFERRED_MIN_RADIUS * RUNE_PREFERRED_MIN_RADIUS;
+        double maxRadiusSq = RUNE_PREFERRED_MAX_RADIUS * RUNE_PREFERRED_MAX_RADIUS;
+        for (BlockPos pos : candidates) {
+            double distanceSq = horizontalDistanceSq(center, pos);
+            if (Math.abs(pos.getY() - center.getY()) <= RUNE_PREFERRED_MAX_HEIGHT
+                    && distanceSq >= minRadiusSq && distanceSq <= maxRadiusSq) {
+                preferred.add(pos);
+            }
+        }
+        if (candidates.size() <= targetCount) {
+            return new ArrayList<>(candidates);
+        }
+
+        Set<BlockPos> preferredSet = new HashSet<>(preferred);
+        List<BlockPos> selected = new ArrayList<>(targetCount);
+        for (int sector = 0; sector < targetCount; sector++) {
+            double targetAngle = Math.PI * 2.0D * sector / targetCount;
+            BlockPos best = null;
+            double bestAngleDistance = Double.MAX_VALUE;
+            double bestRadiusDistance = Double.MAX_VALUE;
+            for (BlockPos pos : candidates) {
+                if (selected.contains(pos)) {
+                    continue;
+                }
+                double angle = Math.atan2(pos.getZ() - center.getZ(), pos.getX() - center.getX());
+                double angleDistance = circularAngleDistance(angle, targetAngle);
+                double radiusDistance = Math.abs(Math.sqrt(horizontalDistanceSq(center, pos))
+                        - RUNE_PREFERRED_RADIUS);
+                boolean isPreferred = preferredSet.contains(pos);
+                boolean bestIsPreferred = best != null && preferredSet.contains(best);
+                if (best == null
+                        || (isPreferred && !bestIsPreferred)
+                        || (isPreferred == bestIsPreferred
+                        && (angleDistance < bestAngleDistance
+                        || (Math.abs(angleDistance - bestAngleDistance) < 1.0E-6
+                        && radiusDistance < bestRadiusDistance)))) {
+                    best = pos;
+                    bestAngleDistance = angleDistance;
+                    bestRadiusDistance = radiusDistance;
+                }
+            }
+            if (best != null) {
+                selected.add(best);
+            }
+        }
+        return selected;
+    }
+
+    private static double horizontalDistanceSq(BlockPos first, BlockPos second) {
+        double dx = second.getX() - first.getX();
+        double dz = second.getZ() - first.getZ();
+        return dx * dx + dz * dz;
+    }
+
+    private static double circularAngleDistance(double first, double second) {
+        double distance = Math.abs(first - second) % (Math.PI * 2.0D);
+        return Math.min(distance, Math.PI * 2.0D - distance);
+    }
+
     private BlockPos arenaAnchor() {
         return this.homePos != null ? this.homePos : this.blockPosition();
+    }
+
+    private void tickRuneGuidance(ServerLevel serverLevel) {
+        if (this.corruptedRunes.isEmpty()) {
+            return;
+        }
+        // 拟影就在 cloneIds 里,按 UUID 直取,不做大范围实体扫描
+        List<AbyssWatcher> guards = new ArrayList<>();
+        for (UUID id : this.cloneIds) {
+            if (serverLevel.getEntity(id) instanceof AbyssWatcher clone
+                    && clone.isAlive() && clone.isClone()) {
+                guards.add(clone);
+            }
+        }
+        Vec3 core = this.eyeBeamOrigin();
+        for (BlockPos pos : this.corruptedRunes) {
+            var state = serverLevel.getBlockState(pos);
+            if (!(state.getBlock() instanceof cn.kurt6.unknown_echoes.block.tide.TideRuneBlock)
+                    || !state.getValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED)) {
+                continue;
+            }
+            Vec3 rune = Vec3.atCenterOf(pos).add(0, 0.35, 0);
+            AbyssWatcher guard = nearestRuneGuard(guards, rune);
+            BossFx.guidanceMarker(serverLevel, rune, ParticleTypes.GLOW);
+            if (guard != null) {
+                BossFx.guidanceFlow(serverLevel, guard.eyeBeamOrigin(), rune,
+                        ParticleTypes.GLOW, ParticleTypes.END_ROD, this.tickCount);
+            } else {
+                BossFx.guidanceFlow(serverLevel, core, rune,
+                        ParticleTypes.GLOW, ParticleTypes.ELECTRIC_SPARK, this.tickCount);
+            }
+        }
+    }
+
+    private boolean hasNearbyRuneViewer(ServerLevel level) {
+        double radius = RUNE_SCAN_RADIUS + 8.0D;
+        for (ServerPlayer player : level.players()) {
+            if (!player.isSpectator() && player.isAlive()
+                    && player.distanceToSqr(this) <= radius * radius) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static AbyssWatcher nearestRuneGuard(List<AbyssWatcher> guards, Vec3 rune) {
+        AbyssWatcher nearest = null;
+        double nearestDistance = CLONE_GUARD_RADIUS * CLONE_GUARD_RADIUS;
+        for (AbyssWatcher guard : guards) {
+            double distance = guard.distanceToSqr(rune);
+            if (distance <= nearestDistance) {
+                nearest = guard;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
     }
 
     /** 玩家净化一块符文时由 TideRuneBlock 调用:全部净化 → 破防窗口。 */
@@ -802,7 +979,7 @@ public class AbyssWatcher extends Monster implements GeoEntity {
                 || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
-        this.participants.add(purifier.getUUID());
+        BossNbtData.addParticipant(this.participants, purifier.getUUID());
         int remaining = 0;
         for (BlockPos pos : this.corruptedRunes) {
             var state = serverLevel.getBlockState(pos);
@@ -812,8 +989,8 @@ public class AbyssWatcher extends Monster implements GeoEntity {
             }
         }
         if (remaining <= 0) {
-            this.corruptedRunes.clear();
             this.triggerBroken(serverLevel);
+            this.corruptedRunes.clear();
         } else {
             broadcastNearby(Component.translatable("message.unknown_echoes.watcher.rune_progress",
                     remaining));
@@ -833,6 +1010,13 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         // 破防演出:中心音爆 + 三圈火花涟漪向外扩散("倒影裂开")
         serverLevel.sendParticles(ParticleTypes.SONIC_BOOM,
                 this.getX(), this.getY() + this.getBbHeight() * 0.55, this.getZ(), 1, 0, 0, 0, 0);
+        Vec3 core = this.eyeBeamOrigin();
+        for (BlockPos pos : this.corruptedRunes) {
+            Vec3 rune = Vec3.atCenterOf(pos).add(0, 0.35, 0);
+            BossFx.guidanceMarker(serverLevel, rune, ParticleTypes.END_ROD);
+            BossFx.guidanceFlow(serverLevel, rune, core,
+                    ParticleTypes.GLOW, ParticleTypes.ELECTRIC_SPARK, this.tickCount);
+        }
         for (int ring = 1; ring <= 3; ring++) {
             double r = ring * 2.0;
             for (int i = 0; i < 12 + ring * 6; i++) {
@@ -869,8 +1053,9 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         if (this.isClone()) {
             return super.hurt(source, amount);
         }
-        if (!this.level().isClientSide && source.getEntity() instanceof ServerPlayer attacker) {
-            this.participants.add(attacker.getUUID());
+        if (!this.level().isClientSide && source.getEntity() instanceof ServerPlayer attacker
+                && !attacker.isSpectator()) {
+            BossNbtData.addParticipant(this.participants, attacker.getUUID());
         }
         if (!this.level().isClientSide && !this.isBroken()
                 && BossPhaseGate.shouldCapMechanicDamage(source)) {
@@ -941,7 +1126,7 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         // 设计红线 #4:奖励只发给死亡时仍在场地范围内的参与玩家
         double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
         for (ServerPlayer player : serverLevel.players()) {
-            if (this.participants.contains(player.getUUID())
+            if (!player.isSpectator() && this.participants.contains(player.getUUID())
                     && player.distanceToSqr(this) <= radius * radius) {
                 boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
                         EchoPermission.ABYSS_WATCHER_ID);
@@ -949,6 +1134,9 @@ public class AbyssWatcher extends Monster implements GeoEntity {
                 if (firstKill) {
                     BossMaterialRewards.givePersonal(player, EchoPermission.ABYSS_WATCHER_ID,
                             new ItemStack(ModItems.TIDE_CORE.get()));
+                } else {
+                    // 重复击败也发 1 枚核心(普通材料语义):守誓套与升级链按件消耗,仅靠首杀凑不齐
+                    BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.TIDE_CORE.get()));
                 }
                 BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.WATCHER_EYE_SHARD.get(),
                         2 + this.random.nextInt(3)));
@@ -1047,39 +1235,29 @@ public class AbyssWatcher extends Monster implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        BlockPos entityPos = this.blockPosition();
+        this.homePos = BossNbtData.loadPositionNear(tag, "HomePos", entityPos,
+                RUNE_SCAN_RADIUS * 2, RUNE_SCAN_HEIGHT * 2);
+        BlockPos arenaCenter = this.homePos != null ? this.homePos : entityPos;
         if (tag.getBoolean("IsClone")) {
             this.becomeClone();
-            this.cloneLifeTicks = tag.getInt("CloneLife");
-            if (tag.contains("GuardPos", Tag.TAG_INT_ARRAY)) {
-                int[] coords = tag.getIntArray("GuardPos");
-                if (coords.length == 3) {
-                    this.guardPos = new BlockPos(coords[0], coords[1], coords[2]);
-                }
-            }
+            this.cloneLifeTicks = BossNbtData.clampTimer(tag.getInt("CloneLife"), CLONE_LIFETIME_TICKS);
+            this.guardPos = BossNbtData.loadPositionNear(tag, "GuardPos", arenaCenter,
+                    RUNE_SCAN_RADIUS, RUNE_SCAN_HEIGHT);
         }
         this.setBroken(tag.getBoolean("Broken"));
-        this.brokenTicksRemaining = tag.getInt("BrokenTicks");
-        this.brokenWindowHealthFloor = tag.getFloat("BrokenWindowHealthFloor");
-        this.cloneIds.clear();
-        for (Tag entry : tag.getList("CloneIds", Tag.TAG_INT_ARRAY)) {
-            this.cloneIds.add(NbtUtils.loadUUID(entry));
-        }
-        this.participants.clear();
-        for (Tag entry : tag.getList("Participants", Tag.TAG_INT_ARRAY)) {
-            this.participants.add(NbtUtils.loadUUID(entry));
-        }
-        this.scaledParticipants = Math.max(1, tag.getInt("ScaledParticipants"));
-        this.corruptedRunes.clear();
-        ListTag runes = tag.getList("CorruptedRunes", Tag.TAG_INT_ARRAY);
-        for (int i = 0; i < runes.size(); i++) {
-            int[] coords = runes.getIntArray(i);
-            if (coords.length == 3) {
-                this.corruptedRunes.add(new BlockPos(coords[0], coords[1], coords[2]));
-            }
-        }
-        int[] home = tag.getIntArray("HomePos");
-        if (home.length == 3) {
-            this.homePos = new BlockPos(home[0], home[1], home[2]);
+        this.brokenTicksRemaining = BossNbtData.clampTimer(tag.getInt("BrokenTicks"),
+                ServerConfig.BOSS_BROKEN_DURATION_TICKS.get());
+        this.brokenWindowHealthFloor = BossNbtData.clampHealthFloor(
+                tag.getFloat("BrokenWindowHealthFloor"), this.getMaxHealth());
+        BossNbtData.loadUuids(tag, "CloneIds", this.cloneIds, BossNbtData.MAX_SUMMONS);
+        BossNbtData.loadUuids(tag, "Participants", this.participants, BossNbtData.MAX_PARTICIPANTS);
+        this.scaledParticipants = BossNbtData.clampParticipantScale(tag.getInt("ScaledParticipants"));
+        BossNbtData.loadPositionsNear(tag, "CorruptedRunes", this.corruptedRunes,
+                BossNbtData.MAX_ARENA_POSITIONS, arenaCenter, RUNE_SCAN_RADIUS, RUNE_SCAN_HEIGHT);
+        this.runeSelectionNeedsRefresh = !this.isClone() && !this.isBroken()
+                && this.corruptedRunes.size() > RUNE_MECHANIC_COUNT;
+        if (this.homePos != null) {
             if (!this.isClone()) {
                 this.restrictTo(this.homePos, RUNE_SCAN_RADIUS);
             }

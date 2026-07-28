@@ -9,10 +9,15 @@ import cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus;
 import cn.kurt6.unknown_echoes.entity.boss.LostRecorderChief;
 import cn.kurt6.unknown_echoes.entity.boss.MirrorDustButler;
 import cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian;
+import cn.kurt6.unknown_echoes.entity.boss.RiftWarden;
 import cn.kurt6.unknown_echoes.entity.boss.SilentPriest;
 import cn.kurt6.unknown_echoes.entity.boss.StormWeaver;
 import cn.kurt6.unknown_echoes.entity.boss.TideLanternKeeper;
+import cn.kurt6.unknown_echoes.entity.boss.VoidProphet;
+import cn.kurt6.unknown_echoes.entity.boss.WorldEcho;
 import cn.kurt6.unknown_echoes.entity.mob.BrokenBellCrow;
+import cn.kurt6.unknown_echoes.entity.mob.AbyssLurker;
+import cn.kurt6.unknown_echoes.entity.mob.AnchorShellBeast;
 import cn.kurt6.unknown_echoes.entity.mob.CrystalFeatherBird;
 import cn.kurt6.unknown_echoes.entity.mob.CrystalChimeSpirit;
 import cn.kurt6.unknown_echoes.entity.mob.CrystalNoiseWisp;
@@ -21,6 +26,7 @@ import cn.kurt6.unknown_echoes.entity.mob.DreamingDeer;
 import cn.kurt6.unknown_echoes.entity.mob.EchoDeer;
 import cn.kurt6.unknown_echoes.entity.mob.EchoRemnant;
 import cn.kurt6.unknown_echoes.entity.mob.EchoWanderer;
+import cn.kurt6.unknown_echoes.entity.mob.FoldpageBug;
 import cn.kurt6.unknown_echoes.entity.mob.GlowRabbit;
 import cn.kurt6.unknown_echoes.entity.mob.LostRecorder;
 import cn.kurt6.unknown_echoes.entity.mob.MirrorDustDecoy;
@@ -31,6 +37,7 @@ import cn.kurt6.unknown_echoes.entity.mob.TideWaterShade;
 import cn.kurt6.unknown_echoes.entity.mob.WaterShadow;
 import cn.kurt6.unknown_echoes.entity.mob.WindErodedSentinel;
 import cn.kurt6.unknown_echoes.entity.mob.WindSacMoth;
+import cn.kurt6.unknown_echoes.entity.mob.VoidWanderer;
 import cn.kurt6.unknown_echoes.entity.projection.EchoProjectionEntity;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import net.minecraft.tags.FluidTags;
@@ -50,6 +57,9 @@ public class ModEntityEvents {
         event.put(ModEntities.ECHO_WANDERER.get(), EchoWanderer.createAttributes().build());
         event.put(ModEntities.FORGOTTEN_COLOSSUS.get(), ForgottenColossus.createAttributes().build());
         event.put(ModEntities.ABYSS_WATCHER.get(), AbyssWatcher.createAttributes().build());
+        event.put(ModEntities.VOID_PROPHET.get(), VoidProphet.createAttributes().build());
+        event.put(ModEntities.RIFT_WARDEN.get(), RiftWarden.createAttributes().build());
+        event.put(ModEntities.WORLD_ECHO.get(), WorldEcho.createAttributes().build());
         event.put(ModEntities.MIRROR_GUARDIAN.get(), MirrorGuardian.createAttributes().build());
         event.put(ModEntities.SILENT_WALKER.get(), SilentWalker.createAttributes().build());
         event.put(ModEntities.CRYSTAL_FEATHER_BIRD.get(), CrystalFeatherBird.createAttributes().build());
@@ -82,6 +92,11 @@ public class ModEntityEvents {
         event.put(ModEntities.BROKEN_BELL_KEEPER.get(), BrokenBellKeeper.createAttributes().build());
         event.put(ModEntities.DREAM_BLOOM_KEEPER.get(), DreamBloomKeeper.createAttributes().build());
         event.put(ModEntities.LOST_RECORDER_CHIEF.get(), LostRecorderChief.createAttributes().build());
+        // 深层回响生态
+        event.put(ModEntities.FOLDPAGE_BUG.get(), FoldpageBug.createAttributes().build());
+        event.put(ModEntities.ANCHOR_SHELL_BEAST.get(), AnchorShellBeast.createAttributes().build());
+        event.put(ModEntities.ABYSS_LURKER.get(), AbyssLurker.createAttributes().build());
+        event.put(ModEntities.VOID_WANDERER.get(), VoidWanderer.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -167,6 +182,29 @@ public class ModEntityEvents {
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 (type, level, spawnType, pos, random) ->
                         Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        // 深层回响生态:潜伏者额外要求低光,其余遵循地面碰撞规则
+        event.register(ModEntities.FOLDPAGE_BUG.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.ANCHOR_SHELL_BEAST.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.ABYSS_LURKER.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getMaxLocalRawBrightness(pos) <= 5
+                                && Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.VOID_WANDERER.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D))
+                                && Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
                 RegisterSpawnPlacementsEvent.Operation.REPLACE);
         // 镜尾鱼:水中生成
         event.register(ModEntities.MIRROR_TAIL_FISH.get(), SpawnPlacementTypes.IN_WATER,

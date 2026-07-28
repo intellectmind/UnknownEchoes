@@ -1,77 +1,8 @@
 {
-  "render_type": "minecraft:cutout",
+  "parent": "unknown_echoes:block/tide_buoy",
   "textures": {
-    "particle": "unknown_echoes:block/tide_buoy_off",
-    "all": "unknown_echoes:block/tide_buoy_off"
-  },
-  "elements": [
-    {
-      "from": [
-        3,
-        0,
-        3
-      ],
-      "to": [
-        13,
-        14,
-        13
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            3,
-            2,
-            13,
-            16
-          ],
-          "texture": "#all"
-        },
-        "south": {
-          "uv": [
-            3,
-            2,
-            13,
-            16
-          ],
-          "texture": "#all"
-        },
-        "east": {
-          "uv": [
-            3,
-            2,
-            13,
-            16
-          ],
-          "texture": "#all"
-        },
-        "west": {
-          "uv": [
-            3,
-            2,
-            13,
-            16
-          ],
-          "texture": "#all"
-        },
-        "up": {
-          "uv": [
-            3,
-            3,
-            13,
-            13
-          ],
-          "texture": "#all"
-        },
-        "down": {
-          "uv": [
-            3,
-            3,
-            13,
-            13
-          ],
-          "texture": "#all"
-        }
-      }
-    }
-  ]
+    "1": "unknown_echoes:block/tide_buoy_off",
+    "2": "unknown_echoes:block/tide_buoy_off",
+    "particle": "unknown_echoes:block/tide_buoy_off"
+  }
 }

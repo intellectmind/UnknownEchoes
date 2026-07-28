@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:void_vein_chamber",
+  "biomes": "#unknown_echoes:has_void_vein_chamber",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

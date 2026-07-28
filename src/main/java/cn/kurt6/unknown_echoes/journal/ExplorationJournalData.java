@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.journal;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -16,14 +17,25 @@ import java.util.Set;
  */
 public class ExplorationJournalData {
     public static final int CURRENT_DATA_VERSION = 2;
+    public static final int MAX_CLUES = 64;
+    private static final int MAX_DISCOVERIES = 1024;
+    private static final int MAX_PAGES = 256;
+    private static final int MAX_ID_LENGTH = 256;
+    private static final int MAX_CLUE_LENGTH = 512;
+    private static final Codec<String> ID_CODEC = Codec.sizeLimitedString(MAX_ID_LENGTH);
 
     public static final Codec<ExplorationJournalData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.optionalFieldOf("data_version", CURRENT_DATA_VERSION).forGetter(d -> d.dataVersion),
-            Codec.STRING.listOf().optionalFieldOf("structures", List.of()).forGetter(d -> List.copyOf(d.structures)),
-            Codec.STRING.listOf().optionalFieldOf("mobs", List.of()).forGetter(d -> List.copyOf(d.mobs)),
-            Codec.STRING.listOf().optionalFieldOf("biomes", List.of()).forGetter(d -> List.copyOf(d.biomes)),
-            Codec.INT.listOf().optionalFieldOf("pages", List.of()).forGetter(d -> List.copyOf(d.pages)),
-            Codec.STRING.listOf().optionalFieldOf("clues", List.of()).forGetter(d -> List.copyOf(d.clues))
+            ID_CODEC.listOf(0, MAX_DISCOVERIES).optionalFieldOf("structures", List.of())
+                    .forGetter(d -> List.copyOf(d.structures)),
+            ID_CODEC.listOf(0, MAX_DISCOVERIES).optionalFieldOf("mobs", List.of())
+                    .forGetter(d -> List.copyOf(d.mobs)),
+            ID_CODEC.listOf(0, MAX_DISCOVERIES).optionalFieldOf("biomes", List.of())
+                    .forGetter(d -> List.copyOf(d.biomes)),
+            Codec.INT.listOf(0, MAX_PAGES).optionalFieldOf("pages", List.of())
+                    .forGetter(d -> List.copyOf(d.pages)),
+            Codec.sizeLimitedString(MAX_CLUE_LENGTH).listOf(0, MAX_PAGES).optionalFieldOf("clues", List.of())
+                    .forGetter(d -> List.copyOf(d.clues))
     ).apply(instance, ExplorationJournalData::new));
 
     private int dataVersion;
@@ -42,11 +54,31 @@ public class ExplorationJournalData {
     public ExplorationJournalData(int dataVersion, List<String> structures, List<String> mobs,
                                   List<String> biomes, List<Integer> pages, List<String> clues) {
         this.dataVersion = CURRENT_DATA_VERSION;
-        this.structures.addAll(structures);
-        this.mobs.addAll(mobs);
-        this.biomes.addAll(biomes);
-        this.pages.addAll(pages);
-        this.clues.addAll(clues);
+        copyResourceIds(structures, this.structures);
+        copyResourceIds(mobs, this.mobs);
+        copyResourceIds(biomes, this.biomes);
+        for (Integer page : pages) {
+            if (page != null && page > 0 && page <= 10000) {
+                this.pages.add(page);
+            }
+        }
+        int start = Math.max(0, clues.size() - MAX_CLUES);
+        for (int i = start; i < clues.size(); i++) {
+            String line = clues.get(i);
+            ExplorationClue clue = ExplorationClue.decode(line);
+            if (clue != null && ResourceLocation.tryParse(clue.structureId()) != null
+                    && ResourceLocation.tryParse(clue.dimension()) != null) {
+                this.clues.add(line);
+            }
+        }
+    }
+
+    private static void copyResourceIds(List<String> source, Set<String> target) {
+        for (String id : source) {
+            if (ResourceLocation.tryParse(id) != null) {
+                target.add(id);
+            }
+        }
     }
 
     public Set<String> getStructures() {

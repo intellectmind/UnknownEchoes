@@ -1,0 +1,9 @@
+{
+  "structures": [{ "structure": "unknown_echoes:folded_archive", "weight": 1 }],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 28,
+    "separation": 9,
+    "salt": 1690072581
+  }
+}

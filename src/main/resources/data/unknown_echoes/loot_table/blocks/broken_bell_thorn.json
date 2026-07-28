@@ -5,11 +5,21 @@
       "rolls": 1,
       "bonus_rolls": 0,
       "entries": [
-        { "type": "minecraft:item", "name": "unknown_echoes:broken_bell_thorn" },
-        { "type": "minecraft:item", "name": "unknown_echoes:broken_bell_gear", "weight": 1 }
+        { "type": "minecraft:item", "name": "unknown_echoes:broken_bell_thorn" }
       ],
       "conditions": [
         { "condition": "minecraft:survives_explosion" }
+      ]
+    },
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:broken_bell_gear" }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" },
+        { "condition": "minecraft:random_chance", "chance": 0.25 }
       ]
     }
   ],

@@ -46,6 +46,8 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
     private static final Map<ResourceLocation, List<EchoTrade>> TABLES = new HashMap<>();
     /** 旅者实例 → (交易序号 → 已成交次数)。内存记账,随旅者离开/重启作废。 */
     private static final Map<UUID, Map<Integer, Integer>> USES = new HashMap<>();
+    /** 玩家 → 上次下发列表的表内索引快照:点击按打开时看到的列表解析,阶段变化/重载不会错位买错行。 */
+    private static final Map<UUID, List<Integer>> SESSION_VIEW = new HashMap<>();
 
     public EchoTradeManager() {
         super(GSON, "echo_trades");
@@ -60,11 +62,17 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
     protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager resourceManager,
                          ProfilerFiller profiler) {
         TABLES.clear();
+        USES.clear();
+        SESSION_VIEW.clear();
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             try {
                 JsonObject root = GsonHelper.convertToJsonObject(entry.getValue(), "echo trade table");
                 List<EchoTrade> trades = new ArrayList<>();
-                for (JsonElement element : GsonHelper.getAsJsonArray(root, "trades")) {
+                var tradeElements = GsonHelper.getAsJsonArray(root, "trades");
+                if (tradeElements.size() > EchoTrade.MAX_TRADES_PER_TABLE) {
+                    throw new IllegalArgumentException("trade table contains too many trades");
+                }
+                for (JsonElement element : tradeElements) {
                     trades.add(EchoTrade.fromJson(GsonHelper.convertToJsonObject(element, "trade")));
                 }
                 TABLES.put(entry.getKey(), List.copyOf(trades));
@@ -82,12 +90,21 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
 
     /** 当前玩家可见的交易列表(按阶段过滤;顺序稳定,客户端按序号回传)。 */
     public static List<EchoTrade> getVisibleTrades(ServerPlayer player) {
+        List<EchoTrade> visible = new ArrayList<>();
+        for (IndexedTrade indexed : getVisibleTradeEntries(player)) {
+            visible.add(indexed.trade());
+        }
+        return visible;
+    }
+
+    private static List<IndexedTrade> getVisibleTradeEntries(ServerPlayer player) {
         List<EchoTrade> all = TABLES.getOrDefault(LOST_TRAVELER_TABLE, List.of());
         int stage = getStage(player);
-        List<EchoTrade> visible = new ArrayList<>();
-        for (EchoTrade trade : all) {
+        List<IndexedTrade> visible = new ArrayList<>();
+        for (int tableIndex = 0; tableIndex < all.size(); tableIndex++) {
+            EchoTrade trade = all.get(tableIndex);
             if (trade.isVisibleTo(player, stage)) {
-                visible.add(trade);
+                visible.add(new IndexedTrade(tableIndex, trade));
             }
         }
         return visible;
@@ -95,15 +112,19 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
 
     /** 下发交易表并让客户端打开总览交易页(旅者右键入口)。 */
     public static void openTrades(ServerPlayer player, LostTraveler traveler) {
-        List<EchoTrade> visible = getVisibleTrades(player);
+        List<IndexedTrade> visible = getVisibleTradeEntries(player);
         List<String> lines = new ArrayList<>();
+        List<Integer> view = new ArrayList<>();
         Map<Integer, Integer> used = USES.getOrDefault(traveler.getUUID(), Map.of());
         for (int i = 0; i < visible.size(); i++) {
-            EchoTrade trade = visible.get(i);
+            IndexedTrade indexed = visible.get(i);
+            EchoTrade trade = indexed.trade();
             int usesLeft = trade.maxUses() < 0 ? -1
-                    : Math.max(0, trade.maxUses() - used.getOrDefault(i, 0));
+                    : Math.max(0, trade.maxUses() - used.getOrDefault(indexed.tableIndex(), 0));
             lines.add(trade.encodeForClient(usesLeft));
+            view.add(indexed.tableIndex());
         }
+        SESSION_VIEW.put(player.getUUID(), List.copyOf(view));
         PacketDistributor.sendToPlayer(player, new TradeListPayload(traveler.getId(), lines));
     }
 
@@ -116,25 +137,32 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
                     Component.translatable("message.unknown_echoes.trade.too_far"), true);
             return;
         }
-        List<EchoTrade> visible = getVisibleTrades(player);
-        if (index < 0 || index >= visible.size()) {
+        List<Integer> view = SESSION_VIEW.get(player.getUUID());
+        List<EchoTrade> all = TABLES.getOrDefault(LOST_TRAVELER_TABLE, List.of());
+        if (view == null || index < 0 || index >= view.size()) {
             return;
         }
-        EchoTrade trade = visible.get(index);
+        int tableIndex = view.get(index);
+        if (tableIndex < 0 || tableIndex >= all.size()) {
+            return;
+        }
+        EchoTrade trade = all.get(tableIndex);
+        // 打开后阶段/能力变化导致的不可见交易:拒绝而不是错位映射
+        if (!trade.isVisibleTo(player, getStage(player))) {
+            return;
+        }
         Map<Integer, Integer> used = USES.computeIfAbsent(traveler.getUUID(), k -> new HashMap<>());
-        if (trade.maxUses() >= 0 && used.getOrDefault(index, 0) >= trade.maxUses()) {
+        if (trade.maxUses() >= 0 && used.getOrDefault(tableIndex, 0) >= trade.maxUses()) {
             player.displayClientMessage(
                     Component.translatable("message.unknown_echoes.trade.sold_out"), true);
             playNo(player, traveler);
             return;
         }
-        for (EchoTrade.Cost cost : trade.costs()) {
-            if (countItem(player, trade.getCostItemHolder(cost)) < cost.count()) {
-                player.displayClientMessage(
-                        Component.translatable("message.unknown_echoes.trade.cant_afford"), true);
-                playNo(player, traveler);
-                return;
-            }
+        if (!canAfford(player, trade)) {
+            player.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.trade.cant_afford"), true);
+            playNo(player, traveler);
+            return;
         }
         ItemStack result = trade.makeResult();
         if (!canFitResultAfterCosts(player, trade, result)) {
@@ -143,20 +171,64 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
             playNo(player, traveler);
             return;
         }
+        List<ItemStack> originalMain = copySlots(player.getInventory().items);
+        List<ItemStack> originalOffhand = copySlots(player.getInventory().offhand);
         for (EchoTrade.Cost cost : trade.costs()) {
             consumeItem(player, trade.getCostItemHolder(cost), cost.count());
         }
-        player.getInventory().add(result);
-        used.merge(index, 1, Integer::sum);
+        if (!player.getInventory().add(result)) {
+            restoreSlots(player.getInventory().items, originalMain);
+            restoreSlots(player.getInventory().offhand, originalOffhand);
+            player.getInventory().setChanged();
+            player.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.trade.need_space"), true);
+            playNo(player, traveler);
+            return;
+        }
+        used.merge(tableIndex, 1, Integer::sum);
         traveler.level().playSound(null, traveler.blockPosition(),
                 SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.9F, 1.0F);
         // 成交后重发列表刷新库存显示
         openTrades(player, traveler);
     }
 
+    public static void clearUses(UUID travelerId) {
+        USES.remove(travelerId);
+    }
+
+    /** 服务器停止时清理旅者实例库存,避免跨世界保留旧实体 UUID。 */
+    public static void clearAllUses() {
+        USES.clear();
+        SESSION_VIEW.clear();
+    }
+
+    /** 玩家下线清理其列表快照。 */
+    public static void clearSessionView(UUID playerId) {
+        SESSION_VIEW.remove(playerId);
+    }
+
+    private record IndexedTrade(int tableIndex, EchoTrade trade) {
+    }
+
     private static void playNo(ServerPlayer player, LostTraveler traveler) {
         traveler.level().playSound(null, traveler.blockPosition(),
                 SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 0.9F, 1.0F);
+    }
+
+    private static boolean canAfford(ServerPlayer player, EchoTrade trade) {
+        Map<Item, Long> required = new HashMap<>();
+        for (EchoTrade.Cost cost : trade.costs()) {
+            if (cost.count() <= 0) {
+                return false;
+            }
+            required.merge(trade.getCostItemHolder(cost), (long) cost.count(), Long::sum);
+        }
+        for (Map.Entry<Item, Long> entry : required.entrySet()) {
+            if (countItem(player, entry.getKey()) < entry.getValue()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean canFitResultAfterCosts(ServerPlayer player, EchoTrade trade, ItemStack result) {
@@ -166,7 +238,10 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
             int remaining = consumeFromSlots(mainSlots, trade.getCostItemHolder(cost), cost.count());
             consumeFromSlots(offhandSlots, trade.getCostItemHolder(cost), remaining);
         }
-        return simulateInsert(mainSlots, result.copy());
+        ItemStack remaining = result.copy();
+        mergeIntoExisting(mainSlots, remaining);
+        mergeIntoExisting(offhandSlots, remaining);
+        return fillEmptySlots(mainSlots, remaining);
     }
 
     private static List<ItemStack> copySlots(List<ItemStack> slots) {
@@ -175,6 +250,12 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
             copied.add(slot.copy());
         }
         return copied;
+    }
+
+    private static void restoreSlots(List<ItemStack> slots, List<ItemStack> snapshot) {
+        for (int i = 0; i < slots.size(); i++) {
+            slots.set(i, snapshot.get(i));
+        }
     }
 
     private static int consumeFromSlots(List<ItemStack> slots, Item item, int amount) {
@@ -191,29 +272,31 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
         return amount;
     }
 
-    private static boolean simulateInsert(List<ItemStack> slots, ItemStack stack) {
-        int remaining = stack.getCount();
+    private static void mergeIntoExisting(List<ItemStack> slots, ItemStack stack) {
         for (ItemStack slot : slots) {
-            if (remaining <= 0) {
-                return true;
+            if (stack.isEmpty()) {
+                return;
             }
             if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, stack)) {
-                int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
+                int move = Math.min(stack.getCount(), slot.getMaxStackSize() - slot.getCount());
                 if (move > 0) {
                     slot.grow(move);
-                    remaining -= move;
+                    stack.shrink(move);
                 }
             }
         }
+    }
+
+    private static boolean fillEmptySlots(List<ItemStack> slots, ItemStack stack) {
         for (ItemStack slot : slots) {
-            if (remaining <= 0) {
+            if (stack.isEmpty()) {
                 return true;
             }
             if (slot.isEmpty()) {
-                remaining -= stack.getMaxStackSize();
+                stack.shrink(Math.min(stack.getCount(), stack.getMaxStackSize()));
             }
         }
-        return remaining <= 0;
+        return stack.isEmpty();
     }
 
     private static int countItem(ServerPlayer player, Item item) {

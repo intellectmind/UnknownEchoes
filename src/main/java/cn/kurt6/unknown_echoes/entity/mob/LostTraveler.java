@@ -12,6 +12,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -23,9 +24,6 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.CampfireBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
@@ -37,9 +35,12 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * 迷途旅者(9.2/16.4):仍残留聆者血脉的流浪者——听得见,但听不懂。
  * 非任务型中立 NPC:给出模糊提示、出售少量特殊物品;不发布任务,不出售任何关键进度物。
  * 交易入口走自绘交易 Screen(5.8):右键由服务端下发交易表,不打开原版 Merchant。
- * 营地随时间更换(4.2.1):驻留时间到后熄灭营地篝火并离开,旧营地只留下熄灭的篝火。
+ * 营地随时间更换(4.2.1):驻留时间到后离开；事件不放置任何世界方块。
  */
 public class LostTraveler extends PathfinderMob implements GeoEntity {
+
+    private static final int MAX_HORIZONTAL_COORDINATE = 30_000_000;
+    private static final int MAX_ANCHOR_DISTANCE_SQR = 32 * 32;
 
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.lost_traveler.idle");
@@ -48,8 +49,8 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    /** 营地锚点(篝火位置);离开时把它熄灭。 */
-    private BlockPos campPos;
+    /** 临时驻留锚点；只用于限制活动范围，不对应世界方块。 */
+    private BlockPos stayAnchorPos;
     /** 驻留截止 gameTime;0=常驻(刷怪蛋/指令生成的旅者不自动离开)。 */
     private long stayUntil;
 
@@ -74,11 +75,12 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
     }
 
-    /** 设置营地:锚定篝火附近活动,驻留计时开始(WorldEventManager 失落商队事件调用)。 */
-    public void setCamp(BlockPos campfirePos, long gameTime) {
-        this.campPos = campfirePos;
-        this.stayUntil = gameTime + ServerConfig.LOST_TRAVELER_STAY_TICKS.get();
-        this.restrictTo(campfirePos, 12);
+    /** 开始临时驻留：限制活动范围并启动离场计时。 */
+    public void startTemporaryStay(BlockPos anchorPos, long gameTime) {
+        this.stayAnchorPos = anchorPos;
+        long duration = ServerConfig.LOST_TRAVELER_STAY_TICKS.get();
+        this.stayUntil = duration > Long.MAX_VALUE - gameTime ? Long.MAX_VALUE : gameTime + duration;
+        this.restrictTo(anchorPos, 12);
     }
 
     @Override
@@ -87,14 +89,6 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
         if (this.level().isClientSide || this.stayUntil <= 0
                 || this.level().getGameTime() < this.stayUntil) {
             return;
-        }
-        // 驻留时间到:熄灭营地篝火(旧营地留下熄灭的篝火,4.2.1),旅者悄然离开
-        if (this.campPos != null) {
-            BlockState state = this.level().getBlockState(this.campPos);
-            if (state.is(Blocks.CAMPFIRE) && state.getValue(CampfireBlock.LIT)) {
-                this.level().setBlock(this.campPos,
-                        state.setValue(CampfireBlock.LIT, Boolean.FALSE), 3);
-            }
         }
         this.level().playSound(null, this.blockPosition(),
                 SoundEvents.CAMPFIRE_CRACKLE, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F, 0.8F);
@@ -120,8 +114,9 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        if (this.campPos != null) {
-            tag.put("CampPos", NbtUtils.writeBlockPos(this.campPos));
+        if (this.stayAnchorPos != null) {
+            // 保留旧键名，确保已有世界里的旅者仍能恢复驻留锚点。
+            tag.put("CampPos", NbtUtils.writeBlockPos(this.stayAnchorPos));
         }
         tag.putLong("StayUntil", this.stayUntil);
     }
@@ -129,11 +124,25 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        NbtUtils.readBlockPos(tag, "CampPos").ifPresent(pos -> this.campPos = pos);
-        this.stayUntil = tag.getLong("StayUntil");
-        if (this.campPos != null) {
-            this.restrictTo(this.campPos, 12);
+        this.stayAnchorPos = null;
+        this.clearRestriction();
+        NbtUtils.readBlockPos(tag, "CampPos").filter(this::isValidStayAnchor)
+                .ifPresent(pos -> this.stayAnchorPos = pos);
+        long savedStayUntil = tag.getLong("StayUntil");
+        long now = this.level().getGameTime();
+        long duration = ServerConfig.LOST_TRAVELER_STAY_TICKS.get();
+        long maxStayUntil = duration > Long.MAX_VALUE - now ? Long.MAX_VALUE : now + duration;
+        this.stayUntil = savedStayUntil <= 0L ? 0L : Math.min(savedStayUntil, maxStayUntil);
+        if (this.stayAnchorPos != null) {
+            this.restrictTo(this.stayAnchorPos, 12);
         }
+    }
+
+    private boolean isValidStayAnchor(BlockPos pos) {
+        return Math.abs((long) pos.getX()) <= MAX_HORIZONTAL_COORDINATE
+                && Math.abs((long) pos.getZ()) <= MAX_HORIZONTAL_COORDINATE
+                && pos.getY() >= -2048 && pos.getY() <= 2047
+                && pos.distSqr(this.blockPosition()) <= MAX_ANCHOR_DISTANCE_SQR;
     }
 
     @Override
@@ -149,6 +158,14 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
     @Override
     protected SoundEvent getDeathSound() {
         return SoundEvents.VILLAGER_DEATH;
+    }
+
+    @Override
+    public void remove(Entity.RemovalReason reason) {
+        if (!this.level().isClientSide && reason.shouldDestroy()) {
+            EchoTradeManager.clearUses(this.getUUID());
+        }
+        super.remove(reason);
     }
 
     @Override

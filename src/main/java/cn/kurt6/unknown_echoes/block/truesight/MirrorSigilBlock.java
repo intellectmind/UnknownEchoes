@@ -73,6 +73,9 @@ public class MirrorSigilBlock extends BaseEntityBlock {
         if (!(player instanceof ServerPlayer serverPlayer) || !(level instanceof ServerLevel serverLevel)) {
             return InteractionResult.CONSUME;
         }
+        if (!MirrorSigilBlockEntity.ensureInitialized(serverLevel, pos)) {
+            return InteractionResult.CONSUME;
+        }
         if (MirrorSigilBlockEntity.isReal(serverLevel, pos)) {
             String key = mechanismKey(level, pos);
             if (EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)) {
@@ -128,16 +131,8 @@ public class MirrorSigilBlock extends BaseEntityBlock {
     /** 触假即重置:周围所有真符印的个人激活记录被抹掉,需要重新观察。 */
     private void resetPlayerSigils(ServerPlayer player, ServerLevel level, BlockPos center) {
         var mechanisms = EchoAbilityManager.getData(player).getActivatedMechanisms();
-        for (BlockPos pos : BlockPos.betweenClosed(
-                center.offset(-MirrorSigilBlockEntity.CLUSTER_RANGE_H,
-                        -MirrorSigilBlockEntity.CLUSTER_RANGE_V,
-                        -MirrorSigilBlockEntity.CLUSTER_RANGE_H),
-                center.offset(MirrorSigilBlockEntity.CLUSTER_RANGE_H,
-                        MirrorSigilBlockEntity.CLUSTER_RANGE_V,
-                        MirrorSigilBlockEntity.CLUSTER_RANGE_H))) {
-            BlockState state = level.getBlockState(pos);
-            if (state.getBlock() instanceof MirrorSigilBlock
-                    && MirrorSigilBlockEntity.isReal(level, pos)) {
+        for (BlockPos pos : MirrorSigilBlockEntity.findCluster(level, center)) {
+            if (MirrorSigilBlockEntity.isReal(level, pos)) {
                 mechanisms.remove(mechanismKey(level, pos));
             }
         }
@@ -145,19 +140,16 @@ public class MirrorSigilBlock extends BaseEntityBlock {
 
     /** 机关完成判定(V0.6E 信物仪式):本神殿全部真符印都被该玩家点亮。 */
     private boolean clusterComplete(ServerPlayer player, ServerLevel level, BlockPos center) {
-        for (BlockPos pos : BlockPos.betweenClosed(
-                center.offset(-MirrorSigilBlockEntity.CLUSTER_RANGE_H,
-                        -MirrorSigilBlockEntity.CLUSTER_RANGE_V,
-                        -MirrorSigilBlockEntity.CLUSTER_RANGE_H),
-                center.offset(MirrorSigilBlockEntity.CLUSTER_RANGE_H,
-                        MirrorSigilBlockEntity.CLUSTER_RANGE_V,
-                        MirrorSigilBlockEntity.CLUSTER_RANGE_H))) {
-            if (level.getBlockState(pos).getBlock() instanceof MirrorSigilBlock
-                    && MirrorSigilBlockEntity.isReal(level, pos)
-                    && !EchoAbilityManager.hasActivatedMechanism(player, mechanismKey(level, pos))) {
+        boolean foundReal = false;
+        for (BlockPos pos : MirrorSigilBlockEntity.findCluster(level, center)) {
+            if (!MirrorSigilBlockEntity.isReal(level, pos)) {
+                continue;
+            }
+            foundReal = true;
+            if (!EchoAbilityManager.hasActivatedMechanism(player, mechanismKey(level, pos))) {
                 return false;
             }
         }
-        return true;
+        return foundReal;
     }
 }

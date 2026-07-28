@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "unknown_echoes:abyss_beacon_structure",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 40,
+    "separation": 12,
+    "salt": 1690072571
+  }
+}

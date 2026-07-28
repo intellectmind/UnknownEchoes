@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.client;
 import cn.kurt6.unknown_echoes.network.JournalSyncPayload;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -17,6 +18,11 @@ public class ClientJournalCache {
     private static final Set<String> MOBS = new HashSet<>();
     private static final Set<String> BOSSES = new HashSet<>();
     private static final List<Integer> PAGES = new ArrayList<>();
+    private static final Set<String> STRUCTURES_VIEW = Collections.unmodifiableSet(STRUCTURES);
+    private static final Set<String> BIOMES_VIEW = Collections.unmodifiableSet(BIOMES);
+    private static final Set<String> MOBS_VIEW = Collections.unmodifiableSet(MOBS);
+    private static final Set<String> BOSSES_VIEW = Collections.unmodifiableSet(BOSSES);
+    private static final List<Integer> PAGES_VIEW = Collections.unmodifiableList(PAGES);
     private static int totalStructures;
     private static int totalBiomes;
     private static int totalMobs;
@@ -44,23 +50,23 @@ public class ClientJournalCache {
     }
 
     public static Set<String> structures() {
-        return STRUCTURES;
+        return STRUCTURES_VIEW;
     }
 
     public static Set<String> biomes() {
-        return BIOMES;
+        return BIOMES_VIEW;
     }
 
     public static Set<String> mobs() {
-        return MOBS;
+        return MOBS_VIEW;
     }
 
     public static Set<String> bosses() {
-        return BOSSES;
+        return BOSSES_VIEW;
     }
 
     public static List<Integer> pages() {
-        return PAGES;
+        return PAGES_VIEW;
     }
 
     public static int totalStructures() {

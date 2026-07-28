@@ -1,0 +1,47 @@
+{
+  "textures": {
+    "alloy": "unknown_echoes:block/deep_alloy",
+    "rune": "unknown_echoes:block/echo_rune_bricks",
+    "flux": "unknown_echoes:block/resonance_flux",
+    "particle": "unknown_echoes:block/deep_alloy"
+  },
+  "elements": [
+    { "from": [2, 0, 2], "to": [14, 3, 14], "faces": {
+      "north": { "texture": "#alloy" }, "east": { "texture": "#alloy" },
+      "south": { "texture": "#alloy" }, "west": { "texture": "#alloy" },
+      "up": { "texture": "#rune" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [5, 3, 5], "to": [11, 9, 11], "faces": {
+      "north": { "texture": "#rune" }, "east": { "texture": "#alloy" },
+      "south": { "texture": "#rune" }, "west": { "texture": "#alloy" },
+      "up": { "texture": "#alloy" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [1, 9, 3], "to": [15, 11, 13], "faces": {
+      "north": { "texture": "#alloy" }, "east": { "texture": "#rune" },
+      "south": { "texture": "#alloy" }, "west": { "texture": "#rune" },
+      "up": { "texture": "#rune" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [3, 11, 4], "to": [13, 11.75, 12], "rotation": {
+      "angle": -22.5, "axis": "x", "origin": [8, 11, 8]
+    }, "faces": {
+      "north": { "texture": "#flux" }, "east": { "texture": "#flux" },
+      "south": { "texture": "#flux" }, "west": { "texture": "#flux" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#rune" }
+    }},
+    { "from": [2, 7, 2], "to": [4, 10, 4], "faces": {
+      "north": { "texture": "#flux" }, "east": { "texture": "#flux" },
+      "south": { "texture": "#flux" }, "west": { "texture": "#flux" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#alloy" }
+    }},
+    { "from": [12, 7, 2], "to": [14, 10, 4], "faces": {
+      "north": { "texture": "#flux" }, "east": { "texture": "#flux" },
+      "south": { "texture": "#flux" }, "west": { "texture": "#flux" },
+      "up": { "texture": "#flux" }, "down": { "texture": "#alloy" }
+    }}
+  ],
+  "display": {
+    "gui": { "rotation": [30, 225, 0], "translation": [0, -1, 0], "scale": [0.72, 0.72, 0.72] },
+    "ground": { "translation": [0, 3, 0], "scale": [0.35, 0.35, 0.35] },
+    "fixed": { "scale": [0.65, 0.65, 0.65] }
+  }
+}

@@ -32,7 +32,7 @@ displayURL = "https://kurt6.cn" #optional
 authors = "${mod_authors}" #optional
 
 # The description text for the mod (multi line!) (#mandatory)
-description = '''${mod_description}'''
+description = "\u8d70\u51fa\u53bb\uff0c\u8046\u542c\u5927\u5730\u7684\u56de\u54cd\uff0c\u53d1\u73b0\u88ab\u9057\u5fd8\u7684\u4e16\u754c\u3002An exploration-driven adventure mod."
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
 #[[mixins]]

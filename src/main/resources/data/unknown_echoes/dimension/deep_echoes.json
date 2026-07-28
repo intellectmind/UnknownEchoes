@@ -1,0 +1,48 @@
+{
+  "type": "unknown_echoes:deep_echoes",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "minecraft:overworld",
+    "biome_source": {
+      "type": "minecraft:multi_noise",
+      "biomes": [
+        {
+          "biome": "unknown_echoes:folded_corridors",
+          "parameters": {
+            "temperature": [-1.0, 1.0],
+            "humidity": [-1.0, 1.0],
+            "continentalness": [-1.2, 1.0],
+            "erosion": [-1.0, 1.0],
+            "weirdness": [-1.0, 1.0],
+            "depth": [-1.0, -0.2],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:inverted_chasm",
+          "parameters": {
+            "temperature": [-1.0, 1.0],
+            "humidity": [-1.0, 1.0],
+            "continentalness": [-1.2, 1.0],
+            "erosion": [-1.0, 1.0],
+            "weirdness": [-1.0, 1.0],
+            "depth": [-0.2, 0.45],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "unknown_echoes:silent_abyss",
+          "parameters": {
+            "temperature": [-1.0, 1.0],
+            "humidity": [-1.0, 1.0],
+            "continentalness": [-1.2, 1.0],
+            "erosion": [-1.0, 1.0],
+            "weirdness": [-1.0, 1.0],
+            "depth": [0.45, 1.0],
+            "offset": 0.0
+          }
+        }
+      ]
+    }
+  }
+}

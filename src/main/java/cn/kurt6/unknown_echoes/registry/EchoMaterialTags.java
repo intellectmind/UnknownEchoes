@@ -7,7 +7,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 
 /**
- * V0.7A 材料经济分组。JSON 是数据源,这里给后续配方/交易/校验代码提供稳定入口。
+ * 材料经济分组。JSON 是数据源,这里给后续配方/交易/校验代码提供稳定入口。
  */
 public final class EchoMaterialTags {
     public static final TagKey<Item> BASIC_MATERIALS = item("basic_materials");

@@ -15,6 +15,9 @@ import net.minecraft.world.item.ItemStack;
  * 调用方一律在低频检查点(40 tick 周期 / 事件回调 / 滑翔包入口)取件数。
  */
 public final class EchoArmorSets {
+    private static final EquipmentSlot[] ARMOR_SLOTS = {
+            EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
+    };
 
     private EchoArmorSets() {
     }
@@ -63,10 +66,13 @@ public final class EchoArmorSets {
         return countPieces(player, ModArmorMaterials.ECHO_OATH);
     }
 
+    public static int abyssWalkerPieces(Player player) {
+        return countPieces(player, ModArmorMaterials.ABYSS_WALKER);
+    }
+
     private static int countPieces(Player player, Holder<ArmorMaterial> material) {
         int count = 0;
-        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST,
-                EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+        for (EquipmentSlot slot : ARMOR_SLOTS) {
             ItemStack stack = player.getItemBySlot(slot);
             if (stack.getItem() instanceof ArmorItem armor && armor.getMaterial().is(material.getKey())) {
                 count++;

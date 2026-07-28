@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:gravity_shale"
+  },
+  "result": {
+    "id": "unknown_echoes:banded_gravity_shale",
+    "count": 1
+  }
+}

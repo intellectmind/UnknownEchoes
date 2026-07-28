@@ -44,6 +44,8 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
 
     private static final int TICK_INTERVAL = 40;
     private static final double ACTIVATION_RANGE = 28.0D;
+    private static final int MAX_RESET_POSITIONS = 256;
+    private static final int MISSING_BOSS_CONFIRMATIONS = 3;
 
     /** 要生成的守护者实体类型 ID(unknown_echoes:storm_weaver 等)。 */
     private ResourceLocation entityTypeId = null;
@@ -66,6 +68,7 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
     /** 未满足门槛时的含蓄提示 lang 键。 */
     private String lockedHintKey = null;
     private int lockedHintCooldown = 0;
+    private int missingBossChecks = 0;
 
     public MiniBossSpawnerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MINIBOSS_SPAWNER.get(), pos, state);
@@ -82,7 +85,10 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
     public void setResetBlocks(ResourceLocation blockId, List<BlockPos> positions) {
         this.resetBlockId = blockId;
         this.resetPositions.clear();
-        this.resetPositions.addAll(positions);
+        int limit = Math.min(positions.size(), MAX_RESET_POSITIONS);
+        for (int i = 0; i < limit; i++) {
+            this.resetPositions.add(positions.get(i).immutable());
+        }
         this.setChanged();
     }
 
@@ -101,9 +107,11 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
     /** 守护者死亡回调(MiniBossEntity.die):启动重开计时。 */
     public void onBossDefeated() {
         this.bossUuid = null;
+        this.missingBossChecks = 0;
         this.defeatedOnce = true;
         if (this.level != null) {
-            this.reopenAt = this.level.getGameTime() + ServerConfig.MINIBOSS_ARENA_REOPEN_TICKS.get();
+            this.reopenAt = safeDeadline(this.level.getGameTime(),
+                    ServerConfig.MINIBOSS_ARENA_REOPEN_TICKS.get());
         }
         this.setChanged();
     }
@@ -111,7 +119,7 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
     public static void serverTick(Level level, BlockPos pos, BlockState state,
                                   MiniBossSpawnerBlockEntity spawner) {
         if (!(level instanceof ServerLevel serverLevel)
-                || level.getGameTime() % TICK_INTERVAL != 0
+                || Math.floorMod(level.getGameTime() + pos.asLong(), TICK_INTERVAL) != 0L
                 || spawner.entityTypeId == null) {
             return;
         }
@@ -119,29 +127,57 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
         if (spawner.bossUuid != null) {
             Entity boss = serverLevel.getEntity(spawner.bossUuid);
             if (boss != null && boss.isAlive()) {
+                spawner.missingBossChecks = 0;
                 return;
             }
+            if (boss == null) {
+                if (serverLevel.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5,
+                        pos.getZ() + 0.5, ACTIVATION_RANGE, false) == null) {
+                    spawner.missingBossChecks = 0;
+                    return;
+                }
+                if (++spawner.missingBossChecks < MISSING_BOSS_CONFIRMATIONS) {
+                    return;
+                }
+            }
+            spawner.missingBossChecks = 0;
             spawner.bossUuid = null;
+            spawner.defeatedOnce = true;
             if (spawner.reopenAt < 0) {
-                spawner.reopenAt = level.getGameTime() + ServerConfig.MINIBOSS_ARENA_REOPEN_TICKS.get();
+                spawner.reopenAt = safeDeadline(level.getGameTime(),
+                        ServerConfig.MINIBOSS_ARENA_REOPEN_TICKS.get());
             }
             spawner.setChanged();
             return;
         }
         // 击败后:重开关闭 = 一次性场地;开启则等计时到点
         if (spawner.defeatedOnce) {
-            if (!ServerConfig.MINIBOSS_ARENA_REOPEN.get()
-                    || spawner.reopenAt < 0 || level.getGameTime() < spawner.reopenAt) {
+            if (!ServerConfig.MINIBOSS_ARENA_REOPEN.get()) {
+                return;
+            }
+            if (spawner.reopenAt < 0) {
+                spawner.reopenAt = safeDeadline(level.getGameTime(),
+                        ServerConfig.MINIBOSS_ARENA_REOPEN_TICKS.get());
+                spawner.setChanged();
+                return;
+            }
+            long maximum = safeDeadline(level.getGameTime(),
+                    ServerConfig.MINIBOSS_ARENA_REOPEN_TICKS.get());
+            if (spawner.reopenAt > maximum) {
+                spawner.reopenAt = maximum;
+                spawner.setChanged();
+            }
+            if (level.getGameTime() < spawner.reopenAt) {
                 return;
             }
         }
-        // 首次生成与重开都要求有玩家接近,无人不激活
-        if (serverLevel.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-                ACTIVATION_RANGE, false) == null) {
-            return;
-        }
-        // 挑战门槛:服务端校验能力数据 / 个人 Boss 记录(红线 #1/#6),未满足只给含蓄提示
-        if (!spawner.checkChallengeGate(serverLevel, pos)) {
+        if (spawner.requiredAbility == null) {
+            // 无门槛时只做一次最近玩家查询
+            if (serverLevel.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                    ACTIVATION_RANGE, false) == null) {
+                return;
+            }
+        } else if (!spawner.checkChallengeGate(serverLevel, pos)) {
             return;
         }
         spawner.restoreResetBlocks(serverLevel);
@@ -153,21 +189,28 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
         if (this.requiredAbility == null) {
             return true;
         }
-        List<ServerPlayer> nearby = new ArrayList<>();
+        boolean collectHints = this.lockedHintCooldown <= 0 && this.lockedHintKey != null;
+        List<ServerPlayer> nearby = null;
         for (ServerPlayer player : level.players()) {
-            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)
+            if (!player.isSpectator()
+                    && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)
                     <= ACTIVATION_RANGE * ACTIVATION_RANGE) {
-                nearby.add(player);
                 if (EchoAbilityManager.hasAbility(player, this.requiredAbility)
                         || (this.fallbackBossId != null
                         && EchoAbilityManager.hasDefeatedBoss(player, this.fallbackBossId))) {
                     return true;
                 }
+                if (collectHints) {
+                    if (nearby == null) {
+                        nearby = new ArrayList<>();
+                    }
+                    nearby.add(player);
+                }
             }
         }
         if (this.lockedHintCooldown > 0) {
             this.lockedHintCooldown -= TICK_INTERVAL;
-        } else if (!nearby.isEmpty() && this.lockedHintKey != null) {
+        } else if (nearby != null && !nearby.isEmpty()) {
             for (ServerPlayer player : nearby) {
                 player.displayClientMessage(
                         net.minecraft.network.chat.Component.translatable(this.lockedHintKey), true);
@@ -182,7 +225,14 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
         if (this.resetBlockId == null) {
             return;
         }
-        Block block = BuiltInRegistries.BLOCK.get(this.resetBlockId);
+        Block block = BuiltInRegistries.BLOCK.getOptional(this.resetBlockId).orElse(null);
+        if (block == null) {
+            UnknownEchoes.LOGGER.warn("Mini boss spawner at {} references missing reset block {}",
+                    this.worldPosition, this.resetBlockId);
+            this.resetBlockId = null;
+            this.setChanged();
+            return;
+        }
         for (BlockPos pos : this.resetPositions) {
             if (level.getBlockState(pos).isAir()) {
                 level.setBlock(pos, block.defaultBlockState(), 3);
@@ -191,7 +241,14 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
     }
 
     private void spawnBoss(ServerLevel level) {
-        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(this.entityTypeId);
+        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getOptional(this.entityTypeId).orElse(null);
+        if (type == null) {
+            UnknownEchoes.LOGGER.warn("Mini boss spawner at {} references missing entity {}",
+                    this.worldPosition, this.entityTypeId);
+            this.entityTypeId = null;
+            this.setChanged();
+            return;
+        }
         Entity entity = type.create(level);
         if (entity == null) {
             UnknownEchoes.LOGGER.error("Mini boss spawner at {} failed to create entity {}",
@@ -207,8 +264,13 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
             miniBoss.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos),
                     MobSpawnType.STRUCTURE, null);
         }
-        level.addFreshEntity(entity);
+        if (!level.addFreshEntity(entity)) {
+            UnknownEchoes.LOGGER.warn("Mini boss spawner at {} failed to add entity {}",
+                    this.worldPosition, this.entityTypeId);
+            return;
+        }
         this.bossUuid = entity.getUUID();
+        this.missingBossChecks = 0;
         this.reopenAt = -1L;
         this.setChanged();
         // 出场演出:守护者自下而上凝聚
@@ -252,25 +314,45 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        this.entityTypeId = tag.contains("EntityType")
-                ? ResourceLocation.parse(tag.getString("EntityType")) : null;
-        this.spawnYOffset = tag.contains("SpawnYOffset") ? tag.getInt("SpawnYOffset") : 2;
-        this.reopenAt = tag.contains("ReopenAt") ? tag.getLong("ReopenAt") : -1L;
+        this.entityTypeId = readResourceLocation(tag, "EntityType");
+        this.spawnYOffset = Math.max(-16, Math.min(64,
+                tag.contains("SpawnYOffset") ? tag.getInt("SpawnYOffset") : 2));
+        long savedReopenAt = tag.contains("ReopenAt") ? tag.getLong("ReopenAt") : -1L;
+        this.reopenAt = savedReopenAt < 0L ? -1L : savedReopenAt;
         this.defeatedOnce = tag.getBoolean("DefeatedOnce");
         this.bossUuid = tag.hasUUID("BossUuid") ? tag.getUUID("BossUuid") : null;
-        this.resetBlockId = tag.contains("ResetBlock")
-                ? ResourceLocation.parse(tag.getString("ResetBlock")) : null;
+        this.resetBlockId = readResourceLocation(tag, "ResetBlock");
         this.requiredAbility = tag.contains("RequiredAbility")
                 ? EchoAbilityType.byId(tag.getString("RequiredAbility")) : null;
-        this.fallbackBossId = tag.contains("FallbackBoss")
-                ? ResourceLocation.parse(tag.getString("FallbackBoss")) : null;
-        this.lockedHintKey = tag.contains("LockedHint") ? tag.getString("LockedHint") : null;
+        this.fallbackBossId = readResourceLocation(tag, "FallbackBoss");
+        String hint = tag.contains("LockedHint", Tag.TAG_STRING) ? tag.getString("LockedHint") : null;
+        this.lockedHintKey = hint == null ? null : hint.substring(0, Math.min(256, hint.length()));
         this.resetPositions.clear();
-        for (Tag entry : tag.getList("ResetPositions", Tag.TAG_INT_ARRAY)) {
+        ListTag positions = tag.getList("ResetPositions", Tag.TAG_INT_ARRAY);
+        int limit = Math.min(positions.size(), MAX_RESET_POSITIONS);
+        for (int i = 0; i < limit; i++) {
+            Tag entry = positions.get(i);
             int[] xyz = ((IntArrayTag) entry).getAsIntArray();
             if (xyz.length == 3) {
-                this.resetPositions.add(new BlockPos(xyz[0], xyz[1], xyz[2]));
+                BlockPos resetPos = new BlockPos(xyz[0], xyz[1], xyz[2]);
+                if (this.worldPosition.distManhattan(resetPos) <= 128) {
+                    this.resetPositions.add(resetPos);
+                }
             }
         }
+    }
+
+    private static long safeDeadline(long now, long duration) {
+        if (now < 0L) {
+            now = 0L;
+        }
+        if (duration <= 0L || duration > Long.MAX_VALUE - now) {
+            return duration <= 0L ? now : Long.MAX_VALUE;
+        }
+        return now + duration;
+    }
+
+    private static ResourceLocation readResourceLocation(CompoundTag tag, String key) {
+        return tag.contains(key, Tag.TAG_STRING) ? ResourceLocation.tryParse(tag.getString(key)) : null;
     }
 }

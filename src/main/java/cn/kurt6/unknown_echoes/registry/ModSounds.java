@@ -8,7 +8,6 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * 自定义音效事件。实际音频在 sounds.json 中引用原版音效事件做变调/混合,
- * V0.1 不引入自定义 ogg 文件。
  */
 public class ModSounds {
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
@@ -34,6 +33,16 @@ public class ModSounds {
 
     public static final DeferredHolder<SoundEvent, SoundEvent> COLOSSUS_MUSIC =
             register("music.forgotten_colossus");
+
+    /** 独立事件默认映射遗忘巨像主题,资源包可只覆盖虚空先知音轨。 */
+    public static final DeferredHolder<SoundEvent, SoundEvent> VOID_PROPHET_MUSIC =
+            register("music.void_prophet");
+
+    public static final DeferredHolder<SoundEvent, SoundEvent> RIFT_WARDEN_MUSIC =
+            register("music.rift_warden");
+
+    public static final DeferredHolder<SoundEvent, SoundEvent> WORLD_ECHO_MUSIC =
+            register("music.world_echo");
 
     public static final DeferredHolder<SoundEvent, SoundEvent> ABYSS_WATCHER_MUSIC =
             register("music.abyss_watcher");

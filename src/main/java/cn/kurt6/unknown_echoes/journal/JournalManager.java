@@ -10,6 +10,7 @@ import cn.kurt6.unknown_echoes.research.EchoResearchManager;
 import cn.kurt6.unknown_echoes.registry.ModAttachments;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.world.EchoRealmBiomeCatalog;
+import cn.kurt6.unknown_echoes.world.DeepEchoesBiomeCatalog;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -33,6 +34,7 @@ public class JournalManager {
     /** 第一维度发行残页目标。 */
     public static final int KNOWN_PAGES = AncientPageCatalog.TOTAL;
     private static final String ALL_PAGES_REWARD_KEY = "journal:all_pages_reward";
+    private static final String ALL_DEEP_BIOMES_KEY = "journal:all_deep_echoes_biomes";
 
     /** 研究等级上限(V0.6B:设定基线 4 级;等级 4 预留给神器隐藏词条联动)。 */
     public static final int MAX_RESEARCH_LEVEL = EchoResearchManager.MAX_RESEARCH_LEVEL;
@@ -46,9 +48,6 @@ public class JournalManager {
         return player.getData(ModAttachments.EXPLORATION_JOURNAL);
     }
 
-    /** 个人探索线索上限(超出时优先淘汰最旧的已踏入线索,防数据无界增长)。 */
-    private static final int MAX_CLUES = 64;
-
     public static void recordStructure(ServerPlayer player, ResourceLocation structureId) {
         recordStructure(player, structureId, player.blockPosition());
     }
@@ -61,6 +60,8 @@ public class JournalManager {
                 ModAdvancements.award(player, ModAdvancements.EXPLORER_5);
             }
             ModAdvancements.awardStructureDiscovery(player, structureId.toString(), getData(player).getStructures());
+            ModAdvancements.checkDeepExplorationAdvancements(player,
+                    getData(player).getStructures(), getData(player).getBiomes());
             // V0.6D:发现遗迹 = 罗盘"归途"线索落账 + 回响能量回填(回访点档位)
             addClue(player, new ExplorationClue(structureId.toString(),
                     player.level().dimension().location().toString(), pos, true));
@@ -88,7 +89,7 @@ public class JournalManager {
             }
         }
         clues.add(clue.encode());
-        if (clues.size() > MAX_CLUES) {
+        if (clues.size() > ExplorationJournalData.MAX_CLUES) {
             // 优先淘汰最旧的已踏入线索;全是未踏入时淘汰最旧一条
             int removeIdx = 0;
             for (int i = 0; i < clues.size(); i++) {
@@ -139,6 +140,15 @@ public class JournalManager {
             notebookFlip(player);
             if (EchoRealmBiomeCatalog.hasVisitedAll(getData(player).getBiomes())) {
                 ModAdvancements.award(player, ModAdvancements.ALL_BIOMES);
+            }
+            ModAdvancements.checkDeepExplorationAdvancements(player,
+                    getData(player).getStructures(), getData(player).getBiomes());
+            if (DeepEchoesBiomeCatalog.hasVisitedAll(getData(player).getBiomes())
+                    && !EchoAbilityManager.hasActivatedMechanism(player, ALL_DEEP_BIOMES_KEY)) {
+                EchoAbilityManager.activateMechanism(player, ALL_DEEP_BIOMES_KEY);
+                EchoAbilityManager.syncToClient(player);
+                player.sendSystemMessage(Component.translatable(
+                        "message.unknown_echoes.deep_echoes.all_biomes"));
             }
             syncJournal(player);
         }
@@ -193,23 +203,37 @@ public class JournalManager {
 
     private static boolean canFitAllRewards(ServerPlayer player, List<ItemStack> rewards) {
         List<ItemStack> slots = new ArrayList<>();
+        List<ItemStack> offhand = new ArrayList<>();
         for (ItemStack slot : player.getInventory().items) {
             slots.add(slot.copy());
         }
+        for (ItemStack slot : player.getInventory().offhand) {
+            offhand.add(slot.copy());
+        }
         for (ItemStack reward : rewards) {
-            if (!simulateInsert(slots, reward.copy())) {
+            if (!simulateInsert(slots, offhand, reward.copy())) {
                 return false;
             }
         }
         return true;
     }
 
-    private static boolean simulateInsert(List<ItemStack> slots, ItemStack reward) {
+    private static boolean simulateInsert(List<ItemStack> slots, List<ItemStack> offhand,
+                                          ItemStack reward) {
         int remaining = reward.getCount();
         for (ItemStack slot : slots) {
             if (remaining <= 0) {
                 return true;
             }
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, reward)) {
+                int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
+                if (move > 0) {
+                    slot.grow(move);
+                    remaining -= move;
+                }
+            }
+        }
+        for (ItemStack slot : offhand) {
             if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, reward)) {
                 int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
                 if (move > 0) {
@@ -240,7 +264,7 @@ public class JournalManager {
         var registries = player.server.registryAccess();
         int totalStructures = (int) registries.registryOrThrow(Registries.STRUCTURE).keySet().stream()
                 .filter(id -> id.getNamespace().equals(UnknownEchoes.MODID)).count();
-        int totalBiomes = EchoRealmBiomeCatalog.REQUIRED_COUNT;
+        int totalBiomes = EchoRealmBiomeCatalog.REQUIRED_COUNT + DeepEchoesBiomeCatalog.REQUIRED_COUNT;
         int totalMobs = countTag(ECHO_MOBS_TAG);
         int totalBosses = countTag(ECHO_BOSSES_TAG);
         PacketDistributor.sendToPlayer(player, new JournalSyncPayload(
@@ -276,7 +300,7 @@ public class JournalManager {
 
         long totalStructures = registries.registryOrThrow(Registries.STRUCTURE).keySet().stream()
                 .filter(id -> id.getNamespace().equals(UnknownEchoes.MODID)).count();
-        long totalBiomes = EchoRealmBiomeCatalog.REQUIRED_COUNT;
+        long totalBiomes = EchoRealmBiomeCatalog.REQUIRED_COUNT + DeepEchoesBiomeCatalog.REQUIRED_COUNT;
         int totalMobs = countTag(ECHO_MOBS_TAG);
         int totalBosses = countTag(ECHO_BOSSES_TAG);
 

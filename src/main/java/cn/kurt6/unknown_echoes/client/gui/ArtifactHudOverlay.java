@@ -28,24 +28,43 @@ public final class ArtifactHudOverlay {
     private static final String[] ARTIFACT_IDS = {
             ArtifactType.STORM_COMPASS.getId(),
             ArtifactType.TIDE_LANTERN.getId(),
-            ArtifactType.ECHO_LENS.getId()
+            ArtifactType.ECHO_LENS.getId(),
+            ArtifactType.TIME_HOURGLASS.getId(),
+            ArtifactType.DIMENSION_ANCHOR.getId(),
+            ArtifactType.RIFT_ANCHOR.getId()
     };
     private static final ItemStack[] ICONS = {
             new ItemStack(ModItems.STORM_COMPASS.get()),
             new ItemStack(ModItems.TIDE_LANTERN.get()),
-            new ItemStack(ModItems.ECHO_LENS.get())
+            new ItemStack(ModItems.ECHO_LENS.get()),
+            new ItemStack(ModItems.TIME_HOURGLASS.get()),
+            new ItemStack(ModItems.DIMENSION_ANCHOR.get()),
+            new ItemStack(ModItems.RIFT_ANCHOR.get())
     };
+
+    // 每帧渲染的文本组件按值缓存,数值每秒才变一次,不逐帧新建
+    private static final Component[] TITLE_CACHE = new Component[ARTIFACT_IDS.length];
+    private static final int[] TITLE_LEVEL = new int[ARTIFACT_IDS.length];
+    private static final Component[] STATE_CACHE = new Component[ARTIFACT_IDS.length];
+    private static final int[] STATE_COOLDOWN = new int[ARTIFACT_IDS.length];
+    private static Component energyText = null;
+    private static int energyTextValue = -1;
+    private static int energyTextMax = -1;
 
     private ArtifactHudOverlay() {
     }
 
     public static void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui || mc.screen != null || !shouldRender(mc.player)) {
+        if (mc.player == null || mc.options.hideGui || mc.screen != null) {
             return;
         }
         String held = heldArtifactId(mc.player);
-        boolean renderAll = held == null && energyNeedsAttention();
+        boolean energyNeedsAttention = energyNeedsAttention();
+        if (held == null && (!energyNeedsAttention || !hasClaimedArtifact())) {
+            return;
+        }
+        boolean renderAll = held == null;
         int rows = renderAll ? claimedCount() : 1;
         int height = 15 + rows * ROW_HEIGHT;
         int x = 8;
@@ -57,7 +76,7 @@ public final class ArtifactHudOverlay {
         for (int i = 0; i < ARTIFACT_IDS.length; i++) {
             if (ClientArtifactCache.isClaimed(ARTIFACT_IDS[i])
                     && (renderAll || ARTIFACT_IDS[i].equals(held))) {
-                renderArtifactRow(graphics, mc, ARTIFACT_IDS[i], ICONS[i], x, rowY);
+                renderArtifactRow(graphics, mc, i, x, rowY);
                 rowY += ROW_HEIGHT;
             }
         }
@@ -81,8 +100,12 @@ public final class ArtifactHudOverlay {
         int fill = Mth.clamp(energy * BAR_WIDTH / max, 0, BAR_WIDTH);
         long time = mc.level == null ? 0L : mc.level.getGameTime();
         boolean lowFlash = energy * 5 < max && (time / 10L) % 2L == 0L;
-        graphics.drawString(mc.font,
-                Component.translatable("hud.unknown_echoes.artifact.energy", energy, max),
+        if (energyText == null || energyTextValue != energy || energyTextMax != max) {
+            energyTextValue = energy;
+            energyTextMax = max;
+            energyText = Component.translatable("hud.unknown_echoes.artifact.energy", energy, max);
+        }
+        graphics.drawString(mc.font, energyText,
                 x + 2, y + 1, lowFlash ? 0xFFFF9E8A : 0xFFE2F9FF, false);
         int barX = x + 37;
         int barY = y + 4;
@@ -99,7 +122,8 @@ public final class ArtifactHudOverlay {
     }
 
     private static void renderArtifactRow(GuiGraphics graphics, Minecraft mc,
-                                          String id, ItemStack icon, int x, int y) {
+                                          int index, int x, int y) {
+        String id = ARTIFACT_IDS[index];
         ClientArtifactCache.Entry entry = ClientArtifactCache.get(id);
         if (entry == null) {
             return;
@@ -108,15 +132,20 @@ public final class ArtifactHudOverlay {
         graphics.fillGradient(x, y - 2, x + PANEL_WIDTH - 3, y + 16, 0x33101824, 0x1103050A);
         graphics.fill(x + 2, y - 1, x + 3, y + 15, cooldown > 0 ? COL_GOLD : COL_ACCENT_DIM);
         graphics.renderOutline(x + 7, y - 1, 18, 18, COL_EDGE_FAINT);
-        graphics.renderItem(icon, x + 8, y);
-        Component name = Component.translatable("artifact.unknown_echoes." + id);
-        graphics.drawString(mc.font,
-                Component.translatable("hud.unknown_echoes.artifact.level", name, entry.level()),
-                x + 30, y - 1, COL_TEXT, false);
-        Component state = cooldown > 0
-                ? Component.translatable("hud.unknown_echoes.artifact.cooldown", cooldown)
-                : Component.translatable("hud.unknown_echoes.artifact.ready");
-        graphics.drawString(mc.font, state, x + 30, y + 8,
+        graphics.renderItem(ICONS[index], x + 8, y);
+        if (TITLE_CACHE[index] == null || TITLE_LEVEL[index] != entry.level()) {
+            TITLE_LEVEL[index] = entry.level();
+            TITLE_CACHE[index] = Component.translatable("hud.unknown_echoes.artifact.level",
+                    Component.translatable("artifact.unknown_echoes." + id), entry.level());
+        }
+        graphics.drawString(mc.font, TITLE_CACHE[index], x + 30, y - 1, COL_TEXT, false);
+        if (STATE_CACHE[index] == null || STATE_COOLDOWN[index] != cooldown) {
+            STATE_COOLDOWN[index] = cooldown;
+            STATE_CACHE[index] = cooldown > 0
+                    ? Component.translatable("hud.unknown_echoes.artifact.cooldown", cooldown)
+                    : Component.translatable("hud.unknown_echoes.artifact.ready");
+        }
+        graphics.drawString(mc.font, STATE_CACHE[index], x + 30, y + 8,
                 cooldown > 0 ? 0xFFFFD28A : 0xFF8AF7C5, false);
     }
 
@@ -151,32 +180,20 @@ public final class ArtifactHudOverlay {
         return count;
     }
 
-    private static boolean shouldRender(Player player) {
-        return hasClaimedArtifact() && (energyNeedsAttention() || heldArtifactId(player) != null);
-    }
-
     private static boolean energyNeedsAttention() {
         int energy = ClientArtifactCache.getEnergy();
         return energy >= 0 && energy < Math.max(1, ClientArtifactCache.getMaxEnergy());
     }
 
     private static String heldArtifactId(Player player) {
-        for (String id : ARTIFACT_IDS) {
-            if (ClientArtifactCache.isClaimed(id)
-                    && (isHeldArtifact(player.getMainHandItem(), id)
-                    || isHeldArtifact(player.getOffhandItem(), id))) {
-                return id;
+        ItemStack mainHand = player.getMainHandItem();
+        ItemStack offhand = player.getOffhandItem();
+        for (int i = 0; i < ARTIFACT_IDS.length; i++) {
+            if (ClientArtifactCache.isClaimed(ARTIFACT_IDS[i])
+                    && (mainHand.is(ICONS[i].getItem()) || offhand.is(ICONS[i].getItem()))) {
+                return ARTIFACT_IDS[i];
             }
         }
         return null;
-    }
-
-    private static boolean isHeldArtifact(ItemStack stack, String id) {
-        for (int i = 0; i < ARTIFACT_IDS.length; i++) {
-            if (ARTIFACT_IDS[i].equals(id) && stack.is(ICONS[i].getItem())) {
-                return true;
-            }
-        }
-        return false;
     }
 }

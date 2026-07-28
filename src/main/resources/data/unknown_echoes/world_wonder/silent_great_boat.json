@@ -17,7 +17,8 @@
   "core_record_score": 3,
   "loot_tables": {
     "common": "unknown_echoes:chests/silent_hut",
-    "core": "unknown_echoes:chests/common/t4_region_core"
+    "core": "unknown_echoes:chests/common/t4_region_core",
+    "endgame": "unknown_echoes:chests/common/t7_echo_realm_endgame"
   },
   "clue_key": "clue.unknown_echoes.silent_great_boat",
   "critical_path": false,

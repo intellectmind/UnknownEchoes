@@ -115,8 +115,8 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
             }
             this.oceanFloorY = total / count;
 
-            // 水深校验:灯塔高 9 + 浮标层,要求中心 ≥11,四角 ≥6
-            if (!LakeBedPieceHelper.checkWaterDepth(level, generator,
+            // 水深校验:25×25 四角可能跨到未就绪区块,用噪声柱(gotcha #30);中心 ≥11,四角 ≥6
+            if (!LakeBedPieceHelper.checkWaterDepthByNoise(level, generator,
                     this.boundingBox.minX(), this.boundingBox.minZ(), SIZE, SIZE, 11, 6)) {
                 this.rejected = true;
                 return false;

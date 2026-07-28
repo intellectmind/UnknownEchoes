@@ -16,7 +16,9 @@ public final class AncientPageCatalog {
             category("dream", 86, 87, 88, 89, 90, 91),
             category("bell", 92, 93, 94, 95, 96, 97),
             category("endgame", 104, 105, 106, 107, 108, 109, 110, 111, 112, 113),
-            category("ecology", 120, 121, 122, 123, 124, 125, 126, 127)
+            category("ecology", 120, 121, 122, 123, 124, 125, 126, 127),
+            category("deep", 128, 129, 130, 131, 132, 133, 134, 135,
+                    136, 137, 138, 139, 140, 141, 142, 143)
     );
     public static final int TOTAL = CATEGORIES.stream().mapToInt(Category::total).sum();
 

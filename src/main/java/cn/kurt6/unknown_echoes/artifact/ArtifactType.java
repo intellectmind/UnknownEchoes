@@ -19,17 +19,32 @@ public enum ArtifactType {
     STORM_COMPASS("storm_compass", EchoAbilityType.WIND_ECHO,
             List.of("seek", "homeward"), "windflow",
             () -> ModItems.STORM_COMPASS.get(),
-            120, 18),
+            120, 30),
 
     TIDE_LANTERN("tide_lantern", EchoAbilityType.TIDE_ECHO,
             List.of("rune", "record"), "stable_reflection",
             () -> ModItems.TIDE_LANTERN.get(),
-            75, 8),
+            75, 24),
 
     ECHO_LENS("echo_lens", EchoAbilityType.TRUE_SIGHT_ECHO,
             List.of("inscription", "cache"), "archive_door",
             () -> ModItems.ECHO_LENS.get(),
-            60, 12);
+            60, 24),
+
+    TIME_HOURGLASS("time_hourglass", EchoAbilityType.GRAVITY_ECHO,
+            List.of("shorthand", "breadth"), "folded_memory",
+            () -> ModItems.TIME_HOURGLASS.get(),
+            90, 40),
+
+    DIMENSION_ANCHOR("dimension_anchor", EchoAbilityType.TIDE_ECHO,
+            List.of("thrift", "dual_anchor"), "undertow_return",
+            () -> ModItems.DIMENSION_ANCHOR.get(),
+            120, 50),
+
+    RIFT_ANCHOR("rift_anchor", EchoAbilityType.VOID_ECHO,
+            List.of("lingering", "twin_spike"), "silent_fold",
+            () -> ModItems.RIFT_ANCHOR.get(),
+            180, 60);
 
     /** 等级上限(12.4:1=领取即得,2=解锁调谐,3=词条增强)。 */
     public static final int MAX_LEVEL = 3;

@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:folded_archive",
+  "biomes": "#unknown_echoes:has_folded_archive",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

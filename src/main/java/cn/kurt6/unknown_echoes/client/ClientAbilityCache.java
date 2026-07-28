@@ -18,10 +18,9 @@ public class ClientAbilityCache {
     private static final Set<String> BEACONS = new HashSet<>();
     private static final Set<String> DIMENSIONS = new HashSet<>();
     private static final Map<String, Integer> RESEARCH = new HashMap<>();
-    /** 已完成核心机关仪式的能力 id(V0.6E 凭据与誓记页;只是布尔事实,不含坐标)。 */
     private static final Set<String> RITUAL_TOKENS = new HashSet<>();
-    /** 最近失败提示键(V0.6E 能力面板),键=能力 id。 */
     private static final Map<String, String> FAILURES = new HashMap<>();
+    private static int puzzleScore;
 
     public static void update(SyncAbilityPayload payload) {
         ABILITIES.clear();
@@ -31,11 +30,17 @@ public class ClientAbilityCache {
         DIMENSIONS.clear();
         DIMENSIONS.addAll(payload.dimensions());
         RESEARCH.clear();
+        puzzleScore = 0;
         for (String entry : payload.research()) {
             int sep = entry.lastIndexOf(':');
             if (sep > 0) {
                 try {
-                    RESEARCH.put(entry.substring(0, sep), Integer.parseInt(entry.substring(sep + 1)));
+                    int value = Integer.parseInt(entry.substring(sep + 1));
+                    if (entry.startsWith("@puzzle_score:")) {
+                        puzzleScore = Math.max(0, value);
+                    } else {
+                        RESEARCH.put(entry.substring(0, sep), value);
+                    }
                 } catch (NumberFormatException ignored) {
                 }
             }
@@ -76,6 +81,10 @@ public class ClientAbilityCache {
         return FAILURES.getOrDefault(type.getId(), "");
     }
 
+    public static int getPuzzleScore() {
+        return puzzleScore;
+    }
+
     public static void clear() {
         ABILITIES.clear();
         BEACONS.clear();
@@ -83,5 +92,6 @@ public class ClientAbilityCache {
         RESEARCH.clear();
         RITUAL_TOKENS.clear();
         FAILURES.clear();
+        puzzleScore = 0;
     }
 }

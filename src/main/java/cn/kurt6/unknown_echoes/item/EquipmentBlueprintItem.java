@@ -22,6 +22,17 @@ public class EquipmentBlueprintItem extends Item {
         this.weaponKey = weaponKey;
     }
 
+    // 图纸是线索而非耗材:合成武器后留在合成栏,一张图纸可反复参照
+    @Override
+    public boolean hasCraftingRemainingItem(ItemStack stack) {
+        return true;
+    }
+
+    @Override
+    public ItemStack getCraftingRemainingItem(ItemStack stack) {
+        return stack.copyWithCount(1);
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {
@@ -31,5 +42,7 @@ public class EquipmentBlueprintItem extends Item {
                 .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.blueprint." + weaponKey + ".hint")
                 .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.blueprint.keeps")
+                .withStyle(ChatFormatting.DARK_GRAY));
     }
 }

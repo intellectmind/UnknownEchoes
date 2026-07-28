@@ -114,7 +114,8 @@ public class EchoTempleStructure extends Structure {
             COMBAT(10, 7, 11), COMBAT_E(10, 7, 11),
             ARCHIVE(10, 7, 11), ARCHIVE_E(10, 7, 11),
             HIDDEN(10, 7, 11), HIDDEN_E(10, 7, 11),
-            TREASURE(11, 7, 8);
+            TREASURE(11, 7, 8),
+            INVALID(1, 1, 1);
 
             final int width, height, depth;
 
@@ -122,6 +123,17 @@ public class EchoTempleStructure extends Structure {
                 this.width = width;
                 this.height = height;
                 this.depth = depth;
+            }
+
+            private static final Kind[] VALUES = values();
+
+            static Kind byName(String name) {
+                for (Kind kind : VALUES) {
+                    if (kind.name().equals(name)) {
+                        return kind;
+                    }
+                }
+                return INVALID;
             }
 
             Kind asWest() {
@@ -157,7 +169,7 @@ public class EchoTempleStructure extends Structure {
 
         public TemplePiece(CompoundTag tag) {
             super(ModStructures.ECHO_TEMPLE_PIECE.get(), tag);
-            this.kind = Kind.valueOf(tag.getString("Kind"));
+            this.kind = Kind.byName(tag.getString("Kind"));
         }
 
         @Override
@@ -177,6 +189,9 @@ public class EchoTempleStructure extends Structure {
                 case COMBAT, COMBAT_E -> buildCombat(level, box, random);
                 case ARCHIVE, ARCHIVE_E -> buildArchive(level, box, random);
                 case HIDDEN, HIDDEN_E -> buildHidden(level, box, random);
+                case INVALID -> {
+                    // 损坏存档的 Piece 不再尝试写入未知结构。
+                }
             }
         }
 

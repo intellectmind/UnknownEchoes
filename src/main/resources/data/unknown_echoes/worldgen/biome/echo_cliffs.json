@@ -36,12 +36,16 @@
     [],
     [],
     [
+      "unknown_echoes:echo_strata_disk",
+      "unknown_echoes:resonant_cliff_crystal_disk",
       "unknown_echoes:echo_cliff_stone_disk",
       "unknown_echoes:wind_etched_stone_disk"
     ],
     [],
     [],
     [
+      "unknown_echoes:cliff_heather_patch",
+      "unknown_echoes:archive_lichen_patch",
       "minecraft:patch_grass_plain",
       "unknown_echoes:ash_chime_grass_patch",
       "unknown_echoes:echo_flowers",

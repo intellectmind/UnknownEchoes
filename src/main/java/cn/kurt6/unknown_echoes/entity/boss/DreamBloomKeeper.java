@@ -5,7 +5,6 @@ import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -74,6 +73,7 @@ public class DreamBloomKeeper extends MiniBossEntity {
 
     private static final int ARENA_RADIUS = 12;
     private static final int EXPOSED_WINDOW = 240; // 凋萎暴露窗口 12s
+    private static final int BUD_COUNT = 3;
 
     /** 当前在场治疗花苞位置;非空 = 正在回血且受护。 */
     private final List<Vec3> healingBuds = new ArrayList<>();
@@ -132,6 +132,16 @@ public class DreamBloomKeeper extends MiniBossEntity {
     }
 
     @Override
+    protected void tickMechanicGuidance(ServerLevel level) {
+        Vec3 core = this.position().add(0, 1.0, 0);
+        for (Vec3 bud : this.healingBuds) {
+            Vec3 marker = bud.add(0, 0.4, 0);
+            BossFx.guidanceMarker(level, marker, ParticleTypes.HAPPY_VILLAGER);
+            BossFx.guidanceLink(level, marker, core, ParticleTypes.GLOW);
+        }
+    }
+
+    @Override
     protected void grantSettlement(ServerPlayer player, boolean firstKill) {
         MiniBossRewardTable.grantDreamBloomKeeper(this, player, firstKill);
     }
@@ -176,19 +186,9 @@ public class DreamBloomKeeper extends MiniBossEntity {
                 serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER,
                         bud.x, bud.y + 0.4, bud.z, 1, 0.2, 0.3, 0.2, 0.0);
             }
-            // 花苞到本体的回流光带
-            if (this.tickCount % 8 == 0) {
-                Vec3 d = this.position().add(0, 1.0, 0).subtract(bud);
-                int steps = Math.max(2, (int) d.length());
-                for (int i = 0; i <= steps; i += 2) {
-                    Vec3 p = bud.add(d.scale(i / (double) steps));
-                    serverLevel.sendParticles(ParticleTypes.COMPOSTER, p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0.0);
-                }
-            }
         }
         // 清除:任意玩家靠近(2 格内)
-        this.healingBuds.removeIf(bud -> serverLevel.players().stream().anyMatch(
-                p -> p.isAlive() && p.distanceToSqr(bud.x, bud.y, bud.z) <= 4.0));
+        this.healingBuds.removeIf(bud -> hasNearbyAlivePlayer(serverLevel, bud, 4.0D));
         if (this.healingBuds.isEmpty()) {
             this.exposedTicks = EXPOSED_WINDOW;
             this.playSound(ModSounds.DREAM_BLOOM_KEEPER_BLOOM.get(), 1.0F, 1.4F);
@@ -203,15 +203,23 @@ public class DreamBloomKeeper extends MiniBossEntity {
         this.playSound(ModSounds.DREAM_BLOOM_KEEPER_BLOOM.get(), 1.2F, 0.7F);
         this.heal(6.0F);
         Vec3 anchor = Vec3.atCenterOf(this.arenaAnchor());
-        int count = 3;
-        for (int i = 0; i < count; i++) {
-            double angle = Math.PI * 2 * i / count + this.random.nextDouble() * 0.6;
+        for (int i = 0; i < BUD_COUNT; i++) {
+            double angle = Math.PI * 2 * i / BUD_COUNT + this.random.nextDouble() * 0.6;
             double dist = 4.0 + this.random.nextDouble() * (ARENA_RADIUS - 6);
             Vec3 bud = new Vec3(anchor.x + Math.cos(angle) * dist, anchor.y, anchor.z + Math.sin(angle) * dist);
             this.healingBuds.add(bud);
             serverLevel.sendParticles(ParticleTypes.CHERRY_LEAVES, bud.x, bud.y + 0.5, bud.z, 12, 0.3, 0.5, 0.3, 0.02);
         }
         this.broadcastHint(serverLevel, "message.unknown_echoes.dream_bloom_keeper.guarded");
+    }
+
+    private static boolean hasNearbyAlivePlayer(ServerLevel level, Vec3 pos, double rangeSqr) {
+        for (ServerPlayer player : level.players()) {
+            if (!player.isSpectator() && player.isAlive() && player.distanceToSqr(pos) <= rangeSqr) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void tickSpecialAttacks(ServerLevel serverLevel) {
@@ -266,7 +274,7 @@ public class DreamBloomKeeper extends MiniBossEntity {
         }
         BossFx.sparkSpray(serverLevel, this.position().add(0, 1.2, 0), forward, 7.0, ParticleTypes.SPORE_BLOSSOM_AIR);
         for (Player victim : serverLevel.players()) {
-            if (!victim.isAlive() || victim.distanceToSqr(this) > 64.0) {
+            if (victim.isSpectator() || !victim.isAlive() || victim.distanceToSqr(this) > 64.0) {
                 continue;
             }
             Vec3 toVictim = victim.position().subtract(this.position()).multiply(1, 0, 1);
@@ -285,7 +293,7 @@ public class DreamBloomKeeper extends MiniBossEntity {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.5F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(4.0, 2.0, 4.0),
-                e -> e != this && !(e instanceof Enemy))) {
+                e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
             victim.hurt(this.damageSources().mobAttack(this), damage);
             victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 0), this);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
@@ -365,14 +373,9 @@ public class DreamBloomKeeper extends MiniBossEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.exposedTicks = tag.getInt("ExposedTicks");
-        this.healingBuds.clear();
-        for (Tag entry : tag.getList("HealingBuds", Tag.TAG_COMPOUND)) {
-            if (entry instanceof CompoundTag budTag) {
-                this.healingBuds.add(new Vec3(
-                        budTag.getDouble("X"), budTag.getDouble("Y"), budTag.getDouble("Z")));
-            }
-        }
+        this.exposedTicks = BossNbtData.clampTimer(tag.getInt("ExposedTicks"), EXPOSED_WINDOW);
+        BossNbtData.loadVec3sNear(tag, "HealingBuds", this.healingBuds, BUD_COUNT,
+                Vec3.atCenterOf(this.arenaAnchor()), ARENA_RADIUS, ARENA_RADIUS);
         if (!this.healingBuds.isEmpty()) {
             this.exposedTicks = 0;
         } else if (tag.getInt("BudCount") > 0) {

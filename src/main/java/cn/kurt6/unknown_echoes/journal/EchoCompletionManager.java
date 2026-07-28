@@ -30,10 +30,13 @@ public final class EchoCompletionManager {
     private static final String T7_INGOTS_KEY = "completion:echo_realm_t7_ingots";
     private static final String T7_CLUE_MAP_KEY = "completion:echo_realm_t7_clue_map";
     private static final String ARCHIVE_TERMINAL_KEY = "completion:echo_grand_archive_terminal";
+    private static final String MAINLINE_COMPLETION_KEY = "completion:echo_realm_mainline";
+    private static final String CORE_RESONANCE_KEY = "completion:echo_realm_core_resonance";
     private static final String INDEX_UNLOCK_KEY = "completion:echo_index_unlocked";
     private static final String INDEX_EXPANSION_ONE_KEY = "completion:echo_index_expansion_1";
     private static final String INDEX_EXPANSION_TWO_KEY = "completion:echo_index_expansion_2";
     private static final ResourceLocation ARCHIVE_STRUCTURE = UnknownEchoes.id("echo_grand_archive");
+    private static final ResourceLocation ABYSS_BEACON_STRUCTURE = UnknownEchoes.id("abyss_beacon_structure");
     private static final int REQUIRED_BIOMES = 8;
     private static final int REQUIRED_PAGES = 48;
     private static final int REQUIRED_MINI_BOSSES = 6;
@@ -68,7 +71,53 @@ public final class EchoCompletionManager {
     public static boolean handleArchiveTerminalUse(ServerPlayer player) {
         EchoAbilityManager.activateMechanism(player, ARCHIVE_TERMINAL_KEY);
         JournalManager.recordStructure(player, ARCHIVE_STRUCTURE, player.blockPosition());
+        boolean hadMainlineRecord = hasMainlineCompletionRecord(player);
+        if (refreshMainlineCompletion(player)) {
+            if (!hadMainlineRecord) {
+                player.sendSystemMessage(Component.translatable(
+                        "message.unknown_echoes.completion.mainline_unlocked"));
+            }
+            player.displayClientMessage(Component.translatable(ClueLocator.locateAndAddClue(
+                            player, ABYSS_BEACON_STRUCTURE)
+                            ? "message.unknown_echoes.completion.abyss_clue_added"
+                            : "message.unknown_echoes.completion.abyss_clue_missing"), true);
+        }
         return showSummaryAndClaim(player);
+    }
+
+    /**
+     * 第一维度主线毕业只检查必经内容，不复用包含可选探索目标的 T7 完满判定。
+     */
+    public static boolean isMainlineComplete(ServerPlayer player) {
+        return hasCoreAbilities(player)
+                && hasCoreBosses(player)
+                && hasArchiveTerminal(player)
+                && hasArchiveTrials(player);
+    }
+
+    /**
+     * 为已满足条件的玩家写入稳定主线记录。深渊信标也会调用本方法，
+     * 以兼容在版本更新前已经完成档案馆流程的旧存档。
+     */
+    public static boolean refreshMainlineCompletion(ServerPlayer player) {
+        if (!isMainlineComplete(player)) {
+            return false;
+        }
+        boolean changed = !hasMainlineCompletionRecord(player) || !hasCoreResonance(player);
+        EchoAbilityManager.activateMechanism(player, MAINLINE_COMPLETION_KEY);
+        EchoAbilityManager.activateMechanism(player, CORE_RESONANCE_KEY);
+        if (changed) {
+            EchoAbilityManager.syncToClient(player);
+        }
+        return true;
+    }
+
+    public static boolean hasMainlineCompletionRecord(ServerPlayer player) {
+        return EchoAbilityManager.hasActivatedMechanism(player, MAINLINE_COMPLETION_KEY);
+    }
+
+    public static boolean hasCoreResonance(ServerPlayer player) {
+        return EchoAbilityManager.hasActivatedMechanism(player, CORE_RESONANCE_KEY);
     }
 
     private static boolean showSummaryAndClaim(ServerPlayer player) {
@@ -77,7 +126,9 @@ public final class EchoCompletionManager {
             player.sendSystemMessage(line);
         }
         if (!isComplete(player)) {
-            player.displayClientMessage(Component.translatable("message.unknown_echoes.completion.incomplete"), true);
+            player.displayClientMessage(Component.translatable(hasMainlineCompletionRecord(player)
+                    ? "message.unknown_echoes.completion.mainline_ready"
+                    : "message.unknown_echoes.completion.incomplete"), true);
             return false;
         }
         if (hasClaimedT7(player)) {
@@ -157,13 +208,21 @@ public final class EchoCompletionManager {
         lines.add(Component.translatable("completion.unknown_echoes.index.expansion2.claimed")
                 .withStyle(ChatFormatting.GREEN));
         int beforeDeepChecks = lines.size();
-        addDeepCheck(lines, "completion.unknown_echoes.index.pages", pagesRead(player), DEEP_INDEX_PAGES);
-        addDeepCheck(lines, "completion.unknown_echoes.index.biomes",
-                visitedBiomes(player), EchoRealmBiomeCatalog.REQUIRED_COUNT);
-        addDeepCheck(lines, "completion.unknown_echoes.index.mini_bosses",
-                miniBossKills(player), MINI_BOSSES.size());
-        addDeepCheck(lines, "completion.unknown_echoes.index.artifacts",
-                artifactUpgradeSteps(player), ArtifactType.values().length * (ArtifactType.MAX_LEVEL - 1));
+        addDeepCheck(lines, "completion.unknown_echoes.index.deep_abilities",
+                deepAbilityCount(player), DeepEchoesProgressCatalog.ABILITIES.size());
+        addDeepCheck(lines, "completion.unknown_echoes.index.deep_bosses",
+                deepBossKills(player), DeepEchoesProgressCatalog.BOSS_KEYS.size());
+        addDeepCheck(lines, "completion.unknown_echoes.index.deep_biomes",
+                deepBiomeCount(player), DeepEchoesProgressCatalog.BIOME_IDS.size());
+        addDeepCheck(lines, "completion.unknown_echoes.index.deep_structures",
+                deepStructureCount(player), DeepEchoesProgressCatalog.STRUCTURE_IDS.size());
+        addDeepCheck(lines, "completion.unknown_echoes.index.deep_mobs",
+                deepMobCount(player), DeepEchoesProgressCatalog.MOB_IDS.size());
+        addDeepCheck(lines, "completion.unknown_echoes.index.deep_pages",
+                deepPageCount(player), DeepEchoesProgressCatalog.PAGE_COUNT);
+        addDeepCheck(lines, "completion.unknown_echoes.index.deep_artifacts",
+                deepArtifactUpgradeSteps(player),
+                DeepEchoesProgressCatalog.ARTIFACTS.size() * (ArtifactType.MAX_LEVEL - 1));
         if (lines.size() == beforeDeepChecks) {
             lines.add(Component.translatable("completion.unknown_echoes.index.ready")
                     .withStyle(ChatFormatting.GREEN));
@@ -176,7 +235,7 @@ public final class EchoCompletionManager {
         int score = 0;
         score += Math.min(visitedBiomes(player) * 3, 30);
         score += Math.min(journal.getStructures().size() * 2, 40);
-        score += Math.min(puzzleCompletions(player) * 3, 45);
+        score += puzzleCompletionScore(player);
         score += Math.min(miniBossKills(player) * 6, 48);
         score += Math.min(pagesRead(player), 80);
         score += Math.min(abilityEnhancementStages(player) * 5, 45);
@@ -228,6 +287,11 @@ public final class EchoCompletionManager {
         return count;
     }
 
+    /** 只暴露聚合分数供客户端同步，不泄露机关键或隐藏位置。 */
+    public static int puzzleCompletionScore(ServerPlayer player) {
+        return Math.min(puzzleCompletions(player) * 3, 45);
+    }
+
     private static boolean isPuzzleKey(String key) {
         for (String prefix : PUZZLE_PREFIXES) {
             if (key.startsWith(prefix)) {
@@ -260,6 +324,48 @@ public final class EchoCompletionManager {
         int count = 0;
         var data = ArtifactManager.getData(player);
         for (ArtifactType type : ArtifactType.values()) {
+            count += Math.max(0, data.getLevel(type) - 1);
+        }
+        return count;
+    }
+
+    private static int deepAbilityCount(ServerPlayer player) {
+        int count = 0;
+        for (EchoAbilityType type : DeepEchoesProgressCatalog.ABILITIES) {
+            if (EchoAbilityManager.hasAbility(player, type)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static int deepBossKills(ServerPlayer player) {
+        return defeatedCount(player, DeepEchoesProgressCatalog.BOSS_KEYS);
+    }
+
+    private static int deepBiomeCount(ServerPlayer player) {
+        return DeepEchoesProgressCatalog.countKnown(JournalManager.getData(player).getBiomes(),
+                DeepEchoesProgressCatalog.BIOME_IDS);
+    }
+
+    private static int deepStructureCount(ServerPlayer player) {
+        return DeepEchoesProgressCatalog.countKnown(JournalManager.getData(player).getStructures(),
+                DeepEchoesProgressCatalog.STRUCTURE_IDS);
+    }
+
+    private static int deepMobCount(ServerPlayer player) {
+        return DeepEchoesProgressCatalog.countKnown(JournalManager.getData(player).getMobs(),
+                DeepEchoesProgressCatalog.MOB_IDS);
+    }
+
+    private static int deepPageCount(ServerPlayer player) {
+        return DeepEchoesProgressCatalog.countPages(JournalManager.getData(player).getPages());
+    }
+
+    private static int deepArtifactUpgradeSteps(ServerPlayer player) {
+        int count = 0;
+        var data = ArtifactManager.getData(player);
+        for (ArtifactType type : DeepEchoesProgressCatalog.ARTIFACTS) {
             count += Math.max(0, data.getLevel(type) - 1);
         }
         return count;
@@ -436,28 +542,50 @@ public final class EchoCompletionManager {
                 return true;
             }
         }
+        for (ItemStack slot : player.getInventory().offhand) {
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, stack)) {
+                remaining -= Math.max(0, max - slot.getCount());
+            }
+            if (remaining <= 0) {
+                return true;
+            }
+        }
         return false;
     }
 
     private static boolean canFitAllRewards(ServerPlayer player, List<ItemStack> rewards) {
         List<ItemStack> slots = new ArrayList<>();
+        List<ItemStack> offhand = new ArrayList<>();
         for (ItemStack slot : player.getInventory().items) {
             slots.add(slot.copy());
         }
+        for (ItemStack slot : player.getInventory().offhand) {
+            offhand.add(slot.copy());
+        }
         for (ItemStack reward : rewards) {
-            if (!simulateInsert(slots, reward.copy())) {
+            if (!simulateInsert(slots, offhand, reward.copy())) {
                 return false;
             }
         }
         return true;
     }
 
-    private static boolean simulateInsert(List<ItemStack> slots, ItemStack reward) {
+    private static boolean simulateInsert(List<ItemStack> slots, List<ItemStack> offhand,
+                                          ItemStack reward) {
         int remaining = reward.getCount();
         for (ItemStack slot : slots) {
             if (remaining <= 0) {
                 return true;
             }
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, reward)) {
+                int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
+                if (move > 0) {
+                    slot.grow(move);
+                    remaining -= move;
+                }
+            }
+        }
+        for (ItemStack slot : offhand) {
             if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, reward)) {
                 int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
                 if (move > 0) {

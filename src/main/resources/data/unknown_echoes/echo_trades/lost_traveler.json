@@ -361,6 +361,18 @@
     },
     {
       "cost": {
+        "item": "unknown_echoes:record_tracing_paper",
+        "count": 8
+      },
+      "result": {
+        "item": "unknown_echoes:echo_mark",
+        "count": 1
+      },
+      "min_stage": 1,
+      "max_uses": 4
+    },
+    {
+      "cost": {
         "item": "unknown_echoes:echo_mark",
         "count": 5
       },

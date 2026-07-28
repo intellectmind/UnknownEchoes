@@ -15,7 +15,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.phys.AABB;
 
 import java.util.List;
 
@@ -25,6 +24,7 @@ import java.util.List;
  */
 public class EchoProjectorItem extends Item {
     private static final int COOLDOWN_TICKS = 60;
+    private static final String PROJECTION_ID_KEY = "ue_projection_id";
 
     public EchoProjectorItem(Properties properties) {
         super(properties);
@@ -48,12 +48,9 @@ public class EchoProjectorItem extends Item {
             return InteractionResult.CONSUME;
         }
 
-        // 同一玩家旧投影先消散
-        for (EchoProjectionEntity old : level.getEntitiesOfClass(EchoProjectionEntity.class,
-                new AABB(player.blockPosition()).inflate(128.0D),
-                p -> p.getOwner().map(player.getUUID()::equals).orElse(false))) {
-            old.dissipate();
-        }
+        // 旧投影按记录的 UUID 直取(跨维度可收),不做 128 格实体大扫描
+        java.util.UUID previousId = player.getPersistentData().hasUUID(PROJECTION_ID_KEY)
+                ? player.getPersistentData().getUUID(PROJECTION_ID_KEY) : null;
 
         BlockPos spawnPos = context.getClickedPos().relative(context.getClickedFace());
         EchoProjectionEntity projection = ModEntities.ECHO_PROJECTION.get().create(level);
@@ -63,7 +60,19 @@ public class EchoProjectorItem extends Item {
         projection.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5,
                 player.getYRot(), 0.0F);
         projection.setOwner(player.getUUID());
-        level.addFreshEntity(projection);
+        if (!level.addFreshEntity(projection)) {
+            return InteractionResult.CONSUME;
+        }
+        if (previousId != null) {
+            for (ServerLevel anyLevel : level.getServer().getAllLevels()) {
+                if (anyLevel.getEntity(previousId) instanceof EchoProjectionEntity old
+                        && old.getOwner().map(player.getUUID()::equals).orElse(false)) {
+                    old.dissipate();
+                    break;
+                }
+            }
+        }
+        player.getPersistentData().putUUID(PROJECTION_ID_KEY, projection.getUUID());
         level.playSound(null, spawnPos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 0.9F);
 
         player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);

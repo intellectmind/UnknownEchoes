@@ -31,6 +31,11 @@ import java.util.List;
  */
 public class ArtifactManager {
 
+    /** 持久化时间统一使用主世界时钟，避免跨维度或重启后冷却漂移。 */
+    public static long gameTime(ServerPlayer player) {
+        return player.server.overworld().getGameTime();
+    }
+
     /** 改调谐消耗:回响粉尘 ×2(守护者结算通用材料;首次选择词条免费,12.4)。 */
     public static final int TUNING_COST_DUST = 2;
 
@@ -119,6 +124,13 @@ public class ArtifactManager {
             case ECHO_LENS -> EchoAbilityManager.hasAbility(player, EchoAbilityType.TRUE_SIGHT_ECHO)
                     && hasStructure(player, "mirror_dust_cloister")
                     && EchoAbilityManager.hasDefeatedBoss(player, UnknownEchoes.id("mirror_dust_butler"));
+            case TIME_HOURGLASS -> EchoAbilityManager.hasAbility(player, EchoAbilityType.GRAVITY_ECHO)
+                    && hasStructure(player, "folded_archive");
+            case DIMENSION_ANCHOR -> EchoAbilityManager.hasActivatedBeacon(
+                    player, EchoPermission.ABYSS_BEACON_ID)
+                    && EchoAbilityManager.hasUnlockedDimension(player, EchoPermission.DEEP_ECHOES_ID);
+            case RIFT_ANCHOR -> EchoAbilityManager.hasAbility(player, EchoAbilityType.VOID_ECHO)
+                    && EchoAbilityManager.hasDefeatedBoss(player, EchoPermission.RIFT_WARDEN_ID);
         };
     }
 
@@ -228,6 +240,11 @@ public class ArtifactManager {
                     && countPages(player, 42, 51) >= 6;
             case ECHO_LENS -> countMechanisms(player, "truesight_chest:") >= 2
                     && countPages(player, 56, 65) >= 6;
+            case TIME_HOURGLASS -> countMechanisms(player, "deep_calibration:") >= 3
+                    || countStructures(player, "folded_archive", "calibration_hall") >= 2;
+            case DIMENSION_ANCHOR -> countStructures(player, "folded_archive",
+                    "inverted_chasm_bridge", "silent_abyss_anchor") >= 2;
+            case RIFT_ANCHOR -> countMechanisms(player, "deep_void_stabilizer:") >= 3;
         };
     }
 
@@ -239,6 +256,12 @@ public class ArtifactManager {
                     && EchoAbilityManager.hasDefeatedBoss(player, UnknownEchoes.id("tide_lantern_keeper"));
             case ECHO_LENS -> JournalManager.getResearchLevel(player, EchoAbilityType.TRUE_SIGHT_ECHO) >= 2
                     && EchoAbilityManager.hasDefeatedBoss(player, UnknownEchoes.id("mirror_dust_butler"));
+            case TIME_HOURGLASS -> JournalManager.getResearchLevel(player, EchoAbilityType.GRAVITY_ECHO) >= 2
+                    && EchoAbilityManager.hasDefeatedBoss(player, EchoPermission.VOID_PROPHET_ID);
+            case DIMENSION_ANCHOR -> JournalManager.getResearchLevel(player, EchoAbilityType.TIDE_ECHO) >= 2
+                    && EchoAbilityManager.hasAbility(player, EchoAbilityType.GRAVITY_ECHO);
+            case RIFT_ANCHOR -> JournalManager.getResearchLevel(player, EchoAbilityType.VOID_ECHO) >= 2
+                    && EchoAbilityManager.hasDefeatedBoss(player, EchoPermission.RIFT_WARDEN_ID);
         };
     }
 
@@ -322,26 +345,28 @@ public class ArtifactManager {
     }
 
     /** 当前恢复速率,单位是每 tick 恢复多少个 1/100 energyTwentieths。
-     *  base=1 点/秒时等价于每 tick 100,即每秒 20 个 twentieths。 */
+     *  配置基值 1 点/秒乘默认平衡倍率 0.5 后,每 tick 速率为 50。 */
     public static int getRegenHundredthsPerTick(ServerPlayer player) {
-        int base = ServerConfig.ENERGY_REGEN_PER_SECOND.get();
+        double perSecond = ServerConfig.ENERGY_REGEN_PER_SECOND.get();
         if (player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID)) {
-            base *= ServerConfig.ENERGY_REALM_REGEN_MULTIPLIER.get();
+            perSecond *= ServerConfig.ENERGY_REALM_REGEN_MULTIPLIER.get();
         }
-        int rate = base * 100;
+        perSecond *= ServerConfig.ENERGY_NATURAL_REGEN_MULTIPLIER.get();
+        int rate = (int) Math.round(perSecond * 100.0D);
         if (hasTideRegenBonus(player)) {
             int bonus = getData(player).getLevel(ArtifactType.TIDE_LANTERN) >= 3 ? 20 : 10;
             rate = rate * (100 + bonus) / 100;
         }
         if (EchoArmorSets.echoOathPieces(player) >= 4) {
-            rate = rate * 110 / 100;
+            rate = rate * 115 / 100;
         }
         return rate;
     }
 
     /** 潮汐灯盏常驻收益:水中或雨中能量恢复 +10%/+20%。 */
     public static boolean hasTideRegenBonus(ServerPlayer player) {
-        return getData(player).getLevel(ArtifactType.TIDE_LANTERN) > 0
+        return isEnabled(ArtifactType.TIDE_LANTERN)
+                && getData(player).getLevel(ArtifactType.TIDE_LANTERN) > 0
                 && (player.isInWater()
                 || player.isEyeInFluid(FluidTags.WATER)
                 || player.level().isRainingAt(player.blockPosition()));
@@ -350,18 +375,23 @@ public class ArtifactManager {
     /** 惰性结算能量恢复(按 gameTime 差值补足,无每 tick 开销),返回结算后的 1/20 点值。 */
     private static int settleEnergy(ServerPlayer player) {
         ArtifactData data = getData(player);
-        long now = player.level().getGameTime();
+        long now = gameTime(player);
         int max20 = getMaxEnergy() * 20;
         int value = data.getEnergyTwentieths();
         if (value < 0) {
             value = max20; // 首次接触按满池初始化
             data.setEnergyRemainderHundredths(0);
         } else {
-            long elapsed = Math.max(0, now - data.getEnergyGameTime());
-            long restored = data.getEnergyRemainderHundredths()
-                    + elapsed * (long) getRegenHundredthsPerTick(player);
+            value = Math.min(value, max20);
+            long lastGameTime = data.getEnergyGameTime();
+            long elapsed = lastGameTime >= 0L && lastGameTime <= now ? now - lastGameTime : 0L;
+            long remainder = data.getEnergyRemainderHundredths();
+            long rate = Math.max(0L, getRegenHundredthsPerTick(player));
+            long restored = rate > 0L && elapsed > (Long.MAX_VALUE - remainder) / rate
+                    ? Long.MAX_VALUE
+                    : remainder + elapsed * rate;
             int gain = (int) Math.min(Integer.MAX_VALUE, restored / 100L);
-            value = Math.min(max20, value + gain);
+            value = (int) Math.min(max20, (long) value + gain);
             data.setEnergyRemainderHundredths(value >= max20 ? 0 : (int) (restored % 100L));
         }
         data.setEnergyTwentieths(value);
@@ -376,8 +406,10 @@ public class ArtifactManager {
 
     /** 扣除能量(主动型神器预留接口;V0.7+ 维度锚/时间沙漏接入)。服务端判定与扣除(12.5)。 */
     public static boolean spendEnergy(ServerPlayer player, int points) {
-        double multiplier = ServerConfig.ARTIFACT_ENERGY_COST_MULTIPLIER.get();
-        int cost20 = (int) Math.round(points * 20 * multiplier);
+        if (points <= 0) {
+            return true;
+        }
+        int cost20 = scaledEnergyCostTwentieths(points);
         int value = settleEnergy(player);
         if (value < cost20) {
             actionbar(player, "message.unknown_echoes.artifact.no_energy");
@@ -386,6 +418,13 @@ public class ArtifactManager {
         getData(player).setEnergyTwentieths(value - cost20);
         syncToClient(player);
         return true;
+    }
+
+    /** 与实际扣除完全一致的耗能，供服务端同步 UI；单位为 1/20 点。 */
+    private static int scaledEnergyCostTwentieths(int points) {
+        double multiplier = ServerConfig.ARTIFACT_ENERGY_COST_MULTIPLIER.get();
+        long scaledCost = Math.round((double) Math.max(0, points) * 20.0D * multiplier);
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, scaledCost));
     }
 
     /** 一次性回填能量(读残页/解谜/激活回访点,12.2:20-40 点档位)。 */
@@ -399,7 +438,7 @@ public class ArtifactManager {
             getData(player).setEnergyRemainderHundredths(0);
             return;
         }
-        int next = Math.min(max20, value + points * 20);
+        int next = (int) Math.min(max20, (long) value + (long) points * 20L);
         getData(player).setEnergyTwentieths(next);
         if (next >= max20) {
             getData(player).setEnergyRemainderHundredths(0);
@@ -407,34 +446,39 @@ public class ArtifactManager {
         syncToClient(player);
     }
 
-    // ---- 冷却(被动/提示型神器只用冷却,12.2) ----
+    // ---- 神器主动效果冷却(12.2) ----
 
     public static boolean isOnCooldown(ServerPlayer player, ArtifactType type) {
-        return player.level().getGameTime() < getData(player).getCooldownEnd(type);
+        return gameTime(player) < getData(player).getCooldownEnd(type);
     }
 
     /** 启动冷却(秒,服务端权威;全局倍率走 ServerConfig,12.5)。 */
     public static void startCooldown(ServerPlayer player, ArtifactType type, int seconds) {
-        long ticks = (long) Math.max(0, seconds * 20 * ServerConfig.ARTIFACT_COOLDOWN_MULTIPLIER.get());
-        getData(player).setCooldownEnd(type, player.level().getGameTime() + ticks);
+        long ticks = Math.max(0L, Math.round((double) seconds * 20.0D
+                * ServerConfig.ARTIFACT_COOLDOWN_MULTIPLIER.get()));
+        long now = gameTime(player);
+        getData(player).setCooldownEnd(type, ticks > Long.MAX_VALUE - now ? Long.MAX_VALUE : now + ticks);
         syncToClient(player);
     }
 
     // ---- 管理员入口(/echoes admin,V0.6D):绕过领取资格但仍走本类落账与同步 ----
 
     /** 管理员直接授予神器(等级 1 + 新凭据),不校验资格,不消耗部件。 */
-    public static void adminGrant(ServerPlayer player, ArtifactType type) {
+    public static boolean adminGrant(ServerPlayer player, ArtifactType type) {
         if (!hasCredentialSpace(player)) {
             actionbar(player, "message.unknown_echoes.artifact.need_space");
-            return;
+            return false;
         }
         ArtifactData data = getData(player);
         if (!data.isClaimed(type)) {
             data.setLevel(type, 1);
         }
         data.nextSerial(type);
-        giveCredential(player, type);
+        if (!giveCredential(player, type)) {
+            return false;
+        }
         syncToClient(player);
+        return true;
     }
 
     /** 管理员撤销神器(清除等级/调谐;序号保留使旧凭据失效)。 */
@@ -454,13 +498,16 @@ public class ArtifactManager {
         List<String> entries = new ArrayList<>();
         for (ArtifactType type : ArtifactType.values()) {
             if (data.isClaimed(type)) {
+                int energyCost20 = scaledEnergyCostTwentieths(
+                        ArtifactEffectManager.getEnergyCost(player, type));
                 entries.add(type.getId() + ":" + data.getLevel(type) + ":" + data.getTuning(type)
-                        + ":" + data.getSerial(type) + ":" + data.getCooldownEnd(type));
+                        + ":" + data.getSerial(type) + ":" + data.getCooldownEnd(type)
+                        + ":" + energyCost20);
             }
         }
         PacketDistributor.sendToPlayer(player, new ArtifactSyncPayload(entries,
                 energy20, getMaxEnergy(), getRegenHundredthsPerTick(player),
-                player.level().getGameTime()));
+                gameTime(player)));
     }
 
     // ---- 工具 ----

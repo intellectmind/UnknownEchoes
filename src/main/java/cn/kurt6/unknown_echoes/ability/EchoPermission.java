@@ -1,7 +1,9 @@
 package cn.kurt6.unknown_echoes.ability;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.block.deep.DeepRouteNodeBlock;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.journal.EchoCompletionManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -15,13 +17,26 @@ public class EchoPermission {
     public static final ResourceLocation FORGOTTEN_COLOSSUS_ID = UnknownEchoes.id("forgotten_colossus");
     public static final ResourceLocation ABYSS_WATCHER_ID = UnknownEchoes.id("abyss_watcher");
     public static final ResourceLocation MIRROR_GUARDIAN_ID = UnknownEchoes.id("mirror_guardian");
+    public static final ResourceLocation VOID_PROPHET_ID = UnknownEchoes.id("void_prophet");
+    public static final ResourceLocation RIFT_WARDEN_ID = UnknownEchoes.id("rift_warden");
+    public static final ResourceLocation WORLD_ECHO_ID = UnknownEchoes.id("world_echo");
     public static final ResourceLocation ECHO_REALM_ID = UnknownEchoes.id("echo_realm");
+    public static final ResourceLocation ABYSS_BEACON_ID = UnknownEchoes.id("abyss");
+    public static final ResourceLocation DEEP_ECHOES_ID = UnknownEchoes.id("deep_echoes");
+    public static final String GRAVITY_TRIAL_KEY = "deep:gravity_trial";
+    public static final String VOID_ROUTE_READY_KEY = "deep:void_route_ready";
+    public static final String VOID_TRIAL_KEY = "deep:void_trial";
+    public static final String WORLD_ECHO_REWARD_READY_KEY = "ending:world_echo_reward_ready";
+    public static final String WORLD_ECHO_COMPLETE_KEY = "ending:world_echo_complete";
 
     /**
      * 通用回响机关权限判定(V0.2 起所有新机关统一走这里)。
      * 服务端校验玩家能力数据;ability_permission_required=false 时全部放行。
      */
     public static boolean canUseEchoMechanism(Player player, EchoAbilityType requiredAbility) {
+        if (player.isSpectator()) {
+            return false;
+        }
         if (!ServerConfig.ABILITY_PERMISSION_REQUIRED.get()) {
             return true;
         }
@@ -30,6 +45,9 @@ public class EchoPermission {
 
     /** 组合条件:需要同时拥有全部列出的能力(如 V0.5 潮汐 + 真视机关)。 */
     public static boolean canUseEchoMechanism(Player player, EchoAbilityType... requiredAbilities) {
+        if (player.isSpectator()) {
+            return false;
+        }
         if (!ServerConfig.ABILITY_PERMISSION_REQUIRED.get()) {
             return true;
         }
@@ -55,10 +73,63 @@ public class EchoPermission {
     }
 
     public static boolean canEnterEchoRealm(Player player) {
-        return EchoAbilityManager.hasActivatedBeacon(player, RESONANCE_BEACON_ID);
+        return !player.isSpectator()
+                && EchoAbilityManager.hasActivatedBeacon(player, RESONANCE_BEACON_ID);
+    }
+
+    public static boolean canCalibrateAbyssBeacon(ServerPlayer player) {
+        return !player.isSpectator()
+                && EchoCompletionManager.hasMainlineCompletionRecord(player)
+                && EchoCompletionManager.hasCoreResonance(player);
+    }
+
+    public static boolean canEnterDeepEchoes(Player player) {
+        return !player.isSpectator()
+                && EchoAbilityManager.hasActivatedBeacon(player, ABYSS_BEACON_ID)
+                && EchoAbilityManager.hasUnlockedDimension(player, DEEP_ECHOES_ID);
+    }
+
+    /** 虚空先知只要求前三种回响与校准大厅前置，绝不预先要求重力回响。 */
+    public static boolean canStartVoidProphet(Player player) {
+        return canEnterDeepEchoes(player)
+                && EchoAbilityManager.hasAbility(player, EchoAbilityType.WIND_ECHO)
+                && EchoAbilityManager.hasAbility(player, EchoAbilityType.TIDE_ECHO)
+                && EchoAbilityManager.hasAbility(player, EchoAbilityType.TRUE_SIGHT_ECHO)
+                && DeepRouteNodeBlock.hasCompletedHall(player);
+    }
+
+    public static boolean canUseGravityMechanism(Player player) {
+        return canUseEchoMechanism(player, EchoAbilityType.GRAVITY_ECHO);
+    }
+
+    public static boolean hasVoidRouteReady(Player player) {
+        return EchoAbilityManager.hasActivatedMechanism(player, VOID_ROUTE_READY_KEY);
+    }
+
+    public static boolean canStartRiftWarden(Player player) {
+        return canUseGravityMechanism(player) && hasVoidRouteReady(player);
+    }
+
+    public static boolean canSummonWorldEcho(Player player) {
+        if (!canEnterDeepEchoes(player)) {
+            return false;
+        }
+        for (EchoAbilityType ability : EchoAbilityType.values()) {
+            if (!EchoAbilityManager.hasAbility(player, ability)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean canClaimWorldEchoEnding(ServerPlayer player) {
+        return canSummonWorldEcho(player)
+                && EchoAbilityManager.hasDefeatedBoss(player, WORLD_ECHO_ID)
+                && EchoAbilityManager.hasActivatedMechanism(player, WORLD_ECHO_REWARD_READY_KEY);
     }
 
     public static boolean canClaimBossReward(ServerPlayer player, ResourceLocation bossId) {
-        return EchoAbilityManager.hasDefeatedBoss(player, bossId);
+        return !player.isSpectator()
+                && EchoAbilityManager.hasDefeatedBoss(player, bossId);
     }
 }

@@ -55,6 +55,16 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
         this.setChanged();
     }
 
+    /** 时间沙漏白名单重置入口：只清理临时气流，不改任何个人进度。 */
+    public void deactivate() {
+        this.activeTicks = 0;
+        if (this.level != null && this.getBlockState().getValue(WindCurrentPlatformBlock.ACTIVE)) {
+            this.level.setBlock(this.worldPosition,
+                    this.getBlockState().setValue(WindCurrentPlatformBlock.ACTIVE, Boolean.FALSE), 3);
+        }
+        this.setChanged();
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state,
                                   WindCurrentPlatformBlockEntity platform) {
         if (platform.activeTicks <= 0) {
@@ -64,8 +74,11 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
             return;
         }
         platform.activeTicks--;
-        if (platform.activeTicks == 0) {
+        if (platform.activeTicks == 0 || platform.activeTicks % 20 == 0) {
             platform.setChanged();
+        }
+        if (platform.activeTicks > 0 && !state.getValue(WindCurrentPlatformBlock.ACTIVE)) {
+            level.setBlock(pos, state.setValue(WindCurrentPlatformBlock.ACTIVE, Boolean.TRUE), 3);
         }
         if (!(level instanceof ServerLevel serverLevel) || level.getGameTime() % 2 != 0) {
             return;
@@ -166,8 +179,16 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
             Set<BlockPos> positions = LOADED_PLATFORMS.get(this.level.dimension());
             if (positions != null) {
                 positions.remove(this.worldPosition);
+                if (positions.isEmpty()) {
+                    LOADED_PLATFORMS.remove(this.level.dimension(), positions);
+                }
             }
         }
+    }
+
+    /** 服务器停止时清理已加载平台索引,避免跨世界保留旧维度坐标。 */
+    public static void clearLoadedPlatforms() {
+        LOADED_PLATFORMS.clear();
     }
 
     /** 最近的已加载风流平台(风暴罗盘"风流"词条用);无 → null。 */
@@ -198,6 +219,7 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        this.activeTicks = tag.getInt("ActiveTicks");
+        this.activeTicks = Math.max(0, Math.min(tag.getInt("ActiveTicks"),
+                ServerConfig.WIND_PLATFORM_ACTIVE_TICKS.get()));
     }
 }

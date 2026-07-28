@@ -69,19 +69,23 @@ public class ServerConfig {
             .comment("Ticks before a defeated mini boss arena reopens (default 15 min)")
             .defineInRange("miniboss_arena_reopen_ticks", 18000, 200, 1728000);
 
-    // ---- V0.6D 回响能量(12.2:设定基线 上限 100,自然恢复 1/秒,境域内翻倍) ----
+    // ---- V0.6D 回响能量(上限 100;配置基值 1/秒,平衡倍率 0.5,境域内翻倍) ----
 
     public static final ModConfigSpec.IntValue ENERGY_MAX = BUILDER
             .comment("Echo energy pool cap per player")
             .defineInRange("energy_max", 100, 1, 10000);
 
     public static final ModConfigSpec.IntValue ENERGY_REGEN_PER_SECOND = BUILDER
-            .comment("Echo energy natural regeneration per second")
+            .comment("Base Echo energy natural regeneration per second before multipliers")
             .defineInRange("energy_regen_per_second", 1, 0, 100);
 
     public static final ModConfigSpec.IntValue ENERGY_REALM_REGEN_MULTIPLIER = BUILDER
             .comment("Energy regeneration multiplier while inside the Echo Realm")
             .defineInRange("energy_realm_regen_multiplier", 2, 1, 10);
+
+    public static final ModConfigSpec.DoubleValue ENERGY_NATURAL_REGEN_MULTIPLIER = BUILDER
+            .comment("Global balance multiplier applied to natural Echo energy regeneration")
+            .defineInRange("energy_natural_regen_multiplier", 0.5D, 0.0D, 10.0D);
 
     public static final ModConfigSpec.IntValue ENERGY_REFILL_PAGE = BUILDER
             .comment("One-time energy refill when reading a new ancient page")
@@ -116,7 +120,7 @@ public class ServerConfig {
 
     public static final ModConfigSpec.IntValue STORM_COMPASS_ENERGY_COST = BUILDER
             .comment("Echo energy cost for Storm Compass flight")
-            .defineInRange("storm_compass_energy_cost", 18, 0, 1000);
+            .defineInRange("storm_compass_energy_cost", 30, 0, 1000);
 
     public static final ModConfigSpec.IntValue STORM_COMPASS_FLIGHT_SECONDS = BUILDER
             .comment("Storm Compass level 1 flight seconds; higher levels add 4s each")
@@ -128,7 +132,7 @@ public class ServerConfig {
 
     public static final ModConfigSpec.IntValue TIDE_LANTERN_ENERGY_COST = BUILDER
             .comment("Echo energy cost for Tide Lantern renewal")
-            .defineInRange("tide_lantern_energy_cost", 8, 0, 1000);
+            .defineInRange("tide_lantern_energy_cost", 24, 0, 1000);
 
     public static final ModConfigSpec.IntValue TIDE_LANTERN_MAX_HEALTH_BONUS = BUILDER
             .comment("Maximum extra health granted by Tide Lantern")
@@ -144,7 +148,7 @@ public class ServerConfig {
 
     public static final ModConfigSpec.IntValue ECHO_LENS_ENERGY_COST = BUILDER
             .comment("Echo energy cost for Echo Lens marking")
-            .defineInRange("echo_lens_energy_cost", 12, 0, 1000);
+            .defineInRange("echo_lens_energy_cost", 24, 0, 1000);
 
     public static final ModConfigSpec.DoubleValue ECHO_LENS_DAMAGE_BONUS = BUILDER
             .comment("Echo Lens marked-target damage bonus")
@@ -153,6 +157,38 @@ public class ServerConfig {
     public static final ModConfigSpec.DoubleValue ECHO_LENS_DAMAGE_CAP = BUILDER
             .comment("Echo Lens bonus damage cap per hit")
             .defineInRange("echo_lens_damage_cap", 6.0, 0.0, 1024.0);
+
+    public static final ModConfigSpec.IntValue TIME_HOURGLASS_COOLDOWN_SECONDS = BUILDER
+            .comment("Cooldown of Time Hourglass entity freeze")
+            .defineInRange("time_hourglass_cooldown_seconds", 45, 0, 3600);
+
+    public static final ModConfigSpec.IntValue TIME_HOURGLASS_ENERGY_COST = BUILDER
+            .comment("Echo energy cost of Time Hourglass entity freeze")
+            .defineInRange("time_hourglass_energy_cost", 40, 0, 1000);
+
+    public static final ModConfigSpec.IntValue TIME_HOURGLASS_FREEZE_TICKS = BUILDER
+            .comment("Base duration of Time Hourglass entity freeze in ticks")
+            .defineInRange("time_hourglass_freeze_ticks", 100, 20, 1200);
+
+    public static final ModConfigSpec.IntValue DIMENSION_ANCHOR_COOLDOWN_SECONDS = BUILDER
+            .comment("Cooldown of Dimension Anchor return")
+            .defineInRange("dimension_anchor_cooldown_seconds", 120, 0, 3600);
+
+    public static final ModConfigSpec.IntValue DIMENSION_ANCHOR_ENERGY_COST = BUILDER
+            .comment("Echo energy cost of Dimension Anchor return")
+            .defineInRange("dimension_anchor_energy_cost", 50, 0, 1000);
+
+    public static final ModConfigSpec.IntValue RIFT_ANCHOR_COOLDOWN_SECONDS = BUILDER
+            .comment("Cooldown of Rift Anchor return")
+            .defineInRange("rift_anchor_cooldown_seconds", 180, 0, 3600);
+
+    public static final ModConfigSpec.IntValue RIFT_ANCHOR_ENERGY_COST = BUILDER
+            .comment("Echo energy cost of Rift Anchor return")
+            .defineInRange("rift_anchor_energy_cost", 60, 0, 1000);
+
+    public static final ModConfigSpec.IntValue RIFT_ANCHOR_LIFETIME_TICKS = BUILDER
+            .comment("Base lifetime of a bound Rift Anchor point")
+            .defineInRange("rift_anchor_lifetime_ticks", 12000, 200, 1728000);
 
     public static final ModConfigSpec.BooleanValue ARTIFACT_PVP_EFFECTS = BUILDER
             .comment("Allow artifact damage marks and PvP effects against players")
@@ -192,7 +228,7 @@ public class ServerConfig {
             .define("lost_traveler_camp_event", true);
 
     public static final ModConfigSpec.IntValue LOST_TRAVELER_STAY_TICKS = BUILDER
-            .comment("Ticks a lost traveler stays before moving camp (campfire is left extinguished)")
+            .comment("Ticks a lost traveler stays before leaving (the event places no blocks)")
             .defineInRange("lost_traveler_stay_ticks", 36000, 1200, 1728000);
 
     // ---- V0.6E 风之滑翔能量与风流平台(5.2:消耗+落地冷却走配置;平台只是表现+运动) ----
@@ -204,6 +240,38 @@ public class ServerConfig {
     public static final ModConfigSpec.IntValue WIND_GLIDE_LANDING_COOLDOWN_TICKS = BUILDER
             .comment("Ticks after landing from a glide before the next glide may start")
             .defineInRange("wind_glide_landing_cooldown_ticks", 60, 0, 1200);
+
+    public static final ModConfigSpec.IntValue GRAVITY_ACTIVE_ENERGY_COST = BUILDER
+            .comment("Echo energy consumed by active Gravity Echo attunement (0 by default)")
+            .defineInRange("gravity_active_energy_cost", 0, 0, 1000);
+
+    public static final ModConfigSpec.IntValue GRAVITY_ACTIVE_DURATION_TICKS = BUILDER
+            .comment("Duration of active Gravity Echo attunement in ticks")
+            .defineInRange("gravity_active_duration_ticks", 100, 20, 1200);
+
+    public static final ModConfigSpec.IntValue GRAVITY_ACTIVE_COOLDOWN_TICKS = BUILDER
+            .comment("Base cooldown of active Gravity Echo attunement in ticks (80s; 32s at research 4)")
+            .defineInRange("gravity_active_cooldown_ticks", 1600, 0, 72000);
+
+    public static final ModConfigSpec.DoubleValue GRAVITY_ACTIVE_RADIUS = BUILDER
+            .comment("Base radius of the Gravity Echo suppression field")
+            .defineInRange("gravity_active_radius", 5.0D, 1.0D, 32.0D);
+
+    public static final ModConfigSpec.IntValue VOID_STEP_ENERGY_COST = BUILDER
+            .comment("Echo energy consumed by Void Echo short step (0 by default)")
+            .defineInRange("void_step_energy_cost", 0, 0, 1000);
+
+    public static final ModConfigSpec.DoubleValue VOID_STEP_DISTANCE = BUILDER
+            .comment("Maximum collision-checked distance of Void Echo short step")
+            .defineInRange("void_step_distance", 6.0D, 1.0D, 12.0D);
+
+    public static final ModConfigSpec.IntValue VOID_STEP_COOLDOWN_TICKS = BUILDER
+            .comment("Base cooldown of Void Echo short step in ticks (80s; 32s at research 4)")
+            .defineInRange("void_step_cooldown_ticks", 1600, 0, 72000);
+
+    public static final ModConfigSpec.IntValue VOID_WARD_DURATION_TICKS = BUILDER
+            .comment("Void-corrosion cleansing window after a successful short step")
+            .defineInRange("void_ward_duration_ticks", 60, 20, 1200);
 
     public static final ModConfigSpec.IntValue WIND_PLATFORM_ACTIVE_TICKS = BUILDER
             .comment("Ticks a wind current platform keeps its updraft column after activation")

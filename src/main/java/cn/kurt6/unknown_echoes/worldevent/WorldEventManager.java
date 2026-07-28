@@ -15,8 +15,8 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -62,7 +62,7 @@ public class WorldEventManager {
         List<ActiveWorldEvent> events = ACTIVE.computeIfAbsent(level.dimension(), k -> new ArrayList<>());
         long now = level.getGameTime();
 
-        // 结束清理(失落商队的篝火熄灭由旅者实体自理,旧营地刻意留下熄灭的篝火)
+        // 事件记录到期后移除；失落商队不放置世界方块，旅者实体自行离场。
         events.removeIf(active -> now >= active.endGameTime);
 
         // 表现与目击:每 10 tick 一轮,只对附近玩家生效
@@ -83,7 +83,12 @@ public class WorldEventManager {
 
     /** 选一名在线玩家,按维度/群系挑可触发事件并寻找安全位置;失败则本次取消。 */
     private static void tryStartEvent(ServerLevel level, List<ActiveWorldEvent> events) {
-        List<ServerPlayer> players = level.players();
+        List<ServerPlayer> players = level.players().stream()
+                .filter(player -> !player.isSpectator())
+                .toList();
+        if (players.isEmpty()) {
+            return;
+        }
         ServerPlayer anchor = players.get(level.random.nextInt(players.size()));
         boolean inRealm = level.dimension().location().equals(EchoPermission.ECHO_REALM_ID);
 
@@ -125,11 +130,11 @@ public class WorldEventManager {
         // 全部尝试失败:取消本次事件,不强行生成(22.10)
     }
 
-    /** 选点:玩家附近 24-48 格,已加载、群系匹配、不压结构、地表合法。失败返回 null。 */
+    /** 选点:玩家附近 40-60 格,已加载、群系匹配、不压结构、地表合法。失败返回 null。 */
     private static BlockPos pickPosition(ServerLevel level, BlockPos origin,
                                          WorldEventType type, RandomSource random) {
         double angle = random.nextDouble() * Math.PI * 2;
-        int dist = 24 + random.nextInt(25);
+        int dist = 40 + random.nextInt(21);
         int x = origin.getX() + (int) (Math.cos(angle) * dist);
         int z = origin.getZ() + (int) (Math.sin(angle) * dist);
         if (!level.isLoaded(new BlockPos(x, origin.getY(), z))) {
@@ -157,26 +162,54 @@ public class WorldEventManager {
         // 事件专属落点要求
         return switch (type) {
             case MIRROR_ANOMALY -> level.getBlockState(surface.below()).is(Blocks.WATER) ? surface : null;
-            case LOST_CARAVAN -> level.getBlockState(surface.below()).isSolidRender(level, surface.below())
-                    && level.getBlockState(surface).isAir()
-                    && level.getBlockState(surface.above()).isAir() ? surface : null;
+            case LOST_CARAVAN -> isSafeCaravanSite(level, surface) ? surface : null;
             default -> surface;
         };
     }
 
-    /** 失落商队:安全位置放一座点燃的篝火并生成迷途旅者(16.4 小型临时营地点)。 */
+    /** 只在露天、天然且平整的地表驻留，避免旅者刷进玩家建筑。 */
+    private static boolean isSafeCaravanSite(ServerLevel level, BlockPos center) {
+        if (!level.canSeeSky(center) || !level.noCollision(null,
+                new net.minecraft.world.phys.AABB(center).inflate(1.0D, 0.0D, 1.0D))) {
+            return false;
+        }
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                BlockPos surface = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING,
+                        center.offset(dx, 0, dz));
+                if (Math.abs(surface.getY() - center.getY()) > 1
+                        || !level.canSeeSky(surface)
+                        || !level.getBlockState(surface).isAir()
+                        || !level.getBlockState(surface.above()).isAir()
+                        || !isNaturalCampGround(level.getBlockState(surface.below()))) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean isNaturalCampGround(BlockState state) {
+        return state.is(BlockTags.DIRT)
+                || state.is(BlockTags.SAND)
+                || state.is(BlockTags.BASE_STONE_OVERWORLD)
+                || state.is(Blocks.GRAVEL)
+                || state.is(Blocks.SNOW_BLOCK);
+    }
+
+    /** 失落商队：只生成临时旅者；营地氛围由事件粒子与音效表现，不改世界方块。 */
     private static boolean placeCaravan(ServerLevel level, BlockPos pos) {
         var traveler = ModEntities.LOST_TRAVELER.get().create(level);
         if (traveler == null) {
             return false;
         }
-        level.setBlock(pos, Blocks.CAMPFIRE.defaultBlockState()
-                .setValue(CampfireBlock.LIT, Boolean.TRUE), 3);
-        traveler.moveTo(pos.getX() + 1.5, pos.getY(), pos.getZ() + 0.5,
+        traveler.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
                 level.random.nextFloat() * 360.0F, 0.0F);
-        traveler.setCamp(pos, level.getGameTime());
-        level.addFreshEntity(traveler);
-        return true;
+        if (!level.noCollision(traveler)) {
+            return false;
+        }
+        traveler.startTemporaryStay(pos, level.getGameTime());
+        return level.addFreshEntity(traveler);
     }
 
     /** 事件开始:给附近玩家一条含蓄氛围文案(红线 #7)。 */
@@ -193,6 +226,9 @@ public class WorldEventManager {
     private static void tickEvent(ServerLevel level, ActiveWorldEvent active) {
         boolean anyoneNear = false;
         for (ServerPlayer player : level.players()) {
+            if (player.isSpectator()) {
+                continue;
+            }
             double distSqr = player.blockPosition().distSqr(active.center);
             if (distSqr > (long) EVENT_RADIUS * EVENT_RADIUS) {
                 continue;
@@ -270,7 +306,7 @@ public class WorldEventManager {
                 }
             }
             case LOST_CARAVAN -> {
-                // 营地本体由篝火与旅者承担表现;这里只偶发一点火星
+                // 不放置篝火；用低频暖色火星标记旅者的临时停留点。
                 if (random.nextInt(4) == 0) {
                     level.sendParticles(ParticleTypes.LAVA,
                             center.getX() + 0.5, center.getY() + 0.4, center.getZ() + 0.5,

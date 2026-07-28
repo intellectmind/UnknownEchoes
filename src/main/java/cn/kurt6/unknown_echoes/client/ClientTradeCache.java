@@ -10,6 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -24,6 +25,7 @@ public class ClientTradeCache {
     private static int travelerEntityId = -1;
     private static final double CLIENT_TRADE_RANGE_SQR = 6.0D * 6.0D;
     private static final List<Entry> ENTRIES = new ArrayList<>();
+    private static final List<Entry> ENTRIES_VIEW = Collections.unmodifiableList(ENTRIES);
 
     public static void openFromServer(TradeListPayload payload) {
         travelerEntityId = payload.entityId();
@@ -57,6 +59,9 @@ public class ClientTradeCache {
     private static List<ItemStack> parseCosts(String text) {
         List<ItemStack> costs = new ArrayList<>();
         for (String part : text.split(";")) {
+            if (costs.size() >= 16) {
+                throw new NumberFormatException("too many costs");
+            }
             costs.add(stackSpec(part));
         }
         return List.copyOf(costs);
@@ -81,7 +86,8 @@ public class ClientTradeCache {
 
     private static ItemStack stack(String id, int count) {
         ResourceLocation rl = ResourceLocation.tryParse(id);
-        Item item = rl == null ? Items.BARRIER : BuiltInRegistries.ITEM.get(rl);
+        Item item = rl == null ? Items.BARRIER
+                : BuiltInRegistries.ITEM.getOptional(rl).orElse(Items.BARRIER);
         return new ItemStack(item, Math.max(1, count));
     }
 
@@ -90,7 +96,7 @@ public class ClientTradeCache {
     }
 
     public static List<Entry> getEntries() {
-        return ENTRIES;
+        return ENTRIES_VIEW;
     }
 
     /** 是否存在进行中的交易会话(旅者还在跟前才有意义,展示层判断)。 */

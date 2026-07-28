@@ -1,0 +1,7 @@
+{
+  "parent": "unknown_echoes:block/gravity_field_core",
+  "textures": {
+    "2": "unknown_echoes:block/gravity_flux_down",
+    "particle": "unknown_echoes:block/gravity_flux_down"
+  }
+}

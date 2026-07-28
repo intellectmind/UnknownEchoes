@@ -36,11 +36,15 @@
     [],
     [],
     [
+      "unknown_echoes:songstone_disk",
+      "unknown_echoes:resonant_geode_disk",
       "unknown_echoes:crystal_song_cluster_disk"
     ],
     [],
     [],
     [
+      "unknown_echoes:tuning_grass_patch",
+      "unknown_echoes:crystal_bellflower_patch",
       "unknown_echoes:echo_flowers",
       "unknown_echoes:glow_fern_patch",
       "unknown_echoes:glow_grass_patch",

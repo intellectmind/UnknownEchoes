@@ -10,6 +10,7 @@ import net.minecraft.world.item.ArrowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.List;
  * - 潮爆 AOE、水中增伤、水下弹道无衰减与符文方向标记由 TideBoltEntity 实现。
  */
 public class TideCrossbowItem extends CrossbowItem {
+    private static final String VIRTUAL_AMMO_KEY = "ue_tide_virtual";
 
     private final double boltBaseDamage;
     private final int quickLoadTicks;
@@ -41,6 +43,8 @@ public class TideCrossbowItem extends CrossbowItem {
                                 List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.skill")
                 .withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.ammo")
+                .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.detail")
                 .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.lore")
@@ -62,6 +66,10 @@ public class TideCrossbowItem extends CrossbowItem {
         }
         TideBoltEntity bolt = new TideBoltEntity(level, shooter,
                 ammo.copyWithCount(1), weapon.copyWithCount(1));
+        if (ammo.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                CustomData.EMPTY).contains(VIRTUAL_AMMO_KEY)) {
+            bolt.setVirtualAmmo();
+        }
         bolt.setBaseDamage(boltBaseDamage);
         if (isCrit) {
             bolt.setCritArrow(true);

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "active=false,inverted=false": { "model": "unknown_echoes:block/gravity_field_core" },
+    "active=false,inverted=true": { "model": "unknown_echoes:block/gravity_field_core" },
+    "active=true,inverted=false": { "model": "unknown_echoes:block/gravity_field_core_down" },
+    "active=true,inverted=true": { "model": "unknown_echoes:block/gravity_field_core_up" }
+  }
+}

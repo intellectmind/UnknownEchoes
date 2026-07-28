@@ -17,7 +17,8 @@
   "core_record_score": 3,
   "loot_tables": {
     "common": "unknown_echoes:chests/broken_archive",
-    "core": "unknown_echoes:chests/common/t5_miniboss_repeat"
+    "core": "unknown_echoes:chests/common/t5_miniboss_repeat",
+    "endgame": "unknown_echoes:chests/common/t7_echo_realm_endgame"
   },
   "clue_key": "clue.unknown_echoes.broken_bell_tower",
   "critical_path": false,

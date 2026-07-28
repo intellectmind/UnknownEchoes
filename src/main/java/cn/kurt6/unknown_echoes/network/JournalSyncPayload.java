@@ -23,12 +23,12 @@ public record JournalSyncPayload(List<String> structures, List<String> biomes,
 
     public static final StreamCodec<RegistryFriendlyByteBuf, JournalSyncPayload> STREAM_CODEC =
             StreamCodec.composite(
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), JournalSyncPayload::structures,
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), JournalSyncPayload::biomes,
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), JournalSyncPayload::mobs,
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), JournalSyncPayload::bosses,
-                    ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), JournalSyncPayload::pages,
-                    ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), JournalSyncPayload::totals,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(1024)), JournalSyncPayload::structures,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(1024)), JournalSyncPayload::biomes,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(1024)), JournalSyncPayload::mobs,
+                    ByteBufCodecs.stringUtf8(256).apply(ByteBufCodecs.list(1024)), JournalSyncPayload::bosses,
+                    ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(256)), JournalSyncPayload::pages,
+                    ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(8)), JournalSyncPayload::totals,
                     JournalSyncPayload::new);
 
     @Override

@@ -20,6 +20,12 @@ final class MiniBossRewardTable {
         grant(boss, player, firstKill, new Spec(
                 ModItems.STORM_SPINDLE, 1, 23, ModItems.WIND_ENHANCE_CORE,
                 ModItems.CRYSTAL_FEATHER, ModItems.WINDWOVEN_THREAD, ModItems.WIND_ENHANCE_CORE));
+        // 风暴罗盘部件:风之研究 L4 与残钟升级核心的媒材,全游戏只有风暴编织者结算发放
+        if (firstKill) {
+            boss.giveFirstKillItem(player, new ItemStack(ModItems.STORM_COMPASS_PART.get()));
+        } else if (roll(boss, 0.20F)) {
+            MiniBossEntity.giveItem(player, new ItemStack(ModItems.STORM_COMPASS_PART.get()));
+        }
     }
 
     static void grantTideLanternKeeper(MiniBossEntity boss, ServerPlayer player, boolean firstKill) {
@@ -61,7 +67,7 @@ final class MiniBossRewardTable {
     static void grantLostRecorderChief(MiniBossEntity boss, ServerPlayer player, boolean firstKill) {
         grant(boss, player, firstKill, new Spec(
                 ModItems.ARCHIVE_BINDING, 1, 104, ModItems.ATTUNED_ECHO_GEM,
-                ModItems.ECHO_INDEX, ModItems.RECORD_TRACING_PAPER, null));
+                ModItems.BLANK_ECHO_PAGE, ModItems.RECORD_TRACING_PAPER, null));
     }
 
     private static void grant(MiniBossEntity boss, ServerPlayer player, boolean firstKill, Spec spec) {

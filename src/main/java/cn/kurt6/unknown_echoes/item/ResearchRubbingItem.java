@@ -29,9 +29,17 @@ public class ResearchRubbingItem extends Item {
     /** 拓片种类:wind / tide / true_sight。 */
     private final String kind;
 
+    /** 单次阅读可推进的研究等级数(研究拓片=1,誊清后的残篇页=2);逐级校验并扣除媒材。 */
+    private final int points;
+
     public ResearchRubbingItem(String kind, Properties properties) {
+        this(kind, 1, properties);
+    }
+
+    public ResearchRubbingItem(String kind, int points, Properties properties) {
         super(properties);
         this.kind = kind;
+        this.points = Math.max(1, points);
     }
 
     public String getKind() {
@@ -71,6 +79,20 @@ public class ResearchRubbingItem extends Item {
                 }
                 consumeCosts(serverPlayer, line, nextLevel);
                 EchoResearchManager.addResearchPoints(serverPlayer, line, 1);
+                // 第 2 级起媒材不足就停在当前级:多级阅读不减免任何一级的材料
+                for (int extra = 1; extra < this.points; extra++) {
+                    int reached = EchoResearchManager.getResearchLevel(serverPlayer, line);
+                    if (reached >= EchoResearchManager.MAX_RESEARCH_LEVEL) {
+                        break;
+                    }
+                    int next = reached + 1;
+                    if (!serverPlayer.getAbilities().instabuild
+                            && firstMissingCost(serverPlayer, line, next) != null) {
+                        break;
+                    }
+                    consumeCosts(serverPlayer, line, next);
+                    EchoResearchManager.addResearchPoints(serverPlayer, line, 1);
+                }
                 stack.shrink(1);
                 level.playSound(null, player.blockPosition(),
                         SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.8F, 1.0F);
@@ -88,6 +110,10 @@ public class ResearchRubbingItem extends Item {
                                 List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.unknown_echoes.research_rubbing." + this.kind)
                 .withStyle(ChatFormatting.GRAY));
+        if (this.points > 1) {
+            tooltip.add(Component.translatable("tooltip.unknown_echoes.research_rubbing.condensed")
+                    .withStyle(ChatFormatting.GRAY));
+        }
         tooltip.add(Component.translatable("tooltip.unknown_echoes.research_rubbing.cost_hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
         super.appendHoverText(stack, context, tooltip, flag);
@@ -162,6 +188,34 @@ public class ResearchRubbingItem extends Item {
                 case 4 -> List.of(cost(ModItems.TRUE_SIGHT_UPGRADE_CORE.get(), 2),
                         cost(ModItems.DECOY_SHARD.get(), 2),
                         cost(ModItems.OATHBOUND_ALLOY.get(), 1));
+                default -> List.of();
+            };
+            case GRAVITY -> switch (nextLevel) {
+                case 1 -> List.of(cost(ModItems.GRAVITY_CORE_FRAGMENT.get(), 1),
+                        cost(ModItems.DEEP_ORE_SCRAP.get(), 2));
+                case 2 -> List.of(cost(ModItems.GRAVITY_CORE_FRAGMENT.get(), 1),
+                        cost(ModItems.SPACE_ANCHOR_SHARD.get(), 2),
+                        cost(ModItems.DEEP_ORE_SCRAP.get(), 2));
+                case 3 -> List.of(cost(ModItems.GRAVITY_CORE_FRAGMENT.get(), 2),
+                        cost(ModItems.DEEP_ALLOY_INGOT.get(), 1),
+                        cost(ModItems.SPACE_ANCHOR_SHARD.get(), 2));
+                case 4 -> List.of(cost(ModItems.GRAVITY_CORE_FRAGMENT.get(), 2),
+                        cost(ModItems.DEEP_ALLOY_INGOT.get(), 2),
+                        cost(ModItems.VOID_RIFT_SHARD.get(), 1));
+                default -> List.of();
+            };
+            case VOID -> switch (nextLevel) {
+                case 1 -> List.of(cost(ModItems.VOID_RIFT_SHARD.get(), 1),
+                        cost(ModItems.SPACE_ANCHOR_SHARD.get(), 2));
+                case 2 -> List.of(cost(ModItems.VOID_RIFT_SHARD.get(), 1),
+                        cost(ModItems.DEEP_ORE_SCRAP.get(), 2),
+                        cost(ModItems.SPACE_ANCHOR_SHARD.get(), 2));
+                case 3 -> List.of(cost(ModItems.VOID_RIFT_SHARD.get(), 2),
+                        cost(ModItems.DEEP_ALLOY_INGOT.get(), 1),
+                        cost(ModItems.SPACE_ANCHOR_SHARD.get(), 2));
+                case 4 -> List.of(cost(ModItems.VOID_RIFT_SHARD.get(), 2),
+                        cost(ModItems.DEEP_ALLOY_INGOT.get(), 2),
+                        cost(ModItems.GRAVITY_CORE_FRAGMENT.get(), 1));
                 default -> List.of();
             };
         };

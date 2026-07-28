@@ -44,11 +44,11 @@ public class StormCompassItem extends Item {
         if (level.isClientSide || !(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResultHolder.success(stack);
         }
-        useOnServer(serverPlayer, stack);
+        useOnServer(serverPlayer, stack, hand);
         return InteractionResultHolder.consume(stack);
     }
 
-    private void useOnServer(ServerPlayer player, ItemStack stack) {
+    private void useOnServer(ServerPlayer player, ItemStack stack, InteractionHand hand) {
         ArtifactType type = ArtifactType.STORM_COMPASS;
         if (!ArtifactManager.isEnabled(type)) {
             actionbar(player, "message.unknown_echoes.artifact.disabled");
@@ -66,7 +66,7 @@ public class StormCompassItem extends Item {
             return;
         }
         if (!player.isShiftKeyDown()) {
-            ArtifactEffectManager.use(player, type);
+            ArtifactEffectManager.use(player, type, hand);
             return;
         }
 
@@ -192,8 +192,6 @@ public class StormCompassItem extends Item {
             tooltip.add(Component.translatable("tooltip.unknown_echoes.artifact.serial", serial)
                     .withStyle(ChatFormatting.DARK_GRAY));
         }
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.storm_compass.hint")
-                .withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.ITALIC));
     }
 
     private static void actionbar(ServerPlayer player, String key) {

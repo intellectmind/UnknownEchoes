@@ -37,12 +37,16 @@
     [],
     [],
     [
+      "unknown_echoes:reef_limestone_disk",
+      "unknown_echoes:tidelight_coral_block_disk",
       "unknown_echoes:mirror_stone_disk",
       "unknown_echoes:tide_salt_ore_disk"
     ],
     [],
     [],
     [
+      "unknown_echoes:lantern_seafan_patch",
+      "unknown_echoes:shell_bloom_patch",
       "unknown_echoes:mirror_reed_patch",
       "unknown_echoes:pearl_anemone_patch",
       "unknown_echoes:tide_grass_patch",
@@ -52,12 +56,6 @@
   ],
   "spawners": {
     "monster": [
-      {
-        "type": "unknown_echoes:tide_water_shade",
-        "weight": 35,
-        "minCount": 1,
-        "maxCount": 2
-      },
       {
         "type": "unknown_echoes:water_shadow",
         "weight": 22,

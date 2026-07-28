@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.ability;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,16 +17,29 @@ import java.util.Set;
  */
 public class EchoAbilityData {
     public static final int CURRENT_DATA_VERSION = 4;
+    private static final int MAX_ID_LENGTH = 256;
+    private static final int MAX_STANDARD_ENTRIES = 1024;
+    private static final int MAX_MECHANISM_ENTRIES = 16384;
+    private static final int MAX_MECHANISM_LENGTH = 512;
+    private static final Codec<String> ID_CODEC = Codec.sizeLimitedString(MAX_ID_LENGTH);
+    private static final Codec<String> MECHANISM_CODEC = Codec.sizeLimitedString(MAX_MECHANISM_LENGTH);
 
     public static final Codec<EchoAbilityData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.optionalFieldOf("data_version", CURRENT_DATA_VERSION).forGetter(d -> d.dataVersion),
-            Codec.STRING.listOf().optionalFieldOf("unlocked_abilities", List.of()).forGetter(d -> List.copyOf(d.unlockedAbilities)),
-            Codec.STRING.listOf().optionalFieldOf("activated_beacons", List.of()).forGetter(d -> List.copyOf(d.activatedBeacons)),
-            Codec.STRING.listOf().optionalFieldOf("defeated_bosses", List.of()).forGetter(d -> List.copyOf(d.defeatedBosses)),
-            Codec.STRING.listOf().optionalFieldOf("unlocked_dimensions", List.of()).forGetter(d -> List.copyOf(d.unlockedDimensions)),
-            Codec.STRING.listOf().optionalFieldOf("activated_mechanisms", List.of()).forGetter(d -> List.copyOf(d.activatedMechanisms)),
-            Codec.unboundedMap(Codec.STRING, Codec.INT).optionalFieldOf("research_points", Map.of()).forGetter(d -> Map.copyOf(d.researchPoints)),
-            Codec.unboundedMap(Codec.STRING, Codec.INT).optionalFieldOf("token_serials", Map.of()).forGetter(d -> Map.copyOf(d.tokenSerials))
+            ID_CODEC.listOf(0, EchoAbilityType.values().length).optionalFieldOf("unlocked_abilities", List.of())
+                    .forGetter(d -> List.copyOf(d.unlockedAbilities)),
+            ID_CODEC.listOf(0, MAX_STANDARD_ENTRIES).optionalFieldOf("activated_beacons", List.of())
+                    .forGetter(d -> List.copyOf(d.activatedBeacons)),
+            ID_CODEC.listOf(0, MAX_STANDARD_ENTRIES).optionalFieldOf("defeated_bosses", List.of())
+                    .forGetter(d -> List.copyOf(d.defeatedBosses)),
+            ID_CODEC.listOf(0, MAX_STANDARD_ENTRIES).optionalFieldOf("unlocked_dimensions", List.of())
+                    .forGetter(d -> List.copyOf(d.unlockedDimensions)),
+            MECHANISM_CODEC.listOf(0, MAX_MECHANISM_ENTRIES).optionalFieldOf("activated_mechanisms", List.of())
+                    .forGetter(d -> List.copyOf(d.activatedMechanisms)),
+            Codec.unboundedMap(ID_CODEC, Codec.INT).optionalFieldOf("research_points", Map.of())
+                    .forGetter(d -> Map.copyOf(d.researchPoints)),
+            Codec.unboundedMap(ID_CODEC, Codec.INT).optionalFieldOf("token_serials", Map.of())
+                    .forGetter(d -> Map.copyOf(d.tokenSerials))
     ).apply(instance, EchoAbilityData::new));
 
     private int dataVersion;
@@ -52,13 +66,52 @@ public class EchoAbilityData {
                            List<String> bosses, List<String> dimensions, List<String> mechanisms,
                            Map<String, Integer> researchPoints, Map<String, Integer> tokenSerials) {
         this.dataVersion = CURRENT_DATA_VERSION;
-        this.unlockedAbilities.addAll(abilities);
-        this.activatedBeacons.addAll(beacons);
-        this.defeatedBosses.addAll(bosses);
-        this.unlockedDimensions.addAll(dimensions);
-        this.activatedMechanisms.addAll(mechanisms);
-        this.researchPoints.putAll(researchPoints);
-        this.tokenSerials.putAll(tokenSerials);
+        for (String id : abilities) {
+            if (EchoAbilityType.byId(id) != null) {
+                this.unlockedAbilities.add(id);
+            }
+        }
+        copyResourceIds(beacons, this.activatedBeacons);
+        copyResourceIds(bosses, this.defeatedBosses);
+        copyResourceIds(dimensions, this.unlockedDimensions);
+        for (String mechanism : mechanisms) {
+            if (mechanism != null && !mechanism.isBlank() && mechanism.length() <= MAX_MECHANISM_LENGTH) {
+                this.activatedMechanisms.add(mechanism);
+                if (this.activatedMechanisms.size() >= MAX_MECHANISM_ENTRIES) {
+                    break;
+                }
+            }
+        }
+        // 研究点键 = 研究线存储键(能力线沿用能力 id,非能力线用线 id),不能只按能力 id 白名单过滤
+        java.util.Set<String> researchKeys = new java.util.LinkedHashSet<>();
+        for (EchoAbilityType type : EchoAbilityType.values()) {
+            researchKeys.add(type.getId());
+        }
+        for (cn.kurt6.unknown_echoes.research.EchoResearchLine line
+                : cn.kurt6.unknown_echoes.research.EchoResearchLine.values()) {
+            researchKeys.add(line.getStorageKey());
+        }
+        for (String id : researchKeys) {
+            int points = Math.max(0, Math.min(8, researchPoints.getOrDefault(id, 0)));
+            if (points > 0) {
+                this.researchPoints.put(id, points);
+            }
+        }
+        for (EchoAbilityType type : EchoAbilityType.values()) {
+            String id = type.getId();
+            int serial = Math.max(0, tokenSerials.getOrDefault(id, 0));
+            if (serial > 0) {
+                this.tokenSerials.put(id, serial);
+            }
+        }
+    }
+
+    private static void copyResourceIds(List<String> source, Set<String> target) {
+        for (String id : source) {
+            if (ResourceLocation.tryParse(id) != null) {
+                target.add(id);
+            }
+        }
     }
 
     public Set<String> getUnlockedAbilities() {
@@ -69,16 +122,48 @@ public class EchoAbilityData {
         return activatedBeacons;
     }
 
+    public boolean activateBeacon(String beaconId) {
+        return addResourceId(activatedBeacons, beaconId);
+    }
+
     public Set<String> getDefeatedBosses() {
         return defeatedBosses;
+    }
+
+    public boolean markBossDefeated(String bossId) {
+        return addResourceId(defeatedBosses, bossId);
     }
 
     public Set<String> getUnlockedDimensions() {
         return unlockedDimensions;
     }
 
+    public boolean unlockDimension(String dimensionId) {
+        return addResourceId(unlockedDimensions, dimensionId);
+    }
+
     public Set<String> getActivatedMechanisms() {
         return activatedMechanisms;
+    }
+
+    /** 运行时写入必须与 Codec 上限一致，避免附件在下次保存时编码失败。 */
+    public boolean activateMechanism(String mechanism) {
+        if (mechanism == null || mechanism.isBlank() || mechanism.length() > MAX_MECHANISM_LENGTH) {
+            return false;
+        }
+        if (activatedMechanisms.contains(mechanism)) {
+            return true;
+        }
+        return activatedMechanisms.size() < MAX_MECHANISM_ENTRIES
+                && activatedMechanisms.add(mechanism);
+    }
+
+    private static boolean addResourceId(Set<String> target, String id) {
+        if (id == null || id.length() > MAX_ID_LENGTH || ResourceLocation.tryParse(id) == null
+                || target.contains(id) || target.size() >= MAX_STANDARD_ENTRIES) {
+            return false;
+        }
+        return target.add(id);
     }
 
     /** 该研究线残页之外的研究点(拓片/回访/守护者来源)。 */
@@ -88,7 +173,10 @@ public class EchoAbilityData {
 
     /** 累加研究点。存储上限 8(等级封顶之外留少量冗余,防数据无界增长)。 */
     public void addResearchPoints(EchoResearchLine line, int amount) {
-        int next = Math.min(8, getResearchPoints(line) + amount);
+        if (amount <= 0) {
+            return;
+        }
+        int next = (int) Math.min(8L, (long) getResearchPoints(line) + amount);
         researchPoints.put(line.getStorageKey(), next);
     }
 
@@ -100,9 +188,12 @@ public class EchoAbilityData {
 
     /** 兼容旧调用:能力研究点映射到对应研究线。 */
     public void addResearchPoints(EchoAbilityType type, int amount) {
+        if (amount <= 0) {
+            return;
+        }
         EchoResearchLine line = EchoResearchLine.byAbility(type);
         if (line == null) {
-            int next = Math.min(8, getResearchPoints(type) + amount);
+            int next = (int) Math.min(8L, (long) getResearchPoints(type) + amount);
             researchPoints.put(type.getId(), next);
             return;
         }
@@ -125,7 +216,8 @@ public class EchoAbilityData {
 
     /** 发新信物:序号自增并返回,旧序号信物从此不再通过校验。 */
     public int nextTokenSerial(EchoAbilityType type) {
-        int next = getTokenSerial(type) + 1;
+        int current = getTokenSerial(type);
+        int next = current == Integer.MAX_VALUE ? Integer.MAX_VALUE : current + 1;
         tokenSerials.put(type.getId(), next);
         return next;
     }

@@ -20,7 +20,7 @@ public record TradeListPayload(int entityId, List<String> trades) implements Cus
     public static final StreamCodec<RegistryFriendlyByteBuf, TradeListPayload> STREAM_CODEC =
             StreamCodec.composite(
                     ByteBufCodecs.VAR_INT, TradeListPayload::entityId,
-                    ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), TradeListPayload::trades,
+                    ByteBufCodecs.stringUtf8(4096).apply(ByteBufCodecs.list(64)), TradeListPayload::trades,
                     TradeListPayload::new);
 
     @Override

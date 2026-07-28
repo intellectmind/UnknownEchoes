@@ -17,5 +17,9 @@ public class CommonConfig {
             .comment("Allow players to enter the Echo Realm through resonance beacons")
             .define("enable_echo_realm", true);
 
+    public static final ModConfigSpec.BooleanValue ENABLE_DEEP_ECHOES = BUILDER
+            .comment("Allow qualified players to enter Deep Echoes through calibrated abyss beacons")
+            .define("enable_deep_echoes", true);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 }

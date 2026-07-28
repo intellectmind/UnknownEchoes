@@ -1,7 +1,7 @@
 {
   "type": "minecraft:random_patch",
   "config": {
-    "tries": 10,
+    "tries": 5,
     "xz_spread": 6,
     "y_spread": 2,
     "feature": {
@@ -15,6 +15,10 @@
         }
       },
       "placement": [
+        {
+          "type": "minecraft:block_predicate_filter",
+          "predicate": { "type": "minecraft:replaceable" }
+        },
         {
           "type": "minecraft:block_predicate_filter",
           "predicate": {

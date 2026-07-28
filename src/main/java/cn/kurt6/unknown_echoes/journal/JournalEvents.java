@@ -22,6 +22,7 @@ public class JournalEvents {
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)
+                || player.isSpectator()
                 || player.tickCount % 40 != 0
                 || !(player.level() instanceof ServerLevel level)) {
             return;

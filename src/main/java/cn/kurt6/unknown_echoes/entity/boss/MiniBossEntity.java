@@ -3,12 +3,13 @@ package cn.kurt6.unknown_echoes.entity.boss;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlockEntity;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.registry.ModDataComponents;
+import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerBossEvent;
@@ -19,7 +20,6 @@ import net.minecraft.world.BossEvent;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.item.Item;
@@ -48,6 +48,9 @@ import java.util.UUID;
  */
 public abstract class MiniBossEntity extends Monster implements GeoEntity {
     private static final String PENDING_REWARD_PREFIX = "pending_miniboss_reward|";
+    private static final int MAX_PENDING_REWARD_COUNT = 4096;
+    private static final int GUIDANCE_INTERVAL = 5;
+    private static final Set<UUID> PLAYERS_WITH_PENDING = new HashSet<>();
 
     protected final ServerBossEvent bossEvent;
     protected final Set<UUID> participants = new HashSet<>();
@@ -89,6 +92,9 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
         return null;
     }
 
+    protected void tickMechanicGuidance(ServerLevel level) {
+    }
+
     /** 结算半径:覆盖场地外缘一圈,死亡瞬间在范围内的参与者才拿奖励(红线 #4)。 */
     protected double settlementRadius() {
         return arenaRadius() + 12;
@@ -121,13 +127,27 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
         if (this.tickCount % 20 == 0 && this.getTarget() != null) {
             double radius = settlementRadius();
             for (ServerPlayer player : serverLevel.players()) {
-                if (player.distanceToSqr(this) <= radius * radius) {
-                    this.participants.add(player.getUUID());
+                if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
+                    BossNbtData.addParticipant(this.participants, player.getUUID());
                 }
             }
         }
+        if (this.tickCount % GUIDANCE_INTERVAL == 0 && this.isDamageGuarded()
+                && this.hasNearbyGuidanceViewer(serverLevel)) {
+            this.tickMechanicGuidance(serverLevel);
+        }
         this.tickOutOfCombatRegen();
         this.bossEvent.setProgress(this.getHealth() / this.getMaxHealth());
+    }
+
+    private boolean hasNearbyGuidanceViewer(ServerLevel level) {
+        double radius = settlementRadius();
+        for (ServerPlayer player : level.players()) {
+            if (!player.isSpectator() && player.isAlive() && player.distanceToSqr(this) <= radius * radius) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 脱战回血:无存活目标持续 5 秒后每秒回 2% 最大生命,减员消耗战不可行。 */
@@ -149,8 +169,9 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
         if (!this.level().isClientSide && source.getEntity() instanceof Enemy) {
             return false;
         }
-        if (!this.level().isClientSide && source.getEntity() instanceof ServerPlayer attacker) {
-            this.participants.add(attacker.getUUID());
+        if (!this.level().isClientSide && source.getEntity() instanceof ServerPlayer attacker
+                && !attacker.isSpectator()) {
+            BossNbtData.addParticipant(this.participants, attacker.getUUID());
         }
         // 未破防双保险:乘数 + 单次上限,沿用主线 Boss 的 ServerConfig 两项(红线 #4)
         if (!this.level().isClientSide && this.isDamageGuarded()
@@ -177,7 +198,7 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
         // 个人结算:首杀写击败记录 + 完整奖励;重复击败只给普通奖励(grantSettlement 自行区分)
         double radius = settlementRadius();
         for (ServerPlayer player : serverLevel.players()) {
-            if (this.participants.contains(player.getUUID())
+            if (!player.isSpectator() && this.participants.contains(player.getUUID())
                     && player.distanceToSqr(this) <= radius * radius) {
                 boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player, minibossId());
                 if (firstKill) {
@@ -196,8 +217,7 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
     /** 结算发放物品:优先进背包,满了落在玩家脚下(普通材料允许掉落,红线 #2 只针对关键奖励)。 */
     protected static void giveItem(ServerPlayer player, ItemStack stack) {
         if (!player.getInventory().add(stack)) {
-            player.level().addFreshEntity(
-                    new ItemEntity(player.level(), player.getX(), player.getY() + 0.5, player.getZ(), stack));
+            player.drop(stack, false);
         }
     }
 
@@ -206,55 +226,118 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
         if (canFitEntireStack(player, copy) && player.getInventory().add(copy)) {
             return;
         }
-        rememberPendingFirstKillItem(player, stack);
-        player.displayClientMessage(Component.translatable(
-                "message.unknown_echoes.miniboss.reward_pending", stack.getHoverName()), true);
+        if (rememberPendingFirstKillItem(player, stack)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.miniboss.reward_pending", stack.getHoverName()), true);
+        }
     }
 
     public static void retryPendingFirstKillRewards(ServerPlayer player) {
+        if (!PLAYERS_WITH_PENDING.contains(player.getUUID())) {
+            return;
+        }
         Set<String> mechanisms = EchoAbilityManager.getData(player).getActivatedMechanisms();
+        boolean stillPending = false;
         Iterator<String> iterator = mechanisms.iterator();
         while (iterator.hasNext()) {
             String key = iterator.next();
+            if (!key.startsWith(PENDING_REWARD_PREFIX)) {
+                continue;
+            }
             PendingReward reward = parsePendingReward(key);
             if (reward == null) {
+                iterator.remove();
                 continue;
             }
             ItemStack stack = new ItemStack(reward.item(), reward.count());
+            if (reward.pageId() >= 0) {
+                stack.set(ModDataComponents.PAGE_ID.get(), reward.pageId());
+            }
             if (canFitEntireStack(player, stack) && player.getInventory().add(stack)) {
                 iterator.remove();
                 player.displayClientMessage(Component.translatable(
                         "message.unknown_echoes.miniboss.reward_claimed", stack.getHoverName()), true);
+            } else {
+                stillPending = true;
             }
+        }
+        if (!stillPending) {
+            PLAYERS_WITH_PENDING.remove(player.getUUID());
         }
     }
 
-    private void rememberPendingFirstKillItem(ServerPlayer player, ItemStack stack) {
+    public static void loadPendingFirstKillRewards(ServerPlayer player) {
+        PLAYERS_WITH_PENDING.add(player.getUUID());
+        retryPendingFirstKillRewards(player);
+    }
+
+    public static void clearPendingPlayer(UUID playerId) {
+        PLAYERS_WITH_PENDING.remove(playerId);
+    }
+
+    public static void clearAllPendingPlayers() {
+        PLAYERS_WITH_PENDING.clear();
+    }
+
+    private boolean rememberPendingFirstKillItem(ServerPlayer player, ItemStack stack) {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        EchoAbilityManager.getData(player).getActivatedMechanisms().add(
-                PENDING_REWARD_PREFIX + minibossId() + "|" + itemId + "|" + stack.getCount());
+        int pageId = stack.getOrDefault(ModDataComponents.PAGE_ID.get(), -1);
+        if (!EchoAbilityManager.activateMechanism(player,
+                PENDING_REWARD_PREFIX + minibossId() + "|" + itemId + "|" + stack.getCount()
+                        + "|" + pageId)) {
+            player.drop(stack.copy(), false);
+            return false;
+        }
+        PLAYERS_WITH_PENDING.add(player.getUUID());
+        return true;
     }
 
     private static PendingReward parsePendingReward(String key) {
         if (!key.startsWith(PENDING_REWARD_PREFIX)) {
             return null;
         }
-        String[] parts = key.substring(PENDING_REWARD_PREFIX.length()).split("\\|", 3);
-        if (parts.length != 3) {
+        String[] parts = key.substring(PENDING_REWARD_PREFIX.length()).split("\\|", 4);
+        if (parts.length < 3) {
             return null;
         }
         ResourceLocation itemId = ResourceLocation.tryParse(parts[1]);
         int count;
+        int pageId = -1;
         try {
             count = Integer.parseInt(parts[2]);
+            if (parts.length == 4) {
+                pageId = Integer.parseInt(parts[3]);
+            } else if (itemId != null
+                    && itemId.equals(BuiltInRegistries.ITEM.getKey(ModItems.ANCIENT_PAGE.get()))) {
+                pageId = legacyPageId(parts[0]);
+            }
         } catch (NumberFormatException ignored) {
             return null;
         }
-        if (itemId == null || count <= 0) {
+        if (itemId == null || count <= 0 || count > MAX_PENDING_REWARD_COUNT
+                || pageId < -1 || pageId > 999) {
             return null;
         }
-        Item item = BuiltInRegistries.ITEM.get(itemId);
-        return item == Items.AIR ? null : new PendingReward(item, count);
+        Item item = BuiltInRegistries.ITEM.getOptional(itemId).orElse(null);
+        return item == null || item == Items.AIR ? null : new PendingReward(item, count, pageId);
+    }
+
+    private static int legacyPageId(String bossId) {
+        ResourceLocation id = ResourceLocation.tryParse(bossId);
+        if (id == null) {
+            return -1;
+        }
+        return switch (id.getPath()) {
+            case "storm_weaver" -> 23;
+            case "tide_lantern_keeper" -> 43;
+            case "mirror_dust_butler" -> 56;
+            case "silent_priest" -> 70;
+            case "crystal_songkeeper" -> 80;
+            case "dream_bloom_keeper" -> 86;
+            case "broken_bell_keeper" -> 92;
+            case "lost_recorder_chief" -> 104;
+            default -> -1;
+        };
     }
 
     private static boolean canFitEntireStack(ServerPlayer player, ItemStack stack) {
@@ -270,10 +353,18 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
                 return true;
             }
         }
+        for (ItemStack slot : player.getInventory().offhand) {
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, stack)) {
+                remaining -= Math.max(0, max - slot.getCount());
+            }
+            if (remaining <= 0) {
+                return true;
+            }
+        }
         return false;
     }
 
-    private record PendingReward(Item item, int count) {
+    private record PendingReward(Item item, int count, int pageId) {
     }
 
     // ---- Boss 体征 ----
@@ -334,19 +425,15 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.participants.clear();
-        for (Tag entry : tag.getList("Participants", Tag.TAG_INT_ARRAY)) {
-            this.participants.add(NbtUtils.loadUUID(entry));
-        }
-        int[] home = tag.getIntArray("HomePos");
-        if (home.length == 3) {
-            this.homePos = new BlockPos(home[0], home[1], home[2]);
+        BossNbtData.loadUuids(tag, "Participants", this.participants, BossNbtData.MAX_PARTICIPANTS);
+        BlockPos entityPos = this.blockPosition();
+        this.homePos = BossNbtData.loadPositionNear(tag, "HomePos", entityPos,
+                arenaRadius() * 3, arenaRadius() * 2);
+        if (this.homePos != null) {
             this.restrictTo(this.homePos, arenaRadius());
         }
-        int[] spawner = tag.getIntArray("SpawnerPos");
-        if (spawner.length == 3) {
-            this.spawnerPos = new BlockPos(spawner[0], spawner[1], spawner[2]);
-        }
+        this.spawnerPos = BossNbtData.loadPositionNear(tag, "SpawnerPos",
+                this.homePos != null ? this.homePos : entityPos, arenaRadius() * 3, 32);
         if (this.hasCustomName()) {
             this.bossEvent.setName(this.getDisplayName());
         }

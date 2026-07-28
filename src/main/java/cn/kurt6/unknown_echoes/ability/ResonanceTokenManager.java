@@ -36,6 +36,8 @@ public class ResonanceTokenManager {
             case WIND_ECHO -> ModItems.WIND_RESONANCE_TOKEN.get();
             case TIDE_ECHO -> ModItems.TIDE_RESONANCE_TOKEN.get();
             case TRUE_SIGHT_ECHO -> ModItems.TRUE_SIGHT_RESONANCE_TOKEN.get();
+            case GRAVITY_ECHO -> ModItems.GRAVITY_RESONANCE_TOKEN.get();
+            case VOID_ECHO -> ModItems.VOID_RESONANCE_TOKEN.get();
             default -> null;
         };
     }
@@ -234,6 +236,8 @@ public class ResonanceTokenManager {
             case WIND_ECHO -> "wind_resonance_token";
             case TIDE_ECHO -> "tide_resonance_token";
             case TRUE_SIGHT_ECHO -> "true_sight_resonance_token";
+            case GRAVITY_ECHO -> "gravity_resonance_token";
+            case VOID_ECHO -> "void_resonance_token";
             default -> "wind_resonance_token";
         };
     }

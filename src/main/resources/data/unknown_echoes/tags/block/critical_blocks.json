@@ -1,6 +1,17 @@
 {
   "values": [
     "unknown_echoes:resonance_beacon",
+    "unknown_echoes:abyss_beacon",
+    "unknown_echoes:deep_route_node",
+    "unknown_echoes:deep_calibration_node",
+    "unknown_echoes:gravity_core_altar",
+    "unknown_echoes:gravity_fold_door",
+    "unknown_echoes:gravity_field_core",
+    "unknown_echoes:space_anchor",
+    "unknown_echoes:void_stabilizer",
+    "unknown_echoes:void_core_altar",
+    "unknown_echoes:world_resonance_altar",
+    "unknown_echoes:ending_record_table",
     "unknown_echoes:wind_door",
     "unknown_echoes:memory_pillar",
     "unknown_echoes:reward_altar",
