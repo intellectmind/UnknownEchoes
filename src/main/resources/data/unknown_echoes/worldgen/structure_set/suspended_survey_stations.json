@@ -1,0 +1,9 @@
+{
+  "structures": [{ "structure": "unknown_echoes:suspended_survey_station", "weight": 1 }],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 30,
+    "separation": 10,
+    "salt": 2089346104
+  }
+}

@@ -1,11 +1,13 @@
 package cn.kurt6.unknown_echoes.client.gui.overview;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.ability.DeepEchoAbilityHandler;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.client.ClientAbilityCache;
 import cn.kurt6.unknown_echoes.client.ClientArtifactCache;
 import cn.kurt6.unknown_echoes.client.ClientJournalCache;
 import cn.kurt6.unknown_echoes.config.ClientConfig;
+import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.artifact.ArtifactType;
 import cn.kurt6.unknown_echoes.journal.AncientPageCatalog;
 import cn.kurt6.unknown_echoes.journal.DeepEchoesProgressCatalog;
@@ -189,7 +191,9 @@ public class EchoOverviewScreen extends Screen {
             "abyss_beacon_structure", "folded_archive", "calibration_hall",
             "inverted_mountains", "inverted_chasm_bridge", "silent_abyss_anchor",
             "spatial_rift", "void_vein_chamber", "folded_waystation",
-            "gravity_shard_spire", "hushed_refuge", "world_resonance_hall"
+            "gravity_shard_spire", "hushed_refuge", "misfiled_catalog_well",
+            "folded_scriptorium", "inverted_archive_tower", "suspended_survey_station",
+            "fractured_anchor_station", "severed_archive_vault", "world_resonance_hall"
     };
     private static final List<String> KNOWN_BIOMES = java.util.stream.Stream.concat(
             EchoRealmBiomeCatalog.PATHS.stream(), DeepEchoesBiomeCatalog.PATHS.stream()).toList();
@@ -761,10 +765,44 @@ public class EchoOverviewScreen extends Screen {
             hint = Component.translatable("overview.unknown_echoes.research.complete");
         } else {
             hint = Component.translatable("overview.unknown_echoes.research.next."
-                    + line.getId() + "." + (level + 1));
+                    + line.getId() + "." + (level + 1), researchHintArgs(line, level + 1));
         }
         addWrapped(Component.literal("  ↳ ").withStyle(ChatFormatting.DARK_GRAY)
                 .append(hint.copy().withStyle(ChatFormatting.GRAY)), null);
+    }
+
+    /** 面板悬停提示:重力/虚空的基础冷却按当前配置填充,其余能力沿用静态文本。 */
+    private static net.minecraft.network.chat.MutableComponent abilityHint(EchoAbilityType type) {
+        if (type == EchoAbilityType.GRAVITY_ECHO) {
+            return Component.translatable("screen.unknown_echoes.ability_panel.hint.gravity_echo",
+                    cooldownSecondsText(ServerConfig.GRAVITY_ACTIVE_COOLDOWN_TICKS, 0));
+        }
+        if (type == EchoAbilityType.VOID_ECHO) {
+            return Component.translatable("screen.unknown_echoes.ability_panel.hint.void_echo",
+                    cooldownSecondsText(ServerConfig.VOID_STEP_COOLDOWN_TICKS, 0));
+        }
+        return ABILITY_HINTS[type.ordinal()].copy();
+    }
+
+    /** 重力/虚空冷却提示实时读取同步后的服务器配置,与实际结算共用折减公式,不再写死数值。 */
+    private static Object[] researchHintArgs(EchoResearchLine line, int nextLevel) {
+        if (line == EchoResearchLine.GRAVITY) {
+            return new Object[]{cooldownSecondsText(
+                    ServerConfig.GRAVITY_ACTIVE_COOLDOWN_TICKS, nextLevel)};
+        }
+        if (line == EchoResearchLine.VOID) {
+            return new Object[]{cooldownSecondsText(
+                    ServerConfig.VOID_STEP_COOLDOWN_TICKS, nextLevel)};
+        }
+        return new Object[0];
+    }
+
+    private static String cooldownSecondsText(net.neoforged.neoforge.common.ModConfigSpec.IntValue baseTicks,
+                                              int research) {
+        int base = ServerConfig.SPEC.isLoaded() ? baseTicks.get() : baseTicks.getDefault();
+        long ticks = DeepEchoAbilityHandler.scaledCooldown(base, research);
+        return ticks % 20L == 0L ? String.valueOf(ticks / 20L)
+                : String.format(java.util.Locale.ROOT, "%.1f", ticks / 20.0D);
     }
 
     private Component firstRequiredBiomeName(EchoResearchLine line) {
@@ -1257,7 +1295,7 @@ public class EchoOverviewScreen extends Screen {
                 }
             }
             if (hovered) {
-                Component hint = ABILITY_HINTS[type.ordinal()].copy()
+                Component hint = abilityHint(type)
                         .withStyle(unlocked ? ChatFormatting.GRAY : ChatFormatting.DARK_GRAY);
                 tooltip = unlocked
                         ? java.util.List.of(Component.translatable("overview.unknown_echoes.ability.tip.research",

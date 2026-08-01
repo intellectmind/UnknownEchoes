@@ -102,6 +102,8 @@ public class CommonEvents {
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             EchoAbilityManager.syncToClient(player);
+            cn.kurt6.unknown_echoes.journal.JournalManager.retryAllPagesReward(player);
+            ModAdvancements.checkJournalAdvancements(player);
             cn.kurt6.unknown_echoes.journal.JournalManager.syncJournal(player);
             cn.kurt6.unknown_echoes.artifact.ArtifactManager.syncToClient(player);
             LAST_ENERGY_REGEN_RATE.put(player.getUUID(),
@@ -109,10 +111,7 @@ public class CommonEvents {
             restorePendingArtifactCredentials(player, true);
             BossMaterialRewards.loadPendingPersonalRewards(player);
             MiniBossEntity.loadPendingFirstKillRewards(player);
-            if (player.level().dimension().location().equals(EchoPermission.DEEP_ECHOES_ID)
-                    && EchoPermission.canEnterDeepEchoes(player)) {
-                ModAdvancements.award(player, ModAdvancements.ENTER_DEEP_ECHOES);
-            }
+            cn.kurt6.unknown_echoes.item.WorldtreeFruitItem.applyHealthBonus(player);
             ModAdvancements.checkDeepExplorationAdvancements(player,
                     JournalManager.getData(player).getStructures(),
                     JournalManager.getData(player).getBiomes());
@@ -184,12 +183,15 @@ public class CommonEvents {
             EchoAbilityManager.syncToClient(player);
             cn.kurt6.unknown_echoes.journal.JournalManager.syncJournal(player);
             cn.kurt6.unknown_echoes.artifact.ArtifactManager.syncToClient(player);
+            cn.kurt6.unknown_echoes.item.WorldtreeFruitItem.applyHealthBonus(player);
         }
     }
 
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone event) {
         cn.kurt6.unknown_echoes.ability.DeepEchoAbilityHandler.copyCooldowns(
+                event.getOriginal(), event.getEntity());
+        cn.kurt6.unknown_echoes.item.WorldtreeFruitItem.copyPersistentData(
                 event.getOriginal(), event.getEntity());
     }
 
@@ -205,15 +207,6 @@ public class CommonEvents {
             cn.kurt6.unknown_echoes.journal.JournalManager.syncJournal(player);
             // 能量恢复速率随维度变化(境域内翻倍),换维度后重推一次供客户端外推
             cn.kurt6.unknown_echoes.artifact.ArtifactManager.syncToClient(player);
-            if (!player.isSpectator()
-                    && event.getTo().location().equals(EchoPermission.ECHO_REALM_ID)) {
-                EchoAbilityManager.unlockDimension(player, EchoPermission.ECHO_REALM_ID);
-            }
-            if (!player.isSpectator()
-                    && event.getTo().location().equals(EchoPermission.DEEP_ECHOES_ID)
-                    && EchoPermission.canEnterDeepEchoes(player)) {
-                ModAdvancements.award(player, ModAdvancements.ENTER_DEEP_ECHOES);
-            }
         }
     }
 
@@ -442,13 +435,12 @@ public class CommonEvents {
             return;
         }
         boolean weaponChain = WeaponEffectGuard.isActive(player);
-        if (!weaponChain) {
-            applyEchoBowEffects(event, player);
+        if (weaponChain) {
+            return;
         }
+        applyEchoBowEffects(event, player);
         applyHeldWeaponEffects(event, player);
-        if (!weaponChain) {
-            ArtifactEffectManager.onIncomingDamage(event);
-        }
+        ArtifactEffectManager.onIncomingDamage(event);
         applyTideWetBonus(event, player);
         if (!EchoAbilityManager.hasAbility(player, EchoAbilityType.TRUE_SIGHT_ECHO)) {
             return;
@@ -539,6 +531,13 @@ public class CommonEvents {
                 ? directArrow : null;
         ItemStack firedFromWeapon = arrow == null ? null : arrow.getWeaponItem();
         LivingEntity target = event.getEntity();
+        // 弓类实伤加成:长弓箭矢 ×1.25、沉梦弓箭矢 +2,保证两把弓明确强于原版弓而不只有附加效果。
+        if (firedFromWeapon != null && firedFromWeapon.is(ModItems.ECHO_LONGBOW.get())) {
+            event.setAmount(event.getAmount() * 1.25F);
+        }
+        if (firedFromWeapon != null && firedFromWeapon.is(ModItems.DREAM_BLOOM_BOW.get())) {
+            event.setAmount(event.getAmount() + 2.0F);
+        }
         boolean leavesLongbowMark = arrow != null && arrow.isCritArrow()
                 && firedFromWeapon != null && firedFromWeapon.is(ModItems.ECHO_LONGBOW.get());
         if (event.getSource().getDirectEntity() == player

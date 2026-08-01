@@ -14,6 +14,11 @@
         },
         {
           "type": "minecraft:item",
+          "name": "unknown_echoes:gravity_research_rubbing",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
           "name": "unknown_echoes:ancient_page",
           "weight": 3,
           "functions": [

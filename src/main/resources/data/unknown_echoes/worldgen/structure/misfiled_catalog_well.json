@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:misfiled_catalog_well",
+  "biomes": "#unknown_echoes:has_misfiled_catalog_well",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

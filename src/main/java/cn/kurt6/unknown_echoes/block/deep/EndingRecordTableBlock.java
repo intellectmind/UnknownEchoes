@@ -89,9 +89,13 @@ public class EndingRecordTableBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        EchoAbilityManager.activateMechanism(serverPlayer, EchoPermission.WORLD_ECHO_COMPLETE_KEY);
+        if (!EchoAbilityManager.activateMechanism(serverPlayer, EchoPermission.WORLD_ECHO_COMPLETE_KEY)) {
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return InteractionResult.CONSUME;
+        }
         EchoAbilityManager.syncToClient(serverPlayer);
-        ModAdvancements.award(serverPlayer, "world_echo_complete");
+        ModAdvancements.award(serverPlayer, ModAdvancements.WORLD_ECHO_COMPLETE);
         serverLevel.sendParticles(ParticleTypes.END_ROD,
                 pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
                 120, 1.2, 1.0, 1.2, 0.12);

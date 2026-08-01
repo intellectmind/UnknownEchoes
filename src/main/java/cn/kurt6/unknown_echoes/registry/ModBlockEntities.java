@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.registry;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.archive.EchoArchiveTerminalBlockEntity;
 import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlockEntity;
+import cn.kurt6.unknown_echoes.block.deep.BossRechallengeAltarBlockEntity;
 import cn.kurt6.unknown_echoes.block.deep.GravityFieldCoreBlockEntity;
 import cn.kurt6.unknown_echoes.block.deep.WorldResonanceAltarBlockEntity;
 import cn.kurt6.unknown_echoes.block.puzzle.PuzzleCoreBlockEntity;
@@ -58,6 +59,11 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("gravity_field_core",
                     () -> BlockEntityType.Builder.of(GravityFieldCoreBlockEntity::new,
                             ModBlocks.GRAVITY_FIELD_CORE.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BossRechallengeAltarBlockEntity>> BOSS_RECHALLENGE_ALTAR =
+            BLOCK_ENTITY_TYPES.register("boss_rechallenge_altar",
+                    () -> BlockEntityType.Builder.of(BossRechallengeAltarBlockEntity::new,
+                            ModBlocks.GRAVITY_CORE_ALTAR.get(), ModBlocks.VOID_CORE_ALTAR.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WorldResonanceAltarBlockEntity>> WORLD_RESONANCE_ALTAR =
             BLOCK_ENTITY_TYPES.register("world_resonance_altar",

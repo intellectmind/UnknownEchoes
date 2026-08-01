@@ -10,6 +10,7 @@
     { "item": "unknown_echoes:tide_rune_fragment" }
   ],
   "result": {
-    "id": "unknown_echoes:tide_upgrade_core"
+    "id": "unknown_echoes:tide_upgrade_core",
+    "count": 4
   }
 }

@@ -4,7 +4,7 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.client.model.EchoArmorModel;
 import cn.kurt6.unknown_echoes.client.model.ThemedEchoArmorModel;
 import cn.kurt6.unknown_echoes.client.render.AbyssWatcherRenderer;
-import cn.kurt6.unknown_echoes.client.gui.ArtifactHudOverlay;
+import cn.kurt6.unknown_echoes.client.gui.EchoStatusHudOverlay;
 import cn.kurt6.unknown_echoes.client.render.BrokenBellKeeperRenderer;
 import cn.kurt6.unknown_echoes.client.render.CrystalSongkeeperRenderer;
 import cn.kurt6.unknown_echoes.client.render.DreamBloomKeeperRenderer;
@@ -137,10 +137,15 @@ public class ClientModEvents {
             "key.unknown_echoes.echo_overview", InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_K, "key.categories.unknown_echoes");
 
-    /** 武器战技(默认 R,可改键):触发手持武器的主动技能,与右键等价。 */
+    /** 武器主战技(默认 R,可改键)。 */
     public static final KeyMapping WEAPON_SKILL = new KeyMapping(
             "key.unknown_echoes.weapon_skill", InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_R, "key.categories.unknown_echoes");
+
+    /** 双战技武器的副战技(默认 X,可改键)，不占用右键交互。 */
+    public static final KeyMapping WEAPON_SECONDARY_SKILL = new KeyMapping(
+            "key.unknown_echoes.weapon_secondary_skill", InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_X, "key.categories.unknown_echoes");
 
     public static final KeyMapping GRAVITY_ATTUNE = new KeyMapping(
             "key.unknown_echoes.gravity_attune", InputConstants.Type.KEYSYM,
@@ -159,6 +164,7 @@ public class ClientModEvents {
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(OPEN_ECHO_OVERVIEW);
         event.register(WEAPON_SKILL);
+        event.register(WEAPON_SECONDARY_SKILL);
         event.register(GRAVITY_ATTUNE);
         event.register(VOID_STEP);
         event.register(ARTIFACT_USE);
@@ -167,7 +173,7 @@ public class ClientModEvents {
     @SubscribeEvent
     public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
         event.registerAbove(VanillaGuiLayers.HOTBAR,
-                UnknownEchoes.id("artifact_hud"), ArtifactHudOverlay::render);
+                UnknownEchoes.id("echo_status_hud"), EchoStatusHudOverlay::render);
     }
 
     @SubscribeEvent

@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.registry;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.artifact.ArtifactType;
 import cn.kurt6.unknown_echoes.item.AncientPageItem;
+import cn.kurt6.unknown_echoes.item.EchoEnergyConsumableItem;
 import cn.kurt6.unknown_echoes.item.EchoKeyItem;
 import cn.kurt6.unknown_echoes.item.EchoMaterialItem;
 import cn.kurt6.unknown_echoes.item.EchoProjectorItem;
@@ -13,6 +14,7 @@ import cn.kurt6.unknown_echoes.item.GenericArtifactItem;
 import cn.kurt6.unknown_echoes.item.ResearchRubbingItem;
 import cn.kurt6.unknown_echoes.item.SilentPodItem;
 import cn.kurt6.unknown_echoes.item.WindEchoMarkItem;
+import cn.kurt6.unknown_echoes.item.WorldtreeFruitItem;
 import cn.kurt6.unknown_echoes.item.tool.EchoBrushItem;
 import cn.kurt6.unknown_echoes.item.tool.EchoFishingRodItem;
 import cn.kurt6.unknown_echoes.item.tool.EchoHatchetItem;
@@ -25,6 +27,7 @@ import cn.kurt6.unknown_echoes.item.weapon.CrystalSongStaffItem;
 import cn.kurt6.unknown_echoes.item.weapon.DeepMeleeWeaponItem;
 import cn.kurt6.unknown_echoes.item.weapon.EchoBowItem;
 import cn.kurt6.unknown_echoes.item.weapon.EchoMeleeWeaponItem;
+import cn.kurt6.unknown_echoes.item.weapon.EchoOathbladeItem;
 import cn.kurt6.unknown_echoes.item.weapon.TideCrossbowItem;
 import cn.kurt6.unknown_echoes.item.weapon.TrueSightBladeItem;
 import cn.kurt6.unknown_echoes.item.weapon.WindSpearItem;
@@ -101,6 +104,19 @@ public class ModItems {
                     EchoUtilityConsumableItem.Kind.MEMORY_ECHO_STONE,
                     new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON).food(new FoodProperties.Builder()
                             .nutrition(0).saturationModifier(0.0F).alwaysEdible().build())));
+
+    public static final DeferredItem<EchoEnergyConsumableItem> FAINT_ECHO_CANDY =
+            ITEMS.register("faint_echo_candy", () -> new EchoEnergyConsumableItem(4,
+                    energyFoodProperties(16, Rarity.COMMON)));
+    public static final DeferredItem<EchoEnergyConsumableItem> ECHO_CANDY =
+            ITEMS.register("echo_candy", () -> new EchoEnergyConsumableItem(8,
+                    energyFoodProperties(8, Rarity.UNCOMMON)));
+    public static final DeferredItem<EchoEnergyConsumableItem> CONDENSED_ECHO_CANDY =
+            ITEMS.register("condensed_echo_candy", () -> new EchoEnergyConsumableItem(16,
+                    energyFoodProperties(4, Rarity.RARE)));
+    public static final DeferredItem<EchoEnergyConsumableItem> PURE_ECHO_CANDY =
+            ITEMS.register("pure_echo_candy", () -> new EchoEnergyConsumableItem(32,
+                    energyFoodProperties(2, Rarity.EPIC)));
 
     // ---- V0.5 镜湖材料 ----
 
@@ -238,7 +254,15 @@ public class ModItems {
             ITEMS.register("true_sight_research_rubbing", () -> new ResearchRubbingItem("true_sight",
                     new Item.Properties().rarity(Rarity.UNCOMMON)));
 
-    // ---- V0.7A/D 文档规范研究材料 ID(残篇页=誊清拓片,单次阅读可推进两级,媒材逐级照扣) ----
+    public static final DeferredItem<ResearchRubbingItem> GRAVITY_RESEARCH_RUBBING =
+            ITEMS.register("gravity_research_rubbing", () -> new ResearchRubbingItem("gravity",
+                    new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    public static final DeferredItem<ResearchRubbingItem> VOID_RESEARCH_RUBBING =
+            ITEMS.register("void_research_rubbing", () -> new ResearchRubbingItem("void",
+                    new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    // ---- 五条能力研究材料(残篇页=誊清拓片,单次阅读可推进两级,媒材逐级照扣) ----
 
     public static final DeferredItem<ResearchRubbingItem> WIND_FRAGMENT_PAGE =
             ITEMS.register("wind_fragment_page", () -> new ResearchRubbingItem("wind", 2,
@@ -250,6 +274,14 @@ public class ModItems {
 
     public static final DeferredItem<ResearchRubbingItem> TRUE_SIGHT_FRAGMENT_PAGE =
             ITEMS.register("true_sight_fragment_page", () -> new ResearchRubbingItem("true_sight", 2,
+                    new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    public static final DeferredItem<ResearchRubbingItem> GRAVITY_FRAGMENT_PAGE =
+            ITEMS.register("gravity_fragment_page", () -> new ResearchRubbingItem("gravity", 2,
+                    new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    public static final DeferredItem<ResearchRubbingItem> VOID_FRAGMENT_PAGE =
+            ITEMS.register("void_fragment_page", () -> new ResearchRubbingItem("void", 2,
                     new Item.Properties().rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<Item> INSCRIPTION_RUBBING_PAPER =
@@ -364,9 +396,9 @@ public class ModItems {
             ITEMS.register("dream_bloom_bow", () -> new EchoBowItem("dream_bloom_bow",
                     new Item.Properties().durability(1200).rarity(Rarity.RARE)));
 
-    public static final DeferredItem<EchoMeleeWeaponItem> ECHO_OATHBLADE =
-            ITEMS.register("echo_oathblade", () -> new EchoMeleeWeaponItem(15.0, 1.70,
-                    "echo_oathblade", new Item.Properties().durability(4000).rarity(Rarity.EPIC)));
+    public static final DeferredItem<EchoOathbladeItem> ECHO_OATHBLADE =
+            ITEMS.register("echo_oathblade", () -> new EchoOathbladeItem(17.0, 1.75,
+                    new Item.Properties().durability(4500).rarity(Rarity.EPIC)));
 
     public static final DeferredItem<DeepMeleeWeaponItem> GRAVITY_HAMMER =
             ITEMS.register("gravity_hammer", () -> new DeepMeleeWeaponItem(
@@ -598,6 +630,16 @@ public class ModItems {
     public static final DeferredItem<Item> ECHO_BERRY = ITEMS.register("echo_berry",
             () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
                     .nutrition(3).saturationModifier(0.3F).build())));
+
+    public static final DeferredItem<Item> GLOW_FRUIT = ITEMS.register("glow_fruit",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(4).saturationModifier(0.45F).build())));
+
+    public static final DeferredItem<WorldtreeFruitItem> WORLDTREE_FRUIT =
+            ITEMS.register("worldtree_fruit",
+                    () -> new WorldtreeFruitItem(new Item.Properties().stacksTo(16)
+                            .rarity(Rarity.EPIC).food(new FoodProperties.Builder()
+                                    .nutrition(4).saturationModifier(0.6F).alwaysEdible().build())));
 
     /** 风脆饼:漂浮群岛补给,短暂缓降,不作为进度权限。 */
     public static final DeferredItem<Item> WIND_CRISP = ITEMS.register("wind_crisp",
@@ -1073,6 +1115,12 @@ public class ModItems {
 
     private static Item.Properties armorProperties(ArmorItem.Type type, int durabilityMultiplier, Rarity rarity) {
         return new Item.Properties().durability(type.getDurability(durabilityMultiplier)).rarity(rarity);
+    }
+
+    private static Item.Properties energyFoodProperties(int stackSize, Rarity rarity) {
+        return new Item.Properties().stacksTo(stackSize).rarity(rarity)
+                .food(new FoodProperties.Builder().nutrition(0).saturationModifier(0.0F)
+                        .alwaysEdible().build());
     }
 
     private static Item.Properties toolProperties(int durability, float attackDamage, float attackSpeed, Rarity rarity) {

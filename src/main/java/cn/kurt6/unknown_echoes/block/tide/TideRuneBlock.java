@@ -99,8 +99,8 @@ public class TideRuneBlock extends Block {
         // 回访点研究来源(V0.6B):每块符文首次读取 +1 潮汐研究点(个人绑定,按坐标去重)
         if (player instanceof ServerPlayer serverPlayer) {
             String key = "research_revisit:tide_rune:" + level.dimension().location() + ":" + pos.asLong();
-            if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)) {
-                EchoAbilityManager.activateMechanism(serverPlayer, key);
+            if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)
+                    && EchoAbilityManager.activateMechanism(serverPlayer, key)) {
                 EchoAbilityManager.addResearchPoints(serverPlayer, EchoAbilityType.TIDE_ECHO, 1);
                 serverPlayer.displayClientMessage(
                         Component.translatable("message.unknown_echoes.research.insight"), true);

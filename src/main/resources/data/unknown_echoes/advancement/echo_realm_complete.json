@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:all_biomes",
+  "parent": "unknown_echoes:echo_realm_graduation",
   "display": {
     "icon": {
       "id": "unknown_echoes:echo_realm_core"

@@ -46,7 +46,7 @@ import java.util.UUID;
  *   (MINIBOSS_ARENA_REOPEN / _TICKS,服务器可配置)。
  * - 常规 Boss 体征:Boss 血条、不自然消失、不可拴绳、脱战回血、场地锚点限制。
  */
-public abstract class MiniBossEntity extends Monster implements GeoEntity {
+public abstract class MiniBossEntity extends Monster implements GeoEntity, BossDamageGuard {
     private static final String PENDING_REWARD_PREFIX = "pending_miniboss_reward|";
     private static final int MAX_PENDING_REWARD_COUNT = 4096;
     private static final int GUIDANCE_INTERVAL = 5;
@@ -173,20 +173,27 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
                 && !attacker.isSpectator()) {
             BossNbtData.addParticipant(this.participants, attacker.getUUID());
         }
-        // 未破防双保险:乘数 + 单次上限,沿用主线 Boss 的 ServerConfig 两项(红线 #4)
-        if (!this.level().isClientSide && this.isDamageGuarded()
-                && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-            float multiplier = ServerConfig.BOSS_UNBROKEN_DAMAGE_MULTIPLIER.get().floatValue();
-            float cap = ServerConfig.BOSS_UNBROKEN_MAX_DAMAGE.get().floatValue();
-            amount = Math.min(amount * multiplier, cap);
-            String hintKey = guardedHintKey();
-            if (hintKey != null && this.guardedHintCooldown <= 0
-                    && source.getEntity() instanceof ServerPlayer player) {
-                player.displayClientMessage(Component.translatable(hintKey), true);
-                this.guardedHintCooldown = 40;
-            }
-        }
         return super.hurt(source, amount);
+    }
+
+    @Override
+    public boolean isMechanicDamageGuarded() {
+        return this.isDamageGuarded();
+    }
+
+    @Override
+    public boolean shouldGuardDamage(DamageSource source) {
+        return !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY);
+    }
+
+    @Override
+    public void onMechanicDamageGuarded(DamageSource source) {
+        String hintKey = guardedHintKey();
+        if (hintKey != null && this.guardedHintCooldown <= 0
+                && source.getEntity() instanceof ServerPlayer player) {
+            player.displayClientMessage(Component.translatable(hintKey), true);
+            this.guardedHintCooldown = 40;
+        }
     }
 
     @Override
@@ -201,8 +208,10 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity {
             if (!player.isSpectator() && this.participants.contains(player.getUUID())
                     && player.distanceToSqr(this) <= radius * radius) {
                 boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player, minibossId());
-                if (firstKill) {
-                    EchoAbilityManager.markBossDefeated(player, minibossId());
+                if (firstKill && !EchoAbilityManager.markBossDefeated(player, minibossId())) {
+                    player.sendSystemMessage(Component.translatable(
+                            "message.unknown_echoes.progress_record.full"));
+                    continue;
                 }
                 this.grantSettlement(player, firstKill);
             }

@@ -152,11 +152,11 @@ public class EchoAdminCommands {
                     yield false;
                 }
                 if (grant) {
-                    EchoAbilityManager.unlockAbility(target, ability);
+                    yield EchoAbilityManager.unlockAbility(target, ability);
                 } else {
                     EchoAbilityManager.revokeAbility(target, ability);
+                    yield true;
                 }
-                yield true;
             }
             case "boss" -> {
                 ResourceLocation id = value.contains(":")
@@ -165,11 +165,11 @@ public class EchoAdminCommands {
                     yield false;
                 }
                 if (grant) {
-                    EchoAbilityManager.markBossDefeated(target, id);
+                    yield EchoAbilityManager.markBossDefeated(target, id);
                 } else {
                     EchoAbilityManager.revokeBossDefeated(target, id);
+                    yield true;
                 }
-                yield true;
             }
             case "beacon" -> {
                 ResourceLocation id = ResourceLocation.tryParse(value);
@@ -177,11 +177,11 @@ public class EchoAdminCommands {
                     yield false;
                 }
                 if (grant) {
-                    EchoAbilityManager.activateBeacon(target, id);
+                    yield EchoAbilityManager.activateBeacon(target, id);
                 } else {
                     EchoAbilityManager.revokeBeacon(target, id);
+                    yield true;
                 }
-                yield true;
             }
             case "dimension" -> {
                 ResourceLocation id = ResourceLocation.tryParse(value);
@@ -189,11 +189,11 @@ public class EchoAdminCommands {
                     yield false;
                 }
                 if (grant) {
-                    EchoAbilityManager.unlockDimension(target, id);
+                    yield EchoAbilityManager.unlockDimension(target, id);
                 } else {
                     EchoAbilityManager.revokeDimension(target, id);
+                    yield true;
                 }
-                yield true;
             }
             case "artifact" -> {
                 ArtifactType type = ArtifactType.byId(value);

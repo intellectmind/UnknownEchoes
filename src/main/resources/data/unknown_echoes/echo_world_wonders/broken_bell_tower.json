@@ -11,14 +11,13 @@
   "allow_multiple": true,
   "priority": 3,
   "mechanic": "great_bell_timing_chain",
-  "reward_tier": "t7_echo_realm_endgame",
+  "reward_tier": "t5_miniboss_repeat",
   "discovery_score": 4,
   "completion_score": 8,
   "core_record_score": 3,
   "loot_tables": {
     "common": "unknown_echoes:chests/broken_archive",
-    "core": "unknown_echoes:chests/common/t5_miniboss_repeat",
-    "endgame": "unknown_echoes:chests/common/t7_echo_realm_endgame"
+    "core": "unknown_echoes:chests/common/t5_miniboss_repeat"
   },
   "clue_key": "clue.unknown_echoes.broken_bell_tower",
   "critical_path": false,

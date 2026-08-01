@@ -18,11 +18,20 @@
       "item": "unknown_echoes:broken_reflection"
     },
     {
-      "item": "unknown_echoes:echo_core"
+      "item": "unknown_echoes:colossus_memory_core"
+    },
+    {
+      "item": "unknown_echoes:tide_core"
+    },
+    {
+      "item": "unknown_echoes:mirror_guardian_core"
+    },
+    {
+      "tag": "unknown_echoes:mini_boss_oath_materials"
     }
   ],
   "result": {
     "id": "unknown_echoes:oathbound_alloy",
-    "count": 2
+    "count": 6
   }
 }

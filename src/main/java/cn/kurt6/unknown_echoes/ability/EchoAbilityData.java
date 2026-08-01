@@ -7,6 +7,8 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -134,6 +136,31 @@ public class EchoAbilityData {
         return addResourceId(defeatedBosses, bossId);
     }
 
+    /** Boss 击败与同一次结算产生的机关记录必须同时落盘。 */
+    public boolean markBossDefeatedWithMechanisms(String bossId, Collection<String> mechanisms) {
+        if (!canStoreResourceId(defeatedBosses, bossId)) {
+            return false;
+        }
+        Set<String> additions = new LinkedHashSet<>();
+        if (mechanisms != null) {
+            for (String mechanism : mechanisms) {
+                if (mechanism == null || mechanism.isBlank()
+                        || mechanism.length() > MAX_MECHANISM_LENGTH) {
+                    return false;
+                }
+                if (!activatedMechanisms.contains(mechanism)) {
+                    additions.add(mechanism);
+                }
+            }
+        }
+        if (activatedMechanisms.size() + additions.size() > MAX_MECHANISM_ENTRIES) {
+            return false;
+        }
+        defeatedBosses.add(bossId);
+        activatedMechanisms.addAll(additions);
+        return true;
+    }
+
     public Set<String> getUnlockedDimensions() {
         return unlockedDimensions;
     }
@@ -158,12 +185,71 @@ public class EchoAbilityData {
                 && activatedMechanisms.add(mechanism);
     }
 
+    /** 多条关联记录必须同时落盘，避免容量边界留下半完成状态。 */
+    public boolean activateMechanisms(Collection<String> mechanisms) {
+        if (mechanisms == null || mechanisms.isEmpty()) {
+            return false;
+        }
+        Set<String> additions = new LinkedHashSet<>();
+        for (String mechanism : mechanisms) {
+            if (mechanism == null || mechanism.isBlank() || mechanism.length() > MAX_MECHANISM_LENGTH) {
+                return false;
+            }
+            if (!activatedMechanisms.contains(mechanism)) {
+                additions.add(mechanism);
+            }
+        }
+        if (activatedMechanisms.size() + additions.size() > MAX_MECHANISM_ENTRIES) {
+            return false;
+        }
+        activatedMechanisms.addAll(additions);
+        return true;
+    }
+
+    /** 信标激活与维度权限必须同时成立，可附带同一流程的完成记录。 */
+    public boolean activateBeaconRoute(String beaconId, String dimensionId,
+                                       Collection<String> mechanisms) {
+        if (!canStoreResourceId(activatedBeacons, beaconId)
+                || !canStoreResourceId(unlockedDimensions, dimensionId)) {
+            return false;
+        }
+        Set<String> additions = new LinkedHashSet<>();
+        if (mechanisms != null) {
+            for (String mechanism : mechanisms) {
+                if (mechanism == null || mechanism.isBlank()
+                        || mechanism.length() > MAX_MECHANISM_LENGTH) {
+                    return false;
+                }
+                if (!activatedMechanisms.contains(mechanism)) {
+                    additions.add(mechanism);
+                }
+            }
+        }
+        if (activatedMechanisms.size() + additions.size() > MAX_MECHANISM_ENTRIES) {
+            return false;
+        }
+        activatedBeacons.add(beaconId);
+        unlockedDimensions.add(dimensionId);
+        activatedMechanisms.addAll(additions);
+        return true;
+    }
+
     private static boolean addResourceId(Set<String> target, String id) {
-        if (id == null || id.length() > MAX_ID_LENGTH || ResourceLocation.tryParse(id) == null
+        if (!isValidResourceId(id)
                 || target.contains(id) || target.size() >= MAX_STANDARD_ENTRIES) {
             return false;
         }
         return target.add(id);
+    }
+
+    private static boolean canStoreResourceId(Set<String> target, String id) {
+        return isValidResourceId(id)
+                && (target.contains(id) || target.size() < MAX_STANDARD_ENTRIES);
+    }
+
+    private static boolean isValidResourceId(String id) {
+        return id != null && id.length() <= MAX_ID_LENGTH
+                && ResourceLocation.tryParse(id) != null;
     }
 
     /** 该研究线残页之外的研究点(拓片/回访/守护者来源)。 */

@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.entity.boss;
 
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.block.deep.BossRechallengeAltarBlockEntity;
 import cn.kurt6.unknown_echoes.block.deep.GravityCoreAltarBlock;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import net.minecraft.core.BlockPos;
@@ -54,7 +55,7 @@ import java.util.UUID;
 /**
  * 虚空先知:第四主线 Boss。由校准大厅核心召唤，死亡时为仍在场地内的参与玩家结算。
  */
-public class VoidProphet extends Monster implements GeoEntity {
+public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.void_prophet.idle");
     private static final RawAnimation SPELL_SWAY_ANIM =
@@ -885,14 +886,6 @@ public class VoidProphet extends Monster implements GeoEntity {
             }
             return false;
         }
-        if (!this.level().isClientSide && !this.phaseTransitionTriggered
-                && BossPhaseGate.shouldCapMechanicDamage(source)) {
-            float phaseFloor = this.getMaxHealth() * ENRAGE_THRESHOLD;
-            amount = BossPhaseGate.capDamage(this.getHealth(), amount, phaseFloor);
-            if (amount <= 0.0F) {
-                return false;
-            }
-        }
         if (!this.level().isClientSide && source.getEntity() instanceof ServerPlayer attacker
                 && !attacker.isSpectator()) {
             this.registerParticipant(attacker);
@@ -907,6 +900,11 @@ public class VoidProphet extends Monster implements GeoEntity {
     }
 
     @Override
+    public float phaseDamageFloor() {
+        return this.phaseTransitionTriggered ? 0.0F : this.getMaxHealth() * ENRAGE_THRESHOLD;
+    }
+
+    @Override
     public void die(DamageSource source) {
         super.die(source);
         if (!(this.level() instanceof ServerLevel serverLevel)) {
@@ -916,10 +914,17 @@ public class VoidProphet extends Monster implements GeoEntity {
         for (ServerPlayer player : serverLevel.players()) {
             if (!player.isSpectator() && this.participants.contains(player.getUUID())
                     && player.distanceToSqr(this) <= rewardRadius * rewardRadius) {
-                EchoAbilityManager.markBossDefeated(player, EchoPermission.VOID_PROPHET_ID);
+                if (!EchoAbilityManager.markBossDefeated(player, EchoPermission.VOID_PROPHET_ID)) {
+                    player.sendSystemMessage(Component.translatable(
+                            "message.unknown_echoes.progress_record.full"));
+                    continue;
+                }
                 player.sendSystemMessage(Component.translatable(
                         "message.unknown_echoes.void_prophet.defeated"));
             }
+        }
+        if (this.arenaCenter != null) {
+            BossRechallengeAltarBlockEntity.startCooldown(serverLevel, this.arenaCenter);
         }
         Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.55D, 0.0D);
         serverLevel.sendParticles(ParticleTypes.FLASH,

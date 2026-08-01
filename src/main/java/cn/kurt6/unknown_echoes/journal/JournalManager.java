@@ -145,10 +145,11 @@ public class JournalManager {
                     getData(player).getStructures(), getData(player).getBiomes());
             if (DeepEchoesBiomeCatalog.hasVisitedAll(getData(player).getBiomes())
                     && !EchoAbilityManager.hasActivatedMechanism(player, ALL_DEEP_BIOMES_KEY)) {
-                EchoAbilityManager.activateMechanism(player, ALL_DEEP_BIOMES_KEY);
-                EchoAbilityManager.syncToClient(player);
-                player.sendSystemMessage(Component.translatable(
-                        "message.unknown_echoes.deep_echoes.all_biomes"));
+                if (EchoAbilityManager.activateMechanism(player, ALL_DEEP_BIOMES_KEY)) {
+                    EchoAbilityManager.syncToClient(player);
+                    player.sendSystemMessage(Component.translatable(
+                            "message.unknown_echoes.deep_echoes.all_biomes"));
+                }
             }
             syncJournal(player);
         }
@@ -169,7 +170,7 @@ public class JournalManager {
                 ModAdvancements.award(player, ModAdvancements.PAGES_10);
             }
             if (releasePages >= KNOWN_PAGES) {
-                claimAllPagesReward(player);
+                retryAllPagesReward(player);
             }
             ModAdvancements.checkResearchAdvancements(player);
             // V0.6D:读到新残页一次性回填回响能量(12.2)
@@ -177,6 +178,16 @@ public class JournalManager {
                     cn.kurt6.unknown_echoes.config.ServerConfig.ENERGY_REFILL_PAGE.get());
             syncJournal(player);
         }
+    }
+
+    /** 全页成就按阅读事实授予；背包腾出空间后再补领物品奖励。 */
+    public static boolean retryAllPagesReward(ServerPlayer player) {
+        int releasePages = AncientPageCatalog.countReleasePages(getData(player).getPages());
+        if (releasePages < KNOWN_PAGES) {
+            return false;
+        }
+        ModAdvancements.award(player, ModAdvancements.ALL_PAGES);
+        return claimAllPagesReward(player);
     }
 
     private static boolean claimAllPagesReward(ServerPlayer player) {
@@ -190,11 +201,15 @@ public class JournalManager {
             player.displayClientMessage(Component.translatable("message.unknown_echoes.pages.need_space"), true);
             return false;
         }
-        EchoAbilityManager.activateMechanism(player, ALL_PAGES_REWARD_KEY);
+        if (!EchoAbilityManager.activateMechanism(player, ALL_PAGES_REWARD_KEY)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return false;
+        }
+        EchoAbilityManager.syncToClient(player);
         for (ItemStack reward : rewards) {
             player.getInventory().add(reward);
         }
-        ModAdvancements.award(player, ModAdvancements.ALL_PAGES);
         player.displayClientMessage(Component.translatable("message.unknown_echoes.pages.all_reward"), true);
         player.level().playSound(null, player.blockPosition(),
                 SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 0.6F);

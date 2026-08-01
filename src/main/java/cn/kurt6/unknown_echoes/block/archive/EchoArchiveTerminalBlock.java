@@ -68,6 +68,10 @@ public class EchoArchiveTerminalBlock extends BaseEntityBlock {
         if (level.getBlockEntity(pos) instanceof EchoArchiveTerminalBlockEntity terminal) {
             terminal.recordAccess();
         }
+        EchoCompletionManager.handleArchiveTerminalUse(serverPlayer);
+        if (!EchoCompletionManager.hasArchiveTerminalRecord(serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
         serverPlayer.sendSystemMessage(Component.translatable("message.unknown_echoes.archive_terminal.awakened"));
         level.playSound(null, pos, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.BLOCKS, 0.8F, 0.9F);
         if (level instanceof ServerLevel serverLevel) {
@@ -75,7 +79,6 @@ public class EchoArchiveTerminalBlock extends BaseEntityBlock {
                     pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 24, 0.35, 0.45, 0.35, 0.03);
         }
         ModAdvancements.award(serverPlayer, ModAdvancements.GRAND_ARCHIVE);
-        EchoCompletionManager.handleArchiveTerminalUse(serverPlayer);
         return InteractionResult.CONSUME;
     }
 }

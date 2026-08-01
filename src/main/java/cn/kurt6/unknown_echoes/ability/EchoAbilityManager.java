@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -31,10 +32,14 @@ public class EchoAbilityManager {
         return getData(player).hasAbility(ability);
     }
 
-    public static void unlockAbility(ServerPlayer player, EchoAbilityType ability) {
+    public static boolean unlockAbility(ServerPlayer player, EchoAbilityType ability) {
+        if (hasAbility(player, ability)) {
+            return true;
+        }
         if (getData(player).unlockAbility(ability)) {
             syncToClient(player);
             ModAdvancements.awardAbility(player, ability.getId());
+            ModAdvancements.checkResearchAdvancements(player);
             if (ability == EchoAbilityType.WIND_ECHO) {
                 player.sendSystemMessage(Component.translatable("message.unknown_echoes.ability.wind_unlocked"));
             } else if (ability == EchoAbilityType.TIDE_ECHO) {
@@ -46,37 +51,74 @@ public class EchoAbilityManager {
             player.level().playSound(null, player.blockPosition(),
                     SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 0.8F);
         }
+        return hasAbility(player, ability);
     }
 
     public static boolean hasActivatedBeacon(Player player, ResourceLocation beaconId) {
         return getData(player).getActivatedBeacons().contains(beaconId.toString());
     }
 
-    public static void activateBeacon(ServerPlayer player, ResourceLocation beaconId) {
+    public static boolean activateBeacon(ServerPlayer player, ResourceLocation beaconId) {
+        if (hasActivatedBeacon(player, beaconId)) {
+            return true;
+        }
         if (getData(player).activateBeacon(beaconId.toString())) {
             syncToClient(player);
         }
+        return hasActivatedBeacon(player, beaconId);
     }
 
     public static boolean hasDefeatedBoss(Player player, ResourceLocation bossId) {
         return getData(player).getDefeatedBosses().contains(bossId.toString());
     }
 
-    public static void markBossDefeated(ServerPlayer player, ResourceLocation bossId) {
+    public static boolean markBossDefeated(ServerPlayer player, ResourceLocation bossId) {
+        if (hasDefeatedBoss(player, bossId)) {
+            return true;
+        }
         if (getData(player).markBossDefeated(bossId.toString())) {
             syncToClient(player);
-            ModAdvancements.awardBossDefeat(player, bossId.getPath());
-            // 守护者首杀研究点(V0.6B:研究进度来源之一;重复击败只走结算的普通奖励/拓片)
-            if (bossId.getPath().equals("storm_weaver")) {
-                addResearchPoints(player, EchoAbilityType.WIND_ECHO, 1);
-            }
+            onBossFirstRecorded(player, bossId);
+        }
+        return hasDefeatedBoss(player, bossId);
+    }
+
+    public static boolean markBossDefeatedWithMechanisms(ServerPlayer player, ResourceLocation bossId,
+                                                         String... mechanismKeys) {
+        EchoAbilityData data = getData(player);
+        boolean bossChanged = !hasDefeatedBoss(player, bossId);
+        boolean changed = bossChanged;
+        for (String key : mechanismKeys) {
+            changed |= !hasActivatedMechanism(player, key);
+        }
+        if (!data.markBossDefeatedWithMechanisms(bossId.toString(), Arrays.asList(mechanismKeys))) {
+            return false;
+        }
+        if (changed) {
+            syncToClient(player);
+        }
+        if (bossChanged) {
+            onBossFirstRecorded(player, bossId);
+        }
+        return true;
+    }
+
+    private static void onBossFirstRecorded(ServerPlayer player, ResourceLocation bossId) {
+        ModAdvancements.awardBossDefeat(player, bossId.getPath());
+        // 守护者首杀研究点(V0.6B:研究进度来源之一;重复击败只走结算的普通奖励/拓片)
+        if (bossId.getPath().equals("storm_weaver")) {
+            addResearchPoints(player, EchoAbilityType.WIND_ECHO, 1);
         }
     }
 
-    public static void unlockDimension(ServerPlayer player, ResourceLocation dimensionId) {
+    public static boolean unlockDimension(ServerPlayer player, ResourceLocation dimensionId) {
+        if (hasUnlockedDimension(player, dimensionId)) {
+            return true;
+        }
         if (getData(player).unlockDimension(dimensionId.toString())) {
             syncToClient(player);
         }
+        return hasUnlockedDimension(player, dimensionId);
     }
 
     public static boolean hasUnlockedDimension(Player player, ResourceLocation dimensionId) {
@@ -90,6 +132,28 @@ public class EchoAbilityManager {
 
     public static boolean activateMechanism(ServerPlayer player, String mechanismKey) {
         return getData(player).activateMechanism(mechanismKey);
+    }
+
+    public static boolean activateMechanisms(ServerPlayer player, String... mechanismKeys) {
+        return getData(player).activateMechanisms(Arrays.asList(mechanismKeys));
+    }
+
+    public static boolean activateBeaconRoute(ServerPlayer player, ResourceLocation beaconId,
+                                              ResourceLocation dimensionId, String... mechanismKeys) {
+        EchoAbilityData data = getData(player);
+        boolean changed = !hasActivatedBeacon(player, beaconId)
+                || !hasUnlockedDimension(player, dimensionId);
+        for (String key : mechanismKeys) {
+            changed |= !hasActivatedMechanism(player, key);
+        }
+        if (!data.activateBeaconRoute(beaconId.toString(), dimensionId.toString(),
+                Arrays.asList(mechanismKeys))) {
+            return false;
+        }
+        if (changed) {
+            syncToClient(player);
+        }
+        return true;
     }
 
     public static void deactivateMechanism(ServerPlayer player, String mechanismKey) {
@@ -174,6 +238,8 @@ public class EchoAbilityManager {
                 List.copyOf(data.getActivatedBeacons()),
                 List.copyOf(data.getUnlockedDimensions()),
                 research, tokens, failures));
+        DeepEchoAbilityHandler.syncCooldowns(player);
+        ModAdvancements.checkMainlineAdvancements(player);
         // 能力/研究变化和登录同步时顺带核对一次配方书解锁。
         RecipeUnlocks.checkAndUnlock(player);
     }

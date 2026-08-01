@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:echo_broadsword",
+  "parent": "unknown_echoes:blueprint_found",
   "display": {
     "icon": {
       "id": "unknown_echoes:wind_spear"

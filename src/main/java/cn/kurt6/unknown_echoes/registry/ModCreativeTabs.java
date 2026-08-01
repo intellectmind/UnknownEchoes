@@ -33,6 +33,10 @@ public class ModCreativeTabs {
                         output.accept(ModItems.TIDE_BREATH_BOTTLE.get());
                         output.accept(ModItems.REVEALING_POWDER.get());
                         output.accept(ModItems.MEMORY_ECHO_STONE.get());
+                        output.accept(ModItems.FAINT_ECHO_CANDY.get());
+                        output.accept(ModItems.ECHO_CANDY.get());
+                        output.accept(ModItems.CONDENSED_ECHO_CANDY.get());
+                        output.accept(ModItems.PURE_ECHO_CANDY.get());
                         output.accept(ModItems.ECHO_KEY.get());
                         output.accept(ModItems.ECHO_PROJECTOR.get());
                         output.accept(ModItems.ANCIENT_PAGE.get());
@@ -104,9 +108,13 @@ public class ModCreativeTabs {
                         output.accept(ModItems.WIND_RESEARCH_RUBBING.get());
                         output.accept(ModItems.TIDE_RESEARCH_RUBBING.get());
                         output.accept(ModItems.TRUE_SIGHT_RESEARCH_RUBBING.get());
+                        output.accept(ModItems.GRAVITY_RESEARCH_RUBBING.get());
+                        output.accept(ModItems.VOID_RESEARCH_RUBBING.get());
                         output.accept(ModItems.WIND_FRAGMENT_PAGE.get());
                         output.accept(ModItems.TIDE_FRAGMENT_PAGE.get());
                         output.accept(ModItems.TRUE_SIGHT_FRAGMENT_PAGE.get());
+                        output.accept(ModItems.GRAVITY_FRAGMENT_PAGE.get());
+                        output.accept(ModItems.VOID_FRAGMENT_PAGE.get());
                         output.accept(ModItems.INSCRIPTION_RUBBING_PAPER.get());
                         output.accept(ModItems.ECHO_INDEX.get());
                         output.accept(ModItems.STORM_COMPASS_PART.get());
@@ -178,6 +186,8 @@ public class ModCreativeTabs {
                         output.accept(ModItems.ECHO_ARMOR_PLATE.get());
                         output.accept(ModItems.OATHBOUND_ALLOY.get());
                         output.accept(ModItems.ECHO_BERRY.get());
+                        output.accept(ModItems.GLOW_FRUIT.get());
+                        output.accept(ModItems.WORLDTREE_FRUIT.get());
                         output.accept(ModItems.WIND_CRISP.get());
                         output.accept(ModItems.MOSS_HONEY_STEW.get());
                         output.accept(ModItems.TIDE_SALTED_FISH.get());

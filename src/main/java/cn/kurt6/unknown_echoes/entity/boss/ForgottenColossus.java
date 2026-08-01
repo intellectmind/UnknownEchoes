@@ -66,7 +66,7 @@ import java.util.UUID;
  *
  * 模型与动画由 GeckoLib 驱动(Blockbench 制作,见 model/forgotten_colossus.bbmodel)。
  */
-public class ForgottenColossus extends Monster implements GeoEntity {
+public class ForgottenColossus extends Monster implements GeoEntity, BossDamageGuard, PhaseGatedBoss {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.forgotten_colossus.idle");
     private static final RawAnimation WALK_ANIM =
@@ -923,28 +923,30 @@ public class ForgottenColossus extends Monster implements GeoEntity {
                 && !attacker.isSpectator()) {
             BossNbtData.addParticipant(this.participants, attacker.getUUID());
         }
-        if (!this.level().isClientSide && !this.isBroken()
-                && BossPhaseGate.shouldCapMechanicDamage(source)) {
-            float multiplier = ServerConfig.BOSS_UNBROKEN_DAMAGE_MULTIPLIER.get().floatValue();
-            float cap = ServerConfig.BOSS_UNBROKEN_MAX_DAMAGE.get().floatValue();
-            amount = Math.min(amount * multiplier, cap);
-            if (this.protectedMessageCooldown <= 0 && source.getEntity() instanceof ServerPlayer player) {
-                player.displayClientMessage(Component.translatable("message.unknown_echoes.boss.protected"), true);
-                this.protectedMessageCooldown = 40;
-            }
-        } else if (!this.level().isClientSide && this.isBroken()
-                && BossPhaseGate.shouldCapMechanicDamage(source)) {
-            amount = BossPhaseGate.capDamage(this.getHealth(), amount, this.brokenWindowHealthFloor);
-            if (amount <= 0.0F) {
-                return false;
-            }
-        }
         boolean hurt = super.hurt(source, amount);
         if (!this.level().isClientSide && hurt
                 && BossPhaseGate.reachedFloor(this, this.brokenWindowHealthFloor)) {
             restoreMemoryGuard();
         }
         return hurt;
+    }
+
+    @Override
+    public boolean isMechanicDamageGuarded() {
+        return !this.isBroken();
+    }
+
+    @Override
+    public void onMechanicDamageGuarded(DamageSource source) {
+        if (this.protectedMessageCooldown <= 0 && source.getEntity() instanceof ServerPlayer player) {
+            player.displayClientMessage(Component.translatable("message.unknown_echoes.boss.protected"), true);
+            this.protectedMessageCooldown = 40;
+        }
+    }
+
+    @Override
+    public float phaseDamageFloor() {
+        return this.isBroken() ? this.brokenWindowHealthFloor : 0.0F;
     }
 
     private void restoreMemoryGuard() {
@@ -986,7 +988,12 @@ public class ForgottenColossus extends Monster implements GeoEntity {
                         && player.distanceToSqr(this) <= radius * radius) {
                     boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
                             EchoPermission.FORGOTTEN_COLOSSUS_ID);
-                    EchoAbilityManager.markBossDefeated(player, EchoPermission.FORGOTTEN_COLOSSUS_ID);
+                    if (firstKill && !EchoAbilityManager.markBossDefeated(
+                            player, EchoPermission.FORGOTTEN_COLOSSUS_ID)) {
+                        player.sendSystemMessage(Component.translatable(
+                                "message.unknown_echoes.progress_record.full"));
+                        continue;
+                    }
                     if (firstKill) {
                         BossMaterialRewards.givePersonal(player, EchoPermission.FORGOTTEN_COLOSSUS_ID,
                                 new ItemStack(ModItems.COLOSSUS_MEMORY_CORE.get()));

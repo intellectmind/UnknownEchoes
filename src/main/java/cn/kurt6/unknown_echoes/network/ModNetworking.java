@@ -27,6 +27,10 @@ public class ModNetworking {
         registrar.playToClient(SyncAbilityPayload.TYPE, SyncAbilityPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> ClientAbilityCache.update(payload)));
 
+        registrar.playToClient(AbilityCooldownSyncPayload.TYPE, AbilityCooldownSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() ->
+                        cn.kurt6.unknown_echoes.client.ClientAbilityCooldownCache.update(payload)));
+
         registrar.playToClient(JournalSyncPayload.TYPE, JournalSyncPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() ->
                         cn.kurt6.unknown_echoes.client.ClientJournalCache.update(payload)));
@@ -92,6 +96,13 @@ public class ModNetworking {
                 (payload, context) -> context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player && allowSkillAction(player)) {
                         handleWeaponSkill(player, payload);
+                    }
+                }));
+
+        registrar.playToServer(SecondaryWeaponSkillPayload.TYPE, SecondaryWeaponSkillPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player && allowSkillAction(player)) {
+                        handleSecondaryWeaponSkill(player, payload);
                     }
                 }));
 
@@ -168,6 +179,25 @@ public class ModNetworking {
         net.minecraft.world.item.ItemStack stack = player.getItemInHand(hand);
         if (stack.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill skill) {
             skill.activateSkill(level, player, stack, hand);
+        }
+    }
+
+    private static void handleSecondaryWeaponSkill(ServerPlayer player, SecondaryWeaponSkillPayload payload) {
+        if (!player.isAlive()
+                || !(player.level() instanceof net.minecraft.server.level.ServerLevel level)) {
+            return;
+        }
+        if (payload.hand() != SecondaryWeaponSkillPayload.HAND_MAIN
+                && payload.hand() != SecondaryWeaponSkillPayload.HAND_OFF) {
+            return;
+        }
+        net.minecraft.world.InteractionHand hand = payload.hand() == SecondaryWeaponSkillPayload.HAND_OFF
+                ? net.minecraft.world.InteractionHand.OFF_HAND
+                : net.minecraft.world.InteractionHand.MAIN_HAND;
+        net.minecraft.world.item.ItemStack stack = player.getItemInHand(hand);
+        if (stack.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill skill
+                && skill.hasSecondarySkill()) {
+            skill.activateSecondarySkill(level, player, stack, hand);
         }
     }
 

@@ -1,0 +1,9 @@
+{
+  "structures": [{ "structure": "unknown_echoes:folded_scriptorium", "weight": 1 }],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 38,
+    "separation": 14,
+    "salt": 2089346102
+  }
+}

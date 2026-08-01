@@ -33,6 +33,12 @@ public final class DeepEchoesProgressCatalog {
             "folded_waystation",
             "gravity_shard_spire",
             "hushed_refuge",
+            "misfiled_catalog_well",
+            "folded_scriptorium",
+            "inverted_archive_tower",
+            "suspended_survey_station",
+            "fractured_anchor_station",
+            "severed_archive_vault",
             "world_resonance_hall");
     public static final List<String> STRUCTURE_IDS = ids(STRUCTURE_PATHS);
     public static final List<String> MOB_PATHS = List.of(
@@ -46,7 +52,7 @@ public final class DeepEchoesProgressCatalog {
             ArtifactType.DIMENSION_ANCHOR,
             ArtifactType.RIFT_ANCHOR);
     public static final int FIRST_PAGE_ID = 128;
-    public static final int LAST_PAGE_ID = 143;
+    public static final int LAST_PAGE_ID = 167;
     public static final int PAGE_COUNT = LAST_PAGE_ID - FIRST_PAGE_ID + 1;
 
     private DeepEchoesProgressCatalog() {

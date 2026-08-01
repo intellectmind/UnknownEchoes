@@ -1,12 +1,19 @@
 package cn.kurt6.unknown_echoes.advancement;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
+import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.journal.AncientPageCatalog;
+import cn.kurt6.unknown_echoes.journal.EchoCompletionManager;
+import cn.kurt6.unknown_echoes.journal.JournalManager;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.research.EchoResearchManager;
 import cn.kurt6.unknown_echoes.world.DeepEchoesBiomeCatalog;
+import cn.kurt6.unknown_echoes.world.EchoRealmBiomeCatalog;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementProgress;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Set;
@@ -18,6 +25,7 @@ import java.util.Set;
  */
 public class ModAdvancements {
 
+    public static final String FIRST_BEACON = "first_beacon";
     public static final String ENTER_ECHO_REALM = "enter_echo_realm";
     public static final String FIRST_PAGE = "first_page";
     public static final String PAGES_10 = "pages_10";
@@ -31,6 +39,9 @@ public class ModAdvancements {
     public static final String ENTER_DEEP_ECHOES = "enter_deep_echoes";
     public static final String ALL_DEEP_BIOMES = "all_deep_biomes";
     public static final String DEEP_MICRO_SITES = "deep_micro_sites";
+    public static final String WORLD_ECHO_COMPLETE = "world_echo_complete";
+    private static final String ENTERED_ECHO_REALM_KEY = "advancement:entered_echo_realm_via_beacon";
+    private static final String ENTERED_DEEP_ECHOES_KEY = "advancement:entered_deep_echoes_via_beacon";
 
     private static final Set<String> WORLD_WONDERS = Set.of(
             "unknown_echoes:echo_world_tree",
@@ -68,6 +79,113 @@ public class ModAdvancements {
         award(player, "defeat_" + bossPath);
     }
 
+    /** 登录、修档和数据同步时按服务端事实补发主线成就，不写入任何玩法进度。 */
+    public static void checkMainlineAdvancements(ServerPlayer player) {
+        if (EchoAbilityManager.hasActivatedBeacon(player, EchoPermission.RESONANCE_BEACON_ID)) {
+            award(player, FIRST_BEACON);
+        }
+        if (EchoAbilityManager.hasActivatedMechanism(player, ENTERED_ECHO_REALM_KEY)) {
+            award(player, ENTER_ECHO_REALM);
+        }
+        awardBossIfDefeated(player, EchoPermission.FORGOTTEN_COLOSSUS_ID);
+        awardAbilityIfUnlocked(player, EchoAbilityType.WIND_ECHO);
+        awardBossIfDefeated(player, EchoPermission.ABYSS_WATCHER_ID);
+        awardAbilityIfUnlocked(player, EchoAbilityType.TIDE_ECHO);
+        awardBossIfDefeated(player, EchoPermission.MIRROR_GUARDIAN_ID);
+        awardAbilityIfUnlocked(player, EchoAbilityType.TRUE_SIGHT_ECHO);
+        if (EchoCompletionManager.hasArchiveTerminalRecord(player)) {
+            award(player, GRAND_ARCHIVE);
+        }
+        if (EchoCompletionManager.hasMainlineCompletionRecord(player)) {
+            award(player, ECHO_REALM_GRADUATION);
+        }
+        if (EchoAbilityManager.hasActivatedMechanism(player, ENTERED_DEEP_ECHOES_KEY)) {
+            award(player, ENTER_DEEP_ECHOES);
+        }
+        awardBossIfDefeated(player, EchoPermission.VOID_PROPHET_ID);
+        awardAbilityIfUnlocked(player, EchoAbilityType.GRAVITY_ECHO);
+        awardBossIfDefeated(player, EchoPermission.RIFT_WARDEN_ID);
+        awardAbilityIfUnlocked(player, EchoAbilityType.VOID_ECHO);
+        awardBossIfDefeated(player, EchoPermission.WORLD_ECHO_ID);
+        if (EchoAbilityManager.hasActivatedMechanism(player,
+                EchoPermission.WORLD_ECHO_COMPLETE_KEY)) {
+            award(player, WORLD_ECHO_COMPLETE);
+        }
+    }
+
+    private static void awardBossIfDefeated(ServerPlayer player, ResourceLocation bossId) {
+        if (EchoAbilityManager.hasDefeatedBoss(player, bossId)) {
+            awardBossDefeat(player, bossId.getPath());
+        }
+    }
+
+    private static void awardAbilityIfUnlocked(ServerPlayer player, EchoAbilityType ability) {
+        if (EchoAbilityManager.hasAbility(player, ability)) {
+            awardAbility(player, ability.getId());
+        }
+    }
+
+    /** 只由残响信标在传送成功后调用，其他 Mod 或管理员传送不计入。 */
+    public static void recordEchoRealmEntry(ServerPlayer player) {
+        if (player.isSpectator()
+                || !player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID)
+                || !EchoAbilityManager.hasActivatedBeacon(player, EchoPermission.RESONANCE_BEACON_ID)
+                || !EchoAbilityManager.hasUnlockedDimension(player, EchoPermission.ECHO_REALM_ID)) {
+            return;
+        }
+        if (EchoAbilityManager.activateMechanism(player, ENTERED_ECHO_REALM_KEY)) {
+            award(player, ENTER_ECHO_REALM);
+        }
+    }
+
+    /** 只由校准完成的深渊信标在传送成功后调用，测试传送不计入。 */
+    public static void recordDeepEchoesEntry(ServerPlayer player) {
+        if (player.isSpectator()
+                || !player.level().dimension().location().equals(EchoPermission.DEEP_ECHOES_ID)
+                || !EchoPermission.canEnterDeepEchoes(player)
+                || !EchoAbilityManager.hasActivatedBeacon(player, EchoPermission.ABYSS_BEACON_ID)
+                || !EchoAbilityManager.hasUnlockedDimension(player, EchoPermission.DEEP_ECHOES_ID)) {
+            return;
+        }
+        if (EchoAbilityManager.activateMechanism(player, ENTERED_DEEP_ECHOES_KEY)) {
+            award(player, ENTER_DEEP_ECHOES);
+        }
+    }
+
+    /** 登录修档时只读既有日志事实补发成就，不写入探索、能力或权限进度。 */
+    public static void checkJournalAdvancements(ServerPlayer player) {
+        var journal = JournalManager.getData(player);
+        int pageCount = AncientPageCatalog.countReleasePages(journal.getPages());
+        if (pageCount >= 1) {
+            award(player, FIRST_PAGE);
+        }
+        if (pageCount >= 10) {
+            award(player, PAGES_10);
+        }
+        if (pageCount >= JournalManager.KNOWN_PAGES) {
+            award(player, ALL_PAGES);
+        }
+
+        Set<String> structures = journal.getStructures();
+        if (!structures.isEmpty()) {
+            award(player, FIRST_RUIN);
+        }
+        if (structures.size() >= 5) {
+            award(player, EXPLORER_5);
+        }
+        for (String structureId : structures) {
+            awardStructureDiscovery(player, structureId, structures);
+        }
+        if (EchoRealmBiomeCatalog.hasVisitedAll(journal.getBiomes())) {
+            award(player, ALL_BIOMES);
+        }
+        checkDeepExplorationAdvancements(player, structures, journal.getBiomes());
+        checkResearchAdvancements(player);
+        if (EchoCompletionManager.hasClaimedT7Reward(player)) {
+            award(player, ECHO_REALM_COMPLETE);
+        }
+    }
+
     public static void awardStructureDiscovery(ServerPlayer player, String structureId, Set<String> discovered) {
         switch (structureId) {
             case "unknown_echoes:echo_world_tree" -> award(player, "world_tree");
@@ -75,7 +193,6 @@ public class ModAdvancements {
             case "unknown_echoes:sky_rift" -> award(player, "sky_rift");
             case "unknown_echoes:silent_great_boat" -> award(player, "silent_ark");
             case "unknown_echoes:broken_bell_tower" -> award(player, "broken_bell_tower");
-            case "unknown_echoes:broken_archive" -> award(player, GRAND_ARCHIVE);
             default -> {
             }
         }

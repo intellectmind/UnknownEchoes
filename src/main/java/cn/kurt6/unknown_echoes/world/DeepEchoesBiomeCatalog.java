@@ -9,8 +9,11 @@ import java.util.Set;
 public final class DeepEchoesBiomeCatalog {
     public static final List<String> PATHS = List.of(
             "folded_corridors",
+            "shattered_archive",
             "inverted_chasm",
-            "silent_abyss"
+            "weightless_grotto",
+            "silent_abyss",
+            "voidscar_hollows"
     );
     public static final List<String> IDS = PATHS.stream()
             .map(path -> UnknownEchoes.id(path).toString())

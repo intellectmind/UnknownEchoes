@@ -8,6 +8,7 @@
     { "item": "unknown_echoes:moss_shell_plate" }
   ],
   "result": {
-    "id": "unknown_echoes:silence_upgrade_core"
+    "id": "unknown_echoes:silence_upgrade_core",
+    "count": 4
   }
 }

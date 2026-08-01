@@ -2,6 +2,8 @@
   "values": [
     "unknown_echoes:wind_fragment_page",
     "unknown_echoes:tide_fragment_page",
-    "unknown_echoes:true_sight_fragment_page"
+    "unknown_echoes:true_sight_fragment_page",
+    "unknown_echoes:gravity_fragment_page",
+    "unknown_echoes:void_fragment_page"
   ]
 }

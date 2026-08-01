@@ -65,8 +65,8 @@ public class TrueSightSteleBlock extends Block {
         if (player instanceof ServerPlayer serverPlayer) {
             ArchiveTrialProgress.recordTrueSight(serverPlayer, level, pos);
             String key = "research_revisit:truesight_stele:" + level.dimension().location() + ":" + pos.asLong();
-            if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)) {
-                EchoAbilityManager.activateMechanism(serverPlayer, key);
+            if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)
+                    && EchoAbilityManager.activateMechanism(serverPlayer, key)) {
                 EchoAbilityManager.addResearchPoints(serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO, 1);
                 serverPlayer.displayClientMessage(
                         Component.translatable("message.unknown_echoes.research.insight"), true);

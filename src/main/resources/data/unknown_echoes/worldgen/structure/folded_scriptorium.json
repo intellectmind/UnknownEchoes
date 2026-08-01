@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:folded_scriptorium",
+  "biomes": "#unknown_echoes:has_folded_scriptorium",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

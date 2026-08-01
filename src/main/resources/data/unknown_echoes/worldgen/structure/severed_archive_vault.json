@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:severed_archive_vault",
+  "biomes": "#unknown_echoes:has_severed_archive_vault",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

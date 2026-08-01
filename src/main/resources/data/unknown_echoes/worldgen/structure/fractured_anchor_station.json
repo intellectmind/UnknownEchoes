@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:fractured_anchor_station",
+  "biomes": "#unknown_echoes:has_fractured_anchor_station",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

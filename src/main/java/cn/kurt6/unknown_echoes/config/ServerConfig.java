@@ -1,9 +1,21 @@
 package cn.kurt6.unknown_echoes.config;
 
+import cn.kurt6.unknown_echoes.UnknownEchoes;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class ServerConfig {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+
+    /** 平衡默认值变更时 +1,加载旧配置文件会按 Migrations 强制覆盖为新默认值。 */
+    private static final int CURRENT_CONFIG_VERSION = 1;
+
+    public static final ModConfigSpec.IntValue CONFIG_VERSION = BUILDER
+            .comment("Internal balance version, do not edit: outdated files get changed defaults re-applied")
+            .defineInRange("config_version", 0, 0, Integer.MAX_VALUE);
 
     public static final ModConfigSpec.BooleanValue BOSS_DYNAMIC_SCALING = BUILDER
             .comment("Scale boss max health by participating players (+150 per extra player)")
@@ -24,6 +36,10 @@ public class ServerConfig {
     public static final ModConfigSpec.IntValue BOSS_REWARD_RADIUS = BUILDER
             .comment("Players within this radius of the boss when it dies receive the Wind Echo")
             .defineInRange("boss_reward_radius", 32, 4, 128);
+
+    public static final ModConfigSpec.IntValue BOSS_RECHALLENGE_COOLDOWN_TICKS = BUILDER
+            .comment("Ticks before the Void Prophet and Rift Warden altars allow another challenge (default 5 min)")
+            .defineInRange("boss_rechallenge_cooldown_ticks", 6000, 0, 1728000);
 
     public static final ModConfigSpec.BooleanValue PERSONAL_KEY_REWARDS = BUILDER
             .comment("Key rewards (abilities) are written to player data instead of dropping as items")
@@ -69,7 +85,7 @@ public class ServerConfig {
             .comment("Ticks before a defeated mini boss arena reopens (default 15 min)")
             .defineInRange("miniboss_arena_reopen_ticks", 18000, 200, 1728000);
 
-    // ---- V0.6D 回响能量(上限 100;配置基值 1/秒,平衡倍率 0.5,境域内翻倍) ----
+    // ---- V0.6D 回响能量(上限 100;配置基值 1/秒,平衡倍率 0.1,境域内翻倍) ----
 
     public static final ModConfigSpec.IntValue ENERGY_MAX = BUILDER
             .comment("Echo energy pool cap per player")
@@ -85,7 +101,7 @@ public class ServerConfig {
 
     public static final ModConfigSpec.DoubleValue ENERGY_NATURAL_REGEN_MULTIPLIER = BUILDER
             .comment("Global balance multiplier applied to natural Echo energy regeneration")
-            .defineInRange("energy_natural_regen_multiplier", 0.5D, 0.0D, 10.0D);
+            .defineInRange("energy_natural_regen_multiplier", 0.1D, 0.0D, 10.0D);
 
     public static final ModConfigSpec.IntValue ENERGY_REFILL_PAGE = BUILDER
             .comment("One-time energy refill when reading a new ancient page")
@@ -250,8 +266,8 @@ public class ServerConfig {
             .defineInRange("gravity_active_duration_ticks", 100, 20, 1200);
 
     public static final ModConfigSpec.IntValue GRAVITY_ACTIVE_COOLDOWN_TICKS = BUILDER
-            .comment("Base cooldown of active Gravity Echo attunement in ticks (80s; 32s at research 4)")
-            .defineInRange("gravity_active_cooldown_ticks", 1600, 0, 72000);
+            .comment("Base cooldown of active Gravity Echo attunement in ticks (100s; 40s at research 4)")
+            .defineInRange("gravity_active_cooldown_ticks", 2000, 0, 72000);
 
     public static final ModConfigSpec.DoubleValue GRAVITY_ACTIVE_RADIUS = BUILDER
             .comment("Base radius of the Gravity Echo suppression field")
@@ -266,8 +282,8 @@ public class ServerConfig {
             .defineInRange("void_step_distance", 6.0D, 1.0D, 12.0D);
 
     public static final ModConfigSpec.IntValue VOID_STEP_COOLDOWN_TICKS = BUILDER
-            .comment("Base cooldown of Void Echo short step in ticks (80s; 32s at research 4)")
-            .defineInRange("void_step_cooldown_ticks", 1600, 0, 72000);
+            .comment("Base cooldown of Void Echo short step in ticks (100s; 40s at research 4)")
+            .defineInRange("void_step_cooldown_ticks", 2000, 0, 72000);
 
     public static final ModConfigSpec.IntValue VOID_WARD_DURATION_TICKS = BUILDER
             .comment("Void-corrosion cleansing window after a successful short step")
@@ -292,4 +308,38 @@ public class ServerConfig {
             .defineInRange("tide_door_hold_ticks_research3", 400, 20, 24000);
 
     public static final ModConfigSpec SPEC = BUILDER.build();
+
+    /**
+     * 旧配置文件平衡值迁移:server config 随世界加载,版本号低于当前值时把本次平衡改动
+     * 强制写回文件(一次性覆盖,之后服务器仍可自行调整)。新文件版本号从 0 起步,首次
+     * 加载会空跑一轮迁移并落版本号,幂等无副作用。
+     */
+    @EventBusSubscriber(modid = UnknownEchoes.MODID)
+    public static final class Migrations {
+
+        @SubscribeEvent
+        public static void onLoading(ModConfigEvent.Loading event) {
+            migrate(event.getConfig());
+        }
+
+        @SubscribeEvent
+        public static void onReloading(ModConfigEvent.Reloading event) {
+            migrate(event.getConfig());
+        }
+
+        private static void migrate(ModConfig config) {
+            if (config.getSpec() != SPEC || CONFIG_VERSION.get() >= CURRENT_CONFIG_VERSION) {
+                return;
+            }
+            if (CONFIG_VERSION.get() < 1) {
+                // V3.70/V3.71:能量自然恢复 0.3→0.1,重力/虚空冷却 1600→2000。
+                ENERGY_NATURAL_REGEN_MULTIPLIER.set(0.1D);
+                GRAVITY_ACTIVE_COOLDOWN_TICKS.set(2000);
+                VOID_STEP_COOLDOWN_TICKS.set(2000);
+            }
+            CONFIG_VERSION.set(CURRENT_CONFIG_VERSION);
+            UnknownEchoes.LOGGER.info("Unknown Echoes server config migrated to balance version {}",
+                    CURRENT_CONFIG_VERSION);
+        }
+    }
 }

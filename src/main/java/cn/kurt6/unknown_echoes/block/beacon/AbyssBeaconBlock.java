@@ -100,14 +100,20 @@ public class AbyssBeaconBlock extends Block {
             calibrateStage(level, pos, serverPlayer, baseKey, "tide", EchoAbilityType.TIDE_ECHO,
                     ParticleTypes.SPLASH, SoundEvents.CONDUIT_ACTIVATE);
         } else {
-            if (!calibrateStage(level, pos, serverPlayer, baseKey, "true_sight",
-                    EchoAbilityType.TRUE_SIGHT_ECHO, ParticleTypes.ENCHANT, SoundEvents.BEACON_ACTIVATE)) {
+            if (!EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO)) {
+                fail(level, pos, serverPlayer, "message.unknown_echoes.abyss_beacon.need_true_sight");
                 return InteractionResult.CONSUME;
             }
-            EchoAbilityManager.activateMechanism(serverPlayer, baseKey + ":complete");
-            EchoAbilityManager.activateBeacon(serverPlayer, EchoPermission.ABYSS_BEACON_ID);
-            EchoAbilityManager.unlockDimension(serverPlayer, EchoPermission.DEEP_ECHOES_ID);
-            EchoAbilityManager.syncToClient(serverPlayer);
+            if (!EchoAbilityManager.activateBeaconRoute(serverPlayer,
+                    EchoPermission.ABYSS_BEACON_ID, EchoPermission.DEEP_ECHOES_ID,
+                    baseKey + ":true_sight", baseKey + ":complete")) {
+                serverPlayer.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.progress_record.full"), true);
+                return InteractionResult.CONSUME;
+            }
+            playStageFeedback(level, pos, serverPlayer, "true_sight",
+                    EchoAbilityType.TRUE_SIGHT_ECHO, ParticleTypes.ENCHANT,
+                    SoundEvents.BEACON_ACTIVATE);
             serverPlayer.sendSystemMessage(Component.translatable(
                     "message.unknown_echoes.abyss_beacon.activated"));
             if (level instanceof ServerLevel serverLevel) {
@@ -127,8 +133,20 @@ public class AbyssBeaconBlock extends Block {
             fail(level, pos, player, "message.unknown_echoes.abyss_beacon.need_" + stage);
             return false;
         }
-        EchoAbilityManager.activateMechanism(player, baseKey + ":" + stage);
+        if (!EchoAbilityManager.activateMechanism(player, baseKey + ":" + stage)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return false;
+        }
         EchoAbilityManager.syncToClient(player);
+        playStageFeedback(level, pos, player, stage, ability, particle, sound);
+        return true;
+    }
+
+    private static void playStageFeedback(Level level, BlockPos pos, ServerPlayer player,
+                                          String stage, EchoAbilityType ability,
+                                          net.minecraft.core.particles.ParticleOptions particle,
+                                          net.minecraft.sounds.SoundEvent sound) {
         player.getCooldowns().addCooldown(ModItems.ABYSS_BEACON.get(), STAGE_COOLDOWN_TICKS);
         player.displayClientMessage(Component.translatable(
                 "message.unknown_echoes.abyss_beacon.calibrated_" + stage), true);
@@ -136,7 +154,6 @@ public class AbyssBeaconBlock extends Block {
         if (level instanceof ServerLevel serverLevel) {
             playCalibrationFx(serverLevel, pos, ability, particle);
         }
-        return true;
     }
 
     private static void playCalibrationFx(ServerLevel level, BlockPos pos,

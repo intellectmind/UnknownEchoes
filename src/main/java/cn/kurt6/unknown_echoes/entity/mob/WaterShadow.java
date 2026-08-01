@@ -95,8 +95,11 @@ public class WaterShadow extends Monster implements GeoEntity {
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide && this.tickCount % 10 == 0) {
-            ((ServerLevel) this.level()).sendParticles(ParticleTypes.BUBBLE,
+        if (!this.level().isClientSide && this.tickCount % 10 == 0
+                && this.level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(
+                    cn.kurt6.unknown_echoes.entity.boss.BossFx.waterBubbleOr(
+                            serverLevel, this.position(), ParticleTypes.SPLASH),
                     this.getX(), this.getY() + 0.45D, this.getZ(),
                     1, 0.15D, 0.18D, 0.15D, 0.0D);
         }

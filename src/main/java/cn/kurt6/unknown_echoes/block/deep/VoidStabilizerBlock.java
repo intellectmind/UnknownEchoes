@@ -95,7 +95,11 @@ public class VoidStabilizerBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        EchoAbilityManager.activateMechanism(serverPlayer, key);
+        if (!EchoAbilityManager.activateMechanism(serverPlayer, key)) {
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return InteractionResult.CONSUME;
+        }
         int activated = countActivatedNearby(serverPlayer, level, pos);
         EchoAbilityManager.syncToClient(serverPlayer);
         boolean completed = activated >= REQUIRED_STABILIZERS;

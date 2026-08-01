@@ -107,6 +107,26 @@ public class ClientGameEvents {
             }
         }
 
+        // 副战技使用独立可改键；客户端只筛选支持双战技的武器，结算仍由服务端完成。
+        while (ClientModEvents.WEAPON_SECONDARY_SKILL.consumeClick()) {
+            if (mc.screen != null || player.isSpectator()) {
+                continue;
+            }
+            var main = player.getMainHandItem();
+            var off = player.getOffhandItem();
+            if (main.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill skill
+                    && skill.hasSecondarySkill()
+                    && !player.getCooldowns().isOnCooldown(main.getItem())) {
+                PacketDistributor.sendToServer(
+                        cn.kurt6.unknown_echoes.network.SecondaryWeaponSkillPayload.MAIN);
+            } else if (off.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill skill
+                    && skill.hasSecondarySkill()
+                    && !player.getCooldowns().isOnCooldown(off.getItem())) {
+                PacketDistributor.sendToServer(
+                        cn.kurt6.unknown_echoes.network.SecondaryWeaponSkillPayload.OFF);
+            }
+        }
+
         while (ClientModEvents.GRAVITY_ATTUNE.consumeClick()) {
             if (mc.screen == null && !player.isSpectator()
                     && ClientAbilityCache.hasAbility(EchoAbilityType.GRAVITY_ECHO)) {
@@ -476,6 +496,7 @@ public class ClientGameEvents {
             Minecraft.getInstance().getSoundManager().stop(bossMusic);
         }
         ClientAbilityCache.clear();
+        ClientAbilityCooldownCache.clear();
         ClientArtifactCache.clear();
         ClientJournalCache.clear();
         ClientTradeCache.clearSession();

@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:ability_void_echo",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:world_echo_spawn_egg"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.defeat_world_echo.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.defeat_world_echo.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

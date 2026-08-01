@@ -57,6 +57,8 @@ public class EchoArmorSetEvents {
     private static final ResourceLocation OATH_SPEED_ID = UnknownEchoes.id("echo_oath_set_speed");
     private static final ResourceLocation OATH_TOUGHNESS_ID = UnknownEchoes.id("echo_oath_set_toughness");
     private static final ResourceLocation OATH_ARMOR_ID = UnknownEchoes.id("echo_oath_set_armor");
+    private static final ResourceLocation OATH_REALM_TOUGHNESS_ID = UnknownEchoes.id("echo_oath_set_realm_toughness");
+    private static final ResourceLocation OATH_REALM_ARMOR_ID = UnknownEchoes.id("echo_oath_set_realm_armor");
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
@@ -126,14 +128,19 @@ public class EchoArmorSetEvents {
             player.removeEffect(MobEffects.WEAKNESS);
         }
 
-        boolean oathActive = oath >= 4 && inEchoRealm;
+        // 守誓套装:第一维度毕业装备,基础套装效果不再锁维度;回声境域内"誓约共鸣"额外强化。
+        boolean oathActive = oath >= 4;
         applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), OATH_SPEED_ID, 0.05D,
-                AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, oath >= 2 && inEchoRealm);
+                AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, oath >= 2);
         applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_TOUGHNESS_ID, 2.0D,
                 AttributeModifier.Operation.ADD_VALUE, oathActive);
         applyModifier(player.getAttribute(Attributes.ARMOR), OATH_ARMOR_ID, 2.0D,
                 AttributeModifier.Operation.ADD_VALUE, oathActive);
-        if (oath >= 2 && inEchoRealm) {
+        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_REALM_TOUGHNESS_ID, 1.0D,
+                AttributeModifier.Operation.ADD_VALUE, oathActive && inEchoRealm);
+        applyModifier(player.getAttribute(Attributes.ARMOR), OATH_REALM_ARMOR_ID, 1.0D,
+                AttributeModifier.Operation.ADD_VALUE, oathActive && inEchoRealm);
+        if (oath >= 2) {
             reduceMinorControl(player);
         }
     }
@@ -272,14 +279,14 @@ public class EchoArmorSetEvents {
                 && EchoArmorSets.trueSightShadowPieces(player) >= 4) {
             event.setAmount(event.getAmount() * 0.75F);
         }
-        if (inEchoRealm && EchoArmorSets.echoOathPieces(player) >= 2
-                && isEnvironmentalDamage(event.getSource())) {
+        // 守誓套装减伤全维度生效;回声境域内誓约共鸣把非玩家攻击减伤提升到 25%。
+        int oath = EchoArmorSets.echoOathPieces(player);
+        if (oath >= 2 && isEnvironmentalDamage(event.getSource())) {
             event.setAmount(event.getAmount() * 0.75F);
         }
-        if (inEchoRealm && EchoArmorSets.echoOathPieces(player) >= 4
-                && event.getSource().getEntity() != null
+        if (oath >= 4 && event.getSource().getEntity() != null
                 && !(event.getSource().getEntity() instanceof Player)) {
-            event.setAmount(event.getAmount() * 0.85F);
+            event.setAmount(event.getAmount() * (inEchoRealm ? 0.75F : 0.85F));
         }
         if (inDeepEchoes && EchoArmorSets.abyssWalkerPieces(player) >= 2) {
             if (isEnvironmentalDamage(event.getSource())

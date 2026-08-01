@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:suspended_survey_station",
+  "biomes": "#unknown_echoes:has_suspended_survey_station",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

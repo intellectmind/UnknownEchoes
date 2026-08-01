@@ -139,8 +139,10 @@ public class TideWaterShade extends Monster implements GeoEntity {
             }
         }
         if (this.tickCount % 6 == 0) {
-            // 游动拖尾:细碎气泡(墨汁粒子是大块黑斑,只留给消散演出)
-            serverLevel.sendParticles(ParticleTypes.BUBBLE,
+            // 游动拖尾:细碎气泡(墨汁粒子是大块黑斑,只留给消散演出);上岸追击时回退水花
+            serverLevel.sendParticles(
+                    cn.kurt6.unknown_echoes.entity.boss.BossFx.waterBubbleOr(
+                            serverLevel, this.position(), ParticleTypes.SPLASH),
                     this.getX(), this.getY() + 0.5, this.getZ(), 1, 0.15, 0.25, 0.15, 0.0);
         }
     }

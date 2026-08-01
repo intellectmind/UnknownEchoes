@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.ability;
 
 import cn.kurt6.unknown_echoes.artifact.ArtifactManager;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.network.AbilityCooldownSyncPayload;
 import cn.kurt6.unknown_echoes.network.EchoAbilityActionPayload;
 import cn.kurt6.unknown_echoes.journal.JournalManager;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
@@ -23,6 +24,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -33,7 +35,9 @@ import java.util.UUID;
 public final class DeepEchoAbilityHandler {
     private static final Map<UUID, State> STATES = new HashMap<>();
     private static final String GRAVITY_COOLDOWN_KEY = "ue_gravity_echo_cooldown_until";
+    private static final String GRAVITY_COOLDOWN_DURATION_KEY = "ue_gravity_echo_cooldown_duration";
     private static final String VOID_COOLDOWN_KEY = "ue_void_echo_cooldown_until";
+    private static final String VOID_COOLDOWN_DURATION_KEY = "ue_void_echo_cooldown_duration";
 
     private DeepEchoAbilityHandler() {
     }
@@ -100,7 +104,19 @@ public final class DeepEchoAbilityHandler {
 
     public static void copyCooldowns(Player source, Player target) {
         copyCooldown(source, target, GRAVITY_COOLDOWN_KEY);
+        copyCooldownDuration(source, target, GRAVITY_COOLDOWN_DURATION_KEY);
         copyCooldown(source, target, VOID_COOLDOWN_KEY);
+        copyCooldownDuration(source, target, VOID_COOLDOWN_DURATION_KEY);
+    }
+
+    public static void syncCooldowns(ServerPlayer player) {
+        long now = globalGameTime(player);
+        long gravityEnd = cooldownEnd(player, GRAVITY_COOLDOWN_KEY, now);
+        long voidEnd = cooldownEnd(player, VOID_COOLDOWN_KEY, now);
+        int gravityDuration = cooldownDuration(player, GRAVITY_COOLDOWN_DURATION_KEY, gravityEnd, now);
+        int voidDuration = cooldownDuration(player, VOID_COOLDOWN_DURATION_KEY, voidEnd, now);
+        PacketDistributor.sendToPlayer(player, new AbilityCooldownSyncPayload(
+                gravityEnd, gravityDuration, voidEnd, voidDuration, now));
     }
 
     private static void useGravityAttunement(ServerPlayer player) {
@@ -130,9 +146,12 @@ public final class DeepEchoAbilityHandler {
         double radius = gravityRadius(research);
         state.gravityEnd = now + duration;
         state.gravityRadius = radius;
-        state.gravityCooldownEnd = now + scaledCooldown(
+        int cooldownDuration = (int) scaledCooldown(
                 ServerConfig.GRAVITY_ACTIVE_COOLDOWN_TICKS.get(), research);
+        state.gravityCooldownEnd = now + cooldownDuration;
         player.getPersistentData().putLong(GRAVITY_COOLDOWN_KEY, state.gravityCooldownEnd);
+        player.getPersistentData().putInt(GRAVITY_COOLDOWN_DURATION_KEY, cooldownDuration);
+        syncCooldowns(player);
         if (player.level() instanceof ServerLevel level) {
             sendGravityCalibration(level, player.position(), radius);
             level.playSound(null, player.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
@@ -187,9 +206,12 @@ public final class DeepEchoAbilityHandler {
             wardDuration = wardDuration * 3 / 2;
         }
         state.voidWardEnd = now + wardDuration;
-        state.voidCooldownEnd = now + scaledCooldown(
+        int cooldownDuration = (int) scaledCooldown(
                 ServerConfig.VOID_STEP_COOLDOWN_TICKS.get(), research);
+        state.voidCooldownEnd = now + cooldownDuration;
         player.getPersistentData().putLong(VOID_COOLDOWN_KEY, state.voidCooldownEnd);
+        player.getPersistentData().putInt(VOID_COOLDOWN_DURATION_KEY, cooldownDuration);
+        syncCooldowns(player);
         level.sendParticles(ParticleTypes.END_ROD,
                 destination.x, destination.y + player.getBbHeight() * 0.5D, destination.z,
                 24, 0.4D, 0.7D, 0.4D, 0.08D);
@@ -301,7 +323,7 @@ public final class DeepEchoAbilityHandler {
     }
 
     private static int gravityDuration(int research) {
-        return Math.min(120, ServerConfig.GRAVITY_ACTIVE_DURATION_TICKS.get() + research * 12);
+        return Math.min(1200, ServerConfig.GRAVITY_ACTIVE_DURATION_TICKS.get() + research * 12);
     }
 
     private static double gravityRadius(int research) {
@@ -312,7 +334,8 @@ public final class DeepEchoAbilityHandler {
         return Math.min(16.0D, ServerConfig.VOID_STEP_DISTANCE.get() + research * 1.25D);
     }
 
-    private static long scaledCooldown(int baseTicks, int research) {
+    /** 研究等级冷却折减(0-4 级 → 100%/85%/70%/55%/40%);UI 提示与实际结算共用,避免文本写死脱节。 */
+    public static long scaledCooldown(int baseTicks, int research) {
         double factor = switch (Math.max(0, Math.min(4, research))) {
             case 1 -> 0.85D;
             case 2 -> 0.70D;
@@ -337,9 +360,24 @@ public final class DeepEchoAbilityHandler {
         return end;
     }
 
+    private static int cooldownDuration(ServerPlayer player, String key, long end, long now) {
+        if (end <= now) {
+            player.getPersistentData().remove(key);
+            return 0;
+        }
+        int stored = player.getPersistentData().getInt(key);
+        return stored > 0 ? stored : (int) Math.min(Integer.MAX_VALUE, end - now);
+    }
+
     private static void copyCooldown(Player source, Player target, String key) {
         if (source.getPersistentData().contains(key)) {
             target.getPersistentData().putLong(key, source.getPersistentData().getLong(key));
+        }
+    }
+
+    private static void copyCooldownDuration(Player source, Player target, String key) {
+        if (source.getPersistentData().contains(key)) {
+            target.getPersistentData().putInt(key, source.getPersistentData().getInt(key));
         }
     }
 

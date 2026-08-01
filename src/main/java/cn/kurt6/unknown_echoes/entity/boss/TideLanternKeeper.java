@@ -245,7 +245,8 @@ public class TideLanternKeeper extends MiniBossEntity {
             if (state.getBlock() instanceof TideBuoyBlock && state.getValue(TideBuoyBlock.LIT)) {
                 Vec3 buoy = Vec3.atCenterOf(pos).add(0, 0.45, 0);
                 BossFx.guidanceMarker(level, buoy, ParticleTypes.GLOW);
-                BossFx.guidanceLink(level, core, buoy, ParticleTypes.BUBBLE_COLUMN_UP);
+                BossFx.guidanceLink(level, core, buoy,
+                        BossFx.waterBubbleOr(level, buoy, ParticleTypes.SPLASH));
                 guidedBuoys++;
             }
         }
@@ -428,9 +429,10 @@ public class TideLanternKeeper extends MiniBossEntity {
         }
         for (int i = 0; i < 24; i++) {
             double angle = Math.PI * 2 * i / 24;
-            serverLevel.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP,
-                    this.getX() + Math.cos(angle) * 6, this.getY() + 1.0,
-                    this.getZ() + Math.sin(angle) * 6, 2, 0.3, 0.8, 0.3, 0.02);
+            Vec3 point = new Vec3(this.getX() + Math.cos(angle) * 6,
+                    this.getY() + 1.0, this.getZ() + Math.sin(angle) * 6);
+            serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, point, ParticleTypes.SPLASH),
+                    point.x, point.y, point.z, 2, 0.3, 0.8, 0.3, 0.02);
         }
     }
 
@@ -560,7 +562,7 @@ public class TideLanternKeeper extends MiniBossEntity {
         this.getNavigation().stop();
         for (double d = 1.0; d <= 6.0; d += 1.0) {
             Vec3 point = this.position().add(this.dashDir.scale(d)).add(0, 1.0, 0);
-            serverLevel.sendParticles(ParticleTypes.BUBBLE,
+            serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, point, ParticleTypes.SPLASH),
                     point.x, point.y, point.z, 1, 0.1, 0.1, 0.1, 0.0);
         }
         if (--this.dashTelegraphTicks == 0) {
@@ -580,7 +582,8 @@ public class TideLanternKeeper extends MiniBossEntity {
         this.dashTicks--;
         this.setDeltaMovement(this.dashDir.scale(0.85));
         this.hurtMarked = true;
-        serverLevel.sendParticles(ParticleTypes.BUBBLE,
+        serverLevel.sendParticles(
+                BossFx.waterBubbleOr(serverLevel, this.position(), ParticleTypes.SPLASH),
                 this.getX(), this.getY() + 1.0, this.getZ(), 6, 0.4, 0.4, 0.4, 0.05);
         serverLevel.sendParticles(ParticleTypes.GLOW,
                 this.getX(), this.getY() + 1.1, this.getZ(), 2, 0.25, 0.25, 0.25, 0.02);
@@ -696,7 +699,8 @@ public class TideLanternKeeper extends MiniBossEntity {
             }
             serverLevel.sendParticles(ParticleTypes.GLOW,
                     this.getX(), this.getEyeY(), this.getZ(), 40, 1.2, 1.0, 1.2, 0.05);
-            serverLevel.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP,
+            serverLevel.sendParticles(
+                    BossFx.waterBubbleOr(serverLevel, this.position(), ParticleTypes.SPLASH),
                     this.getX(), this.getY(), this.getZ(), 30, 1.0, 1.2, 1.0, 0.04);
             double radius = settlementRadius();
             for (ServerPlayer player : serverLevel.players()) {

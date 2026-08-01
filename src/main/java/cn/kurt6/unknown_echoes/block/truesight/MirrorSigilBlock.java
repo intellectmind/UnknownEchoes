@@ -97,7 +97,15 @@ public class MirrorSigilBlock extends BaseEntityBlock {
                         Component.translatable("message.unknown_echoes.mirror_sigil.already"), true);
                 return InteractionResult.CONSUME;
             }
-            EchoAbilityManager.activateMechanism(serverPlayer, key);
+            boolean completesRitual = wouldCompleteCluster(serverPlayer, serverLevel, pos);
+            boolean recorded = completesRitual
+                    ? cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.grantRitual(
+                            serverPlayer,
+                            cn.kurt6.unknown_echoes.ability.EchoAbilityType.TRUE_SIGHT_ECHO, key)
+                    : EchoAbilityManager.activateMechanism(serverPlayer, key);
+            if (!recorded) {
+                return InteractionResult.CONSUME;
+            }
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.3F, 1.2F);
             serverLevel.sendParticles(ParticleTypes.END_ROD,
                     pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 10, 0.3, 0.3, 0.3, 0.03);
@@ -112,10 +120,6 @@ public class MirrorSigilBlock extends BaseEntityBlock {
             serverPlayer.displayClientMessage(
                     Component.translatable("message.unknown_echoes.mirror_sigil.activated"), true);
             // 共鸣信物(V0.6E,5.1.1):最后一枚真符印点亮 = 机关完成,写仪式记录并发放真视信物
-            if (clusterComplete(serverPlayer, serverLevel, pos)) {
-                cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.grantRitual(
-                        serverPlayer, cn.kurt6.unknown_echoes.ability.EchoAbilityType.TRUE_SIGHT_ECHO);
-            }
         } else {
             // 幻象碎裂:清空该玩家在本神殿的符印进度,但不造成伤害(观察谜题,不是陷阱房)
             resetPlayerSigils(serverPlayer, serverLevel, pos);
@@ -147,6 +151,21 @@ public class MirrorSigilBlock extends BaseEntityBlock {
             }
             foundReal = true;
             if (!EchoAbilityManager.hasActivatedMechanism(player, mechanismKey(level, pos))) {
+                return false;
+            }
+        }
+        return foundReal;
+    }
+
+    private boolean wouldCompleteCluster(ServerPlayer player, ServerLevel level, BlockPos current) {
+        boolean foundReal = false;
+        for (BlockPos pos : MirrorSigilBlockEntity.findCluster(level, current)) {
+            if (!MirrorSigilBlockEntity.isReal(level, pos)) {
+                continue;
+            }
+            foundReal = true;
+            if (!pos.equals(current)
+                    && !EchoAbilityManager.hasActivatedMechanism(player, mechanismKey(level, pos))) {
                 return false;
             }
         }

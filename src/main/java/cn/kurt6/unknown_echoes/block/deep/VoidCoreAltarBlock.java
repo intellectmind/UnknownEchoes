@@ -23,8 +23,11 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -37,7 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** 虚空脉室核心：管理虚空信物、裂隙看守者战斗与虚空回响授予。 */
-public class VoidCoreAltarBlock extends Block {
+public class VoidCoreAltarBlock extends BaseEntityBlock {
     public static final MapCodec<VoidCoreAltarBlock> CODEC = simpleCodec(VoidCoreAltarBlock::new);
 
     private static final int[][] STABILIZER_OFFSETS = {
@@ -56,8 +59,18 @@ public class VoidCoreAltarBlock extends Block {
     }
 
     @Override
-    protected MapCodec<? extends Block> codec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
+    }
+
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
+
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new BossRechallengeAltarBlockEntity(pos, state);
     }
 
     @Override
@@ -89,15 +102,6 @@ public class VoidCoreAltarBlock extends Block {
             reject(serverPlayer, level, pos, "message.unknown_echoes.void_core.need_anchor_array");
             return InteractionResult.CONSUME;
         }
-        if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.VOID_ECHO)) {
-            if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer, EchoPermission.VOID_TRIAL_KEY)) {
-                EchoAbilityManager.activateMechanism(serverPlayer, EchoPermission.VOID_TRIAL_KEY);
-                EchoAbilityManager.syncToClient(serverPlayer);
-            }
-            serverPlayer.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.void_core.claimed"), true);
-            return InteractionResult.CONSUME;
-        }
         if (!DeepAltarScanLimiter.allow(serverPlayer)) {
             return InteractionResult.CONSUME;
         }
@@ -106,6 +110,14 @@ public class VoidCoreAltarBlock extends Block {
             guideIncompleteStabilizers(serverLevel, pos, serverPlayer);
             reject(serverPlayer, level, pos, "message.unknown_echoes.void_core.need_stabilizers",
                     REQUIRED_STABILIZERS - completedStabilizers);
+            return InteractionResult.CONSUME;
+        }
+
+        if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.VOID_ECHO)) {
+            if (rejectDuringRechallengeCooldown(serverLevel, state, pos, serverPlayer)) {
+                return InteractionResult.CONSUME;
+            }
+            summonOrJoinWarden(serverLevel, pos, serverPlayer);
             return InteractionResult.CONSUME;
         }
 
@@ -131,12 +143,28 @@ public class VoidCoreAltarBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        if (ResonanceTokenManager.consumeToken(serverPlayer, EchoAbilityType.VOID_ECHO)) {
+        if (!EchoAbilityManager.activateMechanism(serverPlayer, EchoPermission.VOID_TRIAL_KEY)) {
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return InteractionResult.CONSUME;
+        }
+        if (ResonanceTokenManager.consumeToken(serverPlayer, EchoAbilityType.VOID_ECHO)
+                && EchoAbilityManager.unlockAbility(serverPlayer, EchoAbilityType.VOID_ECHO)) {
             RewardAltarBlock.playAbsorbCeremony(level, pos);
-            EchoAbilityManager.activateMechanism(serverPlayer, EchoPermission.VOID_TRIAL_KEY);
-            EchoAbilityManager.unlockAbility(serverPlayer, EchoAbilityType.VOID_ECHO);
         }
         return InteractionResult.CONSUME;
+    }
+
+    private static boolean rejectDuringRechallengeCooldown(ServerLevel level, BlockState state,
+                                                            BlockPos pos, ServerPlayer player) {
+        long remaining = BossRechallengeAltarBlockEntity.getOrCreate(level, pos, state)
+                .remainingCooldownTicks(level);
+        if (remaining <= 0L) {
+            return false;
+        }
+        long seconds = (remaining + 19L) / 20L;
+        reject(player, level, pos, "message.unknown_echoes.void_core.rechallenge_cooldown", seconds);
+        return true;
     }
 
     private static int countActivatedStabilizers(ServerPlayer player, Level level, BlockPos center) {

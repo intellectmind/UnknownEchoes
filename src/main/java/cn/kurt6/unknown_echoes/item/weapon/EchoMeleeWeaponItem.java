@@ -1,9 +1,5 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
-import cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher;
-import cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus;
-import cn.kurt6.unknown_echoes.entity.boss.MiniBossEntity;
-import cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
@@ -59,7 +55,7 @@ public class EchoMeleeWeaponItem extends SwordItem {
             case "silence_scythe" -> applySilenceScythe(level, target);
             case "crystal_song_staff" -> applyCrystalSongStaff(level, player, target);
             case "broken_bell_hammer" -> applyBellHammer(level, player, target);
-            case "echo_oathblade" -> applyOathblade(player, target);
+            case "echo_oathblade" -> applyOathblade(target);
             default -> 0.0F;
         };
     }
@@ -139,18 +135,16 @@ public class EchoMeleeWeaponItem extends SwordItem {
         return 0.0F;
     }
 
-    private float applyOathblade(ServerPlayer player, LivingEntity target) {
-        if (isBossLike(target)) {
-            return 1.0F;
+    private float applyOathblade(LivingEntity target) {
+        // LivingIncomingDamageEvent 晚于 Boss 自身的阶段钳制，事件层不得再给 Boss 追加伤害。
+        if (target.getType().is(ModEntityTags.ECHO_BOSSES)) {
+            return 0.0F;
         }
         return target.getType().is(ModEntityTags.ECHO_REALM_HOSTILES) ? 2.0F : 0.0F;
     }
 
     private static boolean isBossLike(LivingEntity target) {
-        return target instanceof MiniBossEntity
-                || target instanceof ForgottenColossus
-                || target instanceof AbyssWatcher
-                || target instanceof MirrorGuardian;
+        return target.getType().is(ModEntityTags.ECHO_BOSSES);
     }
 
     private static boolean isStrongAttack(ServerPlayer player) {

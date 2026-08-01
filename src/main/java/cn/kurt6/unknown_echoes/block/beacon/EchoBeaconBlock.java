@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.block.beacon;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import cn.kurt6.unknown_echoes.config.CommonConfig;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModItems;
@@ -103,12 +104,16 @@ public class EchoBeaconBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
+        if (!EchoAbilityManager.activateBeaconRoute(serverPlayer,
+                EchoPermission.RESONANCE_BEACON_ID, EchoPermission.ECHO_REALM_ID)) {
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return InteractionResult.CONSUME;
+        }
+
         if (!serverPlayer.getAbilities().instabuild) {
             activationKey.shrink(1);
         }
-
-        EchoAbilityManager.activateBeacon(serverPlayer, EchoPermission.RESONANCE_BEACON_ID);
-        EchoAbilityManager.unlockDimension(serverPlayer, EchoPermission.ECHO_REALM_ID);
 
         serverPlayer.sendSystemMessage(Component.translatable("message.unknown_echoes.beacon.activated"));
         level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.0F, 1.2F);
@@ -149,6 +154,7 @@ public class EchoBeaconBlock extends Block {
             }
             player.teleportTo(realm, arrival.getX() + 0.5, arrival.getY(),
                     arrival.getZ() + 0.5, player.getYRot(), player.getXRot());
+            ModAdvancements.recordEchoRealmEntry(player);
             player.displayClientMessage(Component.translatable("message.unknown_echoes.realm.entered"), true);
             realm.playSound(null, arrival, SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 0.5F, 1.0F);
         }));

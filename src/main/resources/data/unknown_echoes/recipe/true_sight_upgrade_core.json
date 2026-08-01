@@ -9,6 +9,7 @@
     { "item": "unknown_echoes:polished_mirror_dust" }
   ],
   "result": {
-    "id": "unknown_echoes:true_sight_upgrade_core"
+    "id": "unknown_echoes:true_sight_upgrade_core",
+    "count": 4
   }
 }

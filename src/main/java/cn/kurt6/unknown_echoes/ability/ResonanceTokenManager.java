@@ -43,14 +43,22 @@ public class ResonanceTokenManager {
     }
 
     /** 机关完成时调用:写仪式记录并发放信物(已有能力的玩家只补记录,不再发信物)。 */
-    public static void grantRitual(ServerPlayer player, EchoAbilityType ability) {
+    public static boolean grantRitual(ServerPlayer player, EchoAbilityType ability,
+                                      String... completionKeys) {
         boolean firstTime = !hasRitualRecord(player, ability);
-        if (firstTime) {
-            EchoAbilityManager.activateMechanism(player, ritualKey(ability));
+        String[] records = new String[completionKeys.length + 1];
+        records[0] = ritualKey(ability);
+        System.arraycopy(completionKeys, 0, records, 1, completionKeys.length);
+        if (!EchoAbilityManager.activateMechanisms(player, records)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return false;
+        }
+        if (firstTime || completionKeys.length > 0) {
             EchoAbilityManager.syncToClient(player);
         }
         if (EchoAbilityManager.hasAbility(player, ability)) {
-            return;
+            return true;
         }
         if (firstTime || !hasValidToken(player, ability)) {
             if (issueToken(player, ability)) {
@@ -64,6 +72,7 @@ public class ResonanceTokenManager {
                         Component.translatable("message.unknown_echoes.token.need_space"), true);
             }
         }
+        return true;
     }
 
     /**

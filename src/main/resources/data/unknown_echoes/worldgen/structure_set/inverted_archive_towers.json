@@ -1,0 +1,9 @@
+{
+  "structures": [{ "structure": "unknown_echoes:inverted_archive_tower", "weight": 1 }],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 36,
+    "separation": 12,
+    "salt": 2089346103
+  }
+}

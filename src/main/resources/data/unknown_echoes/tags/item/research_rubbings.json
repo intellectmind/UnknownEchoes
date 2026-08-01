@@ -3,9 +3,13 @@
     "unknown_echoes:wind_research_rubbing",
     "unknown_echoes:tide_research_rubbing",
     "unknown_echoes:true_sight_research_rubbing",
+    "unknown_echoes:gravity_research_rubbing",
+    "unknown_echoes:void_research_rubbing",
     "unknown_echoes:wind_fragment_page",
     "unknown_echoes:tide_fragment_page",
     "unknown_echoes:true_sight_fragment_page",
+    "unknown_echoes:gravity_fragment_page",
+    "unknown_echoes:void_fragment_page",
     "unknown_echoes:inscription_rubbing_paper",
     "unknown_echoes:echo_index"
   ]

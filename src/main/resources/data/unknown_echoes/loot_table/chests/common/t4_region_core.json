@@ -529,6 +529,28 @@
           ]
         }
       ]
+    },
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "conditions": [
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.09
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:echo_candy",
+          "weight": 8
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:condensed_echo_candy",
+          "weight": 2
+        }
+      ]
     }
   ],
   "random_sequence": "unknown_echoes:chests/common/t4_region_core"

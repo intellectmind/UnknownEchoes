@@ -237,8 +237,8 @@ public class WorldEventManager {
             // 个人参与记录:首次目击写入个人机关数据(持久),并给一次含蓄提示
             if (active.witnessed.add(player.getUUID())) {
                 String key = "world_event:" + active.type.getId();
-                if (!EchoAbilityManager.hasActivatedMechanism(player, key)) {
-                    EchoAbilityManager.activateMechanism(player, key);
+                if (!EchoAbilityManager.hasActivatedMechanism(player, key)
+                        && EchoAbilityManager.activateMechanism(player, key)) {
                     player.sendSystemMessage(Component.translatable(
                             "message.unknown_echoes.world_event." + active.type.getId() + ".witness")
                             .withStyle(net.minecraft.ChatFormatting.DARK_AQUA,

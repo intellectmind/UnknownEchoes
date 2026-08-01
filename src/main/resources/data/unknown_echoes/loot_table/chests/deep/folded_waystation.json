@@ -2,6 +2,14 @@
   "type": "minecraft:chest",
   "pools": [
     {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 156 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 160 } } ] },
+        { "type": "minecraft:empty", "weight": 2 }
+      ]
+    },
+    {
       "rolls": { "type": "minecraft:uniform", "min": 2, "max": 4 },
       "entries": [
         {

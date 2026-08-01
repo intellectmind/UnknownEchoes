@@ -211,6 +211,22 @@
           "weight": 17
         }
       ]
+    },
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "conditions": [
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.12
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:faint_echo_candy"
+        }
+      ]
     }
   ],
   "random_sequence": "unknown_echoes:chests/common/t1_basic"

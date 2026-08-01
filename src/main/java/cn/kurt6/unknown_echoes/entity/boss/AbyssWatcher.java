@@ -75,7 +75,7 @@ import java.util.UUID;
  *       深水牵引(漩涡拖拽)/ 深渊脉冲(近身爆发驱离)。全部动画先行、伤害延迟到命中帧。
  * 死亡:场地内参与玩家个人写入击败记录;潮汐回响由潮汐核心祭坛校验信物后解锁。
  */
-public class AbyssWatcher extends Monster implements GeoEntity {
+public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard, PhaseGatedBoss {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.abyss_watcher.idle");
     private static final RawAnimation SWIM_ANIM =
@@ -457,7 +457,8 @@ public class AbyssWatcher extends Monster implements GeoEntity {
     /** 潮汐冲刺预警:沿锁定方向铺设水纹线 + 自身环绕加速水花。 */
     private void spawnDashWarning(ServerLevel serverLevel) {
         Vec3 eye = this.position().add(0, this.getBbHeight() * 0.5, 0);
-        BossFx.chargeSpiral(serverLevel, eye, this.tickCount, ParticleTypes.BUBBLE_COLUMN_UP);
+        BossFx.chargeSpiral(serverLevel, eye, this.tickCount,
+                BossFx.waterBubbleOr(serverLevel, eye, ParticleTypes.SPLASH));
         for (int d = 1; d <= (int) DASH_RANGE; d += 2) {
             Vec3 p = eye.add(this.dashDirection.scale(d));
             serverLevel.sendParticles(ParticleTypes.SPLASH, p.x, p.y, p.z, 3, 0.4, 0.2, 0.4, 0.0);
@@ -465,7 +466,7 @@ public class AbyssWatcher extends Monster implements GeoEntity {
                 serverLevel.sendParticles(ParticleTypes.GLOW, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
             }
         }
-        serverLevel.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP,
+        serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, eye, ParticleTypes.SPLASH),
                 this.getX(), this.getY() + this.getBbHeight() * 0.5, this.getZ(),
                 6, this.getBbWidth() * 0.5, 0.4, this.getBbWidth() * 0.5, 0.05);
     }
@@ -502,7 +503,8 @@ public class AbyssWatcher extends Monster implements GeoEntity {
                 SoundEvents.DOLPHIN_JUMP, SoundSource.HOSTILE, 1.8F, 0.5F);
         for (int d = 0; d <= (int) DASH_RANGE; d++) {
             Vec3 p = start.add(this.dashDirection.scale(d));
-            serverLevel.sendParticles(ParticleTypes.BUBBLE, p.x, p.y, p.z, 6, 0.6, 0.6, 0.6, 0.1);
+            serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, p, ParticleTypes.SPLASH),
+                    p.x, p.y, p.z, 6, 0.6, 0.6, 0.6, 0.1);
             serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, p.x, p.y, p.z, 2, 0.3, 0.3, 0.3, 0.02);
         }
         BossFx.sparkSpray(serverLevel, start, this.dashDirection, DASH_RANGE, ParticleTypes.BUBBLE_POP);
@@ -613,18 +615,20 @@ public class AbyssWatcher extends Monster implements GeoEntity {
         }
         serverLevel.playSound(null, this.blockPosition(),
                 SoundEvents.BUBBLE_COLUMN_WHIRLPOOL_AMBIENT, SoundSource.HOSTILE, 2.0F, 0.4F);
-        // 漩涡环粒子:由外向内三圈
+        // 漩涡环粒子:由外向内三圈(逐点探水,水中气泡/岸上水花)
         for (int ring = 0; ring < 3; ring++) {
             double r = VORTEX_RANGE - ring * 2.5;
             for (int i = 0; i < 14; i++) {
                 double angle = Math.PI * 2 * i / 14 + ring * 0.5;
-                serverLevel.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP,
-                        this.getX() + Math.cos(angle) * r,
+                Vec3 point = new Vec3(this.getX() + Math.cos(angle) * r,
                         this.getY() + this.getBbHeight() * 0.5,
-                        this.getZ() + Math.sin(angle) * r, 2, 0.1, 0.3, 0.1, 0.02);
+                        this.getZ() + Math.sin(angle) * r);
+                serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, point, ParticleTypes.SPLASH),
+                        point.x, point.y, point.z, 2, 0.1, 0.3, 0.1, 0.02);
             }
         }
-        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.2, 0), VORTEX_RANGE * 0.7, ParticleTypes.BUBBLE_COLUMN_UP);
+        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.2, 0), VORTEX_RANGE * 0.7,
+                BossFx.waterBubbleOr(serverLevel, this.position(), ParticleTypes.SPLASH));
     }
 
     /** 深渊脉冲:近身 AOE 爆发,高击退 + 短暂缓慢——惩罚贴脸硬打,逼玩家利用破防窗口。 */
@@ -1057,22 +1061,6 @@ public class AbyssWatcher extends Monster implements GeoEntity {
                 && !attacker.isSpectator()) {
             BossNbtData.addParticipant(this.participants, attacker.getUUID());
         }
-        if (!this.level().isClientSide && !this.isBroken()
-                && BossPhaseGate.shouldCapMechanicDamage(source)) {
-            float multiplier = ServerConfig.BOSS_UNBROKEN_DAMAGE_MULTIPLIER.get().floatValue();
-            float cap = ServerConfig.BOSS_UNBROKEN_MAX_DAMAGE.get().floatValue();
-            amount = Math.min(amount * multiplier, cap);
-            if (this.veiledMessageCooldown <= 0 && source.getEntity() instanceof ServerPlayer player) {
-                player.displayClientMessage(Component.translatable("message.unknown_echoes.watcher.veiled"), true);
-                this.veiledMessageCooldown = 40;
-            }
-        } else if (!this.level().isClientSide && this.isBroken()
-                && BossPhaseGate.shouldCapMechanicDamage(source)) {
-            amount = BossPhaseGate.capDamage(this.getHealth(), amount, this.brokenWindowHealthFloor);
-            if (amount <= 0.0F) {
-                return false;
-            }
-        }
         boolean hurt = super.hurt(source, amount);
         if (!this.level().isClientSide && hurt
                 && BossPhaseGate.reachedFloor(this, this.brokenWindowHealthFloor)
@@ -1080,6 +1068,24 @@ public class AbyssWatcher extends Monster implements GeoEntity {
             restoreTideVeil(serverLevel);
         }
         return hurt;
+    }
+
+    @Override
+    public boolean isMechanicDamageGuarded() {
+        return !this.isClone() && !this.isBroken();
+    }
+
+    @Override
+    public void onMechanicDamageGuarded(DamageSource source) {
+        if (this.veiledMessageCooldown <= 0 && source.getEntity() instanceof ServerPlayer player) {
+            player.displayClientMessage(Component.translatable("message.unknown_echoes.watcher.veiled"), true);
+            this.veiledMessageCooldown = 40;
+        }
+    }
+
+    @Override
+    public float phaseDamageFloor() {
+        return !this.isClone() && this.isBroken() ? this.brokenWindowHealthFloor : 0.0F;
     }
 
     private void restoreTideVeil(ServerLevel serverLevel) {
@@ -1130,7 +1136,12 @@ public class AbyssWatcher extends Monster implements GeoEntity {
                     && player.distanceToSqr(this) <= radius * radius) {
                 boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
                         EchoPermission.ABYSS_WATCHER_ID);
-                EchoAbilityManager.markBossDefeated(player, EchoPermission.ABYSS_WATCHER_ID);
+                if (firstKill && !EchoAbilityManager.markBossDefeated(
+                        player, EchoPermission.ABYSS_WATCHER_ID)) {
+                    player.sendSystemMessage(Component.translatable(
+                            "message.unknown_echoes.progress_record.full"));
+                    continue;
+                }
                 if (firstKill) {
                     BossMaterialRewards.givePersonal(player, EchoPermission.ABYSS_WATCHER_ID,
                             new ItemStack(ModItems.TIDE_CORE.get()));

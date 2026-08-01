@@ -16,17 +16,21 @@
     "hidden": false
   },
   "criteria": {
-    "has_armor": {
+    "full_set": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "items": [
-              "unknown_echoes:echo_traveler_helmet",
-              "unknown_echoes:echo_traveler_chestplate",
-              "unknown_echoes:echo_traveler_leggings",
-              "unknown_echoes:echo_traveler_boots"
-            ]
+            "items": ["unknown_echoes:echo_traveler_helmet"]
+          },
+          {
+            "items": ["unknown_echoes:echo_traveler_chestplate"]
+          },
+          {
+            "items": ["unknown_echoes:echo_traveler_leggings"]
+          },
+          {
+            "items": ["unknown_echoes:echo_traveler_boots"]
           }
         ]
       }

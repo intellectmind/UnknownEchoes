@@ -106,7 +106,11 @@ public class DeepCalibrationNodeBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        EchoAbilityManager.activateMechanism(serverPlayer, key);
+        if (!EchoAbilityManager.activateMechanism(serverPlayer, key)) {
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return InteractionResult.CONSUME;
+        }
         EchoAbilityManager.syncToClient(serverPlayer);
         playFeedback((ServerLevel) level, pos, corePos, calibration, serverPlayer);
         serverPlayer.displayClientMessage(Component.translatable(

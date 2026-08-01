@@ -5,8 +5,8 @@ import cn.kurt6.unknown_echoes.ability.EchoArmorSets;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher;
 import cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus;
-import cn.kurt6.unknown_echoes.entity.boss.MiniBossEntity;
 import cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian;
+import cn.kurt6.unknown_echoes.registry.ModEntityTags;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -1031,10 +1031,13 @@ public final class ArtifactEffectManager {
     }
 
     private static boolean isBossEntity(LivingEntity entity) {
-        return entity instanceof MiniBossEntity
-                || entity instanceof ForgottenColossus
-                || (entity instanceof AbyssWatcher watcher && !watcher.isClone())
-                || (entity instanceof MirrorGuardian guardian && !guardian.isIllusion());
+        if (entity instanceof AbyssWatcher watcher && watcher.isClone()) {
+            return false;
+        }
+        if (entity instanceof MirrorGuardian guardian && guardian.isIllusion()) {
+            return false;
+        }
+        return entity.getType().is(ModEntityTags.ECHO_BOSSES);
     }
 
     private static boolean isBrokenBoss(LivingEntity entity) {

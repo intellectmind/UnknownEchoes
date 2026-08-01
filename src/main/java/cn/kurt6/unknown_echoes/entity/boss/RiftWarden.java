@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.entity.boss;
 
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.block.deep.BossRechallengeAltarBlockEntity;
 import cn.kurt6.unknown_echoes.block.deep.VoidCoreAltarBlock;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import net.minecraft.core.BlockPos;
@@ -56,7 +57,7 @@ import java.util.UUID;
  * 六种攻击按 Blockbench 动画关键帧分段执行。66% 与 33% 血线会强制执行解锚阶段，
  * 高伤害不能跨越阶段；死亡时只给仍在场地内的有效参与者写个人击败记录。
  */
-public class RiftWarden extends Monster implements GeoEntity {
+public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
     private static final RawAnimation IDLE =
             RawAnimation.begin().thenLoop("animation.rift_warden.idle");
     private static final RawAnimation WALK =
@@ -295,6 +296,20 @@ public class RiftWarden extends Monster implements GeoEntity {
             case 1 -> this.getMaxHealth() * SECOND_PHASE_FLOOR;
             default -> 0.0F;
         };
+    }
+
+    @Override
+    public float phaseDamageFloor() {
+        return this.currentMechanicFloor();
+    }
+
+    @Override
+    public void onPhaseDamageBlocked(DamageSource source) {
+        if (this.protectedMessageCooldown <= 0 && source.getEntity() instanceof ServerPlayer player) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.rift_warden.guard_holds"), true);
+            this.protectedMessageCooldown = 40;
+        }
     }
 
     private void broadcastNearby(Component message) {
@@ -807,18 +822,6 @@ public class RiftWarden extends Monster implements GeoEntity {
             }
         }
         float floor = this.currentMechanicFloor();
-        if (!this.level().isClientSide && BossPhaseGate.shouldCapMechanicDamage(source)) {
-            amount = BossPhaseGate.capDamage(this.getHealth(), amount, floor);
-            if (amount <= 0.0F) {
-                if (this.protectedMessageCooldown <= 0
-                        && source.getEntity() instanceof ServerPlayer player) {
-                    player.displayClientMessage(Component.translatable(
-                            "message.unknown_echoes.rift_warden.guard_holds"), true);
-                    this.protectedMessageCooldown = 40;
-                }
-                return false;
-            }
-        }
         boolean hurt = super.hurt(source, amount);
         if (!this.level().isClientSide && hurt && this.phaseGateStage < 2
                 && BossPhaseGate.reachedFloor(this, floor)) {
@@ -915,10 +918,17 @@ public class RiftWarden extends Monster implements GeoEntity {
         for (ServerPlayer player : level.players()) {
             if (!player.isSpectator() && this.participants.contains(player.getUUID())
                     && player.distanceToSqr(this) <= rewardRadius * rewardRadius) {
-                EchoAbilityManager.markBossDefeated(player, EchoPermission.RIFT_WARDEN_ID);
+                if (!EchoAbilityManager.markBossDefeated(player, EchoPermission.RIFT_WARDEN_ID)) {
+                    player.sendSystemMessage(Component.translatable(
+                            "message.unknown_echoes.progress_record.full"));
+                    continue;
+                }
                 player.sendSystemMessage(Component.translatable(
                         "message.unknown_echoes.rift_warden.defeated"));
             }
+        }
+        if (this.arenaCenter != null) {
+            BossRechallengeAltarBlockEntity.startCooldown(level, this.arenaCenter);
         }
         Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.52D, 0.0D);
         BossFx.impactBurst(level, core, ParticleTypes.REVERSE_PORTAL);

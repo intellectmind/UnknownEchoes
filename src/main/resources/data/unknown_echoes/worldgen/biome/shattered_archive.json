@@ -1,0 +1,54 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.3,
+  "downfall": 0.0,
+  "effects": {
+    "fog_color": 4799838,
+    "sky_color": 2828356,
+    "water_color": 3691626,
+    "water_fog_color": 1583422,
+    "grass_color": 6517852,
+    "foliage_color": 5466191,
+    "ambient_particle": {
+      "options": { "type": "minecraft:reverse_portal" },
+      "probability": 0.006
+    },
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 8500,
+      "block_search_extent": 8,
+      "offset": 2.0
+    }
+  },
+  "carvers": {
+    "air": ["minecraft:cave", "minecraft:canyon"]
+  },
+  "features": [
+    [], [], [], [], [], [],
+    ["unknown_echoes:folded_slate_disk", "unknown_echoes:resonant_folded_slate_disk", "unknown_echoes:clockwork_scrap_block_disk", "unknown_echoes:prism_dust_cluster_disk"],
+    [], [],
+    ["unknown_echoes:seam_grass_patch", "unknown_echoes:archive_fungus_patch", "unknown_echoes:archive_lichen_patch", "unknown_echoes:folded_sporebloom_patch"],
+    []
+  ],
+  "spawners": {
+    "monster": [
+      {
+        "type": "unknown_echoes:void_wanderer",
+        "weight": 4,
+        "minCount": 1,
+        "maxCount": 1
+      }
+    ],
+    "creature": [
+      {
+        "type": "unknown_echoes:foldpage_bug",
+        "weight": 48,
+        "minCount": 2,
+        "maxCount": 5
+      }
+    ],
+    "ambient": [], "axolotls": [],
+    "underground_water_creature": [], "water_creature": [], "water_ambient": [], "misc": []
+  },
+  "spawn_costs": {}
+}

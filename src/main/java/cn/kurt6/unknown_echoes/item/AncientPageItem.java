@@ -60,6 +60,7 @@ public class AncientPageItem extends Item {
                 return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
             }
             if (JournalManager.getData(serverPlayer).getPages().contains(id)) {
+                JournalManager.retryAllPagesReward(serverPlayer);
                 recycleDuplicate(serverPlayer, stack, id);
             } else {
                 JournalManager.recordPage(serverPlayer, id);

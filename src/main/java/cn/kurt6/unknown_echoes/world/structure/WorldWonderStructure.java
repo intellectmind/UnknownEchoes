@@ -13,6 +13,7 @@ import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SeaPickleBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
@@ -126,40 +127,72 @@ public class WorldWonderStructure extends SinglePieceStructure {
 
         private void buildWorldTree(WorldGenLevel level, RandomSource random, BoundingBox box) {
             int c = kind.size / 2;
-            BlockState log = ModBlocks.ECHO_LOG.get().defaultBlockState();
+            BlockState log = ModBlocks.ECHO_LOG.get().defaultBlockState()
+                    .setValue(RotatedPillarBlock.AXIS, Direction.Axis.Y);
             BlockState leaves = ModBlocks.ECHO_LEAVES.get().defaultBlockState()
                     .setValue(LeavesBlock.PERSISTENT, true);
             BlockState rune = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
             disk(level, box, c, 0, c, 22, ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState());
             disk(level, box, c, 1, c, 18, Blocks.MOSS_BLOCK.defaultBlockState());
-            for (int y = 1; y <= 60; y++) {
-                int radius = y < 12 ? 5 : 4;
+
+            int[][] rootDirections = {
+                    {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+                    {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
+            };
+            for (int[] direction : rootDirections) {
+                buildButtressRoot(level, box, c, c, direction[0], direction[1], log);
+            }
+
+            for (int y = 1; y <= 72; y++) {
+                int radius = y < 14 ? 6 : y < 34 ? 5 : y < 52 ? 4 : y < 65 ? 3 : 2;
                 disk(level, box, c, y, c, radius, log);
-                if (y % 8 == 0) {
-                    root(level, box, c, y, c, y / 8);
-                }
-                if (y % 16 == 0) {
-                    hollowDisk(level, box, c, y, c, 8, rune);
-                }
             }
-            for (int y = 54; y <= 82; y++) {
-                int radius = Math.max(9, 20 - Math.abs(68 - y));
-                disk(level, box, c, y, c, radius, leaves);
-                if (y % 7 == 0) {
-                    hollowDisk(level, box, c, y, c, Math.max(6, radius - 5), rune);
-                }
+
+            int[][] crowns = {
+                    {-17, 61, -8, 10, 6, 8}, {16, 63, -11, 9, 6, 8},
+                    {-17, 64, 11, 9, 6, 8}, {17, 66, 10, 10, 6, 8},
+                    {0, 68, -17, 9, 6, 8}, {0, 70, 17, 9, 6, 8},
+                    {-9, 75, -4, 9, 7, 8}, {9, 76, 5, 9, 7, 8},
+                    {0, 83, 0, 9, 8, 9}
+            };
+            for (int[] crown : crowns) {
+                ellipsoid(level, box, c + crown[0], crown[1], c + crown[2],
+                        crown[3], crown[4], crown[5], leaves);
             }
-            for (int i = 0; i < 8; i++) {
-                int angleX = c + (i % 4 < 2 ? -14 : 14);
-                int angleZ = c + (i % 2 == 0 ? -14 : 14);
-                pillar(level, box, angleX, 2, angleZ, 4 + random.nextInt(3), ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState());
-                this.placeBlock(level, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState(), angleX, 7, angleZ, box);
+
+            int[][] branches = {
+                    {c, 45, c, c - 18, 59, c - 8},
+                    {c, 47, c, c + 17, 61, c - 11},
+                    {c, 49, c, c - 18, 62, c + 11},
+                    {c, 51, c, c + 18, 64, c + 10},
+                    {c, 54, c, c, 66, c - 18},
+                    {c, 56, c, c, 68, c + 18},
+                    {c, 61, c, c - 10, 74, c - 4},
+                    {c, 64, c, c + 10, 75, c + 5}
+            };
+            for (int[] branch : branches) {
+                buildWorldTreeBranch(level, box,
+                        branch[0], branch[1], branch[2], branch[3], branch[4], branch[5]);
             }
+
+            ellipsoid(level, box, c + 12, 15, c - 9, 4, 3, 4, leaves);
+            buildWorldTreeBranch(level, box, c + 3, 20, c - 2, c + 12, 15, c - 9);
+
+            decorativeRing(level, box, c, 29, c, 9, 1);
+            decorativeRing(level, box, c, 45, c, 12, 4);
+            decorativeRing(level, box, c, 61, c, 15, 7);
+
+            pillar(level, box, c, 83, c, 6, rune);
+            this.placeBlock(level, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState(), c, 89, c, box);
             this.placeBlock(level, rune, c, 2, c - 5, box);
             this.placeBlock(level, ModBlocks.ECHO_ARCHIVE_TERMINAL.get().defaultBlockState(), c, 3, c - 5, box);
             buildAccessibleChest(level, random, box, c + 6, 1, c + 3, ModLootTables.T4_REGION_CORE);
             buildAccessibleChest(level, random, box, c - 8, 1, c - 2, ModLootTables.T3_PUZZLE);
-            decorateWorldTree(level, box, random, c);
+            decorateWorldTree(level, box, c);
+
+            // 固定坐标由结构分块包围盒裁切，保证每棵新生成世界树恰好放置一枚仙果。
+            this.placeBlock(level, ModBlocks.WORLDTREE_FRUIT.get().defaultBlockState(),
+                    c + 12, 11, c - 9, box);
         }
 
         private void buildLighthouse(WorldGenLevel level, RandomSource random, BoundingBox box) {
@@ -341,25 +374,29 @@ public class WorldWonderStructure extends SinglePieceStructure {
             decorateBellTower(level, box, c);
         }
 
-        private void decorateWorldTree(WorldGenLevel level, BoundingBox box, RandomSource random, int c) {
+        private void decorateWorldTree(WorldGenLevel level, BoundingBox box, int c) {
             BlockState lamp = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
             BlockState flower = ModBlocks.ECHO_FLOWER.get().defaultBlockState();
             BlockState moss = Blocks.MOSS_BLOCK.defaultBlockState();
-            for (int i = 0; i < 24; i++) {
-                double angle = i * Math.PI / 12.0;
-                int x = c + (int) Math.round(Math.cos(angle) * 20);
-                int z = c + (int) Math.round(Math.sin(angle) * 20);
-                if (i % 3 == 0) {
+            for (int i = 0; i < 32; i++) {
+                double angle = i * Math.PI / 16.0;
+                int x = c + (int) Math.round(Math.cos(angle) * 22);
+                int z = c + (int) Math.round(Math.sin(angle) * 22);
+                this.placeBlock(level, moss, x, 1, z, box);
+                if (i % 4 == 0) {
                     this.placeBlock(level, lamp, x, 2, z, box);
                 } else {
-                    this.placeBlock(level, moss, x, 1, z, box);
                     this.placeBlock(level, flower, x, 2, z, box);
                 }
             }
-            for (int i = 0; i < 18; i++) {
-                int x = c - 18 + random.nextInt(37);
-                int z = c - 18 + random.nextInt(37);
-                this.placeBlock(level, lamp, x, 72 + random.nextInt(9), z, box);
+
+            int[][] canopyLights = {
+                    {-20, 61, -8}, {-14, 65, -12}, {18, 63, -12}, {15, 68, -6},
+                    {-19, 64, 12}, {-13, 68, 15}, {20, 66, 10}, {14, 71, 14},
+                    {-6, 77, -8}, {8, 79, 9}, {-2, 86, -5}, {4, 84, 7}
+            };
+            for (int[] light : canopyLights) {
+                this.placeBlock(level, lamp, c + light[0], light[1], c + light[2], box);
             }
         }
 
@@ -443,20 +480,91 @@ public class WorldWonderStructure extends SinglePieceStructure {
             }
         }
 
-        private void root(WorldGenLevel level, BoundingBox box, int c, int y, int z, int index) {
-            int dx = switch (index % 4) {
-                case 0 -> 1;
-                case 1 -> -1;
-                default -> 0;
-            };
-            int dz = switch (index % 4) {
-                case 2 -> 1;
-                case 3 -> -1;
-                default -> 0;
-            };
-            for (int i = 0; i < 13; i++) {
-                this.placeBlock(level, ModBlocks.ECHO_LOG.get().defaultBlockState(),
-                        c + dx * i, Math.max(1, y - i / 2), z + dz * i, box);
+        private void buildButtressRoot(WorldGenLevel level, BoundingBox box, int cx, int cz,
+                                       int dx, int dz, BlockState verticalLog) {
+            Direction.Axis axis = Math.abs(dx) >= Math.abs(dz) ? Direction.Axis.X : Direction.Axis.Z;
+            BlockState rootLog = verticalLog.setValue(RotatedPillarBlock.AXIS, axis);
+            for (int i = 0; i <= 22; i++) {
+                int x = cx + dx * i;
+                int z = cz + dz * i;
+                int y = Math.max(1, 7 - i / 4);
+                int width = Math.max(0, 3 - i / 7);
+                for (int offset = -width; offset <= width; offset++) {
+                    int px = axis == Direction.Axis.X ? x : x + offset;
+                    int pz = axis == Direction.Axis.Z ? z : z + offset;
+                    this.placeBlock(level, rootLog, px, y, pz, box);
+                    if (i < 10 && Math.abs(offset) < width) {
+                        this.placeBlock(level, verticalLog, px, y + 1, pz, box);
+                    }
+                }
+            }
+        }
+
+        private void buildWorldTreeBranch(WorldGenLevel level, BoundingBox box,
+                                          int x0, int y0, int z0, int x1, int y1, int z1) {
+            int steps = Math.max(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)), Math.abs(z1 - z0));
+            int previousX = x0;
+            int previousZ = z0;
+            for (int i = 0; i <= steps; i++) {
+                double progress = steps == 0 ? 0.0D : (double) i / steps;
+                int x = (int) Math.round(x0 + (x1 - x0) * progress);
+                int y = (int) Math.round(y0 + (y1 - y0) * progress);
+                int z = (int) Math.round(z0 + (z1 - z0) * progress);
+                Direction.Axis axis = Math.abs(x - previousX) >= Math.abs(z - previousZ)
+                        ? Direction.Axis.X : Direction.Axis.Z;
+                BlockState branchLog = ModBlocks.ECHO_LOG.get().defaultBlockState()
+                        .setValue(RotatedPillarBlock.AXIS, axis);
+                this.placeBlock(level, branchLog, x, y, z, box);
+                if (progress < 0.55D) {
+                    this.placeBlock(level, branchLog, x, y - 1, z, box);
+                    if (axis == Direction.Axis.X) {
+                        this.placeBlock(level, branchLog, x, y, z + 1, box);
+                    } else {
+                        this.placeBlock(level, branchLog, x + 1, y, z, box);
+                    }
+                }
+                previousX = x;
+                previousZ = z;
+            }
+        }
+
+        private void ellipsoid(WorldGenLevel level, BoundingBox box, int cx, int cy, int cz,
+                               int radiusX, int radiusY, int radiusZ, BlockState state) {
+            for (int x = cx - radiusX; x <= cx + radiusX; x++) {
+                for (int y = cy - radiusY; y <= cy + radiusY; y++) {
+                    for (int z = cz - radiusZ; z <= cz + radiusZ; z++) {
+                        double dx = (double) (x - cx) / radiusX;
+                        double dy = (double) (y - cy) / radiusY;
+                        double dz = (double) (z - cz) / radiusZ;
+                        if (dx * dx + dy * dy + dz * dz <= 1.0D) {
+                            placeIfAir(level, box, x, y, z, state);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void decorativeRing(WorldGenLevel level, BoundingBox box,
+                                    int cx, int y, int cz, int radius, int phase) {
+            for (int i = 0; i < 48; i++) {
+                if ((i + phase) % 11 == 0 || (i + phase) % 11 == 1) {
+                    continue;
+                }
+                double angle = i * Math.PI / 24.0D;
+                int x = cx + (int) Math.round(Math.cos(angle) * radius);
+                int z = cz + (int) Math.round(Math.sin(angle) * radius);
+                BlockState state = i % 8 == 0
+                        ? ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState()
+                        : ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
+                this.placeBlock(level, state, x, y, z, box);
+            }
+        }
+
+        private void placeIfAir(WorldGenLevel level, BoundingBox box,
+                                int x, int y, int z, BlockState state) {
+            BlockPos worldPos = new BlockPos(this.getWorldX(x, z), this.getWorldY(y), this.getWorldZ(x, z));
+            if (box.isInside(worldPos) && level.getBlockState(worldPos).isAir()) {
+                this.placeBlock(level, state, x, y, z, box);
             }
         }
 

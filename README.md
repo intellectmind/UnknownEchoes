@@ -6,7 +6,7 @@
 
 **Unknown Echoes** is an adventure Mod centered around exploration, puzzle-solving, boss battles, and progressive ability growth.
 
-You will open the gateway to the **Echo Realm**, track ancient echoes across ten biomes, and then descend into three regions of the Second Dimension. Five Echo powers, six artifacts, and a new equipment route unfold through personal exploration.
+You will open the gateway to the **Echo Realm**, track ancient echoes across ten biomes, and then descend through three strata spanning six biomes in the Second Dimension. Five Echo powers, six artifacts, and a new equipment route unfold through personal exploration.
 
 ---
 
@@ -35,7 +35,7 @@ You will open the gateway to the **Echo Realm**, track ancient echoes across ten
 1. Explore the **Echoing Forest**, find the Memory Pillar Courtyard, defeat the **Forgotten Colossus**, and unlock the **Wind Echo**.
 2. Explore the **Mirror Lake / Tidal Lighthouse Reef**, delve into the Sunken Sanctum, defeat the **Abyssal Observer**, and unlock the **Tidal Echo**.
 3. Explore the **Mirror Dust Corridor**, breach the Mirror Sanctum, defeat the **Mirror Guardian**, and unlock the **True Sight Echo**.
-4. Gather materials, ancient pages, and structure records across the 10 First Dimension biomes and 3 Second Dimension regions, and challenge 8 **Regional Guardians (Mini Bosses)**.
+4. Gather materials, ancient pages, and structure records across the 10 First Dimension biomes and 6 Second Dimension biomes, and challenge 8 **Regional Guardians (Mini Bosses)**.
 5. Unlock and upgrade 6 **Core Artifacts** based on your exploration progress, strengthening five ability paths.
 6. Find the Grand Archive at **Echo Cliffs**, and claim your personal graduation reward and clues leading deeper once you've achieved sufficient completion.
 
@@ -104,10 +104,13 @@ They are unlocked and upgraded based on your **personal exploration progress**.
 
 ### Second Dimension Biomes
 
-The Second Dimension has three connected regions. Use the Abyssal Beacon in the Riftlayer Hall to return to the Echo Realm.
+The Second Dimension has three connected strata, each split into two biomes. Use the Abyssal Beacon in the Riftlayer Hall to return to the Echo Realm.
 
 | Biome | Defining Keywords |
 |---|---|
 | Folded Corridors | Deep entrance, Foldpage Bugs, folded archives and waystations |
+| Shattered Archive | Misfiled catalogs, sequence runes, hidden True Sight records |
 | Inverted Chasm | Gravity fields, inverted bridges, gravity shard spires |
+| Weightless Grotto | Suspended crystals, inverted archive towers, survey puzzles |
 | Silent Abyss | Void rifts, stabilizers, hushed refuges |
+| Voidscar Hollows | Fractured anchors, sealed vaults, safe paths through void scars |

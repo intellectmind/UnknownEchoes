@@ -69,7 +69,11 @@ public final class EchoCompletionManager {
     }
 
     public static boolean handleArchiveTerminalUse(ServerPlayer player) {
-        EchoAbilityManager.activateMechanism(player, ARCHIVE_TERMINAL_KEY);
+        if (!EchoAbilityManager.activateMechanism(player, ARCHIVE_TERMINAL_KEY)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return false;
+        }
         JournalManager.recordStructure(player, ARCHIVE_STRUCTURE, player.blockPosition());
         boolean hadMainlineRecord = hasMainlineCompletionRecord(player);
         if (refreshMainlineCompletion(player)) {
@@ -104,8 +108,11 @@ public final class EchoCompletionManager {
             return false;
         }
         boolean changed = !hasMainlineCompletionRecord(player) || !hasCoreResonance(player);
-        EchoAbilityManager.activateMechanism(player, MAINLINE_COMPLETION_KEY);
-        EchoAbilityManager.activateMechanism(player, CORE_RESONANCE_KEY);
+        if (!EchoAbilityManager.activateMechanisms(player,
+                MAINLINE_COMPLETION_KEY, CORE_RESONANCE_KEY)) {
+            return false;
+        }
+        ModAdvancements.award(player, ModAdvancements.ECHO_REALM_GRADUATION);
         if (changed) {
             EchoAbilityManager.syncToClient(player);
         }
@@ -120,6 +127,10 @@ public final class EchoCompletionManager {
         return EchoAbilityManager.hasActivatedMechanism(player, CORE_RESONANCE_KEY);
     }
 
+    public static boolean hasArchiveTerminalRecord(ServerPlayer player) {
+        return EchoAbilityManager.hasActivatedMechanism(player, ARCHIVE_TERMINAL_KEY);
+    }
+
     private static boolean showSummaryAndClaim(ServerPlayer player) {
         List<Component> summary = buildCompletionSummary(player);
         for (Component line : summary) {
@@ -131,13 +142,18 @@ public final class EchoCompletionManager {
                     : "message.unknown_echoes.completion.incomplete"), true);
             return false;
         }
-        if (hasClaimedT7(player)) {
-            claimSupplementalRewards(player);
+        if (hasClaimedT7Reward(player)) {
+            boolean supplementsClaimed = claimSupplementalRewards(player);
             claimIndexExpansionRewards(player);
-            player.displayClientMessage(Component.translatable("message.unknown_echoes.completion.claimed"), true);
-            return true;
+            if (supplementsClaimed) {
+                player.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.completion.claimed"), true);
+            }
+            return supplementsClaimed;
         }
-        claimT7Reward(player);
+        if (!claimT7Reward(player)) {
+            return false;
+        }
         claimIndexExpansionRewards(player);
         return true;
     }
@@ -167,10 +183,10 @@ public final class EchoCompletionManager {
         lines.add(doneLine("completion.unknown_echoes.archive", hasArchiveTerminal(player)));
         lines.add(doneLine("completion.unknown_echoes.archive_trials", hasArchiveTrials(player)));
         lines.add(countLine("completion.unknown_echoes.score", completionScore(player), REQUIRED_SCORE));
-        lines.add(Component.translatable(hasClaimedT7(player)
+        lines.add(Component.translatable(hasClaimedT7Reward(player)
                         ? "completion.unknown_echoes.reward.claimed"
                         : "completion.unknown_echoes.reward.ready")
-                .withStyle(hasClaimedT7(player) ? ChatFormatting.DARK_GRAY : ChatFormatting.AQUA));
+                .withStyle(hasClaimedT7Reward(player) ? ChatFormatting.DARK_GRAY : ChatFormatting.AQUA));
         lines.addAll(buildIndexFeedback(player));
         return lines;
     }
@@ -372,7 +388,7 @@ public final class EchoCompletionManager {
     }
 
     private static boolean hasArchiveTerminal(ServerPlayer player) {
-        return EchoAbilityManager.hasActivatedMechanism(player, ARCHIVE_TERMINAL_KEY);
+        return hasArchiveTerminalRecord(player);
     }
 
     private static boolean hasArchiveTrials(ServerPlayer player) {
@@ -399,9 +415,11 @@ public final class EchoCompletionManager {
             return false;
         }
         if (grant) {
-            EchoAbilityManager.activateMechanism(player, key);
-            if (state.equals("reward")) {
-                EchoAbilityManager.activateMechanism(player, INDEX_UNLOCK_KEY);
+            boolean recorded = state.equals("reward")
+                    ? EchoAbilityManager.activateMechanisms(player, key, INDEX_UNLOCK_KEY)
+                    : EchoAbilityManager.activateMechanism(player, key);
+            if (!recorded) {
+                return false;
             }
         } else {
             EchoAbilityManager.deactivateMechanism(player, key);
@@ -411,21 +429,34 @@ public final class EchoCompletionManager {
         return true;
     }
 
-    private static boolean hasClaimedT7(ServerPlayer player) {
+    public static boolean hasClaimedT7Reward(ServerPlayer player) {
         return EchoAbilityManager.getData(player).getActivatedMechanisms().contains(T7_REWARD_KEY);
     }
 
-    private static void claimT7Reward(ServerPlayer player) {
-        EchoAbilityManager.activateMechanism(player, T7_REWARD_KEY);
-        EchoAbilityManager.activateMechanism(player, INDEX_UNLOCK_KEY);
-        claimSupplementalRewards(player);
-        ModAdvancements.award(player, ModAdvancements.ECHO_REALM_GRADUATION);
+    private static boolean claimT7Reward(ServerPlayer player) {
+        List<ItemStack> rewards = supplementalRewards();
+        if (!canFitAllRewards(player, rewards)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.completion.need_space"), true);
+            return false;
+        }
+        if (!EchoAbilityManager.activateMechanisms(player,
+                T7_REWARD_KEY, INDEX_UNLOCK_KEY, T7_CORE_KEY, T7_INGOTS_KEY,
+                T7_CLUE_MAP_KEY)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return false;
+        }
+        for (ItemStack reward : rewards) {
+            player.getInventory().add(reward);
+        }
         ModAdvancements.award(player, ModAdvancements.ECHO_REALM_COMPLETE);
         EchoAbilityManager.syncToClient(player);
         JournalManager.syncJournal(player);
         player.sendSystemMessage(Component.translatable("message.unknown_echoes.completion.reward"));
         player.level().playSound(null, player.blockPosition(),
                 SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 0.9F);
+        return true;
     }
 
     private static void claimIndexExpansionRewards(ServerPlayer player) {
@@ -475,7 +506,11 @@ public final class EchoCompletionManager {
             player.displayClientMessage(Component.translatable("message.unknown_echoes.index.need_space"), true);
             return false;
         }
-        EchoAbilityManager.activateMechanism(player, key);
+        if (!EchoAbilityManager.activateMechanism(player, key)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return false;
+        }
         for (ItemStack stack : rewards) {
             player.getInventory().add(stack);
         }
@@ -501,56 +536,46 @@ public final class EchoCompletionManager {
         return "ready";
     }
 
-    private static void claimSupplementalRewards(ServerPlayer player) {
-        boolean pending = false;
+    private static boolean claimSupplementalRewards(ServerPlayer player) {
+        List<String> keys = new ArrayList<>();
+        List<ItemStack> rewards = new ArrayList<>();
         if (!EchoAbilityManager.hasActivatedMechanism(player, T7_CORE_KEY)) {
-            pending |= !giveSupplement(player, T7_CORE_KEY,
-                    new ItemStack(ModItems.ECHO_REALM_CORE.get(), 1));
+            keys.add(T7_CORE_KEY);
+            rewards.add(new ItemStack(ModItems.ECHO_REALM_CORE.get(), 1));
         }
         if (!EchoAbilityManager.hasActivatedMechanism(player, T7_INGOTS_KEY)) {
-            pending |= !giveSupplement(player, T7_INGOTS_KEY,
-                    new ItemStack(ModItems.ECHO_REALM_INGOT.get(), 4));
+            keys.add(T7_INGOTS_KEY);
+            rewards.add(new ItemStack(ModItems.ECHO_REALM_INGOT.get(), 4));
         }
         if (!EchoAbilityManager.hasActivatedMechanism(player, T7_CLUE_MAP_KEY)) {
-            pending |= !giveSupplement(player, T7_CLUE_MAP_KEY,
-                    new ItemStack(ModItems.CLUE_MAP.get(), 1));
+            keys.add(T7_CLUE_MAP_KEY);
+            rewards.add(new ItemStack(ModItems.CLUE_MAP.get(), 1));
         }
-        if (pending) {
+        if (keys.isEmpty()) {
+            return true;
+        }
+        if (!canFitAllRewards(player, rewards)) {
             player.displayClientMessage(Component.translatable("message.unknown_echoes.completion.need_space"), true);
-        }
-    }
-
-    private static boolean giveSupplement(ServerPlayer player, String key, ItemStack stack) {
-        if (!canFitEntireStack(player, stack)) {
             return false;
         }
-        player.getInventory().add(stack);
-        EchoAbilityManager.activateMechanism(player, key);
+        if (!EchoAbilityManager.activateMechanisms(player, keys.toArray(String[]::new))) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return false;
+        }
+        for (ItemStack reward : rewards) {
+            player.getInventory().add(reward);
+        }
+        EchoAbilityManager.syncToClient(player);
+        JournalManager.syncJournal(player);
         return true;
     }
 
-    private static boolean canFitEntireStack(ServerPlayer player, ItemStack stack) {
-        int remaining = stack.getCount();
-        int max = stack.getMaxStackSize();
-        for (ItemStack slot : player.getInventory().items) {
-            if (slot.isEmpty()) {
-                remaining -= max;
-            } else if (ItemStack.isSameItemSameComponents(slot, stack)) {
-                remaining -= Math.max(0, max - slot.getCount());
-            }
-            if (remaining <= 0) {
-                return true;
-            }
-        }
-        for (ItemStack slot : player.getInventory().offhand) {
-            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, stack)) {
-                remaining -= Math.max(0, max - slot.getCount());
-            }
-            if (remaining <= 0) {
-                return true;
-            }
-        }
-        return false;
+    private static List<ItemStack> supplementalRewards() {
+        return List.of(
+                new ItemStack(ModItems.ECHO_REALM_CORE.get(), 1),
+                new ItemStack(ModItems.ECHO_REALM_INGOT.get(), 4),
+                new ItemStack(ModItems.CLUE_MAP.get(), 1));
     }
 
     private static boolean canFitAllRewards(ServerPlayer player, List<ItemStack> rewards) {

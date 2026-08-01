@@ -87,7 +87,14 @@ public class TidePillarBlock extends Block {
                     Component.translatable("message.unknown_echoes.tide_pillar.already"), true);
             return InteractionResult.CONSUME;
         }
-        EchoAbilityManager.activateMechanism(serverPlayer, key);
+        boolean completesRitual = wouldCompleteCluster(serverPlayer, level, pos);
+        boolean recorded = completesRitual
+                ? cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.grantRitual(
+                        serverPlayer, EchoAbilityType.TIDE_ECHO, key)
+                : EchoAbilityManager.activateMechanism(serverPlayer, key);
+        if (!recorded) {
+            return InteractionResult.CONSUME;
+        }
         level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 1.2F, 0.7F);
         if (level instanceof ServerLevel serverLevel) {
             serverLevel.sendParticles(ParticleTypes.BUBBLE_POP,
@@ -96,10 +103,6 @@ public class TidePillarBlock extends Block {
         serverPlayer.displayClientMessage(
                 Component.translatable("message.unknown_echoes.tide_pillar.activated"), true);
         // 共鸣信物(V0.6E,5.1.1):最后一根符柱唤醒 = 机关完成,写仪式记录并发放潮汐信物
-        if (clusterComplete(serverPlayer, level, pos)) {
-            cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.grantRitual(
-                    serverPlayer, EchoAbilityType.TIDE_ECHO);
-        }
         return InteractionResult.CONSUME;
     }
 
@@ -109,6 +112,19 @@ public class TidePillarBlock extends Block {
                 center.offset(-CLUSTER_RANGE_H, -CLUSTER_RANGE_V, -CLUSTER_RANGE_H),
                 center.offset(CLUSTER_RANGE_H, CLUSTER_RANGE_V, CLUSTER_RANGE_H))) {
             if (level.getBlockState(pos).getBlock() instanceof TidePillarBlock
+                    && !EchoAbilityManager.hasActivatedMechanism(player, mechanismKey(level, pos))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean wouldCompleteCluster(ServerPlayer player, Level level, BlockPos current) {
+        for (BlockPos pos : BlockPos.betweenClosed(
+                current.offset(-CLUSTER_RANGE_H, -CLUSTER_RANGE_V, -CLUSTER_RANGE_H),
+                current.offset(CLUSTER_RANGE_H, CLUSTER_RANGE_V, CLUSTER_RANGE_H))) {
+            if (level.getBlockState(pos).getBlock() instanceof TidePillarBlock
+                    && !pos.equals(current)
                     && !EchoAbilityManager.hasActivatedMechanism(player, mechanismKey(level, pos))) {
                 return false;
             }

@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:defeat_world_echo",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:ending_record_table"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.world_echo_complete.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.world_echo_complete.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

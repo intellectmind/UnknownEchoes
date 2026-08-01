@@ -84,10 +84,14 @@ public class DeepRouteNodeBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        EchoAbilityManager.activateMechanism(serverPlayer, routeKey);
-        boolean completedHall = hasCompletedAll(serverPlayer);
-        if (completedHall) {
-            EchoAbilityManager.activateMechanism(serverPlayer, HALL_COMPLETE_KEY);
+        boolean completedHall = wouldCompleteAll(serverPlayer, route);
+        boolean recorded = completedHall
+                ? EchoAbilityManager.activateMechanisms(serverPlayer, routeKey, HALL_COMPLETE_KEY)
+                : EchoAbilityManager.activateMechanism(serverPlayer, routeKey);
+        if (!recorded) {
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return InteractionResult.CONSUME;
         }
         EchoAbilityManager.syncToClient(serverPlayer);
         playFeedback((ServerLevel) level, pos, route, completedHall);
@@ -107,17 +111,28 @@ public class DeepRouteNodeBlock extends Block {
         return true;
     }
 
+    private static boolean wouldCompleteAll(Player player, Route current) {
+        for (Route route : Route.values()) {
+            if (route != current && !EchoAbilityManager.hasActivatedMechanism(player,
+                    ROUTE_PREFIX + route.getSerializedName())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static boolean hasCompletedHall(Player player) {
         return EchoAbilityManager.hasActivatedMechanism(player, HALL_COMPLETE_KEY);
     }
 
     /** 管理员测试入口使用；正式玩法仍需逐座交互。 */
-    public static void completeHallForTesting(ServerPlayer player) {
-        for (Route route : Route.values()) {
-            EchoAbilityManager.activateMechanism(player,
-                    ROUTE_PREFIX + route.getSerializedName());
-        }
-        EchoAbilityManager.activateMechanism(player, HALL_COMPLETE_KEY);
+    public static boolean prepareVoidProphetForTesting(ServerPlayer player) {
+        return EchoAbilityManager.activateBeaconRoute(player,
+                EchoPermission.ABYSS_BEACON_ID, EchoPermission.DEEP_ECHOES_ID,
+                ROUTE_PREFIX + Route.WIND.getSerializedName(),
+                ROUTE_PREFIX + Route.TIDE.getSerializedName(),
+                ROUTE_PREFIX + Route.TRUE_SIGHT.getSerializedName(),
+                HALL_COMPLETE_KEY);
     }
 
     private static void playFeedback(ServerLevel level, BlockPos pos, Route route, boolean completedHall) {

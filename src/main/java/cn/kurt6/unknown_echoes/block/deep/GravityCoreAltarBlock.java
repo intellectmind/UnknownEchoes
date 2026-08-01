@@ -23,8 +23,11 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -38,7 +41,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 /** 校准大厅核心：管理重力信物、虚空先知战斗与重力回响授予。 */
-public class GravityCoreAltarBlock extends Block {
+public class GravityCoreAltarBlock extends BaseEntityBlock {
     public static final MapCodec<GravityCoreAltarBlock> CODEC = simpleCodec(GravityCoreAltarBlock::new);
 
     private static final int NODE_DISTANCE = 15;
@@ -56,8 +59,18 @@ public class GravityCoreAltarBlock extends Block {
     }
 
     @Override
-    protected MapCodec<? extends Block> codec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
+    }
+
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
+
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new BossRechallengeAltarBlockEntity(pos, state);
     }
 
     @Override
@@ -89,16 +102,6 @@ public class GravityCoreAltarBlock extends Block {
             reject(serverPlayer, level, pos, "message.unknown_echoes.gravity_core.need_routes");
             return InteractionResult.CONSUME;
         }
-        if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.GRAVITY_ECHO)) {
-            if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer,
-                    EchoPermission.GRAVITY_TRIAL_KEY)) {
-                EchoAbilityManager.activateMechanism(serverPlayer, EchoPermission.GRAVITY_TRIAL_KEY);
-                EchoAbilityManager.syncToClient(serverPlayer);
-            }
-            serverPlayer.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.gravity_core.claimed"), true);
-            return InteractionResult.CONSUME;
-        }
         if (!DeepAltarScanLimiter.allow(serverPlayer)) {
             return InteractionResult.CONSUME;
         }
@@ -107,6 +110,14 @@ public class GravityCoreAltarBlock extends Block {
             guideIncompleteCalibrations(serverLevel, pos, serverPlayer);
             reject(serverPlayer, level, pos, "message.unknown_echoes.gravity_core.need_calibration",
                     REQUIRED_CALIBRATIONS - completedCalibrations);
+            return InteractionResult.CONSUME;
+        }
+
+        if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.GRAVITY_ECHO)) {
+            if (rejectDuringRechallengeCooldown(serverLevel, state, pos, serverPlayer)) {
+                return InteractionResult.CONSUME;
+            }
+            summonOrJoinProphet(serverLevel, pos, serverPlayer);
             return InteractionResult.CONSUME;
         }
 
@@ -132,12 +143,28 @@ public class GravityCoreAltarBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        if (ResonanceTokenManager.consumeToken(serverPlayer, EchoAbilityType.GRAVITY_ECHO)) {
+        if (!EchoAbilityManager.activateMechanism(serverPlayer, EchoPermission.GRAVITY_TRIAL_KEY)) {
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return InteractionResult.CONSUME;
+        }
+        if (ResonanceTokenManager.consumeToken(serverPlayer, EchoAbilityType.GRAVITY_ECHO)
+                && EchoAbilityManager.unlockAbility(serverPlayer, EchoAbilityType.GRAVITY_ECHO)) {
             RewardAltarBlock.playAbsorbCeremony(level, pos);
-            EchoAbilityManager.activateMechanism(serverPlayer, EchoPermission.GRAVITY_TRIAL_KEY);
-            EchoAbilityManager.unlockAbility(serverPlayer, EchoAbilityType.GRAVITY_ECHO);
         }
         return InteractionResult.CONSUME;
+    }
+
+    private static boolean rejectDuringRechallengeCooldown(ServerLevel level, BlockState state,
+                                                            BlockPos pos, ServerPlayer player) {
+        long remaining = BossRechallengeAltarBlockEntity.getOrCreate(level, pos, state)
+                .remainingCooldownTicks(level);
+        if (remaining <= 0L) {
+            return false;
+        }
+        long seconds = (remaining + 19L) / 20L;
+        reject(player, level, pos, "message.unknown_echoes.gravity_core.rechallenge_cooldown", seconds);
+        return true;
     }
 
     static boolean hasCompletedCalibrations(ServerPlayer player, Level level, BlockPos center) {

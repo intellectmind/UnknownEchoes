@@ -3,13 +3,10 @@
   "category": "equipment",
   "ingredients": [
     {
-      "item": "minecraft:diamond_sword"
+      "item": "unknown_echoes:echo_broadsword"
     },
     {
-      "item": "unknown_echoes:echo_realm_ingot"
-    },
-    {
-      "item": "unknown_echoes:echo_realm_ingot"
+      "item": "unknown_echoes:oathbound_alloy"
     },
     {
       "item": "unknown_echoes:oathbound_alloy"

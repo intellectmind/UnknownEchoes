@@ -1,8 +1,10 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -16,6 +18,15 @@ public final class BossFx {
     private static final double TAU = Math.PI * 2;
 
     private BossFx() {
+    }
+
+    /**
+     * 水主题粒子选择:BUBBLE/BUBBLE_COLUMN_UP 离水当 tick 即自毁,岸上/水面以上完全不可见。
+     * 位置在水中返回气泡(水下观感最好),否则回退到任意环境可渲染的水花。
+     */
+    public static ParticleOptions waterBubbleOr(ServerLevel level, Vec3 pos, ParticleOptions airFallback) {
+        return level.getFluidState(BlockPos.containing(pos)).is(FluidTags.WATER)
+                ? ParticleTypes.BUBBLE_COLUMN_UP : airFallback;
     }
 
     /** 命中迸发:中心闪光 + 多层扩散光环 + 主题火花上冲。攻击落地/命中时调用。 */
@@ -168,6 +179,96 @@ public final class BossFx {
                 level.sendParticles(theme,
                         origin.x + Math.cos(angle) * d, origin.y + 0.55 + d * 0.04, origin.z + Math.sin(angle) * d,
                         1, 0.04, 0.04, 0.04, 0.0);
+            }
+        }
+    }
+
+    /**
+     * 吸聚环:圆周上的粒子带着朝中心的初速飞入(sendParticles count=0 时偏移量作为速度向量),
+     * 表现"能量被拽向 Boss"的蓄力阶段。适合每 2-4 tick 调用一次。
+     */
+    public static void converge(ServerLevel level, Vec3 c, double radius, int points, ParticleOptions theme) {
+        for (int i = 0; i < points; i++) {
+            double a = TAU * i / points + radius * 0.7;
+            double px = c.x + Math.cos(a) * radius;
+            double pz = c.z + Math.sin(a) * radius;
+            level.sendParticles(theme, px, c.y, pz,
+                    0, -Math.cos(a), 0.02, -Math.sin(a), 0.22);
+            if (i % 3 == 0) {
+                level.sendParticles(ParticleTypes.GLOW, px, c.y + 0.35, pz,
+                        0, -Math.cos(a), 0.08, -Math.sin(a), 0.14);
+            }
+        }
+    }
+
+    /** 双螺旋:沿 from→to 缠绕两条主题粒子链,骨架加 GLOW,用于光束/长矛的"能量缠绕"。 */
+    public static void helix(ServerLevel level, Vec3 from, Vec3 to, double radius, ParticleOptions theme) {
+        Vec3 delta = to.subtract(from);
+        double length = delta.length();
+        if (length < 1.0E-3) {
+            return;
+        }
+        Vec3 d = delta.scale(1.0 / length);
+        Vec3 side = Math.abs(d.y) > 0.92 ? new Vec3(1, 0, 0) : new Vec3(-d.z, 0, d.x).normalize();
+        Vec3 up = d.cross(side);
+        for (double s = 0.0; s <= length; s += 0.55) {
+            double a = s * 1.35;
+            Vec3 axis = from.add(d.scale(s));
+            for (int arm = 0; arm < 2; arm++) {
+                double phase = a + arm * Math.PI;
+                Vec3 p = axis.add(side.scale(Math.cos(phase) * radius)).add(up.scale(Math.sin(phase) * radius));
+                level.sendParticles(theme, p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0.0);
+            }
+            if (((int) (s / 0.55)) % 3 == 0) {
+                level.sendParticles(ParticleTypes.GLOW, axis.x, axis.y, axis.z, 1, 0.04, 0.04, 0.04, 0.0);
+            }
+        }
+    }
+
+    /** 冲天光柱:落点/释放点向上喷发的能量柱,顶端加闪光,用于砸击、相变与新星。 */
+    public static void pillar(ServerLevel level, Vec3 c, double height, ParticleOptions theme) {
+        for (double h = 0.2; h <= height; h += 0.6) {
+            double r = 0.55 * (1.0 - h / (height * 1.6));
+            level.sendParticles(theme, c.x, c.y + h, c.z, 2, r, 0.1, r, 0.02);
+            if (((int) (h / 0.6)) % 2 == 0) {
+                level.sendParticles(ParticleTypes.END_ROD, c.x, c.y + h, c.z, 1, 0.12, 0.05, 0.12, 0.01);
+            }
+        }
+        level.sendParticles(theme, c.x, c.y + 0.3, c.z, 0, 0.0, 1.0, 0.0, 0.55);
+        level.sendParticles(ParticleTypes.FLASH, c.x, c.y + height * 0.7, c.z, 1, 0, 0, 0, 0);
+    }
+
+    /**
+     * 坠星轨迹:从高空指向落点的倾斜彗尾,progress ∈ [0,1] 表示当前坠落进度,
+     * 预警阶段按帧推进 progress 即可获得"正在坠落"的读法。
+     */
+    public static void comet(ServerLevel level, Vec3 impact, double height, double progress, ParticleOptions theme) {
+        Vec3 start = impact.add(height * 0.45, height, height * 0.3);
+        Vec3 head = start.add(impact.subtract(start).scale(Math.min(1.0, Math.max(0.0, progress))));
+        level.sendParticles(theme, head.x, head.y, head.z, 4, 0.22, 0.22, 0.22, 0.04);
+        level.sendParticles(ParticleTypes.FLAME, head.x, head.y, head.z, 2, 0.14, 0.14, 0.14, 0.02);
+        Vec3 tailDir = start.subtract(head);
+        double tailLength = Math.min(3.2, tailDir.length());
+        if (tailLength > 0.2) {
+            Vec3 t = tailDir.normalize();
+            for (double s = 0.5; s <= tailLength; s += 0.6) {
+                Vec3 p = head.add(t.scale(s));
+                level.sendParticles(ParticleTypes.GLOW, p.x, p.y, p.z, 1, 0.08, 0.08, 0.08, 0.0);
+            }
+        }
+    }
+
+    /** 环绕旋涡:围绕中心旋转上升的粒子筒(风暴/火旋),t 传 tickCount 驱动旋转。 */
+    public static void vortex(ServerLevel level, Vec3 c, double radius, double height, double t, ParticleOptions theme) {
+        for (int layer = 0; layer < 5; layer++) {
+            double y = c.y + 0.3 + layer * (height / 5.0);
+            double r = radius * (0.7 + 0.3 * Math.sin(t * 0.2 + layer));
+            for (int arm = 0; arm < 3; arm++) {
+                double a = t * 0.38 + layer * 0.8 + arm * (TAU / 3.0);
+                double px = c.x + Math.cos(a) * r;
+                double pz = c.z + Math.sin(a) * r;
+                level.sendParticles(theme, px, y, pz,
+                        0, -Math.sin(a), 0.06, Math.cos(a), 0.18);
             }
         }
     }

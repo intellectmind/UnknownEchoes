@@ -63,8 +63,8 @@ public class HiddenRuneBlock extends Block {
         // 回访点研究来源(V0.6B):每片幻象墙首次消散 +1 真视研究点(个人绑定,按起点坐标去重)
         if (player instanceof ServerPlayer serverPlayer) {
             String key = "research_revisit:hidden_rune:" + level.dimension().location() + ":" + pos.asLong();
-            if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)) {
-                EchoAbilityManager.activateMechanism(serverPlayer, key);
+            if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)
+                    && EchoAbilityManager.activateMechanism(serverPlayer, key)) {
                 EchoAbilityManager.addResearchPoints(serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO, 1);
                 serverPlayer.displayClientMessage(
                         Component.translatable("message.unknown_echoes.research.insight"), true);

@@ -16,6 +16,7 @@ public class ModLootTables {
             chest("common/t4_region_core");
     public static final ResourceKey<LootTable> T5_MINIBOSS_REPEAT =
             chest("common/t5_miniboss_repeat");
+    // T6/T7 仅保留为数据层模板；自然结构公共箱不得引用，正式奖励走参与者个人结算。
     public static final ResourceKey<LootTable> T6_MAIN_BOSS =
             chest("common/t6_main_boss");
     public static final ResourceKey<LootTable> T7_ECHO_REALM_ENDGAME =
@@ -91,6 +92,18 @@ public class ModLootTables {
             chest("deep/gravity_shard_spire");
     public static final ResourceKey<LootTable> HUSHED_REFUGE_CHEST =
             chest("deep/hushed_refuge");
+    public static final ResourceKey<LootTable> MISFILED_CATALOG_WELL_CHEST =
+            chest("deep/misfiled_catalog_well");
+    public static final ResourceKey<LootTable> FOLDED_SCRIPTORIUM_CHEST =
+            chest("deep/folded_scriptorium");
+    public static final ResourceKey<LootTable> INVERTED_ARCHIVE_TOWER_CHEST =
+            chest("deep/inverted_archive_tower");
+    public static final ResourceKey<LootTable> SUSPENDED_SURVEY_STATION_CHEST =
+            chest("deep/suspended_survey_station");
+    public static final ResourceKey<LootTable> FRACTURED_ANCHOR_STATION_CHEST =
+            chest("deep/fractured_anchor_station");
+    public static final ResourceKey<LootTable> SEVERED_ARCHIVE_VAULT_CHEST =
+            chest("deep/severed_archive_vault");
 
     private static ResourceKey<LootTable> chest(String path) {
         return ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/" + path));

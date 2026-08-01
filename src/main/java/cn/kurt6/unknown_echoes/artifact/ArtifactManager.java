@@ -345,7 +345,7 @@ public class ArtifactManager {
     }
 
     /** 当前恢复速率,单位是每 tick 恢复多少个 1/100 energyTwentieths。
-     *  配置基值 1 点/秒乘默认平衡倍率 0.5 后,每 tick 速率为 50。 */
+     *  配置基值 1 点/秒乘默认平衡倍率 0.1 后,每 tick 速率为 10。 */
     public static int getRegenHundredthsPerTick(ServerPlayer player) {
         double perSecond = ServerConfig.ENERGY_REGEN_PER_SECOND.get();
         if (player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID)) {
@@ -495,9 +495,15 @@ public class ArtifactManager {
     public static void syncToClient(ServerPlayer player) {
         ArtifactData data = getData(player);
         int energy20 = settleEnergy(player);
+        long now = gameTime(player);
         List<String> entries = new ArrayList<>();
         for (ArtifactType type : ArtifactType.values()) {
             if (data.isClaimed(type)) {
+                long remaining = data.getCooldownEnd(type) - now;
+                if (remaining > 0L && !player.getCooldowns().isOnCooldown(type.getCredentialItem())) {
+                    player.getCooldowns().addCooldown(type.getCredentialItem(),
+                            (int) Math.min(Integer.MAX_VALUE, remaining));
+                }
                 int energyCost20 = scaledEnergyCostTwentieths(
                         ArtifactEffectManager.getEnergyCost(player, type));
                 entries.add(type.getId() + ":" + data.getLevel(type) + ":" + data.getTuning(type)

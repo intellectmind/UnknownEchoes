@@ -112,18 +112,26 @@ public class EchoCommands {
             source.sendFailure(Component.translatable("command.unknown_echoes.ability.unknown", abilityId));
             return 0;
         }
+        int changed = 0;
         for (ServerPlayer player : targets) {
             if (grant) {
-                EchoAbilityManager.unlockAbility(player, ability);
+                if (EchoAbilityManager.unlockAbility(player, ability)) {
+                    changed++;
+                }
             } else {
                 EchoAbilityManager.revokeAbility(player, ability);
+                changed++;
             }
         }
+        if (changed == 0) {
+            return 0;
+        }
+        int successCount = changed;
         source.sendSuccess(() -> Component.translatable(grant
                 ? "command.unknown_echoes.ability.granted"
                 : "command.unknown_echoes.ability.revoked",
-                Component.translatable("ability.unknown_echoes." + ability.getId()), targets.size()), true);
-        return targets.size();
+                Component.translatable("ability.unknown_echoes." + ability.getId()), successCount), true);
+        return changed;
     }
 
     private static int grantArtifact(CommandSourceStack source, Collection<ServerPlayer> targets,
@@ -171,31 +179,43 @@ public class EchoCommands {
 
     /** 测试入口：补齐裂隙看守者场地前置，但保留三座稳定器与祭坛仪式。 */
     private static int prepareRiftWarden(CommandSourceStack source,
-                                         Collection<ServerPlayer> targets) {
+                                          Collection<ServerPlayer> targets) {
+        int prepared = 0;
         for (ServerPlayer player : targets) {
-            EchoAbilityManager.unlockAbility(player, EchoAbilityType.GRAVITY_ECHO);
-            EchoAbilityManager.activateMechanism(player, EchoPermission.VOID_ROUTE_READY_KEY);
-            EchoAbilityManager.syncToClient(player);
+            if (EchoAbilityManager.activateMechanism(player, EchoPermission.VOID_ROUTE_READY_KEY)
+                    && EchoAbilityManager.unlockAbility(player, EchoAbilityType.GRAVITY_ECHO)) {
+                EchoAbilityManager.syncToClient(player);
+                prepared++;
+            }
         }
+        if (prepared == 0) {
+            return 0;
+        }
+        int successCount = prepared;
         source.sendSuccess(() -> Component.translatable(
-                "command.unknown_echoes.deep_prepare.rift_warden", targets.size()), true);
-        return targets.size();
+                "command.unknown_echoes.deep_prepare.rift_warden", successCount), true);
+        return prepared;
     }
 
     /** 测试入口：补齐虚空先知入口前置，但保留三座复合校准节点与祭坛仪式。 */
     private static int prepareVoidProphet(CommandSourceStack source,
-                                          Collection<ServerPlayer> targets) {
+                                           Collection<ServerPlayer> targets) {
+        int prepared = 0;
         for (ServerPlayer player : targets) {
-            EchoAbilityManager.unlockAbility(player, EchoAbilityType.WIND_ECHO);
-            EchoAbilityManager.unlockAbility(player, EchoAbilityType.TIDE_ECHO);
-            EchoAbilityManager.unlockAbility(player, EchoAbilityType.TRUE_SIGHT_ECHO);
-            EchoAbilityManager.activateBeacon(player, EchoPermission.ABYSS_BEACON_ID);
-            EchoAbilityManager.unlockDimension(player, EchoPermission.DEEP_ECHOES_ID);
-            DeepRouteNodeBlock.completeHallForTesting(player);
-            EchoAbilityManager.syncToClient(player);
+            if (DeepRouteNodeBlock.prepareVoidProphetForTesting(player)) {
+                EchoAbilityManager.unlockAbility(player, EchoAbilityType.WIND_ECHO);
+                EchoAbilityManager.unlockAbility(player, EchoAbilityType.TIDE_ECHO);
+                EchoAbilityManager.unlockAbility(player, EchoAbilityType.TRUE_SIGHT_ECHO);
+                EchoAbilityManager.syncToClient(player);
+                prepared++;
+            }
         }
+        if (prepared == 0) {
+            return 0;
+        }
+        int successCount = prepared;
         source.sendSuccess(() -> Component.translatable(
-                "command.unknown_echoes.deep_prepare.void_prophet", targets.size()), true);
-        return targets.size();
+                "command.unknown_echoes.deep_prepare.void_prophet", successCount), true);
+        return prepared;
     }
 }

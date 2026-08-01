@@ -83,6 +83,30 @@ public class ModStructures {
             STRUCTURE_TYPES.register("hushed_refuge",
                     () -> () -> DeepRegionStructure.HUSHED_REFUGE_CODEC);
 
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> MISFILED_CATALOG_WELL =
+            STRUCTURE_TYPES.register("misfiled_catalog_well",
+                    () -> () -> DeepRegionStructure.MISFILED_CATALOG_WELL_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> FOLDED_SCRIPTORIUM =
+            STRUCTURE_TYPES.register("folded_scriptorium",
+                    () -> () -> DeepRegionStructure.FOLDED_SCRIPTORIUM_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> INVERTED_ARCHIVE_TOWER =
+            STRUCTURE_TYPES.register("inverted_archive_tower",
+                    () -> () -> DeepRegionStructure.INVERTED_ARCHIVE_TOWER_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> SUSPENDED_SURVEY_STATION =
+            STRUCTURE_TYPES.register("suspended_survey_station",
+                    () -> () -> DeepRegionStructure.SUSPENDED_SURVEY_STATION_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> FRACTURED_ANCHOR_STATION =
+            STRUCTURE_TYPES.register("fractured_anchor_station",
+                    () -> () -> DeepRegionStructure.FRACTURED_ANCHOR_STATION_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> SEVERED_ARCHIVE_VAULT =
+            STRUCTURE_TYPES.register("severed_archive_vault",
+                    () -> () -> DeepRegionStructure.SEVERED_ARCHIVE_VAULT_CODEC);
+
     public static final DeferredHolder<StructureType<?>, StructureType<RunePuzzleRoomStructure>> RUNE_PUZZLE_ROOM =
             STRUCTURE_TYPES.register("rune_puzzle_room", () -> () -> RunePuzzleRoomStructure.CODEC);
 

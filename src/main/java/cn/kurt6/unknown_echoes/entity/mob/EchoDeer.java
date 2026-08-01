@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.journal.ClueLocator;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -41,7 +42,7 @@ import javax.annotation.Nullable;
 
 /**
  * 回声鹿:回响森林被动生物(生命 14)。
- * 受击逃跑时短暂留下回响轨迹粒子——指向最近已生成遗迹方向的弱线索表现,
+ * 受击逃跑时短暂留下回响轨迹粒子——指向最近已加载遗迹方向的弱线索表现,
  * 不显示坐标、不写日志、不参与任何进度判定(九章 9.1 设定基线)。
  * 掉落回响纤维(探索者套装材料)。设定:它们仍循着回声巡视早已无人的归途。
  */
@@ -89,13 +90,13 @@ public class EchoDeer extends Animal implements GeoEntity {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         boolean hurt = super.hurt(source, amount);
-        // 受击触发回响轨迹:服务端检索最近遗迹方向,只留下粒子方向线索
+        // 受击触发回响轨迹:只查询已加载遗迹,绝不为粒子表现生成新区块。
         if (hurt && !this.level().isClientSide && this.trailCooldown <= 0 && this.isAlive()
                 && ServerConfig.ECHO_DEER_TRAIL_COOLDOWN.get() > 0) {
             this.trailCooldown = ServerConfig.ECHO_DEER_TRAIL_COOLDOWN.get();
             ServerLevel serverLevel = (ServerLevel) this.level();
-            BlockPos nearest = serverLevel.findNearestMapStructure(
-                    TRAIL_TARGETS, this.blockPosition(), 8, false);
+            BlockPos nearest = ClueLocator.findNearestLoadedStructureInTag(
+                    serverLevel, TRAIL_TARGETS, this.blockPosition(), 8);
             if (nearest != null) {
                 Vec3 dir = Vec3.atCenterOf(nearest).subtract(this.position());
                 if (dir.horizontalDistanceSqr() > 4.0D) {

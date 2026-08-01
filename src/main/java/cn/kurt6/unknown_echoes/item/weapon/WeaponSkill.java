@@ -9,4 +9,14 @@ import net.minecraft.world.item.ItemStack;
 public interface WeaponSkill {
 
     boolean activateSkill(ServerLevel level, ServerPlayer player, ItemStack stack, InteractionHand hand);
+
+    /** 仅双战技武器返回 true，客户端据此决定是否发送副战技请求。 */
+    default boolean hasSecondarySkill() {
+        return false;
+    }
+
+    default boolean activateSecondarySkill(ServerLevel level, ServerPlayer player,
+                                           ItemStack stack, InteractionHand hand) {
+        return false;
+    }
 }

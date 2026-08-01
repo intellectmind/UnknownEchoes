@@ -53,7 +53,9 @@ public final class ArchiveTrialProgress {
         if (EchoAbilityManager.hasActivatedMechanism(player, key)) {
             return false;
         }
-        EchoAbilityManager.activateMechanism(player, key);
+        if (!EchoAbilityManager.activateMechanism(player, key)) {
+            return false;
+        }
         EchoAbilityManager.syncToClient(player);
         return true;
     }

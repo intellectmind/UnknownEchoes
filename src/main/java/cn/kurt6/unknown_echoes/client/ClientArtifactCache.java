@@ -56,6 +56,10 @@ public class ClientArtifactCache {
         return maxEnergy;
     }
 
+    public static boolean isEnergyRegenerating() {
+        return energyTwentieths >= 0 && regenHundredthsPerTick > 0 && getEnergy() < maxEnergy;
+    }
+
     /** 当前能量(整点,本地按同步速率外推)。尚未同步过返回 -1(UI 显示占位)。 */
     public static int getEnergy() {
         if (energyTwentieths < 0) {

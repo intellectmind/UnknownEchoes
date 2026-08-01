@@ -81,7 +81,10 @@ public class TrueSightChestBlock extends BaseEntityBlock {
             return InteractionResult.CONSUME;
         }
         if (level.getBlockEntity(pos) instanceof TrueSightChestBlockEntity chest) {
-            EchoAbilityManager.activateMechanism(serverPlayer, mechanismKey(level, pos));
+            if (!EchoAbilityManager.activateMechanism(serverPlayer, mechanismKey(level, pos))) {
+                serverPlayer.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.progress_record.full"), true);
+            }
             serverPlayer.openMenu(chest);
         }
         return InteractionResult.CONSUME;

@@ -148,9 +148,9 @@ public class MossBackTurtle extends Animal implements GeoEntity {
                     boolean echoShears = stack.is(ModItems.ECHO_SHEARS.get());
                     this.shearCooldown = ServerConfig.MOSS_TURTLE_SHEAR_COOLDOWN.get();
                     this.playSound(SoundEvents.SHEEP_SHEAR, 1.0F, 1.0F);
-                    this.spawnAtLocation(ModItems.MUFFLE_MOSS.get());
+                    this.spawnAtLocation(ModItems.SILENCE_MOSS.get());
                     if (echoShears) {
-                        this.spawnAtLocation(ModItems.MUFFLE_MOSS.get());
+                        this.spawnAtLocation(ModItems.SILENCE_MOSS.get());
                     }
                     stack.hurtAndBreak(1, player, getSlotForHand(hand));
                 } else {

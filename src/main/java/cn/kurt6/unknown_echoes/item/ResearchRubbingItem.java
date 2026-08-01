@@ -26,7 +26,7 @@ import java.util.List;
  */
 public class ResearchRubbingItem extends Item {
 
-    /** 拓片种类:wind / tide / true_sight。 */
+    /** 拓片种类:wind / tide / true_sight / gravity / void。 */
     private final String kind;
 
     /** 单次阅读可推进的研究等级数(研究拓片=1,誊清后的残篇页=2);逐级校验并扣除媒材。 */
@@ -93,7 +93,9 @@ public class ResearchRubbingItem extends Item {
                     consumeCosts(serverPlayer, line, next);
                     EchoResearchManager.addResearchPoints(serverPlayer, line, 1);
                 }
-                stack.shrink(1);
+                if (!serverPlayer.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
                 level.playSound(null, player.blockPosition(),
                         SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.8F, 1.0F);
                 serverPlayer.displayClientMessage(Component.translatable(

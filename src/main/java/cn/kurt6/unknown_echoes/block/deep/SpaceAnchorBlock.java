@@ -90,12 +90,18 @@ public class SpaceAnchorBlock extends Block {
                     "message.unknown_echoes.space_anchor.already"), true);
             return InteractionResult.CONSUME;
         }
-        EchoAbilityManager.activateMechanism(serverPlayer, key);
-        int activated = countActivatedNearby(serverPlayer, level, pos);
-        boolean completed = activated >= REQUIRED_ANCHORS;
-        if (completed) {
-            EchoAbilityManager.activateMechanism(serverPlayer, EchoPermission.VOID_ROUTE_READY_KEY);
+        int activatedBefore = countActivatedNearby(serverPlayer, level, pos);
+        boolean completed = activatedBefore + 1 >= REQUIRED_ANCHORS;
+        boolean recorded = completed
+                ? EchoAbilityManager.activateMechanisms(serverPlayer, key,
+                        EchoPermission.VOID_ROUTE_READY_KEY)
+                : EchoAbilityManager.activateMechanism(serverPlayer, key);
+        if (!recorded) {
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return InteractionResult.CONSUME;
         }
+        int activated = countActivatedNearby(serverPlayer, level, pos);
         EchoAbilityManager.syncToClient(serverPlayer);
         playFeedback(serverLevel, pos, completed);
         Component message = completed

@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.registry;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.AquaticBiomePlantBlock;
 import cn.kurt6.unknown_echoes.block.AquaticSeaPickleBlock;
+import cn.kurt6.unknown_echoes.block.HangingFruitBlock;
 import cn.kurt6.unknown_echoes.block.RewardAltarBlock;
 import cn.kurt6.unknown_echoes.block.RubbleBlock;
 import cn.kurt6.unknown_echoes.block.RuneBricksBlock;
@@ -328,6 +329,20 @@ public class ModBlocks {
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false)
                     .pushReaction(PushReaction.DESTROY).ignitedByLava()));
+
+    public static final DeferredBlock<HangingFruitBlock> GLOW_FRUIT =
+            BLOCKS.register("glow_fruit",
+                    () -> new HangingFruitBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_CYAN).noCollission().instabreak()
+                            .sound(SoundType.SWEET_BERRY_BUSH).lightLevel(state -> 12)
+                            .noOcclusion().pushReaction(PushReaction.DESTROY)));
+
+    public static final DeferredBlock<HangingFruitBlock> WORLDTREE_FRUIT =
+            BLOCKS.register("worldtree_fruit",
+                    () -> new HangingFruitBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_PURPLE).noCollission().instabreak()
+                            .sound(SoundType.AMETHYST).lightLevel(state -> 15)
+                            .noOcclusion().pushReaction(PushReaction.DESTROY)));
 
     public static final DeferredBlock<RotatedPillarBlock> WHISPERING_LOG = BLOCKS.register("whispering_log",
             () -> new RotatedPillarBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)

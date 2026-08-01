@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.block.beacon;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import cn.kurt6.unknown_echoes.config.CommonConfig;
 import cn.kurt6.unknown_echoes.block.deep.DeepRouteNodeBlock;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
@@ -72,9 +73,14 @@ public final class DeepEchoTeleporter {
                 if (player.isRemoved() || !player.isAlive() || player.level() != sourceLevel) {
                     return;
                 }
-                rememberReturnAnchor(player, source);
+                if (!rememberReturnAnchor(player, source)) {
+                    player.displayClientMessage(Component.translatable(
+                            "message.unknown_echoes.progress_record.full"), true);
+                    return;
+                }
                 player.teleportTo(destination, arrival.getX() + 0.5, arrival.getY(),
                         arrival.getZ() + 0.5, player.getYRot(), player.getXRot());
+                ModAdvancements.recordDeepEchoesEntry(player);
                 player.displayClientMessage(Component.translatable(
                         "message.unknown_echoes.deep_echoes.entered"), true);
                 destination.playSound(null, arrival, SoundEvents.PORTAL_TRAVEL,
@@ -367,10 +373,10 @@ public final class DeepEchoTeleporter {
         }
     }
 
-    private static void rememberReturnAnchor(ServerPlayer player, BlockPos source) {
+    private static boolean rememberReturnAnchor(ServerPlayer player, BlockPos source) {
         var mechanisms = EchoAbilityManager.getData(player).getActivatedMechanisms();
         mechanisms.removeIf(key -> key.startsWith(RETURN_ANCHOR_PREFIX));
-        EchoAbilityManager.activateMechanism(player, RETURN_ANCHOR_PREFIX
+        return EchoAbilityManager.activateMechanism(player, RETURN_ANCHOR_PREFIX
                 + source.getX() + "," + source.getY() + "," + source.getZ());
     }
 

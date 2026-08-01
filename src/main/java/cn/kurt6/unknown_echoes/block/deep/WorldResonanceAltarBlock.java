@@ -142,8 +142,12 @@ public class WorldResonanceAltarBlock extends BaseEntityBlock {
         if (EchoAbilityManager.hasDefeatedBoss(serverPlayer, EchoPermission.WORLD_ECHO_ID)) {
             if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer,
                     EchoPermission.WORLD_ECHO_REWARD_READY_KEY)) {
-                EchoAbilityManager.activateMechanism(serverPlayer,
-                        EchoPermission.WORLD_ECHO_REWARD_READY_KEY);
+                if (!EchoAbilityManager.activateMechanism(serverPlayer,
+                        EchoPermission.WORLD_ECHO_REWARD_READY_KEY)) {
+                    serverPlayer.displayClientMessage(Component.translatable(
+                            "message.unknown_echoes.progress_record.full"), true);
+                    return InteractionResult.CONSUME;
+                }
                 EchoAbilityManager.syncToClient(serverPlayer);
             }
             serverPlayer.displayClientMessage(Component.translatable(

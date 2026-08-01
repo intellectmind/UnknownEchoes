@@ -1,6 +1,8 @@
 package cn.kurt6.unknown_echoes.world.structure;
 
 import cn.kurt6.unknown_echoes.block.deep.DeepCalibrationNodeBlock;
+import cn.kurt6.unknown_echoes.block.puzzle.PuzzleCoreBlockEntity;
+import cn.kurt6.unknown_echoes.block.puzzle.SequenceRuneBlock;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModLootTables;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
@@ -20,7 +22,9 @@ import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-/** 深层回响三群系地标与校准大厅的代码生成结构。 */
+import java.util.Arrays;
+
+/** 深层回响各群系地标、谜题探索点与主线场地的代码生成结构。 */
 public class DeepRegionStructure extends SinglePieceStructure {
     public static final MapCodec<DeepRegionStructure> FOLDED_ARCHIVE_CODEC = codec(Kind.FOLDED_ARCHIVE);
     public static final MapCodec<DeepRegionStructure> INVERTED_CHASM_BRIDGE_CODEC =
@@ -39,6 +43,18 @@ public class DeepRegionStructure extends SinglePieceStructure {
             codec(Kind.GRAVITY_SHARD_SPIRE);
     public static final MapCodec<DeepRegionStructure> HUSHED_REFUGE_CODEC =
             codec(Kind.HUSHED_REFUGE);
+    public static final MapCodec<DeepRegionStructure> MISFILED_CATALOG_WELL_CODEC =
+            codec(Kind.MISFILED_CATALOG_WELL);
+    public static final MapCodec<DeepRegionStructure> FOLDED_SCRIPTORIUM_CODEC =
+            codec(Kind.FOLDED_SCRIPTORIUM);
+    public static final MapCodec<DeepRegionStructure> INVERTED_ARCHIVE_TOWER_CODEC =
+            codec(Kind.INVERTED_ARCHIVE_TOWER);
+    public static final MapCodec<DeepRegionStructure> SUSPENDED_SURVEY_STATION_CODEC =
+            codec(Kind.SUSPENDED_SURVEY_STATION);
+    public static final MapCodec<DeepRegionStructure> FRACTURED_ANCHOR_STATION_CODEC =
+            codec(Kind.FRACTURED_ANCHOR_STATION);
+    public static final MapCodec<DeepRegionStructure> SEVERED_ARCHIVE_VAULT_CODEC =
+            codec(Kind.SEVERED_ARCHIVE_VAULT);
 
     private final Kind kind;
 
@@ -63,6 +79,12 @@ public class DeepRegionStructure extends SinglePieceStructure {
             case FOLDED_WAYSTATION -> ModStructures.FOLDED_WAYSTATION.get();
             case GRAVITY_SHARD_SPIRE -> ModStructures.GRAVITY_SHARD_SPIRE.get();
             case HUSHED_REFUGE -> ModStructures.HUSHED_REFUGE.get();
+            case MISFILED_CATALOG_WELL -> ModStructures.MISFILED_CATALOG_WELL.get();
+            case FOLDED_SCRIPTORIUM -> ModStructures.FOLDED_SCRIPTORIUM.get();
+            case INVERTED_ARCHIVE_TOWER -> ModStructures.INVERTED_ARCHIVE_TOWER.get();
+            case SUSPENDED_SURVEY_STATION -> ModStructures.SUSPENDED_SURVEY_STATION.get();
+            case FRACTURED_ANCHOR_STATION -> ModStructures.FRACTURED_ANCHOR_STATION.get();
+            case SEVERED_ARCHIVE_VAULT -> ModStructures.SEVERED_ARCHIVE_VAULT.get();
         };
     }
 
@@ -75,7 +97,13 @@ public class DeepRegionStructure extends SinglePieceStructure {
         WORLD_RESONANCE_HALL("world_resonance_hall", 49, 23, 49),
         FOLDED_WAYSTATION("folded_waystation", 15, 10, 15),
         GRAVITY_SHARD_SPIRE("gravity_shard_spire", 15, 22, 15),
-        HUSHED_REFUGE("hushed_refuge", 17, 11, 17);
+        HUSHED_REFUGE("hushed_refuge", 17, 11, 17),
+        MISFILED_CATALOG_WELL("misfiled_catalog_well", 21, 16, 21),
+        FOLDED_SCRIPTORIUM("folded_scriptorium", 25, 11, 21),
+        INVERTED_ARCHIVE_TOWER("inverted_archive_tower", 21, 27, 21),
+        SUSPENDED_SURVEY_STATION("suspended_survey_station", 27, 15, 23),
+        FRACTURED_ANCHOR_STATION("fractured_anchor_station", 25, 14, 25),
+        SEVERED_ARCHIVE_VAULT("severed_archive_vault", 27, 13, 23);
 
         private final String id;
         private final int width;
@@ -132,6 +160,12 @@ public class DeepRegionStructure extends SinglePieceStructure {
                 case FOLDED_WAYSTATION -> buildFoldedWaystation(level, box);
                 case GRAVITY_SHARD_SPIRE -> buildGravityShardSpire(level, box);
                 case HUSHED_REFUGE -> buildHushedRefuge(level, box);
+                case MISFILED_CATALOG_WELL -> buildMisfiledCatalogWell(level, box);
+                case FOLDED_SCRIPTORIUM -> buildFoldedScriptorium(level, box);
+                case INVERTED_ARCHIVE_TOWER -> buildInvertedArchiveTower(level, box);
+                case SUSPENDED_SURVEY_STATION -> buildSuspendedSurveyStation(level, box);
+                case FRACTURED_ANCHOR_STATION -> buildFracturedAnchorStation(level, box);
+                case SEVERED_ARCHIVE_VAULT -> buildSeveredArchiveVault(level, box);
             }
             placeExplorationLoot(level, random, box);
         }
@@ -171,6 +205,24 @@ public class DeepRegionStructure extends SinglePieceStructure {
                 case HUSHED_REFUGE ->
                         buildAccessibleChest(level, random, box, 8, 1, 8,
                                 ModLootTables.HUSHED_REFUGE_CHEST);
+                case MISFILED_CATALOG_WELL ->
+                        buildAccessibleChest(level, random, box, 10, 1, 10,
+                                ModLootTables.MISFILED_CATALOG_WELL_CHEST);
+                case FOLDED_SCRIPTORIUM ->
+                        buildAccessibleChest(level, random, box, 20, 1, 16,
+                                ModLootTables.FOLDED_SCRIPTORIUM_CHEST);
+                case INVERTED_ARCHIVE_TOWER ->
+                        buildAccessibleChest(level, random, box, 10, 19, 10,
+                                ModLootTables.INVERTED_ARCHIVE_TOWER_CHEST);
+                case SUSPENDED_SURVEY_STATION ->
+                        buildAccessibleChest(level, random, box, 13, 1, 4,
+                                ModLootTables.SUSPENDED_SURVEY_STATION_CHEST);
+                case FRACTURED_ANCHOR_STATION ->
+                        buildAccessibleChest(level, random, box, 12, 1, 12,
+                                ModLootTables.FRACTURED_ANCHOR_STATION_CHEST);
+                case SEVERED_ARCHIVE_VAULT ->
+                        buildAccessibleChest(level, random, box, 13, 1, 10,
+                                ModLootTables.SEVERED_ARCHIVE_VAULT_CHEST);
             }
         }
 
@@ -543,6 +595,241 @@ public class DeepRegionStructure extends SinglePieceStructure {
             placeBlock(level, rune, 8, 1, 8, box);
         }
 
+        private void buildMisfiledCatalogWell(WorldGenLevel level, BoundingBox box) {
+            BlockState floor = ModBlocks.FOLDED_SLATE.get().defaultBlockState();
+            BlockState wall = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+            BlockState chiseled = ModBlocks.CHISELED_FOLDED_SLATE.get().defaultBlockState();
+            BlockState resonant = ModBlocks.RESONANT_FOLDED_SLATE.get().defaultBlockState();
+            BlockState anchored = ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState();
+            BlockState air = Blocks.AIR.defaultBlockState();
+            int center = 10;
+
+            disk(level, box, center, 0, center, 9, floor);
+            brokenCircularWall(level, box, center, center, 9, 1, 5, wall, 3, true);
+            for (int[] point : new int[][]{{3, 3}, {17, 3}, {3, 17}, {17, 17}}) {
+                pillar(level, box, point[0], 1, point[1], 7, chiseled);
+                placeBlock(level, resonant, point[0], 8, point[1], box);
+            }
+
+            buildVaultShell(level, box, 7, 13, 7, 13, 0, 6,
+                    Direction.SOUTH, anchored, ModBlocks.SEALED_STONE.get().defaultBlockState());
+            for (int y = 1; y <= 5; y++) {
+                circularRing(level, box, center, y, center, 5,
+                        y == 3 ? resonant : wall, 0);
+                for (int x = center - 1; x <= center + 1; x++) {
+                    placeBlock(level, air, x, y, center + 5, box);
+                }
+            }
+            for (int z = 14; z <= 19; z++) {
+                for (int x = 9; x <= 11; x++) {
+                    placeBlock(level, (z + x) % 3 == 0 ? resonant : floor, x, 0, z, box);
+                }
+            }
+
+            int[][] runes = {
+                    {5, 2, 16}, {8, 2, 18}, {12, 2, 18},
+                    {15, 2, 16}, {4, 2, 12}, {16, 2, 12}
+            };
+            int[][] hints = {
+                    {7, 6, 14}, {8, 6, 14}, {9, 6, 14},
+                    {10, 6, 14}, {11, 6, 14}, {12, 6, 14}
+            };
+            installSequencePuzzle(level, box, 10, 2, 14,
+                    runes, hints, 5, chiseled, 0x29A34D31L);
+        }
+
+        private void buildFoldedScriptorium(WorldGenLevel level, BoundingBox box) {
+            BlockState floor = ModBlocks.FOLDED_SLATE.get().defaultBlockState();
+            BlockState wall = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+            BlockState chiseled = ModBlocks.CHISELED_FOLDED_SLATE.get().defaultBlockState();
+            BlockState resonant = ModBlocks.RESONANT_FOLDED_SLATE.get().defaultBlockState();
+            BlockState air = Blocks.AIR.defaultBlockState();
+
+            platform(level, box, 1, 0, 1, 23, 19, floor);
+            for (int z : new int[]{2, 7, 12, 18}) {
+                for (int x = 2; x <= 22; x++) {
+                    boolean opening = (z == 2 && x >= 4 && x <= 6)
+                            || (z == 7 && x >= 5 && x <= 7)
+                            || (z == 12 && x >= 11 && x <= 13)
+                            || (z == 18 && x >= 18 && x <= 20);
+                    if (!opening) {
+                        placeBlock(level, x % 4 == 0 ? chiseled : wall, x, 1, z, box);
+                        placeBlock(level, wall, x, 2, z, box);
+                        if (x % 3 != 0) {
+                            placeBlock(level, resonant, x, 4, z, box);
+                        }
+                    }
+                }
+            }
+            for (int x : new int[]{2, 8, 9, 15, 16, 22}) {
+                for (int z = 2; z <= 18; z++) {
+                    if ((x + z) % 6 != 0) {
+                        placeBlock(level, z % 5 == 0 ? chiseled : wall, x, 1, z, box);
+                    }
+                }
+            }
+            for (int z = 2; z <= 18; z++) {
+                int x = 3 + Math.floorMod(z * 5, 18);
+                placeBlock(level, resonant, x, 0, z, box);
+            }
+            for (int y = 1; y <= 4; y++) {
+                placeBlock(level, air, 5, y, 1, box);
+            }
+
+            buildVaultShell(level, box, 17, 23, 13, 19, 0, 7,
+                    Direction.WEST, ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState(),
+                    ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState());
+            for (int x = 15; x <= 16; x++) {
+                for (int z = 15; z <= 17; z++) {
+                    for (int y = 1; y <= 3; y++) {
+                        placeBlock(level, air, x, y, z, box);
+                    }
+                }
+            }
+            pillar(level, box, 20, 1, 16, 5, Blocks.CHISELED_BOOKSHELF.defaultBlockState());
+            placeBlock(level, resonant, 20, 6, 16, box);
+        }
+
+        private void buildInvertedArchiveTower(WorldGenLevel level, BoundingBox box) {
+            BlockState floor = ModBlocks.GRAVITY_SHALE.get().defaultBlockState();
+            BlockState wall = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+            BlockState banded = ModBlocks.BANDED_GRAVITY_SHALE.get().defaultBlockState();
+            BlockState crystal = ModBlocks.SUSPENDED_CRYSTAL.get().defaultBlockState();
+            int center = 10;
+
+            disk(level, box, center, 0, center, 9, floor);
+            for (int[] point : new int[][]{{2, 2}, {18, 2}, {2, 18}, {18, 18}}) {
+                pillar(level, box, point[0], 1, point[1], 23, wall);
+                for (int y = 4; y <= 22; y += 6) {
+                    placeBlock(level, crystal, point[0], y, point[1], box);
+                }
+            }
+            for (int levelY : new int[]{6, 12, 18}) {
+                annulus(level, box, center, levelY, center, 3, 8,
+                        levelY % 12 == 0 ? banded : wall);
+                brokenCircularWall(level, box, center, center, 8,
+                        levelY + 1, 3, banded, levelY / 6, false);
+            }
+            for (int y : new int[]{1, 7, 13}) {
+                disk(level, box, center, y - 1, center, 2, banded);
+                placeBlock(level, ModBlocks.GRAVITY_FIELD_CORE.get().defaultBlockState(),
+                        center, y, center, box);
+            }
+            for (int[] point : new int[][]{
+                    {5, 4, 10}, {15, 9, 10}, {10, 15, 5}, {10, 21, 15}
+            }) {
+                placeBlock(level, crystal, point[0], point[1], point[2], box);
+                placeBlock(level, banded, point[0], point[1] + 1, point[2], box);
+            }
+            circularRing(level, box, center, 24, center, 5, crystal, 2);
+        }
+
+        private void buildSuspendedSurveyStation(WorldGenLevel level, BoundingBox box) {
+            BlockState floor = ModBlocks.GRAVITY_SHALE.get().defaultBlockState();
+            BlockState wall = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+            BlockState banded = ModBlocks.BANDED_GRAVITY_SHALE.get().defaultBlockState();
+            BlockState crystal = ModBlocks.SUSPENDED_CRYSTAL.get().defaultBlockState();
+            BlockState anchored = ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState();
+            int centerX = 13;
+            int centerZ = 11;
+
+            disk(level, box, centerX, 0, centerZ, 8, floor);
+            platform(level, box, 2, 0, 9, 23, 5, floor);
+            platform(level, box, 11, 0, 2, 5, 19, floor);
+            for (int[] point : new int[][]{{2, 11}, {24, 11}, {13, 2}, {13, 20}}) {
+                pillar(level, box, point[0], 1, point[1], 9, wall);
+                placeBlock(level, crystal, point[0], 10, point[1], box);
+                for (int step = 2; step <= 6; step += 2) {
+                    int x = point[0] + Integer.compare(centerX, point[0]) * step;
+                    int z = point[1] + Integer.compare(centerZ, point[1]) * step;
+                    placeBlock(level, banded, x, 6 + step / 2, z, box);
+                    placeBlock(level, crystal, x, 5 + step / 2, z, box);
+                }
+            }
+            buildVaultShell(level, box, 10, 16, 2, 7, 0, 7,
+                    Direction.SOUTH, anchored, ModBlocks.SEALED_STONE.get().defaultBlockState());
+
+            int[][] runes = {
+                    {7, 2, 11}, {9, 2, 16}, {13, 2, 18},
+                    {17, 2, 16}, {19, 2, 11}, {13, 2, 10}
+            };
+            int[][] hints = {
+                    {10, 6, 8}, {11, 6, 8}, {12, 6, 8},
+                    {13, 6, 8}, {14, 6, 8}, {15, 6, 8}
+            };
+            installSequencePuzzle(level, box, 13, 2, 8,
+                    runes, hints, 4, banded, 0x41D2C6A7L);
+        }
+
+        private void buildFracturedAnchorStation(WorldGenLevel level, BoundingBox box) {
+            BlockState floor = ModBlocks.ABYSSAL_STONE.get().defaultBlockState();
+            BlockState wall = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+            BlockState veined = ModBlocks.VEINED_ABYSSAL_STONE.get().defaultBlockState();
+            BlockState crystal = ModBlocks.MUTE_CRYSTAL.get().defaultBlockState();
+            int center = 12;
+
+            disk(level, box, center, 0, center, 11, floor);
+            for (int radius : new int[]{4, 8, 11}) {
+                brokenCircularWall(level, box, center, center, radius, 1,
+                        radius == 11 ? 5 : 3, radius == 8 ? crystal : wall,
+                        radius, true);
+            }
+            for (int[] point : new int[][]{{4, 7}, {19, 5}, {6, 19}, {20, 17}, {12, 3}}) {
+                pillar(level, box, point[0], 1, point[1], 7, veined);
+                placeBlock(level, crystal, point[0], 8, point[1], box);
+            }
+            for (int z = 16; z <= 23; z++) {
+                int x = center + ((z & 1) == 0 ? 1 : -1);
+                placeBlock(level, crystal, x, 0, z, box);
+            }
+            buildVaultShell(level, box, 9, 15, 9, 15, 0, 7,
+                    Direction.SOUTH, ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState(),
+                    ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState());
+            circularRing(level, box, center, 9, center, 6, crystal, 1);
+        }
+
+        private void buildSeveredArchiveVault(WorldGenLevel level, BoundingBox box) {
+            BlockState floor = ModBlocks.ABYSSAL_STONE.get().defaultBlockState();
+            BlockState wall = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+            BlockState veined = ModBlocks.VEINED_ABYSSAL_STONE.get().defaultBlockState();
+            BlockState crystal = ModBlocks.MUTE_CRYSTAL.get().defaultBlockState();
+            BlockState anchored = ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState();
+
+            platform(level, box, 1, 0, 1, 25, 21, floor);
+            buildVaultShell(level, box, 5, 21, 4, 18, 0, 9,
+                    Direction.SOUTH, anchored, ModBlocks.SEALED_STONE.get().defaultBlockState());
+            for (int z = 6; z <= 16; z += 2) {
+                int halfWidth = 2 + Math.floorMod(z, 5);
+                for (int x = 13 - halfWidth; x <= 13 + halfWidth; x++) {
+                    if (x == 13 || (x + z) % 3 == 0) {
+                        placeBlock(level, crystal, x, 0, z, box);
+                    } else {
+                        placeBlock(level, veined, x, 0, z, box);
+                    }
+                }
+            }
+            for (int[] point : new int[][]{{7, 7}, {19, 7}, {7, 15}, {19, 15}}) {
+                pillar(level, box, point[0], 1, point[1], 6, wall);
+                placeBlock(level, crystal, point[0], 7, point[1], box);
+            }
+            for (int z = 19; z <= 21; z++) {
+                for (int x = 11; x <= 15; x++) {
+                    placeBlock(level, (x + z) % 2 == 0 ? veined : floor, x, 0, z, box);
+                }
+            }
+
+            int[][] runes = {
+                    {8, 2, 19}, {10, 2, 21}, {13, 2, 21}, {16, 2, 21},
+                    {18, 2, 19}, {7, 2, 16}, {19, 2, 16}
+            };
+            int[][] hints = {
+                    {10, 6, 19}, {11, 7, 19}, {12, 6, 19}, {13, 8, 19},
+                    {14, 6, 19}, {15, 7, 19}, {16, 6, 19}
+            };
+            installSequencePuzzle(level, box, 13, 2, 19,
+                    runes, hints, 6, veined, 0x6B81F253L);
+        }
+
         private void buildEchoPylon(WorldGenLevel level, BoundingBox box, int x, int z,
                                     BlockState body, BlockState rune, BlockState lamp) {
             for (int xx = x - 1; xx <= x + 1; xx++) {
@@ -801,6 +1088,168 @@ public class DeepRegionStructure extends SinglePieceStructure {
             int radialX = Integer.compare(nodeX, center);
             int radialZ = Integer.compare(nodeZ, center);
             placeBlock(level, crystal, nodeX + radialX * 3, 1, nodeZ + radialZ * 3, box);
+        }
+
+        private void installSequencePuzzle(WorldGenLevel level, BoundingBox box,
+                                           int coreX, int coreY, int coreZ,
+                                           int[][] runeSpots, int[][] hintSpots,
+                                           int sequenceLength, BlockState pedestal,
+                                           long salt) {
+            placeBlock(level, ModBlocks.PUZZLE_CORE.get().defaultBlockState(),
+                    coreX, coreY, coreZ, box);
+            RandomSource puzzleRandom = RandomSource.create(
+                    boundingBox.minX() * 341873128712L
+                            ^ boundingBox.minZ() * 132897987541L ^ salt);
+            int[] orders = shuffled(puzzleRandom, runeSpots.length);
+            for (int i = 0; i < runeSpots.length; i++) {
+                int[] spot = runeSpots[i];
+                placeBlock(level, pedestal, spot[0], spot[1] - 1, spot[2], box);
+                BlockState rune = ModBlocks.SEQUENCE_RUNE.get().defaultBlockState()
+                        .setValue(SequenceRuneBlock.ORDER, orders[i]);
+                placeBlock(level, rune, spot[0], spot[1], spot[2], box);
+            }
+
+            int[] sequence = Arrays.copyOf(shuffled(puzzleRandom, runeSpots.length), sequenceLength);
+            for (int i = 0; i < sequence.length; i++) {
+                int[] spot = hintSpots[i];
+                BlockState hint = ModBlocks.SEQUENCE_RUNE.get().defaultBlockState()
+                        .setValue(SequenceRuneBlock.ORDER, sequence[i])
+                        .setValue(SequenceRuneBlock.LIT, Boolean.TRUE);
+                placeBlock(level, hint, spot[0], spot[1], spot[2], box);
+            }
+
+            BlockPos corePos = new BlockPos(getWorldX(coreX, coreZ),
+                    getWorldY(coreY), getWorldZ(coreX, coreZ));
+            if (box.isInside(corePos) && level.getBlockEntity(corePos) instanceof PuzzleCoreBlockEntity core) {
+                core.setSequence(sequence);
+            }
+        }
+
+        private void buildVaultShell(WorldGenLevel level, BoundingBox box,
+                                     int minX, int maxX, int minZ, int maxZ,
+                                     int floorY, int roofY, Direction entrance,
+                                     BlockState shell, BlockState door) {
+            BlockState air = Blocks.AIR.defaultBlockState();
+            for (int x = minX; x <= maxX; x++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    placeBlock(level, shell, x, floorY, z, box);
+                    placeBlock(level, shell, x, roofY, z, box);
+                }
+            }
+            for (int y = floorY + 1; y < roofY; y++) {
+                for (int x = minX; x <= maxX; x++) {
+                    placeBlock(level, shell, x, y, minZ, box);
+                    placeBlock(level, shell, x, y, maxZ, box);
+                }
+                for (int z = minZ; z <= maxZ; z++) {
+                    placeBlock(level, shell, minX, y, z, box);
+                    placeBlock(level, shell, maxX, y, z, box);
+                }
+            }
+            for (int x = minX + 1; x < maxX; x++) {
+                for (int z = minZ + 1; z < maxZ; z++) {
+                    for (int y = floorY + 1; y < roofY; y++) {
+                        placeBlock(level, air, x, y, z, box);
+                    }
+                }
+            }
+
+            int centerX = (minX + maxX) / 2;
+            int centerZ = (minZ + maxZ) / 2;
+            for (int y = floorY + 1; y <= floorY + 3; y++) {
+                for (int offset = -1; offset <= 1; offset++) {
+                    switch (entrance) {
+                        case NORTH -> placeBlock(level, door, centerX + offset, y, minZ, box);
+                        case SOUTH -> placeBlock(level, door, centerX + offset, y, maxZ, box);
+                        case WEST -> placeBlock(level, door, minX, y, centerZ + offset, box);
+                        case EAST -> placeBlock(level, door, maxX, y, centerZ + offset, box);
+                        default -> { }
+                    }
+                }
+            }
+        }
+
+        private void disk(WorldGenLevel level, BoundingBox box,
+                          int centerX, int y, int centerZ, int radius, BlockState state) {
+            int radiusSquared = radius * radius;
+            for (int x = centerX - radius; x <= centerX + radius; x++) {
+                for (int z = centerZ - radius; z <= centerZ + radius; z++) {
+                    int dx = x - centerX;
+                    int dz = z - centerZ;
+                    if (dx * dx + dz * dz <= radiusSquared) {
+                        placeBlock(level, state, x, y, z, box);
+                    }
+                }
+            }
+        }
+
+        private void annulus(WorldGenLevel level, BoundingBox box,
+                             int centerX, int y, int centerZ,
+                             int innerRadius, int outerRadius, BlockState state) {
+            int innerSquared = innerRadius * innerRadius;
+            int outerSquared = outerRadius * outerRadius;
+            for (int x = centerX - outerRadius; x <= centerX + outerRadius; x++) {
+                for (int z = centerZ - outerRadius; z <= centerZ + outerRadius; z++) {
+                    int dx = x - centerX;
+                    int dz = z - centerZ;
+                    int distanceSquared = dx * dx + dz * dz;
+                    if (distanceSquared >= innerSquared && distanceSquared <= outerSquared) {
+                        placeBlock(level, state, x, y, z, box);
+                    }
+                }
+            }
+        }
+
+        private void circularRing(WorldGenLevel level, BoundingBox box,
+                                  int centerX, int y, int centerZ,
+                                  int radius, BlockState state, int phase) {
+            for (int step = 0; step < 64; step++) {
+                if ((step + phase) % 17 == 0) {
+                    continue;
+                }
+                double angle = step * Math.PI / 32.0D;
+                int x = centerX + (int) Math.round(Math.cos(angle) * radius);
+                int z = centerZ + (int) Math.round(Math.sin(angle) * radius);
+                placeBlock(level, state, x, y, z, box);
+            }
+        }
+
+        private void brokenCircularWall(WorldGenLevel level, BoundingBox box,
+                                        int centerX, int centerZ, int radius,
+                                        int startY, int height, BlockState state,
+                                        int phase, boolean cardinalOpenings) {
+            for (int step = 0; step < 64; step++) {
+                double angle = step * Math.PI / 32.0D;
+                int x = centerX + (int) Math.round(Math.cos(angle) * radius);
+                int z = centerZ + (int) Math.round(Math.sin(angle) * radius);
+                int dx = x - centerX;
+                int dz = z - centerZ;
+                boolean entrance = cardinalOpenings
+                        && ((Math.abs(dx) <= 1 && Math.abs(dz) >= radius - 1)
+                        || (Math.abs(dz) <= 1 && Math.abs(dx) >= radius - 1));
+                if (entrance || (step + phase) % 19 <= 1) {
+                    continue;
+                }
+                for (int y = startY; y < startY + height; y++) {
+                    if ((step + y + phase) % 23 != 0) {
+                        placeBlock(level, state, x, y, z, box);
+                    }
+                }
+            }
+        }
+
+        private static int[] shuffled(RandomSource random, int size) {
+            int[] values = new int[size];
+            for (int i = 0; i < size; i++) {
+                values[i] = i;
+            }
+            for (int i = size - 1; i > 0; i--) {
+                int other = random.nextInt(i + 1);
+                int current = values[i];
+                values[i] = values[other];
+                values[other] = current;
+            }
+            return values;
         }
 
         private void clearVolume(WorldGenLevel level, BoundingBox box) {

@@ -71,7 +71,7 @@ import java.util.UUID;
  *       镜环爆发(贴身环形冲击,惩罚持续贴脸);假目标爆裂 = 击碎假身时的小范围幻象冲击(反制惩罚)。
  * 死亡:场地内参与玩家个人写入击败记录;真视回响由真视祭坛校验信物后解锁。
  */
-public class MirrorGuardian extends Monster implements GeoEntity {
+public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuard, PhaseGatedBoss {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.mirror_guardian.idle");
     private static final RawAnimation WALK_ANIM =
@@ -819,22 +819,6 @@ public class MirrorGuardian extends Monster implements GeoEntity {
                 && !attacker.isSpectator()) {
             BossNbtData.addParticipant(this.participants, attacker.getUUID());
         }
-        if (!this.level().isClientSide && !this.isBroken()
-                && BossPhaseGate.shouldCapMechanicDamage(source)) {
-            float multiplier = ServerConfig.BOSS_UNBROKEN_DAMAGE_MULTIPLIER.get().floatValue();
-            float cap = ServerConfig.BOSS_UNBROKEN_MAX_DAMAGE.get().floatValue();
-            amount = Math.min(amount * multiplier, cap);
-            if (this.veiledMessageCooldown <= 0 && source.getEntity() instanceof ServerPlayer player) {
-                player.displayClientMessage(Component.translatable("message.unknown_echoes.guardian.veiled"), true);
-                this.veiledMessageCooldown = 40;
-            }
-        } else if (!this.level().isClientSide && this.isBroken()
-                && BossPhaseGate.shouldCapMechanicDamage(source)) {
-            amount = BossPhaseGate.capDamage(this.getHealth(), amount, this.brokenWindowHealthFloor);
-            if (amount <= 0.0F) {
-                return false;
-            }
-        }
         // 真身受击:迸出少量镜屑(假身保持原版反馈,避免又多一条辨识捷径)
         if (!this.level().isClientSide && amount > 0
                 && this.level() instanceof ServerLevel serverLevel) {
@@ -849,6 +833,24 @@ public class MirrorGuardian extends Monster implements GeoEntity {
             restoreMirrorVeil(serverLevel);
         }
         return hurt;
+    }
+
+    @Override
+    public boolean isMechanicDamageGuarded() {
+        return !this.isIllusion() && !this.isBroken();
+    }
+
+    @Override
+    public void onMechanicDamageGuarded(DamageSource source) {
+        if (this.veiledMessageCooldown <= 0 && source.getEntity() instanceof ServerPlayer player) {
+            player.displayClientMessage(Component.translatable("message.unknown_echoes.guardian.veiled"), true);
+            this.veiledMessageCooldown = 40;
+        }
+    }
+
+    @Override
+    public float phaseDamageFloor() {
+        return !this.isIllusion() && this.isBroken() ? this.brokenWindowHealthFloor : 0.0F;
     }
 
     private void restoreMirrorVeil(ServerLevel serverLevel) {
@@ -907,14 +909,26 @@ public class MirrorGuardian extends Monster implements GeoEntity {
                     && player.distanceToSqr(this) <= radius * radius) {
                 boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
                         EchoPermission.MIRROR_GUARDIAN_ID);
-                EchoAbilityManager.markBossDefeated(player, EchoPermission.MIRROR_GUARDIAN_ID);
+                if (firstKill && !EchoAbilityManager.markBossDefeated(
+                        player, EchoPermission.MIRROR_GUARDIAN_ID)) {
+                    player.sendSystemMessage(Component.translatable(
+                            "message.unknown_echoes.progress_record.full"));
+                    continue;
+                }
                 if (firstKill) {
                     BossMaterialRewards.givePersonal(player, EchoPermission.MIRROR_GUARDIAN_ID,
                             new ItemStack(ModItems.TRUE_SIGHT_CORE.get()));
+                    BossMaterialRewards.givePersonal(player, EchoPermission.MIRROR_GUARDIAN_ID,
+                            new ItemStack(ModItems.MIRROR_GUARDIAN_CORE.get()));
+                } else {
+                    // 真视研究与区域装备都消耗核心；重复挑战与另外两位主线 Boss 保持一致。
+                    BossMaterialRewards.giveOrdinary(player,
+                            new ItemStack(ModItems.TRUE_SIGHT_CORE.get()));
+                    BossMaterialRewards.giveOrdinary(player,
+                            new ItemStack(ModItems.MIRROR_GUARDIAN_CORE.get()));
                 }
                 BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.BROKEN_REFLECTION.get(),
                         2 + this.random.nextInt(3)));
-                BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.MIRROR_GUARDIAN_CORE.get()));
             }
         }
     }
