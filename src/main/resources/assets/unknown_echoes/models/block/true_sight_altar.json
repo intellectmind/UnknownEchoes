@@ -2,1540 +2,2472 @@
   "format_version": "1.21.11",
   "credit": "Made with Blockbench",
   "textures": {
-    "0": "unknown_echoes:block/mirror_stone_bricks",
-    "1": "unknown_echoes:block/true_sight_altar",
-    "2": "unknown_echoes:block/mirror_sigil",
-    "particle": "unknown_echoes:block/mirror_stone_bricks"
+    "obsidian": "unknown_echoes:block/true_sight_altar_obsidian",
+    "ivory": "unknown_echoes:block/true_sight_altar_ivory",
+    "silver": "unknown_echoes:block/true_sight_altar_silver",
+    "iris": "unknown_echoes:block/true_sight_altar_iris",
+    "particle": "unknown_echoes:block/true_sight_altar_obsidian"
   },
   "elements": [
     {
-      "name": "foundation",
+      "name": "art_true_sight_tribunal_foundation",
       "from": [
-        0,
-        0,
-        0
+        -1,
+        -0.5,
+        -1
       ],
       "to": [
-        16,
-        2,
-        16
+        17,
+        1,
+        17
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            16,
-            2
+            0.0,
+            6.0,
+            16.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#obsidian"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            16,
-            2
+            0.0,
+            6.0,
+            16.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#obsidian"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            16,
-            2
+            0.0,
+            6.0,
+            16.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#obsidian"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            16,
-            2
+            0.0,
+            6.0,
+            16.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#obsidian"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            16,
-            16
+            0.0,
+            0.0,
+            16.0,
+            16.0
           ],
-          "texture": "#0"
+          "texture": "#obsidian"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            16,
-            16
+            0.0,
+            0.0,
+            16.0,
+            16.0
           ],
-          "texture": "#0"
+          "texture": "#obsidian",
+          "cullface": "down"
         }
       }
     },
     {
-      "name": "dais",
-      "from": [
-        2,
-        2,
-        2
-      ],
-      "to": [
-        14,
-        4,
-        14
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            12,
-            12
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            12,
-            12
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "frame_left",
-      "from": [
-        2,
-        4,
-        5
-      ],
-      "to": [
-        4.5,
-        14,
-        11
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            10
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6,
-            10
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            10
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6,
-            10
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            6
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            6
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "frame_right",
-      "from": [
-        11.5,
-        4,
-        5
-      ],
-      "to": [
-        14,
-        14,
-        11
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            10
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6,
-            10
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            10
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6,
-            10
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            6
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            6
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "frame_top",
-      "from": [
-        3.5,
-        12.5,
-        5
-      ],
-      "to": [
-        12.5,
-        15,
-        11
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            9,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            9,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            9,
-            6
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            9,
-            6
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "frame_foot_left",
+      "name": "art_true_sight_tribunal_dais",
       "from": [
         1,
-        3.5,
-        4
-      ],
-      "to": [
-        5,
-        6,
-        12
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            8,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            8,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4,
-            8
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4,
-            8
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "frame_foot_right",
-      "from": [
-        11,
-        3.5,
-        4
+        0.7,
+        1
       ],
       "to": [
         15,
-        6,
-        12
+        2.2,
+        15
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            4,
-            2.5
+            1.0,
+            6.0,
+            15.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#ivory"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            8,
-            2.5
+            1.0,
+            6.0,
+            15.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#ivory"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            4,
-            2.5
+            1.0,
+            6.0,
+            15.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#ivory"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            8,
-            2.5
+            1.0,
+            6.0,
+            15.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#ivory"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            4,
-            8
+            1.0,
+            1.0,
+            15.0,
+            15.0
           ],
-          "texture": "#0"
+          "texture": "#ivory"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            4,
-            8
+            1.0,
+            1.0,
+            15.0,
+            15.0
           ],
-          "texture": "#0"
+          "texture": "#ivory"
         }
-      }
-    },
-    {
-      "name": "back_spine",
-      "from": [
-        6.5,
-        4,
-        10
-      ],
-      "to": [
-        9.5,
-        13,
-        13
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            9
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            9
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            9
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            9
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "eyelid_top",
-      "from": [
-        4,
-        10.5,
-        5.5
-      ],
-      "to": [
-        12,
-        12,
-        8
-      ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          11,
-          8
-        ]
       },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            8,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            8,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            8,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            8,
-            2.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "eyelid_bottom",
-      "from": [
-        4,
-        7.5,
-        8
-      ],
-      "to": [
-        12,
-        9,
-        10.5
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          8.5,
-          8
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            8,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            8,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            8,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            8,
-            2.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "blade_n",
-      "from": [
-        6.5,
-        6,
-        3
-      ],
-      "to": [
-        9.5,
-        8,
-        7
-      ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          7,
-          7
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            4
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            4
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "blade_s",
-      "from": [
-        6.5,
-        6,
-        9
-      ],
-      "to": [
-        9.5,
-        8,
-        13
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          7,
-          9
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            4
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            4
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "temple_band_left",
-      "from": [
-        1.75,
-        8,
-        4.75
-      ],
-      "to": [
-        4.75,
-        9,
-        11.25
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            6.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            6.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "temple_band_right",
-      "from": [
-        11.25,
-        8,
-        4.75
-      ],
-      "to": [
-        14.25,
-        9,
-        11.25
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            6.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            6.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "crown_left",
-      "from": [
-        3.5,
-        14,
-        5
-      ],
-      "to": [
-        6.5,
-        15.5,
-        8
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "crown_right",
-      "from": [
-        9.5,
-        14,
-        8
-      ],
-      "to": [
-        12.5,
-        15.5,
-        11
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.5
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "sight_eye",
-      "from": [
-        5.25,
-        7,
-        5.25
-      ],
-      "to": [
-        10.75,
-        12.5,
-        10.75
-      ],
       "rotation": {
         "angle": 45,
         "axis": "y",
         "origin": [
           8,
-          9.75,
+          1.5,
           8
         ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            5.5,
-            5.5
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            5.5,
-            5.5
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            5.5,
-            5.5
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            5.5,
-            5.5
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            5.5,
-            5.5
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            5.5,
-            5.5
-          ],
-          "texture": "#2"
-        }
       }
     },
     {
-      "name": "pupil",
-      "from": [
-        7,
-        6.25,
-        7
-      ],
-      "to": [
-        9,
-        13.25,
-        9
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2,
-            7
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2,
-            7
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2,
-            7
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2,
-            7
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2,
-            2
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2,
-            2
-          ],
-          "texture": "#2"
-        }
-      }
-    },
-    {
-      "name": "floor_sigil",
+      "name": "art_true_sight_tribunal_floor_mirror",
       "from": [
         3,
-        4,
+        1.9,
         3
       ],
       "to": [
         13,
-        4.75,
+        2.5,
         13
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            10,
-            0.75
+            3.0,
+            6.0,
+            13.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#obsidian"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            10,
-            0.75
+            3.0,
+            6.0,
+            13.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#obsidian"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            10,
-            0.75
+            3.0,
+            6.0,
+            13.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#obsidian"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            10,
-            0.75
+            3.0,
+            6.0,
+            13.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#obsidian"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            10,
-            10
+            3.0,
+            3.0,
+            13.0,
+            13.0
           ],
-          "texture": "#2"
+          "texture": "#obsidian"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            10,
-            10
+            3.0,
+            3.0,
+            13.0,
+            13.0
           ],
-          "texture": "#2"
+          "texture": "#obsidian"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          2.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_silver_floor_seal",
+      "from": [
+        5,
+        2.2,
+        5
+      ],
+      "to": [
+        11,
+        2.85,
+        11
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            5.0,
+            5.0,
+            11.0,
+            11.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            5.0,
+            5.0,
+            11.0,
+            11.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          2.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_mirror_back",
+      "from": [
+        4.4,
+        3.0,
+        10.15
+      ],
+      "to": [
+        11.6,
+        13.8,
+        11.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.4,
+            2.6,
+            11.6,
+            13.4
+          ],
+          "texture": "#obsidian"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#obsidian"
+        },
+        "south": {
+          "uv": [
+            4.4,
+            2.6,
+            11.6,
+            13.4
+          ],
+          "texture": "#obsidian"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#obsidian"
+        },
+        "up": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "down": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#obsidian"
         }
       }
     },
     {
-      "name": "eye_left",
+      "name": "art_true_sight_tribunal_iris_panel",
       "from": [
-        3.25,
-        9,
-        6.5
-      ],
-      "to": [
+        4.8,
         4.5,
-        11,
-        9.5
+        8.85
       ],
+      "to": [
+        11.2,
+        12.7,
+        9.55
+      ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
             0,
             0,
-            1.25,
-            2
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#iris"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            3,
-            2
+            6.0,
+            3.9,
+            10.0,
+            12.1
           ],
-          "texture": "#2"
+          "texture": "#iris"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            1.25,
-            2
+            4.8,
+            3.9,
+            11.2,
+            12.1
           ],
-          "texture": "#2"
+          "texture": "#iris"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            3,
-            2
+            6.0,
+            3.9,
+            10.0,
+            12.1
           ],
-          "texture": "#2"
+          "texture": "#iris"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            1.25,
-            3
+            4.8,
+            6.0,
+            11.2,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#iris"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.25,
-            3
+            4.8,
+            6.0,
+            11.2,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#iris"
+        }
+      },
+      "light_emission": 13
+    },
+    {
+      "name": "art_true_sight_tribunal_pupil_spine",
+      "from": [
+        7.72,
+        5.0,
+        8.45
+      ],
+      "to": [
+        8.28,
+        12.0,
+        9.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            4.5,
+            10.0,
+            11.5
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            4.5,
+            10.0,
+            11.5
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            4.5,
+            10.0,
+            11.5
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            4.5,
+            10.0,
+            11.5
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
         }
       }
     },
     {
-      "name": "eye_right",
+      "name": "art_true_sight_tribunal_mirror_frame_left",
       "from": [
-        11.5,
-        9,
-        6.5
+        2.1,
+        2.5,
+        8.7
       ],
       "to": [
-        12.75,
-        11,
-        9.5
+        4.9,
+        14.2,
+        11.8
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            1.25,
-            2
+            6.0,
+            2.15,
+            10.0,
+            13.85
           ],
-          "texture": "#2"
+          "texture": "#ivory"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            3,
-            2
+            6.0,
+            2.15,
+            10.0,
+            13.85
           ],
-          "texture": "#2"
+          "texture": "#ivory"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            1.25,
-            2
+            6.0,
+            2.15,
+            10.0,
+            13.85
           ],
-          "texture": "#2"
+          "texture": "#ivory"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            3,
-            2
+            6.0,
+            2.15,
+            10.0,
+            13.85
           ],
-          "texture": "#2"
+          "texture": "#ivory"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            1.25,
-            3
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#ivory"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.25,
-            3
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#ivory"
         }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          4,
+          8,
+          10
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_frame_inlay_left",
+      "from": [
+        2.6500000000000004,
+        3.0,
+        8.25
+      ],
+      "to": [
+        4.3500000000000005,
+        13.799999999999999,
+        11.600000000000001
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          4,
+          8,
+          10
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_mirror_frame_right",
+      "from": [
+        11.1,
+        2.5,
+        8.7
+      ],
+      "to": [
+        13.9,
+        14.2,
+        11.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#ivory"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#ivory"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#ivory"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#ivory"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          12,
+          8,
+          10
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_frame_inlay_right",
+      "from": [
+        11.65,
+        3.0,
+        8.25
+      ],
+      "to": [
+        13.35,
+        13.799999999999999,
+        11.600000000000001
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            2.6,
+            10.0,
+            13.4
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          12,
+          8,
+          10
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_eyelid_top",
+      "from": [
+        5.0,
+        11.9,
+        8.25
+      ],
+      "to": [
+        11.0,
+        13.35,
+        9.45
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "south": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "up": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "down": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          12.4,
+          9
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_eyelid_bottom",
+      "from": [
+        5.0,
+        3.25,
+        8.25
+      ],
+      "to": [
+        11.0,
+        4.95,
+        9.45
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "south": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "up": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "down": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          4.6,
+          9
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_crown_left",
+      "from": [
+        4.1,
+        13.0,
+        9.0
+      ],
+      "to": [
+        7.6,
+        15.7,
+        11.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          6,
+          14.2,
+          10
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_crown_right",
+      "from": [
+        8.4,
+        13.0,
+        9.0
+      ],
+      "to": [
+        11.9,
+        15.7,
+        11.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          10,
+          14.2,
+          10
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_plinth_nw",
+      "from": [
+        1.3,
+        1.3,
+        1.3
+      ],
+      "to": [
+        4.1,
+        4.0,
+        4.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.7,
+          2.6,
+          2.7
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_obelisk_nw",
+      "from": [
+        2.05,
+        3.3,
+        2.05
+      ],
+      "to": [
+        3.3499999999999996,
+        6.0,
+        3.3499999999999996
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.7,
+          4.6,
+          2.7
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_cap_nw",
+      "from": [
+        1.75,
+        5.4,
+        1.75
+      ],
+      "to": [
+        3.6500000000000004,
+        6.8,
+        3.6500000000000004
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.7,
+          6.1,
+          2.7
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_plinth_ne",
+      "from": [
+        11.9,
+        1.3,
+        1.3
+      ],
+      "to": [
+        14.7,
+        4.0,
+        4.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.3,
+          2.6,
+          2.7
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_obelisk_ne",
+      "from": [
+        12.65,
+        3.3,
+        2.05
+      ],
+      "to": [
+        13.95,
+        6.0,
+        3.3499999999999996
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.3,
+          4.6,
+          2.7
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_cap_ne",
+      "from": [
+        12.35,
+        5.4,
+        1.75
+      ],
+      "to": [
+        14.25,
+        6.8,
+        3.6500000000000004
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.3,
+          6.1,
+          2.7
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_plinth_sw",
+      "from": [
+        1.3,
+        1.3,
+        11.9
+      ],
+      "to": [
+        4.1,
+        4.0,
+        14.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.7,
+          2.6,
+          13.3
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_obelisk_sw",
+      "from": [
+        2.05,
+        3.3,
+        12.65
+      ],
+      "to": [
+        3.3499999999999996,
+        6.0,
+        13.95
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.7,
+          4.6,
+          13.3
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_cap_sw",
+      "from": [
+        1.75,
+        5.4,
+        12.35
+      ],
+      "to": [
+        3.6500000000000004,
+        6.8,
+        14.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.7,
+          6.1,
+          13.3
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_plinth_se",
+      "from": [
+        11.9,
+        1.3,
+        11.9
+      ],
+      "to": [
+        14.7,
+        4.0,
+        14.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#ivory"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.3,
+          2.6,
+          13.3
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_obelisk_se",
+      "from": [
+        12.65,
+        3.3,
+        12.65
+      ],
+      "to": [
+        13.95,
+        6.0,
+        13.95
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#obsidian"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.3,
+          4.6,
+          13.3
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_witness_cap_se",
+      "from": [
+        12.35,
+        5.4,
+        12.35
+      ],
+      "to": [
+        14.25,
+        6.8,
+        14.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.3,
+          6.1,
+          13.3
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_verdict_blade_n",
+      "from": [
+        5.5,
+        2.5,
+        -0.2
+      ],
+      "to": [
+        10.5,
+        3.5,
+        4.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            5.9,
+            6.0,
+            10.1,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            5.9,
+            6.0,
+            10.1,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            5.5,
+            5.9,
+            10.5,
+            10.1
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            5.5,
+            5.9,
+            10.5,
+            10.1
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_verdict_blade_s",
+      "from": [
+        5.5,
+        2.5,
+        12
+      ],
+      "to": [
+        10.5,
+        3.5,
+        16.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            5.9,
+            6.0,
+            10.1,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            5.9,
+            6.0,
+            10.1,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            5.5,
+            5.9,
+            10.5,
+            10.1
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            5.5,
+            5.9,
+            10.5,
+            10.1
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          3,
+          12
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_verdict_blade_w",
+      "from": [
+        -0.2,
+        2.5,
+        5.5
+      ],
+      "to": [
+        4,
+        3.5,
+        10.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.9,
+            6.0,
+            10.1,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            5.9,
+            6.0,
+            10.1,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            5.9,
+            5.5,
+            10.1,
+            10.5
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            5.9,
+            5.5,
+            10.1,
+            10.5
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          4,
+          3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_true_sight_tribunal_verdict_blade_e",
+      "from": [
+        12,
+        2.5,
+        5.5
+      ],
+      "to": [
+        16.2,
+        3.5,
+        10.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.9,
+            6.0,
+            10.1,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            5.9,
+            6.0,
+            10.1,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            5.9,
+            5.5,
+            10.1,
+            10.5
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            5.9,
+            5.5,
+            10.1,
+            10.5
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          12,
+          3,
+          8
+        ]
       }
     }
   ],
   "groups": [
     {
-      "name": "root",
+      "name": "art_true_sight_tribunal",
       "origin": [
         8,
-        8,
+        0,
         8
       ],
       "scope": 0,
-      "color": 0,
-      "shade": false,
-      "children": []
-    },
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    17,
-    18,
-    19,
-    20
+      "color": 6,
+      "children": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ]
+    }
   ]
 }

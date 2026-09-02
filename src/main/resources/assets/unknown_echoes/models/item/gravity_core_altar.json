@@ -2,9 +2,21 @@
   "parent": "unknown_echoes:block/gravity_core_altar",
   "display": {
     "gui": {
-      "rotation": [30, 225, 0],
-      "translation": [0, 0, 0],
-      "scale": [0.625, 0.625, 0.625]
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.625,
+        0.625,
+        0.625
+      ]
     }
   }
 }

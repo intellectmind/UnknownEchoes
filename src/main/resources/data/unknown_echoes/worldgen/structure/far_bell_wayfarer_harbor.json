@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:far_bell_wayfarer_harbor",
+  "biomes": "#unknown_echoes:has_far_bell_wayfarer_harbor",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

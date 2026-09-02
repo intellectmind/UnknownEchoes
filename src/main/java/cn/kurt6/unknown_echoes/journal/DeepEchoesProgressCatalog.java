@@ -9,14 +9,16 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.Collection;
 import java.util.List;
 
-/** Shared progress boundaries for Deep Echoes index displays. */
 public final class DeepEchoesProgressCatalog {
     public static final List<EchoAbilityType> ABILITIES = List.of(
             EchoAbilityType.GRAVITY_ECHO,
             EchoAbilityType.VOID_ECHO);
     public static final List<String> BOSS_PATHS = List.of(
             "void_prophet",
-            "rift_warden");
+            "rift_warden",
+            "world_echo",
+            "inverted_gatekeeper",
+            "ash_scribe");
     public static final List<ResourceLocation> BOSS_KEYS = BOSS_PATHS.stream()
             .map(UnknownEchoes::id)
             .toList();
@@ -39,6 +41,18 @@ public final class DeepEchoesProgressCatalog {
             "suspended_survey_station",
             "fractured_anchor_station",
             "severed_archive_vault",
+            "resonance_foundry",
+            "gravity_crown_observatory",
+            "voidscar_bastion",
+            "shattered_codex_vault",
+            "weightless_orrery_court",
+            "hushed_cathedral",
+            "riftglass_citadel",
+            "folded_celestial_archive",
+            "inverted_pendulum_palace",
+            "riftworn_memorial_court",
+            "palimpsest_ecology_dome",
+            "interlayer_expedition_ring",
             "world_resonance_hall");
     public static final List<String> STRUCTURE_IDS = ids(STRUCTURE_PATHS);
     public static final List<String> MOB_PATHS = List.of(
@@ -52,7 +66,7 @@ public final class DeepEchoesProgressCatalog {
             ArtifactType.DIMENSION_ANCHOR,
             ArtifactType.RIFT_ANCHOR);
     public static final int FIRST_PAGE_ID = 128;
-    public static final int LAST_PAGE_ID = 167;
+    public static final int LAST_PAGE_ID = 207;
     public static final int PAGE_COUNT = LAST_PAGE_ID - FIRST_PAGE_ID + 1;
 
     private DeepEchoesProgressCatalog() {

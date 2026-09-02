@@ -8,12 +8,28 @@
         {
           "type": "minecraft:item",
           "name": "unknown_echoes:silent_pod",
-          "weight": 3
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:enchanted_count_increase",
+              "enchantment": "minecraft:looting",
+              "count": { "type": "minecraft:uniform", "min": 0.0, "max": 1.0 },
+              "limit": 3
+            }
+          ]
         },
         {
           "type": "minecraft:item",
           "name": "unknown_echoes:echo_shard",
-          "weight": 2
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:enchanted_count_increase",
+              "enchantment": "minecraft:looting",
+              "count": { "type": "minecraft:uniform", "min": 0.0, "max": 1.0 },
+              "limit": 3
+            }
+          ]
         }
       ],
       "conditions": [
@@ -22,7 +38,7 @@
         },
         {
           "condition": "minecraft:random_chance",
-          "chance": 0.3
+          "chance": 0.7
         }
       ]
     }

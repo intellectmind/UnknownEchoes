@@ -2,60 +2,487 @@
   "format_version": "1.21.11",
   "credit": "Made with Blockbench",
   "textures": {
-    "0": "unknown_echoes:block/echo_stone_bricks",
-    "1": "unknown_echoes:block/reward_altar",
-    "2": "unknown_echoes:block/sky_lamp_glass",
-    "particle": "unknown_echoes:block/echo_stone_bricks"
+    "stone": "unknown_echoes:block/reward_altar_stone",
+    "metal": "unknown_echoes:block/reward_altar_metal",
+    "token": "unknown_echoes:block/reward_altar_token",
+    "wind": "unknown_echoes:block/reward_altar_wind",
+    "particle": "unknown_echoes:block/reward_altar_stone"
   },
   "elements": [
     {
-      "name": "foundation",
+      "name": "art_reward_altar_reliquary_foundation",
       "from": [
+        1.2,
         0,
-        0,
-        0
+        1.2
       ],
       "to": [
-        16,
-        2.5,
-        16
+        14.8,
+        1.15,
+        14.8
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            16,
-            2.5
+            1.2,
+            6.0,
+            14.8,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#stone"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            16,
-            2.5
+            1.2,
+            6.0,
+            14.8,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#stone"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            16,
-            2.5
+            1.2,
+            6.0,
+            14.8,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#stone"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            16,
-            2.5
+            1.2,
+            6.0,
+            14.8,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            1.2,
+            1.2,
+            14.8,
+            14.8
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            1.2,
+            1.2,
+            14.8,
+            14.8
+          ],
+          "texture": "#stone",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_approach_n",
+      "from": [
+        5,
+        0,
+        -1.2
+      ],
+      "to": [
+        11,
+        0.9,
+        2.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_approach_s",
+      "from": [
+        5,
+        0,
+        14.0
+      ],
+      "to": [
+        11,
+        0.9,
+        17.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_approach_w",
+      "from": [
+        -1.2,
+        0,
+        5
+      ],
+      "to": [
+        2.0,
+        0.9,
+        11
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#stone",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_approach_e",
+      "from": [
+        14.0,
+        0,
+        5
+      ],
+      "to": [
+        17.2,
+        0.9,
+        11
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#stone",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_dais",
+      "from": [
+        2.4,
+        1.0,
+        2.4
+      ],
+      "to": [
+        13.6,
+        3.0,
+        13.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            2.4,
+            6.0,
+            13.6,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            2.4,
+            6.0,
+            13.6,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            2.4,
+            6.0,
+            13.6,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            2.4,
+            6.0,
+            13.6,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            2.4,
+            2.4,
+            13.6,
+            13.6
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            2.4,
+            2.4,
+            13.6,
+            13.6
+          ],
+          "texture": "#stone"
+        }
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_dais_inlay",
+      "from": [
+        4.0,
+        2.75,
+        4.0
+      ],
+      "to": [
+        12.0,
+        3.25,
+        12.0
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "east": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "south": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "west": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#token"
         },
         "up": {
           "uv": [
@@ -64,1548 +491,2417 @@
             16,
             16
           ],
-          "texture": "#0"
+          "texture": "#token"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            16,
-            16
+            4.0,
+            4.0,
+            12.0,
+            12.0
           ],
-          "texture": "#0"
+          "texture": "#token"
         }
-      }
-    },
-    {
-      "name": "dais",
-      "from": [
-        2,
-        2.5,
-        2
-      ],
-      "to": [
-        14,
-        4.5,
-        14
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            12,
-            12
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            12,
-            12
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "post_nw",
-      "from": [
-        1,
-        4,
-        1
-      ],
-      "to": [
-        4,
-        8.5,
-        4
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "post_ne",
-      "from": [
-        12,
-        4,
-        1
-      ],
-      "to": [
-        15,
-        8.5,
-        4
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "post_sw",
-      "from": [
-        1,
-        4,
-        12
-      ],
-      "to": [
-        4,
-        8.5,
-        15
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "post_se",
-      "from": [
-        12,
-        4,
-        12
-      ],
-      "to": [
-        15,
-        8.5,
-        15
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            4.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "core_socket",
-      "from": [
-        5.5,
-        4.5,
-        5.5
-      ],
-      "to": [
-        10.5,
-        7,
-        10.5
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            5,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            5,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            5,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            5,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "rune_floor",
-      "from": [
-        3,
-        4.5,
-        3
-      ],
-      "to": [
-        13,
-        5.25,
-        13
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            10,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            10,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            10,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            10,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            10,
-            10
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            10,
-            10
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "wing_n",
-      "from": [
-        5,
-        7,
-        2.5
-      ],
-      "to": [
-        11,
-        9,
-        6.5
-      ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          8,
-          6.5
-        ]
       },
+      "light_emission": 4
+    },
+    {
+      "name": "art_reward_altar_reliquary_plinth",
+      "from": [
+        5.0,
+        2.8,
+        5.0
+      ],
+      "to": [
+        11.0,
+        7.0,
+        11.0
+      ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            6,
-            2
+            5.0,
+            5.9,
+            11.0,
+            10.1
           ],
-          "texture": "#1"
+          "texture": "#stone"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            4,
-            2
+            5.0,
+            5.9,
+            11.0,
+            10.1
           ],
-          "texture": "#1"
+          "texture": "#stone"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            6,
-            2
+            5.0,
+            5.9,
+            11.0,
+            10.1
           ],
-          "texture": "#1"
+          "texture": "#stone"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            4,
-            2
+            5.0,
+            5.9,
+            11.0,
+            10.1
           ],
-          "texture": "#1"
+          "texture": "#stone"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            6,
-            4
+            5.0,
+            5.0,
+            11.0,
+            11.0
           ],
-          "texture": "#1"
+          "texture": "#stone"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            6,
-            4
+            5.0,
+            5.0,
+            11.0,
+            11.0
           ],
-          "texture": "#1"
+          "texture": "#stone"
         }
-      }
-    },
-    {
-      "name": "wing_s",
-      "from": [
-        5,
-        7,
-        9.5
-      ],
-      "to": [
-        11,
-        9,
-        13.5
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          8,
-          9.5
-        ]
       },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            6,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            6,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            6,
-            4
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            6,
-            4
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "wing_w",
-      "from": [
-        2.5,
-        7,
-        5
-      ],
-      "to": [
-        6.5,
-        9,
-        11
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "z",
-        "origin": [
-          6.5,
-          8,
-          8
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4,
-            6
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4,
-            6
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "wing_e",
-      "from": [
-        9.5,
-        7,
-        5
-      ],
-      "to": [
-        13.5,
-        9,
-        11
-      ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "z",
-        "origin": [
-          9.5,
-          8,
-          8
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4,
-            6
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4,
-            6
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "halo_n",
-      "from": [
-        4,
-        12.5,
-        4
-      ],
-      "to": [
-        12,
-        13.5,
-        5
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "halo_s",
-      "from": [
-        4,
-        12.5,
-        11
-      ],
-      "to": [
-        12,
-        13.5,
-        12
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "halo_w",
-      "from": [
-        4,
-        12.5,
-        5
-      ],
-      "to": [
-        5,
-        13.5,
-        11
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1,
-            6
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1,
-            6
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "halo_e",
-      "from": [
-        11,
-        12.5,
-        5
-      ],
-      "to": [
-        12,
-        13.5,
-        11
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1,
-            6
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1,
-            6
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "reward_core",
-      "from": [
-        5.5,
-        7.5,
-        5.5
-      ],
-      "to": [
-        10.5,
-        12.5,
-        10.5
-      ],
       "rotation": {
         "angle": 45,
         "axis": "y",
         "origin": [
           8,
-          10,
+          4.5,
           8
         ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_plinth_collar_low",
+      "from": [
+        4.4,
+        3.1,
+        4.4
+      ],
+      "to": [
+        11.6,
+        4.0,
+        11.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            4.4,
+            4.4,
+            11.6,
+            11.6
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            4.4,
+            4.4,
+            11.6,
+            11.6
+          ],
+          "texture": "#metal"
+        }
       },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        }
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          3.5,
+          8
+        ]
       }
     },
     {
-      "name": "reward_axis",
+      "name": "art_reward_altar_reliquary_plinth_collar_high",
       "from": [
-        6.75,
-        6,
-        6.75
+        4.2,
+        6.3,
+        4.2
       ],
       "to": [
-        9.25,
-        14,
-        9.25
+        11.8,
+        7.3,
+        11.8
       ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            4.2,
+            4.2,
+            11.8,
+            11.8
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            4.2,
+            4.2,
+            11.8,
+            11.8
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          6.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_petal_n",
+      "from": [
+        5.2,
+        6.5,
+        1.6
+      ],
+      "to": [
+        10.8,
+        8.0,
+        5.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          6.8,
+          5.0
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_petal_glow_n",
+      "from": [
+        6.0,
+        6.88,
+        2.4000000000000004
+      ],
+      "to": [
+        10.0,
+        8.18,
+        4.4
+      ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
             0,
             0,
-            2.5,
-            8
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#wind"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            2.5,
-            8
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 11,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          6.8,
+          5.0
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_petal_s",
+      "from": [
+        5.2,
+        6.5,
+        10.8
+      ],
+      "to": [
+        10.8,
+        8.0,
+        14.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          6.8,
+          11.0
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_petal_glow_s",
+      "from": [
+        6.0,
+        6.88,
+        11.600000000000001
+      ],
+      "to": [
+        10.0,
+        8.18,
+        13.6
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
         },
         "south": {
           "uv": [
             0,
             0,
-            2.5,
-            8
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 11,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          6.8,
+          11.0
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_petal_w",
+      "from": [
+        1.6,
+        6.5,
+        5.2
+      ],
+      "to": [
+        5.2,
+        8.0,
+        10.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            5.2,
+            10.0,
+            10.8
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            5.2,
+            10.0,
+            10.8
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5.0,
+          6.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_petal_glow_w",
+      "from": [
+        2.4000000000000004,
+        6.88,
+        6.0
+      ],
+      "to": [
+        4.4,
+        8.18,
+        10.0
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
         },
         "west": {
           "uv": [
             0,
             0,
-            2.5,
-            8
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 11,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5.0,
+          6.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_petal_e",
+      "from": [
+        10.8,
+        6.5,
+        5.2
+      ],
+      "to": [
+        14.4,
+        8.0,
+        10.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            5.2,
+            10.0,
+            10.8
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            5.2,
+            10.0,
+            10.8
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11.0,
+          6.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_petal_glow_e",
+      "from": [
+        11.600000000000001,
+        6.88,
+        6.0
+      ],
+      "to": [
+        13.6,
+        8.18,
+        10.0
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 11,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11.0,
+          6.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_reliquary_bowl",
+      "from": [
+        4.6,
+        7.0,
+        4.6
+      ],
+      "to": [
+        11.4,
+        8.6,
+        11.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.6,
+            6.0,
+            11.4,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            4.6,
+            6.0,
+            11.4,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            4.6,
+            6.0,
+            11.4,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            4.6,
+            6.0,
+            11.4,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            4.6,
+            4.6,
+            11.4,
+            11.4
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            4.6,
+            4.6,
+            11.4,
+            11.4
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          7.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_token_cradle",
+      "from": [
+        5.5,
+        8.0,
+        5.5
+      ],
+      "to": [
+        10.5,
+        9.0,
+        10.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "east": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "south": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "west": {
+          "uv": [
+            5.5,
+            6.0,
+            10.5,
+            10.0
+          ],
+          "texture": "#token"
         },
         "up": {
           "uv": [
             0,
             0,
-            2.5,
-            2.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#token"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            2.5,
-            2.5
+            5.5,
+            5.5,
+            10.5,
+            10.5
           ],
-          "texture": "#2"
+          "texture": "#token"
         }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          8.5,
+          8
+        ]
       }
     },
     {
-      "name": "post_lens_nw",
+      "name": "art_reward_altar_reliquary_wind_spire_n",
       "from": [
-        1.75,
+        7.15,
+        8.7,
+        5.9
+      ],
+      "to": [
+        8.85,
+        12.0,
+        7.1
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          9.0,
+          7.0
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_wind_spire_s",
+      "from": [
+        7.15,
+        8.7,
+        8.9
+      ],
+      "to": [
+        8.85,
+        11.4,
+        10.1
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          9.0,
+          9.0
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_wind_spire_w",
+      "from": [
+        5.9,
+        8.7,
+        7.15
+      ],
+      "to": [
+        7.1,
+        11.2,
+        8.85
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          7.0,
+          9.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_wind_spire_e",
+      "from": [
+        8.9,
+        8.7,
+        7.15
+      ],
+      "to": [
+        10.1,
+        11.7,
+        8.85
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          9.0,
+          9.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_token_seal",
+      "from": [
+        6.9,
+        11.3,
+        6.9
+      ],
+      "to": [
+        9.1,
+        13.5,
+        9.1
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#token"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#token"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#token"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          12.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_ward_post_0",
+      "from": [
+        1.4000000000000001,
+        2.6,
+        1.4000000000000001
+      ],
+      "to": [
+        3.0,
         7.5,
-        1.75
+        3.0
       ],
-      "to": [
-        3.25,
-        9,
-        3.25
-      ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            5.55,
+            10.0,
+            10.45
           ],
-          "texture": "#2"
+          "texture": "#stone"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            5.55,
+            10.0,
+            10.45
           ],
-          "texture": "#2"
+          "texture": "#stone"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            5.55,
+            10.0,
+            10.45
           ],
-          "texture": "#2"
+          "texture": "#stone"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            5.55,
+            10.0,
+            10.45
           ],
-          "texture": "#2"
+          "texture": "#stone"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#stone"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#stone"
         }
       }
     },
     {
-      "name": "post_lens_ne",
+      "name": "art_reward_altar_reliquary_ward_cap_0",
       "from": [
-        12.75,
-        7.5,
-        1.75
+        1.1,
+        6.9,
+        1.1
       ],
       "to": [
-        14.25,
-        9,
-        3.25
+        3.3000000000000003,
+        8.2,
+        3.3000000000000003
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.2,
+          7.5,
+          2.2
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_ward_lens_0",
+      "from": [
+        1.5500000000000003,
+        7.35,
+        1.5500000000000003
+      ],
+      "to": [
+        2.85,
+        8.65,
+        2.85
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
         },
         "up": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#wind"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.2,
+          8,
+          2.2
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_ward_post_1",
+      "from": [
+        13.0,
+        2.6,
+        1.4000000000000001
+      ],
+      "to": [
+        14.600000000000001,
+        7.5,
+        3.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
         }
       }
     },
     {
-      "name": "post_lens_sw",
+      "name": "art_reward_altar_reliquary_ward_cap_1",
       "from": [
-        1.75,
-        7.5,
-        12.75
+        12.700000000000001,
+        6.9,
+        1.1
       ],
       "to": [
-        3.25,
-        9,
-        14.25
+        14.9,
+        8.2,
+        3.3000000000000003
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.8,
+          7.5,
+          2.2
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_ward_lens_1",
+      "from": [
+        13.15,
+        7.35,
+        1.5500000000000003
+      ],
+      "to": [
+        14.450000000000001,
+        8.65,
+        2.85
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
         },
         "up": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#wind"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.8,
+          8,
+          2.2
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_ward_post_2",
+      "from": [
+        13.0,
+        2.6,
+        13.0
+      ],
+      "to": [
+        14.600000000000001,
+        7.5,
+        14.600000000000001
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
         }
       }
     },
     {
-      "name": "post_lens_se",
+      "name": "art_reward_altar_reliquary_ward_cap_2",
       "from": [
-        12.75,
-        7.5,
-        12.75
+        12.700000000000001,
+        6.9,
+        12.700000000000001
       ],
       "to": [
-        14.25,
-        9,
-        14.25
+        14.9,
+        8.2,
+        14.9
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.8,
+          7.5,
+          13.8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_ward_lens_2",
+      "from": [
+        13.15,
+        7.35,
+        13.15
+      ],
+      "to": [
+        14.450000000000001,
+        8.65,
+        14.450000000000001
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
         },
         "up": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#wind"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#wind"
         }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.8,
+          8,
+          13.8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_ward_post_3",
+      "from": [
+        1.4000000000000001,
+        2.6,
+        13.0
+      ],
+      "to": [
+        3.0,
+        7.5,
+        14.600000000000001
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.55,
+            10.0,
+            10.45
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        }
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_ward_cap_3",
+      "from": [
+        1.1,
+        6.9,
+        12.700000000000001
+      ],
+      "to": [
+        3.3000000000000003,
+        8.2,
+        14.9
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#metal"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.2,
+          7.5,
+          13.8
+        ]
+      }
+    },
+    {
+      "name": "art_reward_altar_reliquary_ward_lens_3",
+      "from": [
+        1.5500000000000003,
+        7.35,
+        13.15
+      ],
+      "to": [
+        2.85,
+        8.65,
+        14.450000000000001
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#wind"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.2,
+          8,
+          13.8
+        ]
       }
     }
   ],
   "groups": [
     {
-      "name": "root",
+      "name": "art_reward_altar_reliquary",
       "origin": [
         8,
-        8,
+        0,
         8
       ],
       "scope": 0,
-      "color": 0,
-      "shade": false,
-      "children": []
-    },
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    17,
-    18,
-    19,
-    20,
-    21
+      "color": 3,
+      "children": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36
+      ]
+    }
   ]
 }

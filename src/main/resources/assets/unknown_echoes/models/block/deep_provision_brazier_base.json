@@ -1,0 +1,4530 @@
+{
+  "format_version": "1.21.11",
+  "credit": "Made with Blockbench",
+  "textures": {
+    "base": "unknown_echoes:block/deep_provision_brazier_shell",
+    "trim": "unknown_echoes:block/deep_provision_brazier_trim",
+    "core": "unknown_echoes:block/deep_provision_brazier_idle",
+    "particle": "unknown_echoes:block/deep_provision_brazier_shell"
+  },
+  "elements": [
+    {
+      "name": "art_deep_brazier_precision_foundation",
+      "from": [
+        1,
+        0,
+        1
+      ],
+      "to": [
+        15,
+        1.25,
+        15
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            1.0,
+            1.0,
+            15.0,
+            15.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            1.0,
+            1.0,
+            15.0,
+            15.0
+          ],
+          "texture": "#base"
+        }
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_foundation_trim",
+      "from": [
+        1.7,
+        1.1,
+        1.7
+      ],
+      "to": [
+        14.3,
+        1.85,
+        14.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            1.7,
+            6.0,
+            14.3,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            1.7,
+            6.0,
+            14.3,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            1.7,
+            6.0,
+            14.3,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            1.7,
+            6.0,
+            14.3,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            1.7,
+            1.7,
+            14.3,
+            14.3
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            1.7,
+            1.7,
+            14.3,
+            14.3
+          ],
+          "texture": "#trim"
+        }
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_lower_diamond",
+      "from": [
+        3,
+        1.55,
+        3
+      ],
+      "to": [
+        13,
+        3.15,
+        13
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            3.0,
+            3.0,
+            13.0,
+            13.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            3.0,
+            3.0,
+            13.0,
+            13.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          2.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_pedestal",
+      "from": [
+        3.5,
+        2.6,
+        3.5
+      ],
+      "to": [
+        12.5,
+        5.7,
+        12.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.5,
+            6.0,
+            12.5,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            3.5,
+            6.0,
+            12.5,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            3.5,
+            6.0,
+            12.5,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            3.5,
+            6.0,
+            12.5,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            3.5,
+            3.5,
+            12.5,
+            12.5
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            3.5,
+            3.5,
+            12.5,
+            12.5
+          ],
+          "texture": "#base"
+        }
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_pedestal_band",
+      "from": [
+        3,
+        4.75,
+        3
+      ],
+      "to": [
+        13,
+        5.9,
+        13
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            3.0,
+            3.0,
+            13.0,
+            13.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            3.0,
+            3.0,
+            13.0,
+            13.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          5.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_waist",
+      "from": [
+        4.55,
+        5.1,
+        4.55
+      ],
+      "to": [
+        11.45,
+        8.6,
+        11.45
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.55,
+            6.0,
+            11.45,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            4.55,
+            6.0,
+            11.45,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            4.55,
+            6.0,
+            11.45,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            4.55,
+            6.0,
+            11.45,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            4.55,
+            4.55,
+            11.45,
+            11.45
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            4.55,
+            4.55,
+            11.45,
+            11.45
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          6.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_waist_trim",
+      "from": [
+        4.1,
+        7.4,
+        4.1
+      ],
+      "to": [
+        11.9,
+        8.45,
+        11.9
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.1,
+            6.0,
+            11.9,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            4.1,
+            6.0,
+            11.9,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            4.1,
+            6.0,
+            11.9,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            4.1,
+            6.0,
+            11.9,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            4.1,
+            4.1,
+            11.9,
+            11.9
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            4.1,
+            4.1,
+            11.9,
+            11.9
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          7.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_waist_inlay_n",
+      "from": [
+        6.3,
+        5.75,
+        3.55
+      ],
+      "to": [
+        9.7,
+        7.6,
+        4.45
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 7
+    },
+    {
+      "name": "art_deep_brazier_precision_waist_inlay_s",
+      "from": [
+        6.3,
+        5.75,
+        11.55
+      ],
+      "to": [
+        9.7,
+        7.6,
+        12.45
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 7
+    },
+    {
+      "name": "art_deep_brazier_precision_waist_inlay_w",
+      "from": [
+        3.55,
+        5.75,
+        6.3
+      ],
+      "to": [
+        4.45,
+        7.6,
+        9.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 7
+    },
+    {
+      "name": "art_deep_brazier_precision_waist_inlay_e",
+      "from": [
+        11.55,
+        5.75,
+        6.3
+      ],
+      "to": [
+        12.45,
+        7.6,
+        9.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 7
+    },
+    {
+      "name": "art_deep_brazier_precision_support_nw",
+      "from": [
+        2.25,
+        6.6,
+        2.25
+      ],
+      "to": [
+        4.25,
+        11.2,
+        4.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          3.9,
+          7,
+          3.25
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_support_ne",
+      "from": [
+        11.75,
+        6.6,
+        2.25
+      ],
+      "to": [
+        13.75,
+        11.2,
+        4.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          12.1,
+          7,
+          3.25
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_support_sw",
+      "from": [
+        2.25,
+        6.6,
+        11.75
+      ],
+      "to": [
+        4.25,
+        11.2,
+        13.75
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          3.9,
+          7,
+          12.75
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_support_se",
+      "from": [
+        11.75,
+        6.6,
+        11.75
+      ],
+      "to": [
+        13.75,
+        11.2,
+        13.75
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          12.1,
+          7,
+          12.75
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_support_trim_nw",
+      "from": [
+        3.35,
+        7.2,
+        1.95
+      ],
+      "to": [
+        4.15,
+        10.5,
+        2.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          3.9,
+          7.3,
+          2.4
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_support_trim_ne",
+      "from": [
+        11.85,
+        7.2,
+        1.95
+      ],
+      "to": [
+        12.65,
+        10.5,
+        2.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          12.1,
+          7.3,
+          2.4
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_support_trim_sw",
+      "from": [
+        3.35,
+        7.2,
+        13.2
+      ],
+      "to": [
+        4.15,
+        10.5,
+        14.05
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          3.9,
+          7.3,
+          13.6
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_support_trim_se",
+      "from": [
+        11.85,
+        7.2,
+        13.2
+      ],
+      "to": [
+        12.65,
+        10.5,
+        14.05
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          12.1,
+          7.3,
+          13.6
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_basin_floor",
+      "from": [
+        4,
+        8.25,
+        4
+      ],
+      "to": [
+        12,
+        9.25,
+        12
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            4.0,
+            4.0,
+            12.0,
+            12.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            4.0,
+            4.0,
+            12.0,
+            12.0
+          ],
+          "texture": "#base"
+        }
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_basin_inner",
+      "from": [
+        5,
+        8.9,
+        5
+      ],
+      "to": [
+        11,
+        10.2,
+        11
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            5.0,
+            5.0,
+            11.0,
+            11.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 8
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_n",
+      "from": [
+        3.4,
+        9.1,
+        2.35
+      ],
+      "to": [
+        12.6,
+        10.7,
+        4.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          9.4,
+          4
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_s",
+      "from": [
+        3.4,
+        9.1,
+        11.9
+      ],
+      "to": [
+        12.6,
+        10.7,
+        13.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          9.4,
+          12
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_w",
+      "from": [
+        2.35,
+        9.1,
+        3.4
+      ],
+      "to": [
+        4.1,
+        10.7,
+        12.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            3.4,
+            10.0,
+            12.6
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.4,
+            10.0,
+            12.6
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          4,
+          9.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_e",
+      "from": [
+        11.9,
+        9.1,
+        3.4
+      ],
+      "to": [
+        13.65,
+        10.7,
+        12.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            3.4,
+            6.0,
+            12.6,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            3.4,
+            10.0,
+            12.6
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.4,
+            10.0,
+            12.6
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          12,
+          9.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_trim_n",
+      "from": [
+        4.2,
+        10.05,
+        2.05
+      ],
+      "to": [
+        11.8,
+        10.85,
+        3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          10.2,
+          3.2
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_trim_s",
+      "from": [
+        4.2,
+        10.05,
+        13
+      ],
+      "to": [
+        11.8,
+        10.85,
+        13.95
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          10.2,
+          12.8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_trim_w",
+      "from": [
+        2.05,
+        10.05,
+        4.2
+      ],
+      "to": [
+        3,
+        10.85,
+        11.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.2,
+            10.0,
+            11.8
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.2,
+            10.0,
+            11.8
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          3.2,
+          10.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_trim_e",
+      "from": [
+        13,
+        10.05,
+        4.2
+      ],
+      "to": [
+        13.95,
+        10.85,
+        11.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.2,
+            10.0,
+            11.8
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.2,
+            10.0,
+            11.8
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          12.8,
+          10.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_node_nw",
+      "from": [
+        2.5,
+        9.65,
+        2.5
+      ],
+      "to": [
+        4.3,
+        11.45,
+        4.3
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          3.4,
+          10.2,
+          3.4
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_node_ne",
+      "from": [
+        11.7,
+        9.65,
+        2.5
+      ],
+      "to": [
+        13.5,
+        11.45,
+        4.3
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          12.6,
+          10.2,
+          3.4
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_node_sw",
+      "from": [
+        2.5,
+        9.65,
+        11.7
+      ],
+      "to": [
+        4.3,
+        11.45,
+        13.5
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          3.4,
+          10.2,
+          12.6
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_rim_node_se",
+      "from": [
+        11.7,
+        9.65,
+        11.7
+      ],
+      "to": [
+        13.5,
+        11.45,
+        13.5
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          12.6,
+          10.2,
+          12.6
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_claw_n",
+      "from": [
+        6.9,
+        10,
+        3.2
+      ],
+      "to": [
+        9.1,
+        12.3,
+        4.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          10.4,
+          4.4
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_claw_s",
+      "from": [
+        6.9,
+        10,
+        11.6
+      ],
+      "to": [
+        9.1,
+        12.3,
+        12.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          10.4,
+          11.6
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_claw_w",
+      "from": [
+        3.2,
+        10,
+        6.9
+      ],
+      "to": [
+        4.4,
+        12.3,
+        9.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          4.4,
+          10.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_claw_e",
+      "from": [
+        11.6,
+        10,
+        6.9
+      ],
+      "to": [
+        12.8,
+        12.3,
+        9.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#base"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11.6,
+          10.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_claw_tip_n",
+      "from": [
+        7.2,
+        11.55,
+        2.95
+      ],
+      "to": [
+        8.8,
+        12.75,
+        4.15
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          11.7,
+          4.1
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_claw_tip_s",
+      "from": [
+        7.2,
+        11.55,
+        11.85
+      ],
+      "to": [
+        8.8,
+        12.75,
+        13.05
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          11.7,
+          11.9
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_claw_tip_w",
+      "from": [
+        2.95,
+        11.55,
+        7.2
+      ],
+      "to": [
+        4.15,
+        12.75,
+        8.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          4.1,
+          11.7,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_claw_tip_e",
+      "from": [
+        11.85,
+        11.55,
+        7.2
+      ],
+      "to": [
+        13.05,
+        12.75,
+        8.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#trim"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11.9,
+          11.7,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_heart",
+      "from": [
+        6.4,
+        9.5,
+        6.4
+      ],
+      "to": [
+        9.6,
+        11.3,
+        9.6
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          10.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_center_lower",
+      "from": [
+        7,
+        10.25,
+        7
+      ],
+      "to": [
+        9,
+        13,
+        9
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          10.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_center_mid",
+      "from": [
+        7.2,
+        12,
+        7.1
+      ],
+      "to": [
+        8.8,
+        14.6,
+        8.9
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          8,
+          12.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_center_tip",
+      "from": [
+        7.35,
+        13.8,
+        7.35
+      ],
+      "to": [
+        8.55,
+        17.2,
+        8.65
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 15,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          8,
+          14.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_front",
+      "from": [
+        7.1,
+        10.2,
+        5.5
+      ],
+      "to": [
+        8.6,
+        12.7,
+        7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          10.7,
+          6.9
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_back",
+      "from": [
+        7.4,
+        10.5,
+        9
+      ],
+      "to": [
+        8.9,
+        13,
+        10.5
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          10.9,
+          9.1
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_left_lower",
+      "from": [
+        5.8,
+        10.4,
+        6.8
+      ],
+      "to": [
+        7.2,
+        12.9,
+        8.4
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          7,
+          10.9,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_left_tip",
+      "from": [
+        5.5,
+        12.2,
+        7
+      ],
+      "to": [
+        6.7,
+        14.7,
+        8.2
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          6.3,
+          12.6,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_right_lower",
+      "from": [
+        8.8,
+        10.7,
+        7.1
+      ],
+      "to": [
+        10.2,
+        13.1,
+        8.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          9,
+          11.1,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_flame_right_tip",
+      "from": [
+        9.3,
+        12.4,
+        7.4
+      ],
+      "to": [
+        10.5,
+        14.9,
+        8.6
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          9.7,
+          12.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_ember_w",
+      "from": [
+        3.9,
+        12.5,
+        7.2
+      ],
+      "to": [
+        5.15,
+        13.75,
+        8.45
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          4.5,
+          13,
+          7.8
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_ember_e",
+      "from": [
+        10.95,
+        13.1,
+        7.55
+      ],
+      "to": [
+        12.2,
+        14.35,
+        8.8
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          11.6,
+          13.6,
+          8.2
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_ember_n",
+      "from": [
+        7.25,
+        12.1,
+        3.8
+      ],
+      "to": [
+        8.5,
+        13.35,
+        5.05
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          7.9,
+          12.6,
+          4.4
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_ember_s",
+      "from": [
+        7.55,
+        12.8,
+        10.95
+      ],
+      "to": [
+        8.8,
+        14.05,
+        12.2
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8.2,
+          13.3,
+          11.6
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_ember_high_w",
+      "from": [
+        5.1,
+        15.1,
+        7.4
+      ],
+      "to": [
+        6.1,
+        16.1,
+        8.4
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          5.6,
+          15.5,
+          7.9
+        ]
+      }
+    },
+    {
+      "name": "art_deep_brazier_precision_ember_high_e",
+      "from": [
+        9.9,
+        15.7,
+        7.6
+      ],
+      "to": [
+        10.9,
+        16.7,
+        8.6
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#core"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#core"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          10.4,
+          16.1,
+          8.1
+        ]
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "art_deep_provision_brazier_precision",
+      "origin": [
+        8,
+        8,
+        8
+      ],
+      "scope": 0,
+      "color": 5,
+      "children": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56
+      ]
+    }
+  ]
+}

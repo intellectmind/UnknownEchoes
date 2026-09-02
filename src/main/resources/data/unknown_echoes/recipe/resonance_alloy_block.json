@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "RRR",
+    "RRR",
+    "RRR"
+  ],
+  "key": {
+    "R": { "item": "unknown_echoes:resonance_alloy_ingot" }
+  },
+  "result": { "id": "unknown_echoes:resonance_alloy_block" }
+}

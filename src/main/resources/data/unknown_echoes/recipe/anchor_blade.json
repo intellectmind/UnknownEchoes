@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    { "item": "unknown_echoes:echo_weapon_frame" },
+    { "item": "unknown_echoes:deep_alloy_ingot" },
+    { "item": "unknown_echoes:deep_alloy_ingot" },
+    { "item": "unknown_echoes:space_anchor_rod" },
+    { "item": "unknown_echoes:space_anchor_shard" },
+    { "item": "unknown_echoes:space_anchor_shard" }
+  ],
+  "result": { "id": "unknown_echoes:anchor_blade" }
+}

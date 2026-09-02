@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.world.structure;
 
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModLootTables;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
 import com.mojang.serialization.MapCodec;
@@ -22,17 +23,12 @@ import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-/**
- * 淹没记录室(V0.6E,5.3 强化方向落地):镜湖水下小型结构。
- * 沉在湖床里的记述派档案残间——湖底只露出一圈残破砖沿与顶口,
- * 室内:档案宝箱(残页+潮汐研究拓片)+ 水下符文回访点。
- * 不承载权限门槛,只服务潮汐研究与回访(探索日志提示见 JournalManager)。
- */
+/** 淹没记录室：镜湖水下的小型结构。 */
 public class SubmergedRecordRoomStructure extends SinglePieceStructure {
     public static final MapCodec<SubmergedRecordRoomStructure> CODEC = simpleCodec(SubmergedRecordRoomStructure::new);
 
-    private static final int SIZE = 15;
-    private static final int HEIGHT = 9;
+    private static final int SIZE = 27;
+    private static final int HEIGHT = 15;
 
     public SubmergedRecordRoomStructure(StructureSettings settings) {
         super(Piece::new, SIZE, SIZE, settings);
@@ -40,17 +36,21 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
 
     @Override
     public java.util.Optional<GenerationStub> findGenerationPoint(GenerationContext context) {
-        // 与倒影回廊一致:必须真正沉在水里(镜湖存在旱地区段),水下结构绕开
-        // SinglePieceStructure 的"最低地表 < 海平面即拒绝"默认逻辑。
-        //
-        // CRITICAL: 不在此处做连续水方块校验——/locate 会对每个候选区块调用此方法,
-        // 累积的噪声柱采样会拖服务端主线程超看门狗限制。这里用五点高度图预判,严格校验推迟到 postProcess。
-        if (!LakeBedPlacement.hasSubmergedFootprint(context, SIZE, 6, 4)) {
+        Piece piece = new Piece(context.random(),
+                context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ());
+        BoundingBox footprint = piece.getBoundingBox();
+        if (!LakeBedPlacement.hasSubmergedFootprint(context,
+                footprint.minX(), footprint.minZ(), SIZE, 6, 4)) {
             return java.util.Optional.empty();
         }
+        int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(
+                context, footprint.minX(), footprint.minZ(), SIZE, SIZE);
+        if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
+            return java.util.Optional.empty();
+        }
+        piece.anchorToLakeFloor(floorY);
         return onTopOfChunkCenter(context, Heightmap.Types.OCEAN_FLOOR_WG,
-                builder -> builder.addPiece(new Piece(context.random(),
-                        context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ())));
+                builder -> builder.addPiece(piece));
     }
 
     @Override
@@ -82,6 +82,14 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
             tag.putBoolean("Rejected", this.rejected);
         }
 
+        public void anchorToLakeFloor(int floorY) {
+            if (this.lakeFloorY >= 0) {
+                return;
+            }
+            this.lakeFloorY = floorY;
+            this.boundingBox.move(0, floorY - this.boundingBox.minY() - 5, 0);
+        }
+
         /** 沉进湖床并校验水深:顶板(y4)与湖底齐平,只有 y5 残沿露出湖床一格。 */
         private boolean adjustToLakeFloor(WorldGenLevel level, BoundingBox chunkBox, ChunkGenerator generator) {
             if (this.rejected) {
@@ -90,25 +98,15 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
             if (this.lakeFloorY >= 0) {
                 return true;
             }
-            int total = 0;
-            int count = 0;
-            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-            for (int z = this.boundingBox.minZ(); z <= this.boundingBox.maxZ(); z++) {
-                for (int x = this.boundingBox.minX(); x <= this.boundingBox.maxX(); x++) {
-                    cursor.set(x, 64, z);
-                    if (chunkBox.isInside(cursor)) {
-                        total += level.getHeight(Heightmap.Types.OCEAN_FLOOR_WG, x, z);
-                        count++;
-                    }
-                }
-            }
-            if (count == 0) {
+            int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(level, generator,
+                    this.boundingBox.minX(), this.boundingBox.minZ(), SIZE, SIZE);
+            if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
+                this.rejected = true;
                 return false;
             }
-            this.lakeFloorY = total / count;
+            this.lakeFloorY = floorY;
 
-            // 水深校验:扩展为 15x15 水下记录室后,仍保持轻量生成阶段校验。
-            if (!LakeBedPieceHelper.checkWaterDepth(level, generator,
+            if (!LakeBedPieceHelper.checkWaterDepthByBaseHeight(level, generator,
                     this.boundingBox.minX(), this.boundingBox.minZ(), SIZE, SIZE, 6, 4)) {
                 this.rejected = true;
                 return false;
@@ -125,15 +123,18 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
             if (!adjustToLakeFloor(level, box, generator)) {
                 return;
             }
+            box = LakeBedPieceHelper.intersection(box, this.boundingBox);
+            if (box == null) {
+                return;
+            }
 
-            BlockState mirror = ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState();
-            BlockState mirrorStone = ModBlocks.MIRROR_STONE.get().defaultBlockState();
-            BlockState cracked = Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
+            BlockState mirror = ModBlocks.MIRROR_DUST_BRICKS.get().defaultBlockState();
+            BlockState mirrorStone = ModBlocks.MIRROR_DUST_STONE.get().defaultBlockState();
+            BlockState cracked = ModBlocks.FRACTURED_MIRROR_TILE.get().defaultBlockState();
             BlockState runeBricks = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
             BlockState water = Blocks.WATER.defaultBlockState();
-            int c = SIZE / 2; // 7
+            int c = SIZE / 2;
 
-            // 外壳:地板 y0 / 四壁 y1-3 / 顶板 y4(留顶口和短走廊);室内充水(淹没档案)
             for (int x = 0; x < SIZE; x++) {
                 for (int z = 0; z < SIZE; z++) {
                     boolean wall = x == 0 || z == 0 || x == SIZE - 1 || z == SIZE - 1;
@@ -148,7 +149,7 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
                             : (random.nextFloat() < 0.2F ? cracked : mirror), x, 4, z, box);
                 }
             }
-            // 湖床上的残沿:顶口四周残破砖块(远看是一圈"沉下去的屋脊")
+
             for (int[] rim : new int[][]{{c - 1, c}, {c + 1, c}, {c - 1, c + 1}, {c + 1, c + 1},
                     {c, c - 1}, {c, c + 2}}) {
                 if (random.nextFloat() < 0.7F) {
@@ -156,7 +157,9 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
                 }
             }
 
-            // 室内:档案宝箱(残页+潮汐拓片)+ 水下符文回访点 + 符文砖微光
+            // 必须用围合中庭:倒影回廊已占用镜尘族穹顶剪影。
+            buildCourtyardCloister(level, box, c, 1, c, Footprint.square(10), 6, 3, mirrorStone, mirror, cracked, ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState());
+
             this.placeBlock(level, mirror, c, 1, c - 1, box);
             buildAccessibleChest(level, random, box, c, 2, c - 1, ModLootTables.SUBMERGED_RECORD_ROOM);
             buildAccessibleChest(level, random, box, c - 4, 2, c + 3, ModLootTables.MIRROR_LAKE_CACHE);
@@ -164,6 +167,32 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
             this.placeBlock(level, ModBlocks.TIDE_RUNE.get().defaultBlockState(), SIZE - 2, 1, SIZE - 2, box);
             this.placeBlock(level, runeBricks, 1, 3, SIZE - 2, box);
             buildTrueSightVaultNiche(level, random, box, SIZE - 4, 2, c + 3, Direction.WEST);
+
+            for (int i = 0; i < 12; i++) {
+                double angle = i * Math.PI / 6.0D;
+                int x = c + (int) Math.round(Math.cos(angle) * 9);
+                int z = c + (int) Math.round(Math.sin(angle) * 9);
+                architecturalPillar(level, box, x, 1, z, 6, mirror);
+                this.placeBlock(level, ModBlocks.PRISM_DUST_CLUSTER.get().defaultBlockState(),
+                        x, 7, z, box);
+            }
+            architecturalRing(level, box, c, 5, c, 11, cracked);
+            architecturalRing(level, box, c, 9, c, 8,
+                    Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState());
+            BlockState recordStairs = ModBlocks.MIRROR_DUST_BRICK_STAIRS.get().defaultBlockState();
+            BlockState recordSlab = ModBlocks.MIRROR_DUST_BRICK_SLAB.get().defaultBlockState();
+            buildStairCornice(level, box, c, 6, c, Footprint.square(10), recordStairs, recordSlab, true);
+            buildParapet(level, box, c, 7, c, Footprint.square(11), 4, ModBlocks.MIRROR_DUST_BRICK_WALL.get().defaultBlockState(), cracked);
+
+            buildSpireFinial(level, box, c, 8, c, 2, 4,
+                    mirror, cracked, ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState());
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                buildCardinalGateway(level, box, c, 5, c, 11, direction,
+                        2, 5, mirror, ModBlocks.PRISM_DUST_CLUSTER.get().defaultBlockState());
+            }
+
+            placeSubmergedStructureSpawner(level, random, box, 5, 1, 5,
+                    ModEntities.WATER_SHADOW.get(), mirrorStone, cracked);
         }
     }
 }

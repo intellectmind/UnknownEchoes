@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:inscription_rubbing_paper" },
+    { "item": "unknown_echoes:illusion_dust" },
+    { "item": "unknown_echoes:illusion_dust" },
+    { "item": "unknown_echoes:echo_dust" },
+    { "item": "unknown_echoes:echo_dust" }
+  ],
+  "result": {
+    "id": "unknown_echoes:revealing_powder"
+  }
+}

@@ -6,10 +6,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 
-/**
- * 通用 Boss 战 BGM:循环播放,Boss 死亡/消失或玩家远离(>56 格)时淡出停止。
- * 由 ClientGameEvents 在玩家靠近存活的主线 Boss 时启动。
- */
+/** 通用 Boss 战 BGM:循环播放,Boss 死亡/消失或玩家远离(>56 格)时淡出停止。 */
 public class BossMusicSound extends AbstractTickableSoundInstance {
     private static final double STOP_DISTANCE_SQR = 56 * 56;
     private final LivingEntity boss;

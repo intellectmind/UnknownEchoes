@@ -9,6 +9,22 @@
     "minecraft:savanna",
     "minecraft:taiga",
     "minecraft:snowy_taiga",
-    "minecraft:meadow"
+    "minecraft:meadow",
+    {
+      "id": "#c:is_forest",
+      "required": false
+    },
+    {
+      "id": "#c:is_plains",
+      "required": false
+    },
+    {
+      "id": "#c:is_taiga",
+      "required": false
+    },
+    {
+      "id": "#c:is_savanna",
+      "required": false
+    }
   ]
 }

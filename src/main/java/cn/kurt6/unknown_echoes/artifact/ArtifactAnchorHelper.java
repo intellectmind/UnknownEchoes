@@ -2,6 +2,8 @@ package cn.kurt6.unknown_echoes.artifact;
 
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.block.beacon.AbyssBeaconBlock;
+import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
 import net.minecraft.core.BlockPos;
@@ -17,12 +19,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.Tags;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-/** 维度锚与裂隙锚共享的个人绑定编码及安全传送校验。 */
 final class ArtifactAnchorHelper {
     private static final int BIND_RANGE = 6;
     private static final int SAFE_SEARCH_RADIUS = 5;
@@ -36,11 +38,17 @@ final class ArtifactAnchorHelper {
     }
 
     static BindResult bindDimensionAnchor(ServerPlayer player) {
+        if (!isSupportedDimension(player.level().dimension())) {
+            return new BindResult(Failure.UNSUPPORTED_DIMENSION);
+        }
         BlockPos origin = player.blockPosition();
         BlockPos nearest = null;
         double nearestDistance = Double.MAX_VALUE;
         for (BlockPos cursor : BlockPos.betweenClosed(origin.offset(-BIND_RANGE, -3, -BIND_RANGE),
                 origin.offset(BIND_RANGE, 3, BIND_RANGE))) {
+            if (!player.level().hasChunkAt(cursor)) {
+                continue;
+            }
             BlockState state = player.level().getBlockState(cursor);
             boolean authorized = cursor.distSqr(origin) <= BIND_RANGE * BIND_RANGE
                     && isActivatedForPlayer(player, player.serverLevel(), cursor, state);
@@ -70,7 +78,7 @@ final class ArtifactAnchorHelper {
     }
 
     /** 记录当前坐标；身处目标维度不等于获得返回权限，传送时仍会重新校验进度。 */
-    static BindResult bindRiftAnchor(ServerPlayer player, long expiry) {
+    static BindResult bindRiftAnchor(ServerPlayer player) {
         BlockPos position = player.blockPosition();
         if (!isSupportedDimension(player.level().dimension())) {
             return new BindResult(Failure.UNSUPPORTED_DIMENSION);
@@ -83,44 +91,49 @@ final class ArtifactAnchorHelper {
         }
         ArtifactType type = ArtifactType.RIFT_ANCHOR;
         List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), true);
-        anchors.removeIf(anchor -> anchor.expiry <= ArtifactManager.gameTime(player));
+        long now = ArtifactManager.gameTime(player);
+        normalizeRiftAnchors(player, anchors, now);
         boolean twin = ArtifactManager.getData(player).getLevel(type) >= 2
                 && "twin_spike".equals(ArtifactManager.getData(player).getTuning(type));
-        anchors = mergeAnchor(anchors, new Anchor(player.level().dimension(), position.immutable(), expiry), twin);
+        anchors = mergeAnchor(anchors, new Anchor(player.level().dimension(), position.immutable(),
+                maximumRiftExpiry(player, now)), twin);
         ArtifactManager.getData(player).setBinding(type, encodeBoundAnchors(anchors));
         ArtifactManager.syncToClient(player);
         return new BindResult(Failure.NONE);
     }
 
     static boolean hasRiftBinding(ServerPlayer player) {
-        List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(ArtifactType.RIFT_ANCHOR), true);
+        ArtifactType type = ArtifactType.RIFT_ANCHOR;
+        List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), true);
         long now = ArtifactManager.gameTime(player);
-        anchors.removeIf(anchor -> anchor.expiry <= now);
+        boolean changed = normalizeRiftAnchors(player, anchors, now);
+        changed |= normalizeAnchorCount(player, type, anchors);
+        if (changed) {
+            persistBinding(player, type, anchors);
+        }
         return !anchors.isEmpty();
     }
 
     /** 低频清理过期坐标，避免玩家长期不使用时数据残留。 */
-    static void tickRiftAnchor(ServerPlayer player) {
-        if (player.tickCount % 40 != 0) {
-            return;
-        }
+    static void tickRiftAnchor(ServerPlayer player, ArtifactData data) {
         ArtifactType type = ArtifactType.RIFT_ANCHOR;
-        String raw = ArtifactManager.getData(player).getBinding(type);
+        String raw = data.getBinding(type);
         if (raw == null || raw.isBlank()) {
             return;
         }
         List<Anchor> anchors = boundAnchors(raw, true);
         long now = ArtifactManager.gameTime(player);
-        anchors.removeIf(anchor -> anchor.expiry <= now);
-        if (!raw.equals(encodeBoundAnchors(anchors))) {
-            persistBinding(player, type, anchors);
+        boolean changed = normalizeRiftAnchors(player, anchors, now);
+        changed |= normalizeAnchorCount(player, type, anchors);
+        if (changed || !raw.equals(encodeBoundAnchors(anchors))) {
+            persistBinding(player, type, anchors, data);
         }
     }
 
     static ResolveResult resolveDimensionAnchor(ServerPlayer player) {
         ArtifactType type = ArtifactType.DIMENSION_ANCHOR;
         List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), false);
-        boolean changed = false;
+        boolean changed = normalizeAnchorCount(player, type, anchors);
         Failure failure = Failure.INVALID_ANCHOR;
         for (int index = 0; index < anchors.size();) {
             Anchor anchor = anchors.get(index);
@@ -159,13 +172,35 @@ final class ArtifactAnchorHelper {
         return new ResolveResult(null, failure);
     }
 
+    /** 调谐改变后立即收敛锚点数量与临时有效期，避免旧词条状态在下一次使用前继续生效。 */
+    static void normalizeAfterTuning(ServerPlayer player, ArtifactType type) {
+        if (type != ArtifactType.DIMENSION_ANCHOR && type != ArtifactType.RIFT_ANCHOR) {
+            return;
+        }
+        ArtifactData data = ArtifactManager.getData(player);
+        String raw = data.getBinding(type);
+        if (raw == null || raw.isBlank()) {
+            return;
+        }
+        boolean rift = type == ArtifactType.RIFT_ANCHOR;
+        List<Anchor> anchors = boundAnchors(raw, rift);
+        boolean changed = normalizeAnchorCount(player, type, anchors);
+        if (rift) {
+            changed |= normalizeRiftAnchors(player, anchors, ArtifactManager.gameTime(player));
+        }
+        String normalized = encodeBoundAnchors(anchors);
+        if (changed || !raw.equals(normalized)) {
+            data.setBinding(type, normalized);
+        }
+    }
+
     static ResolveResult resolveRiftAnchor(ServerPlayer player) {
         ArtifactType type = ArtifactType.RIFT_ANCHOR;
         List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), true);
         long now = ArtifactManager.gameTime(player);
         int beforePrune = anchors.size();
-        anchors.removeIf(anchor -> anchor.expiry <= now);
-        boolean changed = anchors.size() != beforePrune;
+        boolean changed = normalizeRiftAnchors(player, anchors, now);
+        changed |= normalizeAnchorCount(player, type, anchors);
         Failure failure = beforePrune > 0 && anchors.isEmpty()
                 ? Failure.EXPIRED : Failure.INVALID_ANCHOR;
         for (int index = 0; index < anchors.size();) {
@@ -199,17 +234,54 @@ final class ArtifactAnchorHelper {
         return new ResolveResult(null, failure);
     }
 
-    static void teleport(ServerPlayer player, Destination destination) {
+    /** 异常存档不得把临时锚伪造成永久锚；上限随当前配置、等级和调谐动态计算。 */
+    private static boolean normalizeRiftAnchors(ServerPlayer player, List<Anchor> anchors, long now) {
+        long maximum = maximumRiftExpiry(player, now);
+        boolean changed = false;
+        for (int index = anchors.size() - 1; index >= 0; index--) {
+            Anchor anchor = anchors.get(index);
+            if (anchor.expiry <= now) {
+                anchors.remove(index);
+                changed = true;
+            } else if (anchor.expiry > maximum) {
+                anchors.set(index, new Anchor(anchor.dimension, anchor.pos, maximum));
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private static long maximumRiftExpiry(ServerPlayer player, long now) {
+        long duration = ServerConfig.RIFT_ANCHOR_LIFETIME_TICKS.get()
+                + Math.max(0, ArtifactManager.getData(player).getLevel(ArtifactType.RIFT_ANCHOR) - 1) * 2400L;
+        if ("lingering".equals(ArtifactManager.getData(player).getTuning(ArtifactType.RIFT_ANCHOR))) {
+            duration += duration / 2L;
+        }
+        return duration > Long.MAX_VALUE - now ? Long.MAX_VALUE : now + duration;
+    }
+
+    static boolean teleport(ServerPlayer player, Destination destination) {
         Vec3 target = destination.target;
         player.teleportTo(destination.level, target.x, target.y, target.z,
                 player.getYRot(), player.getXRot());
+        if (player.serverLevel() != destination.level
+                || player.position().distanceToSqr(target) > 0.01D) {
+            return false;
+        }
         player.setDeltaMovement(Vec3.ZERO);
         player.fallDistance = 0.0F;
+        return true;
     }
 
     /** 只在传送成功后提交双锚轮换，避免失败请求改变下次目的地。 */
     static void commitUse(ServerPlayer player, ArtifactType type, Destination destination) {
         List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), type == ArtifactType.RIFT_ANCHOR);
+        if (normalizeAnchorCount(player, type, anchors)) {
+            persistBinding(player, type, anchors);
+        }
+        if (!supportsMultipleAnchors(player, type)) {
+            return;
+        }
         for (int index = 0; index < anchors.size(); index++) {
             Anchor anchor = anchors.get(index);
             if (anchor.dimension.equals(destination.anchorDimension)
@@ -230,6 +302,9 @@ final class ArtifactAnchorHelper {
         if (safe == null) {
             return new ResolveResult(null, Failure.UNSAFE_POSITION);
         }
+        if (hasBossNearby(targetLevel, BlockPos.containing(safe))) {
+            return new ResolveResult(null, Failure.BOSS_NEARBY);
+        }
         return new ResolveResult(new Destination(targetLevel, safe, anchor.expiry,
                 anchor.dimension, anchor.pos), Failure.NONE);
     }
@@ -247,9 +322,7 @@ final class ArtifactAnchorHelper {
         if (!state.is(ModBlocks.ABYSS_BEACON.get())) {
             return false;
         }
-        String prefix = "abyss_beacon:" + level.dimension().location() + ":"
-                + pos.getX() + ":" + pos.getY() + ":" + pos.getZ();
-        return EchoAbilityManager.hasActivatedMechanism(player, prefix + ":complete");
+        return AbyssBeaconBlock.isCalibratedFor(player, level, pos);
     }
 
     private static boolean canEnterBoundDimension(ServerPlayer player, ResourceKey<Level> dimension) {
@@ -303,25 +376,55 @@ final class ArtifactAnchorHelper {
     private static Vec3 safePosition(ServerLevel level, ServerPlayer player, AABB original, BlockPos feet) {
         Vec3 target = new Vec3(feet.getX() + 0.5D, feet.getY(), feet.getZ() + 0.5D);
         AABB moved = original.move(target.subtract(player.position()));
-        return level.getWorldBorder().isWithinBounds(feet)
+        return level.getWorldBorder().isWithinBounds(moved)
                 && level.noCollision(player, moved)
                 && Block.canSupportCenter(level, feet.below(), Direction.UP) ? target : null;
     }
 
-    static boolean isDestinationSafe(ServerPlayer player, Destination destination) {
+    static boolean isDestinationCurrent(ServerPlayer player, ArtifactType type,
+                                        Destination destination) {
+        if (!canEnterBoundDimension(player, destination.anchorDimension)
+                || player.server.getLevel(destination.anchorDimension) != destination.level) {
+            return false;
+        }
+
+        boolean rift = type == ArtifactType.RIFT_ANCHOR;
+        List<Anchor> anchors = boundAnchors(
+                ArtifactManager.getData(player).getBinding(type), rift);
+        boolean changed = normalizeAnchorCount(player, type, anchors);
+        if (rift) {
+            long now = ArtifactManager.gameTime(player);
+            changed |= normalizeRiftAnchors(player, anchors, now);
+        }
+        if (changed) {
+            persistBinding(player, type, anchors);
+        }
+        boolean stillBound = anchors.stream().anyMatch(anchor ->
+                anchor.dimension.equals(destination.anchorDimension)
+                        && anchor.pos.equals(destination.anchorPos)
+                        && anchor.expiry == destination.expiry);
+        if (!stillBound || !rift
+                && !isValidDimensionAnchor(player, destination.level, destination.anchorPos)) {
+            return false;
+        }
+
+        BlockPos feet = BlockPos.containing(destination.target);
         if (hasBossNearby(player.serverLevel(), player.blockPosition())
-                || hasBossNearby(destination.level, destination.anchorPos)) {
+                || hasBossNearby(destination.level, destination.anchorPos)
+                || hasBossNearby(destination.level, feet)) {
             return false;
         }
         AABB original = player.getBoundingBox();
-        BlockPos feet = BlockPos.containing(destination.target);
         return safePosition(destination.level, player, original, feet) != null;
     }
 
     private static boolean hasBossNearby(ServerLevel level, BlockPos pos) {
         AABB area = new AABB(pos).inflate(BOSS_LOCK_RANGE);
         return !level.getEntitiesOfClass(LivingEntity.class, area,
-                entity -> entity.isAlive() && entity.getType().is(ModEntityTags.ECHO_BOSSES)).isEmpty();
+                entity -> entity.isAlive() && (entity.getType().is(ModEntityTags.ECHO_BOSSES)
+                        || entity.getType().is(Tags.EntityTypes.BOSSES))
+                        && entity.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D,
+                        pos.getZ() + 0.5D) <= BOSS_LOCK_RANGE * BOSS_LOCK_RANGE).isEmpty();
     }
 
     private static void prepareChunks(ServerLevel level, BlockPos center, int radiusBlocks) {
@@ -388,6 +491,27 @@ final class ArtifactAnchorHelper {
         return anchors;
     }
 
+    /** 调谐关闭双点能力后，保留下一次将要使用的首个锚点，避免旧存档继续轮换。 */
+    private static boolean normalizeAnchorCount(ServerPlayer player, ArtifactType type,
+                                                List<Anchor> anchors) {
+        int allowed = supportsMultipleAnchors(player, type) ? MAX_BOUND_ANCHORS : 1;
+        if (anchors.size() <= allowed) {
+            return false;
+        }
+        anchors.subList(allowed, anchors.size()).clear();
+        return true;
+    }
+
+    private static boolean supportsMultipleAnchors(ServerPlayer player, ArtifactType type) {
+        return switch (type) {
+            case DIMENSION_ANCHOR -> ArtifactManager.getData(player).getLevel(type) >= 2
+                    && "dual_anchor".equals(ArtifactManager.getData(player).getTuning(type));
+            case RIFT_ANCHOR -> ArtifactManager.getData(player).getLevel(type) >= 2
+                    && "twin_spike".equals(ArtifactManager.getData(player).getTuning(type));
+            default -> false;
+        };
+    }
+
     private static void rotateAfterUse(ServerPlayer player, ArtifactType type,
                                        List<Anchor> anchors, int index) {
         if (anchors.size() <= 1 || index < 0 || index >= anchors.size()) {
@@ -400,7 +524,12 @@ final class ArtifactAnchorHelper {
     }
 
     private static void persistBinding(ServerPlayer player, ArtifactType type, List<Anchor> anchors) {
-        ArtifactManager.getData(player).setBinding(type, encodeBoundAnchors(anchors));
+        persistBinding(player, type, anchors, ArtifactManager.getData(player));
+    }
+
+    private static void persistBinding(ServerPlayer player, ArtifactType type,
+                                       List<Anchor> anchors, ArtifactData data) {
+        data.setBinding(type, encodeBoundAnchors(anchors));
         ArtifactManager.syncToClient(player);
     }
 

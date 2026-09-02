@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ABA",
+    "CDC",
+    "AEA"
+  ],
+  "key": {
+    "A": { "item": "unknown_echoes:echo_stone_bricks" },
+    "B": { "item": "minecraft:bell" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "D": { "item": "unknown_echoes:echo_metal_ingot" },
+    "E": { "item": "minecraft:moss_block" }
+  },
+  "result": { "id": "unknown_echoes:realm_habitat_chime" }
+}

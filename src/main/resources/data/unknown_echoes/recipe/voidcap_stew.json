@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "ingredients": [
+    { "item": "minecraft:bowl" },
+    { "item": "unknown_echoes:voidcap" },
+    { "item": "unknown_echoes:hush_grass" },
+    { "item": "unknown_echoes:silence_moss" }
+  ],
+  "result": { "id": "unknown_echoes:voidcap_stew" }
+}

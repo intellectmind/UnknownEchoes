@@ -3,7 +3,6 @@ package cn.kurt6.unknown_echoes.entity.boss;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -49,18 +48,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * 风暴编织者:风之回响强化守护者 / Mini Boss(天空观测站四角风蚀柱区,设计文档 10.5)。
- *
- * 阶段:
- * - 风流追击:长期悬空绕场,保持与玩家距离;空中受机制保护(未破防双保险)。
- * - 坠风破防:周期性标记一处落点俯冲穿刺,落地后短暂停留——唯一完整输出窗口。
- * - 乱流收束:低血量(30%)后全技能冷却 x0.7,旋风更频繁,但俯冲窗口不变短。
- * 攻击:风刃连射(预警线 + 三段风刃浪涌)/ 旋风束缚(场内短时旋风区,推开不困死)/
- *       俯冲穿刺(标记落点 → 风压轨迹 → 俯冲 AoE → 落地硬直)。
- * 结算(个人):首杀 = 罗盘部件 + 风之强化核心 + 风之研究拓片 + 回响粉尘;
- *             重复 = 回响粉尘 + 概率拓片(普通奖励与研究进度,10.4.1)。
- */
 public class StormWeaver extends MiniBossEntity {
 
     public static final ResourceLocation MINIBOSS_ID = UnknownEchoes.id("storm_weaver");
@@ -90,13 +77,16 @@ public class StormWeaver extends MiniBossEntity {
     private static final int HOVER_MIN = 5;
     private static final int HOVER_MAX = 9;
 
-    // 风刃连射:预警 0.8s → 三段风刃沿锁定方向推进
     private static final int BLADE_TELEGRAPH_TICKS = 16;
     private static final double BLADE_MAX_DIST = 16.0D;
-    // 俯冲穿刺:风压轨迹预警 1.2s → 俯冲 → 落地硬直(输出窗口)
+    /** 风刃的立方判定半宽。 */
+    private static final double BLADE_HIT_HALF_WIDTH = 1.2D;
+
     private static final int DIVE_TELEGRAPH_TICKS = 24;
     private static final int BROKEN_WINDOW_TICKS = 120;
-    // 旋风束缚:旋风区持续 5s
+    /** 俯冲落地的结算半径。 */
+    private static final double DIVE_IMPACT_RADIUS = 3.0D;
+
     private static final int CYCLONE_LIFETIME = 100;
     private static final double CYCLONE_RADIUS = 2.2D;
 
@@ -178,8 +168,6 @@ public class StormWeaver extends MiniBossEntity {
         this.entityData.set(DATA_BROKEN, broken);
     }
 
-    // ---- MiniBoss 契约 ----
-
     @Override
     protected ResourceLocation minibossId() {
         return MINIBOSS_ID;
@@ -192,7 +180,7 @@ public class StormWeaver extends MiniBossEntity {
 
     @Override
     protected boolean isDamageGuarded() {
-        // 风流追击:空中受风护;只有俯冲落地的硬直窗口可全额输出
+
         return !this.isBroken();
     }
 
@@ -206,20 +194,24 @@ public class StormWeaver extends MiniBossEntity {
         if (this.diveMark == null) {
             return;
         }
-        BossFx.guidanceMarker(level, this.diveMark, ParticleTypes.GLOW);
-        BossFx.guidanceLink(level, this.position().add(0, 0.6, 0), this.diveMark, ParticleTypes.ELECTRIC_SPARK);
+        // 俯冲前示意：地上画环 + 从天空到落点画一条连线。
+        Vec3 marker = this.diveMark.add(0, 0.4, 0);
+        MiniBossFx.objectiveMarker(level, marker, this.fxTheme(), level.getGameTime());
+        MiniBossFx.objectiveLink(level, marker, this.position().add(0, 0.6, 0),
+                this.fxTheme(), level.getGameTime());
     }
 
     @Override
-    protected void grantSettlement(ServerPlayer player, boolean firstKill) {
-        MiniBossRewardTable.grantStormWeaver(this, player, firstKill);
+    protected void grantSettlement(boolean firstKill) {
+        MiniBossRewardTable.grantStormWeaver(this, firstKill);
     }
-
-    // ---- 主循环 ----
 
     @Override
     public void aiStep() {
         super.aiStep();
+        if (this.isSpawnerBindingPaused()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -232,15 +224,9 @@ public class StormWeaver extends MiniBossEntity {
         this.tickHover(serverLevel);
         this.tickCyclones(serverLevel);
         this.tickSpecialAttacks(serverLevel);
-
-        // 翼下风纹:盘旋时周期性风屑(5 tick 节流)
-        if (this.tickCount % 5 == 0) {
-            serverLevel.sendParticles(ParticleTypes.CLOUD,
-                    this.getX(), this.getY() - 0.3, this.getZ(), 2, 0.8, 0.1, 0.8, 0.01);
-        }
     }
 
-    /** 风流追击:围绕场地锚点高空盘旋,周期性换悬空航点,刻意与目标拉开距离。 */
+    /** 风流追击:围绕场地锚点高空盘旋,周期性换悬空航点并与目标保持距离。 */
     private void tickHover(ServerLevel serverLevel) {
         if (--this.waypointTicks > 0 && this.hoverWaypoint != null
                 && this.distanceToSqr(this.hoverWaypoint.x, this.hoverWaypoint.y, this.hoverWaypoint.z) > 4.0) {
@@ -250,7 +236,7 @@ public class StormWeaver extends MiniBossEntity {
         }
         Vec3 anchor = Vec3.atCenterOf(this.arenaAnchor());
         LivingEntity target = this.getTarget();
-        // 航点偏向目标对侧:保持空中距离,逼玩家用风之机动接近
+
         double baseAngle = target != null
                 ? Math.atan2(anchor.z - target.getZ(), anchor.x - target.getX())
                 : this.random.nextDouble() * Math.PI * 2;
@@ -266,7 +252,6 @@ public class StormWeaver extends MiniBossEntity {
                 this.hoverWaypoint.x, this.hoverWaypoint.y, this.hoverWaypoint.z, 1.0);
     }
 
-    /** 乱流收束(低血量):冷却整体提速。 */
     private boolean isTurbulentPhase() {
         return this.getHealth() < this.getMaxHealth() * 0.3F;
     }
@@ -280,7 +265,6 @@ public class StormWeaver extends MiniBossEntity {
         if (this.cycloneCooldown > 0) this.cycloneCooldown--;
         if (this.diveCooldown > 0) this.diveCooldown--;
 
-        // 风刃预警 → 浪涌推进
         if (this.bladeTelegraphTicks > 0) {
             this.tickBladeTelegraph(serverLevel);
             if (--this.bladeTelegraphTicks == 0) {
@@ -293,7 +277,7 @@ public class StormWeaver extends MiniBossEntity {
             this.tickBladeWave(serverLevel);
             return;
         }
-        // 俯冲:预警 → 俯冲位移(在 tickDive 处理)
+
         if (this.diveTelegraphTicks > 0) {
             this.tickDiveTelegraph(serverLevel);
             if (--this.diveTelegraphTicks == 0) {
@@ -322,8 +306,6 @@ public class StormWeaver extends MiniBossEntity {
         }
     }
 
-    // ---- 风刃连射 ----
-
     private void startBladeVolley(LivingEntity target) {
         Vec3 dir = target.position().add(0, target.getBbHeight() * 0.5, 0)
                 .subtract(this.position()).normalize();
@@ -339,34 +321,37 @@ public class StormWeaver extends MiniBossEntity {
         this.playSound(SoundEvents.BREEZE_CHARGE, 1.6F, 0.8F);
     }
 
-    /** 风刃预警:沿攻击路径铺一条风压线。 */
     private void tickBladeTelegraph(ServerLevel serverLevel) {
-        BossFx.chargeSpiral(serverLevel, this.bladeOrigin, this.tickCount, ParticleTypes.ELECTRIC_SPARK);
-        for (double d = 1.5; d <= BLADE_MAX_DIST; d += 1.5) {
-            Vec3 p = this.bladeOrigin.add(this.bladeDir.scale(d));
-            serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                    p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.01);
-        }
+        // 预警画的就是刃波将要走的那条线，玩家照着它侧移才躲得开。
+        MiniBossFx.pierceBeam(serverLevel, this.bladeOrigin, this.bladeDir,
+                this.fxTheme(), BLADE_MAX_DIST);
     }
 
-    /** 风刃浪涌:沿线推进(每 tick 两段),单波每人只命中一次,共三波。 */
     private void tickBladeWave(ServerLevel serverLevel) {
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.55F;
+        if (this.bladeWaveDist <= 1.0D) {
+            BossFx.cinematicImpact(serverLevel, this.bladeOrigin, 22.0D,
+                    0.24F, 4, this.combatImpactColor());
+        }
         for (int seg = 0; seg < 2 && this.bladeWaveDist >= 0; seg++) {
             Vec3 p = this.bladeOrigin.add(this.bladeDir.scale(this.bladeWaveDist));
-            serverLevel.sendParticles(ParticleTypes.SWEEP_ATTACK, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
-            serverLevel.sendParticles(ParticleTypes.CLOUD, p.x, p.y, p.z, 3, 0.3, 0.3, 0.3, 0.05);
-            BossFx.sparkSpray(serverLevel, p, this.bladeDir, 2.2, ParticleTypes.ELECTRIC_SPARK);
+            // 刃波是逐帧推进的立方判定，环画在半宽上让玩家读出"这一段现在危险"。
+            MiniBossFx.impactZone(serverLevel, p, this.fxTheme(), BLADE_HIT_HALF_WIDTH,
+                    this.bladeWaveDist / BLADE_MAX_DIST);
             for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                    new AABB(p.x - 1.2, p.y - 1.2, p.z - 1.2, p.x + 1.2, p.y + 1.2, p.z + 1.2),
+                    new AABB(p.x - BLADE_HIT_HALF_WIDTH, p.y - BLADE_HIT_HALF_WIDTH,
+                            p.z - BLADE_HIT_HALF_WIDTH, p.x + BLADE_HIT_HALF_WIDTH,
+                            p.y + BLADE_HIT_HALF_WIDTH, p.z + BLADE_HIT_HALF_WIDTH),
                     e -> e != this && !e.isSpectator() && !(e instanceof Enemy)
                             && !this.bladeHitVictims.contains(e.getUUID()))) {
-                victim.hurt(this.damageSources().mobAttack(this), damage);
+                if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                    MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+                }
                 this.bladeHitVictims.add(victim.getUUID());
             }
             this.bladeWaveDist += 1.6D;
             if (this.bladeWaveDist > BLADE_MAX_DIST) {
-                // 一波结束:还有剩余波次则向目标重新锁向再射
+
                 if (--this.bladeWavesLeft > 0) {
                     LivingEntity target = this.getTarget();
                     if (target != null && target.isAlive()) {
@@ -384,27 +369,27 @@ public class StormWeaver extends MiniBossEntity {
         }
     }
 
-    // ---- 旋风束缚 ----
-
     /** 在目标与本体之间放 2-3 个短时旋风区:阻路推开,不造成围困。 */
     private void castCyclones(ServerLevel serverLevel, LivingEntity target) {
         int count = this.isTurbulentPhase() ? 3 : 2;
         Vec3 anchor = Vec3.atCenterOf(this.arenaAnchor());
         for (int i = 0; i < count; i++) {
-            // 落点:目标周围 2~5 格的地表附近,但不直接压在目标头上(留可读路线)
+
             double angle = this.random.nextDouble() * Math.PI * 2;
             double dist = 2.0 + this.random.nextDouble() * 3.0;
             Vec3 p = target.position().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
-            // 锁场地:超出场地半径的旋风丢弃
+
             if (p.subtract(anchor).horizontalDistanceSqr() > ARENA_RADIUS * ARENA_RADIUS) {
                 continue;
             }
             this.cyclones.add(new Cyclone(p, CYCLONE_LIFETIME));
-            BossFx.groundShockwave(serverLevel, p.add(0, 0.1, 0), CYCLONE_RADIUS, ParticleTypes.CLOUD);
+            MiniBossFx.groundRing(serverLevel, p, this.fxTheme(), CYCLONE_RADIUS);
         }
         this.cycloneCooldown = scaleCooldown(200);
         this.triggerAnim("attack_controller", "cyclone");
         this.playSound(SoundEvents.BREEZE_IDLE_GROUND, 1.8F, 0.6F);
+        BossFx.cinematicImpact(serverLevel, target.position().add(0, 0.6, 0),
+                22.0D, 0.24F, 4, this.combatImpactColor());
     }
 
     private void tickCyclones(ServerLevel serverLevel) {
@@ -413,20 +398,11 @@ public class StormWeaver extends MiniBossEntity {
         }
         this.cyclones.removeIf(cyclone -> --cyclone.ticks <= 0);
         for (Cyclone cyclone : this.cyclones) {
-            // 螺旋风柱演出
-            double spin = (CYCLONE_LIFETIME - cyclone.ticks) * 0.5;
-            for (int h = 0; h < 3; h++) {
-                double r = 0.6 + h * 0.5;
-                serverLevel.sendParticles(ParticleTypes.CLOUD,
-                        cyclone.pos.x + Math.cos(spin + h * 2.1) * r,
-                        cyclone.pos.y + 0.3 + h * 0.9,
-                        cyclone.pos.z + Math.sin(spin + h * 2.1) * r,
-                        1, 0.05, 0.05, 0.05, 0.0);
-            }
             if (cyclone.ticks % 4 == 0) {
-                BossFx.chargeSpiral(serverLevel, cyclone.pos.add(0, 0.1, 0), this.tickCount, ParticleTypes.CLOUD);
+                // 旋风是持续存在的推开区，环画在 CYCLONE_RADIUS 上标出它的边界。
+                MiniBossFx.groundRing(serverLevel, cyclone.pos, this.fxTheme(), CYCLONE_RADIUS);
             }
-            // 推离:站进旋风会被推开 + 短暂缓速,阻路但不困死
+
             if (cyclone.ticks % 5 == 0) {
                 for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                         new AABB(cyclone.pos.x - CYCLONE_RADIUS, cyclone.pos.y - 0.5, cyclone.pos.z - CYCLONE_RADIUS,
@@ -443,10 +419,8 @@ public class StormWeaver extends MiniBossEntity {
         }
     }
 
-    // ---- 俯冲穿刺 → 坠风破防 ----
-
     private void startDive(ServerLevel serverLevel, LivingEntity target) {
-        // 标记落点:目标当前所站位置(俯冲一定落到标记点,落地即输出窗口)
+
         this.diveMark = target.position();
         this.diveTelegraphTicks = DIVE_TELEGRAPH_TICKS;
         this.diveCooldown = scaleCooldown(280);
@@ -454,28 +428,18 @@ public class StormWeaver extends MiniBossEntity {
         this.playSound(SoundEvents.BREEZE_INHALE, 2.0F, 0.5F);
     }
 
-    /** 俯冲预警:标记点风压圈 + 本体到落点的长条风压轨迹(10.5 粒子演出)。 */
     private void tickDiveTelegraph(ServerLevel serverLevel) {
         if (this.diveMark == null) {
             this.diveTelegraphTicks = 0;
             return;
         }
-        for (int i = 0; i < 8; i++) {
-            double angle = Math.PI * 2 * i / 8 + this.tickCount * 0.2;
-            serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                    this.diveMark.x + Math.cos(angle) * 1.8,
-                    this.diveMark.y + 0.1,
-                    this.diveMark.z + Math.sin(angle) * 1.8, 1, 0.05, 0.02, 0.05, 0.0);
-        }
-        if (this.tickCount % 4 == 0) {
-            BossFx.ring(serverLevel, this.diveMark, 2.4, 20, 0.12, ParticleTypes.CLOUD);
-        }
-        Vec3 from = this.position();
-        Vec3 delta = this.diveMark.subtract(from);
-        int steps = Math.max(4, (int) (delta.length()));
-        for (int i = 0; i <= steps; i += 2) {
-            Vec3 p = from.add(delta.scale(i / (double) steps));
-            serverLevel.sendParticles(ParticleTypes.CLOUD, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
+        // 俯冲预警画在落点，玩家根据它散开。
+        MiniBossFx.groundRing(serverLevel, this.diveMark, this.fxTheme(), DIVE_IMPACT_RADIUS);
+        // 从天空到落点画一条示意线，让玩家抬头看 Boss 也能意识到它是往哪冲的。
+        if (this.tickCount % 3 == 0) {
+            MiniBossFx.pierceBeam(serverLevel, this.position(),
+                    this.diveMark.subtract(this.position()).normalize(),
+                    this.fxTheme(), this.position().distanceTo(this.diveMark));
         }
     }
 
@@ -491,76 +455,72 @@ public class StormWeaver extends MiniBossEntity {
         }
         this.setDeltaMovement(toMark.normalize().scale(1.1));
         this.hurtMarked = true;
-        serverLevel.sendParticles(ParticleTypes.CLOUD,
-                this.getX(), this.getY() + 0.5, this.getZ(), 4, 0.3, 0.3, 0.3, 0.02);
     }
 
-    /** 落地:穿刺 AoE → 坠风破防(硬直输出窗口,唯一全额伤害期)。 */
     private void landDive(ServerLevel serverLevel) {
         this.diving = false;
         this.setDeltaMovement(Vec3.ZERO);
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.2F;
+        // 落地冲击波，环画在结算半径上让玩家读出"散这么开就安全"。
+        MiniBossFx.expandingRing(serverLevel, this.position(), this.fxTheme(),
+                DIVE_IMPACT_RADIUS, 1.2D);
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                this.getBoundingBox().inflate(3.0, 1.5, 3.0),
+                this.getBoundingBox().inflate(DIVE_IMPACT_RADIUS, 1.5, DIVE_IMPACT_RADIUS),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
-            victim.hurt(this.damageSources().mobAttack(this), damage);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
-            if (away.lengthSqr() > 1.0E-4) {
-                Vec3 dir = away.normalize();
-                victim.setDeltaMovement(victim.getDeltaMovement().add(dir.x * 0.9, 0.4, dir.z * 0.9));
-                victim.hurtMarked = true;
+            if (away.lengthSqr() > DIVE_IMPACT_RADIUS * DIVE_IMPACT_RADIUS) {
+                continue;
+            }
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+                if (away.lengthSqr() > 1.0E-4) {
+                    Vec3 dir = away.normalize();
+                    victim.setDeltaMovement(victim.getDeltaMovement().add(
+                            dir.x * 0.9, 0.4, dir.z * 0.9));
+                    victim.hurtMarked = true;
+                }
             }
         }
         this.setBroken(true);
         this.brokenTicksRemaining = BROKEN_WINDOW_TICKS;
         this.diveMark = null;
-        // 破防演出:羽状风纹围绕核心散开(10.5)
-        serverLevel.sendParticles(ParticleTypes.EXPLOSION,
-                this.getX(), this.getY() + 0.5, this.getZ(), 1, 0, 0, 0, 0);
-        for (int i = 0; i < 24; i++) {
-            double angle = Math.PI * 2 * i / 24;
-            serverLevel.sendParticles(ParticleTypes.CLOUD,
-                    this.getX(), this.getY() + 1.0, this.getZ(),
-                    0, Math.cos(angle) * 0.5, 0.1, Math.sin(angle) * 0.5, 1.0);
-        }
-        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.1, 0), 3.5, ParticleTypes.CLOUD);
-        BossFx.impactBurst(serverLevel, this.position().add(0, 0.5, 0), ParticleTypes.CLOUD);
+
+        MiniBossFx.expandingRing(serverLevel, this.position(), this.fxTheme(),
+                DIVE_IMPACT_RADIUS * 1.5, 1.4D);
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 0.4, 0),
+                28.0D, 0.62F, 8, this.combatImpactColor());
         serverLevel.playSound(null, this.blockPosition(),
                 ModSounds.STORM_WEAVER_SHATTER.get(), SoundSource.HOSTILE, 2.0F, 1.0F);
         this.broadcastHint(serverLevel, "message.unknown_echoes.storm_weaver.broken");
     }
 
-    /** 坠风硬直:停在原地,窗口结束后重新升空。 */
     private void tickBrokenWindow(ServerLevel serverLevel) {
         this.getNavigation().stop();
         this.setDeltaMovement(this.getDeltaMovement().multiply(0.4, 0.4, 0.4));
-        // 核心风纹外泄(节流)
+
         if (this.tickCount % 5 == 0) {
-            serverLevel.sendParticles(ParticleTypes.END_ROD,
-                    this.getX(), this.getY() + 1.0, this.getZ(), 3, 0.5, 0.6, 0.5, 0.03);
+            MiniBossFx.breachAura(serverLevel, this, this.fxTheme(), serverLevel.getGameTime());
         }
         if (--this.brokenTicksRemaining <= 0 && this.isAlive()) {
             this.setBroken(false);
-            this.waypointTicks = 0;   // 立刻取新航点升空
+            this.waypointTicks = 0;
             this.playSound(SoundEvents.BREEZE_CHARGE, 1.8F, 1.2F);
         }
     }
 
     private void broadcastHint(ServerLevel serverLevel, String key) {
         double radius = settlementRadius();
-        for (ServerPlayer player : serverLevel.players()) {
-            if (player.distanceToSqr(this) <= radius * radius) {
-                player.displayClientMessage(
-                        net.minecraft.network.chat.Component.translatable(key), true);
-            }
+        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(radius),
+                candidate -> candidate.distanceToSqr(this) <= radius * radius)) {
+            player.displayClientMessage(
+                    net.minecraft.network.chat.Component.translatable(key), true);
         }
     }
 
-    // ---- 体征 ----
-
     @Override
     public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
-        // 俯冲是机制位移,不吃摔落伤害
+
         return false;
     }
 
@@ -579,8 +539,6 @@ public class StormWeaver extends MiniBossEntity {
         return ModSounds.STORM_WEAVER_DEATH.get();
     }
 
-    // ---- NBT ----
-
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
@@ -591,12 +549,13 @@ public class StormWeaver extends MiniBossEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.setBroken(tag.getBoolean("Broken"));
         this.brokenTicksRemaining = BossNbtData.clampTimer(
                 tag.getInt("BrokenTicks"), BROKEN_WINDOW_TICKS);
+        this.setBroken(tag.getBoolean("Broken") && this.brokenTicksRemaining > 0);
+        if (!this.isBroken()) {
+            this.brokenTicksRemaining = 0;
+        }
     }
-
-    // ---- GeckoLib ----
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {

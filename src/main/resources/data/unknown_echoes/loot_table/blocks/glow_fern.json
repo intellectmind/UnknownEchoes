@@ -5,35 +5,49 @@
       "rolls": 1,
       "entries": [
         {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:glow_fern"
-        }
-      ]
-    },
-    {
-      "rolls": 1,
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:echo_fiber",
-          "functions": [
+          "type": "minecraft:alternatives",
+          "children": [
             {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 2
-              }
+              "type": "minecraft:item",
+              "name": "unknown_echoes:glow_fern",
+              "conditions": [
+                {
+                  "condition": "minecraft:match_tool",
+                  "predicate": {
+                    "items": ["minecraft:shears", "unknown_echoes:echo_shears"]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "unknown_echoes:echo_fiber",
+              "functions": [
+                {
+                  "function": "minecraft:set_count",
+                  "count": {
+                    "type": "minecraft:uniform",
+                    "min": 1,
+                    "max": 2
+                  }
+                }
+              ],
+              "conditions": [
+                {
+                  "condition": "minecraft:random_chance",
+                  "chance": 0.45
+                }
+              ]
             }
           ]
         }
       ],
       "conditions": [
         {
-          "condition": "minecraft:random_chance",
-          "chance": 0.45
+          "condition": "minecraft:survives_explosion"
         }
       ]
     }
-  ]
+  ],
+  "random_sequence": "unknown_echoes:blocks/glow_fern"
 }

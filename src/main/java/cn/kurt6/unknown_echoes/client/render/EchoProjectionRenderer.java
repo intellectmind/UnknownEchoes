@@ -10,12 +10,9 @@ import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 import software.bernie.geckolib.util.Color;
 
-/**
- * 回响投影渲染器:半透明全息残影 + 独立发光轮廓。
- */
 public class EchoProjectionRenderer extends GeoEntityRenderer<EchoProjectionEntity> {
 
-    private static final Color HOLOGRAM_TINT = Color.ofRGBA(190, 255, 248, 215);
+    private static final Color HOLOGRAM_TINT = Color.ofRGBA(250, 253, 255, 218);
 
     public EchoProjectionRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("echo_projection"), true));

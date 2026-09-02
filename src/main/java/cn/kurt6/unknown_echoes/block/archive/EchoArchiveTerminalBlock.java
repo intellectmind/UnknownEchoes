@@ -5,7 +5,6 @@ import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -23,10 +22,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * 回声大档案馆终端:读取第一维度完成度并结算 T7 个人奖励。
- * 交互只读玩家服务端进度,奖励写入个人数据;不依赖掉落物或世界唯一状态。
- */
+/** 回声大档案馆终端:读取第一维度完成度并结算 T7 个人奖励。 */
 public class EchoArchiveTerminalBlock extends BaseEntityBlock {
     public static final MapCodec<EchoArchiveTerminalBlock> CODEC = simpleCodec(EchoArchiveTerminalBlock::new);
 
@@ -72,7 +68,6 @@ public class EchoArchiveTerminalBlock extends BaseEntityBlock {
         if (!EchoCompletionManager.hasArchiveTerminalRecord(serverPlayer)) {
             return InteractionResult.CONSUME;
         }
-        serverPlayer.sendSystemMessage(Component.translatable("message.unknown_echoes.archive_terminal.awakened"));
         level.playSound(null, pos, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.BLOCKS, 0.8F, 0.9F);
         if (level instanceof ServerLevel serverLevel) {
             serverLevel.sendParticles(ParticleTypes.END_ROD,

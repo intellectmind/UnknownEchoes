@@ -2,6 +2,14 @@
   "replace": false,
   "values": [
     "unknown_echoes:explorer_helmet",
-    "unknown_echoes:listener_helmet"
+    "unknown_echoes:listener_helmet",
+    "unknown_echoes:echo_traveler_helmet",
+    "unknown_echoes:wind_walker_helmet",
+    "unknown_echoes:tide_stalker_helmet",
+    "unknown_echoes:true_sight_shadow_helmet",
+    "unknown_echoes:silent_watch_helmet",
+    "unknown_echoes:echo_oath_helmet",
+    "unknown_echoes:abyss_walker_helmet",
+    "unknown_echoes:resonator_helmet"
   ]
 }

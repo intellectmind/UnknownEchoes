@@ -2,6 +2,7 @@
 	"parent": "unknown_echoes:block/wind_current_platform",
 	"textures": {
 		"1": "unknown_echoes:block/wind_current_platform_active",
+		"2": "unknown_echoes:block/wind_flux",
 		"particle": "unknown_echoes:block/wind_current_platform_active"
 	}
 }

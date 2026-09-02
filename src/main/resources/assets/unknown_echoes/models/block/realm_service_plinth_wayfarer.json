@@ -1,0 +1,7 @@
+{
+  "parent": "unknown_echoes:block/realm_service_plinth_base",
+  "textures": {
+    "core": "unknown_echoes:block/realm_service_plinth_wayfarer",
+    "focus": "unknown_echoes:block/realm_service_plinth_focus"
+  }
+}

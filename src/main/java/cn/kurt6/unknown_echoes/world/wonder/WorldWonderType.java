@@ -1,8 +1,8 @@
 package cn.kurt6.unknown_echoes.world.wonder;
 
 /**
- * 第一维度世界奇观稳定 ID。当前版本先提供定义层与数据包入口,
- * 大型结构落地时必须复用这些 ID,避免线索、Wiki、完成度和存档记录漂移。
+ * 第一维度世界奇观稳定 ID。
+ * 先提供定义层与数据包入口, 大型结构落地时必须复用这些 ID,避免线索、Wiki、完成度和存档记录漂移。
  */
 public enum WorldWonderType {
     ECHO_WORLD_TREE("echo_world_tree", "echo_forest", 1),
@@ -33,6 +33,11 @@ public enum WorldWonderType {
 
     public int getPriority() {
         return priority;
+    }
+
+    /** 未发现时显示的环境提示键。与清单 JSON 的 clue_key 同源,不要在调用点另写字面量。 */
+    public String getClueKey() {
+        return "clue.unknown_echoes." + id;
     }
 
     public static WorldWonderType byId(String id) {

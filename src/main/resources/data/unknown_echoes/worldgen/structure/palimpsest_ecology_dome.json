@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:palimpsest_ecology_dome",
+  "biomes": "#unknown_echoes:has_palimpsest_ecology_dome",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

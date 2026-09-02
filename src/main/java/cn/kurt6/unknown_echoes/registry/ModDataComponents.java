@@ -9,6 +9,11 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class ModDataComponents {
+    private static final int ARTIFACT_ID_MAX_LENGTH = 64;
+    private static final int OWNER_UUID_MAX_LENGTH = 36;
+    private static final int RESOURCE_ID_MAX_LENGTH = 256;
+    private static final int ABILITY_ID_MAX_LENGTH = 64;
+
     public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENT_TYPES =
             DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, UnknownEchoes.MODID);
 
@@ -21,10 +26,7 @@ public class ModDataComponents {
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> ARTIFACT_ID =
             DATA_COMPONENT_TYPES.register("artifact_id",
-                    () -> DataComponentType.<String>builder()
-                            .persistent(Codec.STRING)
-                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
-                            .build());
+                    () -> stringComponent(ARTIFACT_ID_MAX_LENGTH));
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> CREDENTIAL_SERIAL =
             DATA_COMPONENT_TYPES.register("credential_serial",
@@ -35,29 +37,24 @@ public class ModDataComponents {
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> ARTIFACT_OWNER =
             DATA_COMPONENT_TYPES.register("artifact_owner",
-                    () -> DataComponentType.<String>builder()
-                            .persistent(Codec.STRING)
-                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
-                            .build());
+                    () -> stringComponent(OWNER_UUID_MAX_LENGTH));
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> CLUE_STRUCTURE =
             DATA_COMPONENT_TYPES.register("clue_structure",
-                    () -> DataComponentType.<String>builder()
-                            .persistent(Codec.STRING)
-                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
-                            .build());
+                    () -> stringComponent(RESOURCE_ID_MAX_LENGTH));
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> TOKEN_ABILITY =
             DATA_COMPONENT_TYPES.register("token_ability",
-                    () -> DataComponentType.<String>builder()
-                            .persistent(Codec.STRING)
-                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
-                            .build());
+                    () -> stringComponent(ABILITY_ID_MAX_LENGTH));
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> TOKEN_OWNER =
             DATA_COMPONENT_TYPES.register("token_owner",
-                    () -> DataComponentType.<String>builder()
-                            .persistent(Codec.STRING)
-                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
-                            .build());
+                    () -> stringComponent(OWNER_UUID_MAX_LENGTH));
+
+    private static DataComponentType<String> stringComponent(int maxLength) {
+        return DataComponentType.<String>builder()
+                .persistent(Codec.sizeLimitedString(maxLength))
+                .networkSynchronized(ByteBufCodecs.stringUtf8(maxLength))
+                .build();
+    }
 }

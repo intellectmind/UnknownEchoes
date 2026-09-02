@@ -1,0 +1,47 @@
+{
+  "parent": "unknown_echoes:echo_traveler_armor",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:tide_stalker_chestplate"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.armor_tide_stalker.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.armor_tide_stalker.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "full_set": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:tide_stalker_helmet"
+            ]
+          },
+          {
+            "items": [
+              "unknown_echoes:tide_stalker_chestplate"
+            ]
+          },
+          {
+            "items": [
+              "unknown_echoes:tide_stalker_leggings"
+            ]
+          },
+          {
+            "items": [
+              "unknown_echoes:tide_stalker_boots"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

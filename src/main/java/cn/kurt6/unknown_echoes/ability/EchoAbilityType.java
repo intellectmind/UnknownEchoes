@@ -2,9 +2,6 @@ package cn.kurt6.unknown_echoes.ability;
 
 import javax.annotation.Nullable;
 
-/**
- * 回响能力类型。V0.1 只实现 WIND_ECHO,其余为后续版本预留。
- */
 public enum EchoAbilityType {
     WIND_ECHO("wind_echo"),
     TIDE_ECHO("tide_echo"),

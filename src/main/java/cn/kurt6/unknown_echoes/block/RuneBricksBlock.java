@@ -11,9 +11,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 
-/**
- * 回响符文砖:遗迹提示方块。发光符文刻在正反两面,放置时正面朝向玩家。
- */
+/** 回响符文砖:遗迹提示方块。发光符文刻在正反两面,放置时正面朝向玩家。 */
 public class RuneBricksBlock extends Block {
     public static final MapCodec<RuneBricksBlock> CODEC = simpleCodec(RuneBricksBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;

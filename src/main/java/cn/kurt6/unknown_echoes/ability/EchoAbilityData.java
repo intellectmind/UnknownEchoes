@@ -13,10 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * 玩家个人回响进度数据,通过 NeoForge Data Attachment 持久化。
- * 带 dataVersion,后续新增能力时旧存档缺失字段按未解锁处理。
- */
 public class EchoAbilityData {
     public static final int CURRENT_DATA_VERSION = 4;
     private static final int MAX_ID_LENGTH = 256;
@@ -49,15 +45,13 @@ public class EchoAbilityData {
     private final Set<String> activatedBeacons = new HashSet<>();
     private final Set<String> defeatedBosses = new HashSet<>();
     private final Set<String> unlockedDimensions = new HashSet<>();
-    /** 个人激活过的机关(V0.5 起,如潮汐符柱),键格式 "<机关>:<维度>:<坐标>"。旧档缺失按未激活处理。 */
+    /** 个人激活过的机关，键格式为“<机关>:<维度>:<坐标>”。 */
     private final Set<String> activatedMechanisms = new HashSet<>();
-    /** 残页之外的研究点(V0.6B:拓片阅读/回访点交互/守护者首杀),键=能力 id。
-     *  研究等级 = min(上限, 该能力研究残页数 + 此处研究点);旧档缺失按 0 处理。 */
+    /** 残页之外的研究点(拓片阅读/回访点交互/守护者首杀),键=能力 id。 */
     private final Map<String, Integer> researchPoints = new HashMap<>();
-    /** 共鸣信物当前有效凭据序号(V0.6E 5.1.1,同神器凭据方案),键=能力 id。
-     *  复领自增,旧信物/他人信物序号不符即失效;旧档缺失按 0 处理。 */
+    /** 共鸣信物当前有效凭据序号，按能力 id 保存。 */
     private final Map<String, Integer> tokenSerials = new HashMap<>();
-    /** 最近一次能力使用失败的含蓄提示键(5.7 面板用),键=能力 id。瞬态:不入存档。 */
+    /** 最近一次能力使用失败的提示键，按能力 id 保存；仅用于界面展示。 */
     private final transient Map<String, String> lastFailures = new HashMap<>();
 
     public EchoAbilityData() {
@@ -84,7 +78,7 @@ public class EchoAbilityData {
                 }
             }
         }
-        // 研究点键 = 研究线存储键(能力线沿用能力 id,非能力线用线 id),不能只按能力 id 白名单过滤
+
         java.util.Set<String> researchKeys = new java.util.LinkedHashSet<>();
         for (EchoAbilityType type : EchoAbilityType.values()) {
             researchKeys.add(type.getId());
@@ -252,7 +246,6 @@ public class EchoAbilityData {
                 && ResourceLocation.tryParse(id) != null;
     }
 
-    /** 该研究线残页之外的研究点(拓片/回访/守护者来源)。 */
     public int getResearchPoints(EchoResearchLine line) {
         return researchPoints.getOrDefault(line.getStorageKey(), 0);
     }
@@ -266,13 +259,11 @@ public class EchoAbilityData {
         researchPoints.put(line.getStorageKey(), next);
     }
 
-    /** 兼容旧调用:能力研究点映射到对应研究线。 */
     public int getResearchPoints(EchoAbilityType type) {
         EchoResearchLine line = EchoResearchLine.byAbility(type);
         return line == null ? researchPoints.getOrDefault(type.getId(), 0) : getResearchPoints(line);
     }
 
-    /** 兼容旧调用:能力研究点映射到对应研究线。 */
     public void addResearchPoints(EchoAbilityType type, int amount) {
         if (amount <= 0) {
             return;
@@ -294,8 +285,6 @@ public class EchoAbilityData {
         return unlockedAbilities.add(type.getId());
     }
 
-    // ---- 共鸣信物凭据序号(V0.6E,同 ArtifactData 序号方案) ----
-
     public int getTokenSerial(EchoAbilityType type) {
         return tokenSerials.getOrDefault(type.getId(), 0);
     }
@@ -303,12 +292,13 @@ public class EchoAbilityData {
     /** 发新信物:序号自增并返回,旧序号信物从此不再通过校验。 */
     public int nextTokenSerial(EchoAbilityType type) {
         int current = getTokenSerial(type);
-        int next = current == Integer.MAX_VALUE ? Integer.MAX_VALUE : current + 1;
+        if (current == Integer.MAX_VALUE) {
+            return 0;
+        }
+        int next = current + 1;
         tokenSerials.put(type.getId(), next);
         return next;
     }
-
-    // ---- 最近失败提示(瞬态,5.7 能力面板) ----
 
     /** 最近一次失败提示的 lang 键后缀;空串 = 无记录。 */
     public String getLastFailure(EchoAbilityType type) {

@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:first_guardian",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:crystal_song_cluster"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.defeat_crystal_songkeeper.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.defeat_crystal_songkeeper.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

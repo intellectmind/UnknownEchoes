@@ -12,6 +12,22 @@
     "minecraft:old_growth_birch_forest",
     "minecraft:windswept_hills",
     "minecraft:meadow",
-    "unknown_echoes:echo_forest"
+    "unknown_echoes:echo_forest",
+    {
+      "id": "#c:is_forest",
+      "required": false
+    },
+    {
+      "id": "#c:is_plains",
+      "required": false
+    },
+    {
+      "id": "#c:is_taiga",
+      "required": false
+    },
+    {
+      "id": "#c:is_savanna",
+      "required": false
+    }
   ]
 }

@@ -2,10 +2,12 @@ package cn.kurt6.unknown_echoes.event;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher;
+import cn.kurt6.unknown_echoes.entity.boss.AshScribe;
 import cn.kurt6.unknown_echoes.entity.boss.BrokenBellKeeper;
 import cn.kurt6.unknown_echoes.entity.boss.CrystalSongkeeper;
 import cn.kurt6.unknown_echoes.entity.boss.DreamBloomKeeper;
 import cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus;
+import cn.kurt6.unknown_echoes.entity.boss.InvertedGatekeeper;
 import cn.kurt6.unknown_echoes.entity.boss.LostRecorderChief;
 import cn.kurt6.unknown_echoes.entity.boss.MirrorDustButler;
 import cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian;
@@ -18,20 +20,28 @@ import cn.kurt6.unknown_echoes.entity.boss.WorldEcho;
 import cn.kurt6.unknown_echoes.entity.mob.BrokenBellCrow;
 import cn.kurt6.unknown_echoes.entity.mob.AbyssLurker;
 import cn.kurt6.unknown_echoes.entity.mob.AnchorShellBeast;
+import cn.kurt6.unknown_echoes.entity.mob.AshbackGrazer;
+import cn.kurt6.unknown_echoes.entity.mob.AshveilStalker;
 import cn.kurt6.unknown_echoes.entity.mob.CrystalFeatherBird;
 import cn.kurt6.unknown_echoes.entity.mob.CrystalChimeSpirit;
 import cn.kurt6.unknown_echoes.entity.mob.CrystalNoiseWisp;
 import cn.kurt6.unknown_echoes.entity.mob.BrokenBellGuard;
 import cn.kurt6.unknown_echoes.entity.mob.DreamingDeer;
 import cn.kurt6.unknown_echoes.entity.mob.EchoDeer;
+import cn.kurt6.unknown_echoes.entity.mob.EchoCuttlefish;
 import cn.kurt6.unknown_echoes.entity.mob.EchoRemnant;
 import cn.kurt6.unknown_echoes.entity.mob.EchoWanderer;
 import cn.kurt6.unknown_echoes.entity.mob.FoldpageBug;
+import cn.kurt6.unknown_echoes.entity.mob.FoldedMantis;
+import cn.kurt6.unknown_echoes.entity.mob.GravityRam;
 import cn.kurt6.unknown_echoes.entity.mob.GlowRabbit;
+import cn.kurt6.unknown_echoes.entity.mob.HushlightJelly;
 import cn.kurt6.unknown_echoes.entity.mob.LostRecorder;
 import cn.kurt6.unknown_echoes.entity.mob.MirrorDustDecoy;
 import cn.kurt6.unknown_echoes.entity.mob.MirrorTailFish;
 import cn.kurt6.unknown_echoes.entity.mob.MossBackTurtle;
+import cn.kurt6.unknown_echoes.entity.mob.PearlbackRay;
+import cn.kurt6.unknown_echoes.entity.mob.RiftGlider;
 import cn.kurt6.unknown_echoes.entity.mob.SilentWalker;
 import cn.kurt6.unknown_echoes.entity.mob.TideWaterShade;
 import cn.kurt6.unknown_echoes.entity.mob.WaterShadow;
@@ -71,12 +81,14 @@ public class ModEntityEvents {
         event.put(ModEntities.MIRROR_DUST_BUTLER.get(), MirrorDustButler.createAttributes().build());
         event.put(ModEntities.LOST_TRAVELER.get(),
                 cn.kurt6.unknown_echoes.entity.mob.LostTraveler.createAttributes().build());
-        // V0.6F 普通环境生物
+
         event.put(ModEntities.ECHO_DEER.get(), EchoDeer.createAttributes().build());
         event.put(ModEntities.GLOW_RABBIT.get(), GlowRabbit.createAttributes().build());
         event.put(ModEntities.MIRROR_TAIL_FISH.get(), MirrorTailFish.createAttributes().build());
+        event.put(ModEntities.ECHO_CUTTLEFISH.get(), EchoCuttlefish.createAttributes().build());
+        event.put(ModEntities.PEARLBACK_RAY.get(), PearlbackRay.createAttributes().build());
         event.put(ModEntities.MOSS_BACK_TURTLE.get(), MossBackTurtle.createAttributes().build());
-        // V0.7C 后期群系生态实体
+
         event.put(ModEntities.DREAMING_DEER.get(), DreamingDeer.createAttributes().build());
         event.put(ModEntities.CRYSTAL_CHIME_SPIRIT.get(), CrystalChimeSpirit.createAttributes().build());
         event.put(ModEntities.BROKEN_BELL_GUARD.get(), BrokenBellGuard.createAttributes().build());
@@ -92,16 +104,24 @@ public class ModEntityEvents {
         event.put(ModEntities.BROKEN_BELL_KEEPER.get(), BrokenBellKeeper.createAttributes().build());
         event.put(ModEntities.DREAM_BLOOM_KEEPER.get(), DreamBloomKeeper.createAttributes().build());
         event.put(ModEntities.LOST_RECORDER_CHIEF.get(), LostRecorderChief.createAttributes().build());
-        // 深层回响生态
+        event.put(ModEntities.INVERTED_GATEKEEPER.get(), InvertedGatekeeper.createAttributes().build());
+        event.put(ModEntities.ASH_SCRIBE.get(), AshScribe.createAttributes().build());
+
         event.put(ModEntities.FOLDPAGE_BUG.get(), FoldpageBug.createAttributes().build());
         event.put(ModEntities.ANCHOR_SHELL_BEAST.get(), AnchorShellBeast.createAttributes().build());
         event.put(ModEntities.ABYSS_LURKER.get(), AbyssLurker.createAttributes().build());
         event.put(ModEntities.VOID_WANDERER.get(), VoidWanderer.createAttributes().build());
+        event.put(ModEntities.RIFT_GLIDER.get(), RiftGlider.createAttributes().build());
+        event.put(ModEntities.ASHBACK_GRAZER.get(), AshbackGrazer.createAttributes().build());
+        event.put(ModEntities.HUSHLIGHT_JELLY.get(), HushlightJelly.createAttributes().build());
+        event.put(ModEntities.FOLDED_MANTIS.get(), FoldedMantis.createAttributes().build());
+        event.put(ModEntities.GRAVITY_RAM.get(), GravityRam.createAttributes().build());
+        event.put(ModEntities.ASHVEIL_STALKER.get(), AshveilStalker.createAttributes().build());
     }
 
     @SubscribeEvent
     public static void onRegisterSpawnPlacements(RegisterSpawnPlacementsEvent event) {
-        // 回声境域是永恒黄昏,使用与光照无关的生成规则
+
         event.register(ModEntities.ECHO_WANDERER.get(), SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 (type, level, spawnType, pos, random) ->
@@ -117,7 +137,7 @@ public class ModEntityEvents {
                 (type, level, spawnType, pos, random) ->
                         Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
                 RegisterSpawnPlacementsEvent.Operation.REPLACE);
-        // V0.6F 普通环境生物:同样使用与光照无关的生成规则(永恒黄昏)
+
         event.register(ModEntities.ECHO_DEER.get(), SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 (type, level, spawnType, pos, random) ->
@@ -183,7 +203,7 @@ public class ModEntityEvents {
                 (type, level, spawnType, pos, random) ->
                         Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
                 RegisterSpawnPlacementsEvent.Operation.REPLACE);
-        // 深层回响生态:潜伏者额外要求低光,其余遵循地面碰撞规则
+
         event.register(ModEntities.FOLDPAGE_BUG.get(), SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 (type, level, spawnType, pos, random) ->
@@ -206,8 +226,52 @@ public class ModEntityEvents {
                         level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D))
                                 && Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
                 RegisterSpawnPlacementsEvent.Operation.REPLACE);
-        // 镜尾鱼:水中生成
+        event.register(ModEntities.RIFT_GLIDER.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.ASHBACK_GRAZER.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.HUSHLIGHT_JELLY.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D))
+                                && Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.FOLDED_MANTIS.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.GRAVITY_RAM.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.ASHVEIL_STALKER.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getMaxLocalRawBrightness(pos) <= 7
+                                && Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+
         event.register(ModEntities.MIRROR_TAIL_FISH.get(), SpawnPlacementTypes.IN_WATER,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getFluidState(pos).is(FluidTags.WATER)
+                                && level.getFluidState(pos.above()).is(FluidTags.WATER),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.ECHO_CUTTLEFISH.get(), SpawnPlacementTypes.IN_WATER,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getFluidState(pos).is(FluidTags.WATER)
+                                && level.getFluidState(pos.above()).is(FluidTags.WATER),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.PEARLBACK_RAY.get(), SpawnPlacementTypes.IN_WATER,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 (type, level, spawnType, pos, random) ->
                         level.getFluidState(pos).is(FluidTags.WATER)

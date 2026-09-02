@@ -4,8 +4,8 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.boss.ResonanceCandleBlock;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
+import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -52,19 +52,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * 沉默祭司:失语沼泽区域守护者 / Mini Boss(沉默祭坛,设计文档 10.4.2)。
- *
- * 机制:周期性展开"静默领域"——领域内压制提示音与 HUD 线索(服务端不发战斗提示音/actionbar,
- * 客户端压低音乐),迫使玩家观察动作前摇本身;打碎祭坛四角的共鸣烛可缩短领域持续时间。
- * 领域期间受机制保护(未破防双保险)。
- * 阶段:
- * - 低语(>50%):常规近战与范围压制,领域周期较长。
- * - 失声(≤50%):领域更频繁,但每次领域结束后有明确硬直输出窗口(失声硬直)。
- * 攻击:噤声波(无声涟漪预警 → 环形冲击)/ 苔杖横扫(抬杖前摇 + 扇形)/
- *       沉默标记(标记落点 → 延迟生成压制区,迫使移动)。
- * 结算(个人):首杀 = 静默派研究拓片 + 噤声苔 + 沉默荚果 + 回响粉尘;重复 = 普通材料。
- */
 public class SilentPriest extends MiniBossEntity {
 
     public static final ResourceLocation MINIBOSS_ID = UnknownEchoes.id("silent_priest");
@@ -103,13 +90,16 @@ public class SilentPriest extends MiniBossEntity {
     private static final int DOMAIN_INTERVAL_VOICELESS = 260;
     private static final int STAGGER_TICKS = 70;
 
-    // 噤声波:无声涟漪预警 0.6s → 环形冲击扩散到 7 格
     private static final int WAVE_TELEGRAPH_TICKS = 12;
     private static final double WAVE_MAX_RADIUS = 7.0D;
-    // 苔杖横扫:抬杖前摇 0.6s,正面约 120° 扇形 4 格
+
     private static final int SWEEP_TELEGRAPH_TICKS = 12;
     private static final double SWEEP_RANGE = 4.0D;
-    // 沉默标记:标记 1.5s 后生成压制区,持续 4s
+    /** 横扫的锥形 dot 阈值。演出锥半角由它反算，两处必须同一个常量。 */
+    private static final double SWEEP_MIN_DOT = 0.5D;
+    /** 噤声波的命中带半宽：只有距波前这个距离内才结算。 */
+    private static final double WAVE_BAND_HALF_WIDTH = 1.2D;
+
     private static final int MARK_DELAY_TICKS = 30;
     private static final int MARK_ZONE_TICKS = 80;
     private static final double MARK_ZONE_RADIUS = 3.0D;
@@ -182,8 +172,6 @@ public class SilentPriest extends MiniBossEntity {
         this.entityData.set(DATA_STAGGERED, staggered);
     }
 
-    // ---- MiniBoss 契约 ----
-
     @Override
     protected ResourceLocation minibossId() {
         return MINIBOSS_ID;
@@ -196,13 +184,13 @@ public class SilentPriest extends MiniBossEntity {
 
     @Override
     protected boolean isDamageGuarded() {
-        // 静默领域期间受机制保护;领域之外(尤其失声硬直)全额伤害
+
         return this.isDomainActive();
     }
 
     @Override
     protected String guardedHintKey() {
-        // 静默领域同时压制 HUD 提示——被守护时不给 actionbar 文案,保持"无声"的一致性
+
         return null;
     }
 
@@ -217,31 +205,32 @@ public class SilentPriest extends MiniBossEntity {
         int guided = 0;
         for (int i = 0; i < size && guided < GUIDANCE_CANDLE_BATCH; i++) {
             BlockPos pos = this.domainCandlePositions.get((start + i) % size);
-            if (!(level.getBlockState(pos).getBlock() instanceof ResonanceCandleBlock)) {
+            if (!level.hasChunkAt(pos)
+                    || !(level.getBlockState(pos).getBlock() instanceof ResonanceCandleBlock)) {
                 continue;
             }
             Vec3 candle = Vec3.atCenterOf(pos).add(0, 0.35, 0);
-            BossFx.guidanceMarker(level, candle, ParticleTypes.SMALL_FLAME);
-            BossFx.guidanceLink(level, candle, core, ParticleTypes.NOTE);
+            MiniBossFx.objectiveMarker(level, candle, this.fxTheme(), level.getGameTime());
+            MiniBossFx.objectiveLink(level, candle, core, this.fxTheme(), level.getGameTime());
             guided++;
         }
     }
 
     @Override
-    protected void grantSettlement(ServerPlayer player, boolean firstKill) {
-        MiniBossRewardTable.grantSilentPriest(this, player, firstKill);
+    protected void grantSettlement(boolean firstKill) {
+        MiniBossRewardTable.grantSilentPriest(this, firstKill);
     }
 
-    // ---- 阶段与静默领域 ----
-
-    /** 失声阶段:半血以下,领域更频繁,但领域结束后有硬直输出窗口。 */
     private boolean isVoicelessPhase() {
         return this.getHealth() <= this.getMaxHealth() * 0.5F;
     }
 
-    private void initializeDomainCandles(ServerLevel serverLevel) {
-        this.domainCandlePositions.clear();
+    private boolean initializeDomainCandles(ServerLevel serverLevel) {
         BlockPos anchor = this.arenaAnchor();
+        if (!isScanAreaLoaded(serverLevel, anchor, ARENA_RADIUS)) {
+            return false;
+        }
+        this.domainCandlePositions.clear();
         for (BlockPos pos : BlockPos.betweenClosed(
                 anchor.offset(-ARENA_RADIUS, -3, -ARENA_RADIUS),
                 anchor.offset(ARENA_RADIUS, 4, ARENA_RADIUS))) {
@@ -254,12 +243,14 @@ public class SilentPriest extends MiniBossEntity {
         }
         this.candlesAtDomainStart = this.domainCandlePositions.size();
         this.domainCandlesInitialized = true;
+        return true;
     }
 
     private int countIntactCandles(ServerLevel serverLevel) {
         int count = 0;
         for (BlockPos pos : this.domainCandlePositions) {
-            if (serverLevel.getBlockState(pos).getBlock() instanceof ResonanceCandleBlock) {
+            if (!serverLevel.hasChunkAt(pos)
+                    || serverLevel.getBlockState(pos).getBlock() instanceof ResonanceCandleBlock) {
                 count++;
             }
         }
@@ -268,24 +259,19 @@ public class SilentPriest extends MiniBossEntity {
 
     private void tickDomain(ServerLevel serverLevel) {
         if (this.domainTicksRemaining > 0) {
-            if (!this.domainCandlesInitialized) {
-                initializeDomainCandles(serverLevel);
+            if (!this.domainCandlesInitialized && !initializeDomainCandles(serverLevel)) {
+                return;
             }
             int intact = countIntactCandles(serverLevel);
             if (intact < this.candlesAtDomainStart) {
                 this.domainTicksRemaining -= (this.candlesAtDomainStart - intact) * DOMAIN_PER_CANDLE_TICKS;
                 this.candlesAtDomainStart = intact;
             }
-            // 领域边界演出:贴地灰雾环(无声——这正是机制)
+
             if (this.tickCount % 4 == 0) {
-                for (int i = 0; i < 10; i++) {
-                    double angle = Math.PI * 2 * i / 10 + this.tickCount * 0.05;
-                    serverLevel.sendParticles(ParticleTypes.ASH,
-                            this.getX() + Math.cos(angle) * DOMAIN_RADIUS * 0.6,
-                            this.getY() + 0.3,
-                            this.getZ() + Math.sin(angle) * DOMAIN_RADIUS * 0.6,
-                            1, 0.2, 0.4, 0.2, 0.0);
-                }
+                // 领域环画在 DOMAIN_RADIUS 上：这是玩家"进入静默"的实际边界。
+                MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(),
+                        DOMAIN_RADIUS);
             }
             if (--this.domainTicksRemaining <= 0) {
                 this.endDomain(serverLevel);
@@ -301,14 +287,21 @@ public class SilentPriest extends MiniBossEntity {
     }
 
     private void startDomain(ServerLevel serverLevel) {
-        initializeDomainCandles(serverLevel);
+        if (!initializeDomainCandles(serverLevel)) {
+            return;
+        }
         this.domainTicksRemaining = DOMAIN_BASE_TICKS + this.candlesAtDomainStart * DOMAIN_PER_CANDLE_TICKS;
         this.setDomainActive(true);
-        // 开启瞬间是最后一个"有声"提示:之后领域内一切提示音静默
+
         serverLevel.playSound(null, this.blockPosition(),
-                ModSounds.SILENT_PRIEST_WAVE.get(), SoundSource.HOSTILE, 1.6F, 0.5F);
-        serverLevel.sendParticles(ParticleTypes.SQUID_INK,
-                this.getX(), this.getY() + 1.2, this.getZ(), 20, 1.5, 0.8, 1.5, 0.02);
+                ModSounds.SILENT_PRIEST_DOMAIN.get(), SoundSource.HOSTILE, 1.6F, 1.0F);
+        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), DOMAIN_RADIUS);
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                30.0D, 0.5F, 7, this.combatImpactColor());
+    }
+
+    private static boolean isScanAreaLoaded(ServerLevel level, BlockPos center, int radius) {
+        return LoadedAreaCheck.horizontalRadiusLoaded(level, center, radius);
     }
 
     private void endDomain(ServerLevel serverLevel) {
@@ -317,16 +310,15 @@ public class SilentPriest extends MiniBossEntity {
         this.domainCandlesInitialized = false;
         this.domainCooldown = this.isVoicelessPhase() ? DOMAIN_INTERVAL_VOICELESS : DOMAIN_INTERVAL_WHISPER;
         if (this.isVoicelessPhase()) {
-            // 失声硬直:领域结束的明确输出窗口(10.4.2)
+
             this.setStaggered(true);
             this.staggerTicksRemaining = STAGGER_TICKS;
             this.getNavigation().stop();
-            serverLevel.sendParticles(ParticleTypes.NOTE,
-                    this.getX(), this.getY() + 2.0, this.getZ(), 8, 0.6, 0.5, 0.6, 1.0);
+            MiniBossFx.breachAura(serverLevel, this, this.fxTheme(), serverLevel.getGameTime());
         }
-        // 领域散去:声音"回来了"
+
         serverLevel.playSound(null, this.blockPosition(),
-                ModSounds.SILENT_PRIEST_AMBIENT.get(), SoundSource.HOSTILE, 1.2F, 1.4F);
+                ModSounds.SILENT_PRIEST_AMBIENT.get(), SoundSource.HOSTILE, 1.2F, 1.0F);
     }
 
     /** 领域内不发任何战斗提示音(压制听觉线索);领域外正常。 */
@@ -336,11 +328,12 @@ public class SilentPriest extends MiniBossEntity {
         }
     }
 
-    // ---- 主循环 ----
-
     @Override
     public void aiStep() {
         super.aiStep();
+        if (this.isSpawnerBindingPaused()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -350,8 +343,8 @@ public class SilentPriest extends MiniBossEntity {
         if (this.isStaggered()) {
             this.getNavigation().stop();
             if (this.tickCount % 5 == 0) {
-                serverLevel.sendParticles(ParticleTypes.END_ROD,
-                        this.getX(), this.getY() + 1.2, this.getZ(), 2, 0.4, 0.6, 0.4, 0.02);
+                MiniBossFx.breachAura(serverLevel, this, this.fxTheme(),
+                        serverLevel.getGameTime());
             }
             if (--this.staggerTicksRemaining <= 0) {
                 this.setStaggered(false);
@@ -367,17 +360,19 @@ public class SilentPriest extends MiniBossEntity {
         if (this.sweepCooldown > 0) this.sweepCooldown--;
         if (this.markCooldown > 0) this.markCooldown--;
 
-        // 沉默标记:延迟生成压制区(与其他动作并行推进)
         if (this.markDelayTicks > 0) {
             this.tickMarkTelegraph(serverLevel);
             if (--this.markDelayTicks == 0) {
                 this.markZoneTicks = MARK_ZONE_TICKS;
+                if (this.markPos != null) {
+                    BossFx.cinematicImpact(serverLevel, this.markPos,
+                            24.0D, 0.34F, 5, this.combatImpactColor());
+                }
             }
         } else if (this.markZoneTicks > 0) {
             this.tickMarkZone(serverLevel);
         }
 
-        // 噤声波:预警 → 环形扩散
         if (this.waveTelegraphTicks > 0) {
             this.tickWaveTelegraph(serverLevel);
             if (--this.waveTelegraphTicks == 0) {
@@ -390,13 +385,13 @@ public class SilentPriest extends MiniBossEntity {
             this.tickWaveExpansion(serverLevel);
             return;
         }
-        // 苔杖横扫:前摇 → 扇形命中
+
         if (this.sweepTelegraphTicks > 0) {
-            // 抬杖前摇:杖端苔屑聚集(可见前摇,领域内无声)
+
             Vec3 facing = Vec3.directionFromRotation(0, this.yBodyRot).normalize();
-            serverLevel.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR,
-                    this.getX() + facing.x * 1.2, this.getY() + 2.0, this.getZ() + facing.z * 1.2,
-                    2, 0.15, 0.15, 0.15, 0.0);
+            // 前摇就画出横扫的扇形，玩家才有侧移的依据；锥半角由结算侧的 dot 反算。
+            MiniBossFx.coneSpray(serverLevel, this.position().add(0, 0.7, 0), facing,
+                    this.fxTheme(), SWEEP_RANGE, Math.acos(SWEEP_MIN_DOT));
             if (--this.sweepTelegraphTicks == 0) {
                 this.doSweepDamage(serverLevel);
             }
@@ -409,75 +404,62 @@ public class SilentPriest extends MiniBossEntity {
         }
         double distSq = this.distanceToSqr(target);
         if (this.waveCooldown <= 0 && distSq <= 5.0 * 5.0) {
-            // 噤声波:近身压制主力
+
             this.waveTelegraphTicks = WAVE_TELEGRAPH_TICKS;
             this.waveCooldown = 160;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "wave");
-            this.playCue(serverLevel, ModSounds.SILENT_PRIEST_WAVE.get(), 1.4F, 0.8F);
+            this.playCue(serverLevel, ModSounds.SILENT_PRIEST_WAVE.get(), 1.4F, 1.0F);
         } else if (this.sweepCooldown <= 0 && distSq <= SWEEP_RANGE * SWEEP_RANGE) {
             this.sweepTelegraphTicks = SWEEP_TELEGRAPH_TICKS;
             this.sweepCooldown = 90;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "attack");
-            this.playCue(serverLevel, ModSounds.SILENT_PRIEST_AMBIENT.get(), 1.2F, 0.7F);
+            this.playCue(serverLevel, ModSounds.SILENT_PRIEST_SWEEP.get(), 1.2F, 1.0F);
         } else if (this.markCooldown <= 0 && this.markZoneTicks <= 0 && this.markDelayTicks <= 0
                 && distSq <= 14.0 * 14.0) {
-            // 沉默标记:标记目标脚下,延迟压制——迫使移动
+
             this.markPos = target.position();
             this.markDelayTicks = MARK_DELAY_TICKS;
             this.markCooldown = 220;
             this.triggerAnim("attack_controller", "mark");
-            this.playCue(serverLevel, ModSounds.SILENT_PRIEST_AMBIENT.get(), 1.2F, 1.3F);
+            this.playCue(serverLevel, ModSounds.SILENT_PRIEST_MARK.get(), 1.2F, 1.0F);
         }
     }
 
-    /** 噤声波预警:脚下浮现"无声涟漪"——刻意只有画面没有声音(机制即主题)。 */
+    /** 噤声波预警:脚下浮现无声涟漪,只有画面没有声音。 */
     private void tickWaveTelegraph(ServerLevel serverLevel) {
-        double r = 1.5 + (WAVE_TELEGRAPH_TICKS - this.waveTelegraphTicks) * 0.2;
-        for (int i = 0; i < 14; i++) {
-            double angle = Math.PI * 2 * i / 14;
-            serverLevel.sendParticles(ParticleTypes.ASH,
-                    this.getX() + Math.cos(angle) * r,
-                    this.getY() + 0.1,
-                    this.getZ() + Math.sin(angle) * r, 1, 0.05, 0.02, 0.05, 0.0);
-        }
-        BossFx.chargeSpiral(serverLevel, this.position().add(0, 0.2, 0), this.tickCount, ParticleTypes.ASH);
+        double progress = 1.0D - this.waveTelegraphTicks / (double) WAVE_TELEGRAPH_TICKS;
+        MiniBossFx.chargeConverge(serverLevel, this.position(), this.fxTheme(),
+                WAVE_MAX_RADIUS, progress);
     }
 
-    /** 噤声波扩散:环形冲击逐格外推,沿环中伤害 + 击退,单次施放每人只命中一次。 */
     private void tickWaveExpansion(ServerLevel serverLevel) {
         if (!this.isAlive()) {
             this.waveRadius = -1.0D;
             return;
         }
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.8F;
-        // 冲击环演出
-        int points = (int) (this.waveRadius * 8);
-        for (int i = 0; i < points; i++) {
-            double angle = Math.PI * 2 * i / points;
-            serverLevel.sendParticles(ParticleTypes.SONIC_BOOM,
-                    this.getX() + Math.cos(angle) * this.waveRadius,
-                    this.getY() + 0.6,
-                    this.getZ() + Math.sin(angle) * this.waveRadius, 1, 0.0, 0.0, 0.0, 0.0);
-        }
-        if (this.tickCount % 2 == 0) {
-            BossFx.ring(serverLevel, this.position(), this.waveRadius, Math.max(12, points / 2), 0.25, ParticleTypes.ASH);
-        }
+        // 环画在当前 waveRadius 上：这道波是逐帧长大的判定，画固定半径玩家读不出它到哪了。
+        MiniBossFx.expandingRing(serverLevel, this.position(), this.fxTheme(),
+                this.waveRadius, this.waveRadius / WAVE_MAX_RADIUS);
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(this.waveRadius + 0.8, 1.5, this.waveRadius + 0.8),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy)
                         && !this.waveHitVictims.contains(e.getUUID()))) {
             double dist = victim.position().subtract(this.position()).horizontalDistance();
-            if (Math.abs(dist - this.waveRadius) > 1.2) {
+            if (Math.abs(dist - this.waveRadius) > WAVE_BAND_HALF_WIDTH) {
                 continue;
             }
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
-            if (away.lengthSqr() > 1.0E-4) {
-                Vec3 dir = away.normalize();
-                victim.setDeltaMovement(victim.getDeltaMovement().add(dir.x * 0.8, 0.3, dir.z * 0.8));
-                victim.hurtMarked = true;
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+                Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
+                if (away.lengthSqr() > 1.0E-4) {
+                    Vec3 dir = away.normalize();
+                    victim.setDeltaMovement(victim.getDeltaMovement().add(
+                            dir.x * 0.8, 0.3, dir.z * 0.8));
+                    victim.hurtMarked = true;
+                }
             }
             this.waveHitVictims.add(victim.getUUID());
         }
@@ -487,7 +469,6 @@ public class SilentPriest extends MiniBossEntity {
         }
     }
 
-    /** 苔杖横扫命中:正面约 120° 扇形。 */
     private void doSweepDamage(ServerLevel serverLevel) {
         if (!this.isAlive()) {
             return;
@@ -498,48 +479,35 @@ public class SilentPriest extends MiniBossEntity {
                 this.getBoundingBox().inflate(SWEEP_RANGE, 1.5, SWEEP_RANGE),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
             Vec3 toVictim = victim.position().subtract(this.position()).multiply(1, 0, 1);
-            if (toVictim.lengthSqr() > 1.0E-4 && facing.dot(toVictim.normalize()) < 0.5) {
+            if (toVictim.lengthSqr() > SWEEP_RANGE * SWEEP_RANGE
+                    || (toVictim.lengthSqr() > 1.0E-4
+                        && facing.dot(toVictim.normalize()) < SWEEP_MIN_DOT)) {
                 continue;
             }
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            victim.setDeltaMovement(victim.getDeltaMovement()
-                    .add(facing.x * 0.5, 0.2, facing.z * 0.5));
-            victim.hurtMarked = true;
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+                victim.setDeltaMovement(victim.getDeltaMovement()
+                        .add(facing.x * 0.5, 0.2, facing.z * 0.5));
+                victim.hurtMarked = true;
+            }
         }
-        // 扫击苔屑弧
-        for (int i = -3; i <= 3; i++) {
-            double angle = Math.atan2(facing.z, facing.x) + i * 0.25;
-            serverLevel.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR,
-                    this.getX() + Math.cos(angle) * 2.2,
-                    this.getY() + 1.2,
-                    this.getZ() + Math.sin(angle) * 2.2, 2, 0.1, 0.1, 0.1, 0.0);
-        }
-        this.playCue(serverLevel, ModSounds.SILENT_PRIEST_AMBIENT.get(), 1.4F, 0.9F);
-        BossFx.sweepArc(serverLevel, this.position().add(0, 0.7, 0), facing, SWEEP_RANGE, ParticleTypes.SPORE_BLOSSOM_AIR);
-        BossFx.impactBurst(serverLevel, this.position().add(facing.scale(2.0)).add(0, 1.0, 0), ParticleTypes.SOUL_FIRE_FLAME);
+        this.playCue(serverLevel, ModSounds.SILENT_PRIEST_SWEEP.get(), 1.4F, 1.0F);
+        MiniBossFx.coneSpray(serverLevel, this.position().add(0, 0.7, 0), facing,
+                this.fxTheme(), SWEEP_RANGE, Math.acos(SWEEP_MIN_DOT));
+        BossFx.cinematicImpact(serverLevel, this.position().add(facing.scale(2.0)),
+                22.0D, 0.28F, 4, this.combatImpactColor());
     }
 
-    /** 沉默标记预警:标记点灰纹收束。 */
     private void tickMarkTelegraph(ServerLevel serverLevel) {
         if (this.markPos == null) {
             this.markDelayTicks = 0;
             return;
         }
-        double progress = 1.0 - this.markDelayTicks / (double) MARK_DELAY_TICKS;
-        double r = MARK_ZONE_RADIUS * (1.2 - progress * 0.5);
-        for (int i = 0; i < 8; i++) {
-            double angle = Math.PI * 2 * i / 8 + this.tickCount * 0.15;
-            serverLevel.sendParticles(ParticleTypes.ASH,
-                    this.markPos.x + Math.cos(angle) * r,
-                    this.markPos.y + 0.1,
-                    this.markPos.z + Math.sin(angle) * r, 1, 0.05, 0.02, 0.05, 0.0);
-        }
-        if (this.tickCount % 4 == 0) {
-            BossFx.ring(serverLevel, this.markPos, MARK_ZONE_RADIUS, 18, 0.12, ParticleTypes.SQUID_INK);
-        }
+        // 预警区画在实际结算半径上，随进度收紧；画大或画小都会让玩家站错位置。
+        MiniBossFx.impactZone(serverLevel, this.markPos, this.fxTheme(), MARK_ZONE_RADIUS,
+                1.0D - this.markDelayTicks / (double) MARK_DELAY_TICKS);
     }
 
-    /** 压制区:站在里面持续缓速 + 虚弱 + 轻微伤害,迫使离开。 */
     private void tickMarkZone(ServerLevel serverLevel) {
         if (this.markPos == null) {
             this.markZoneTicks = 0;
@@ -547,9 +515,7 @@ public class SilentPriest extends MiniBossEntity {
         }
         this.markZoneTicks--;
         if (this.tickCount % 3 == 0) {
-            serverLevel.sendParticles(ParticleTypes.SQUID_INK,
-                    this.markPos.x, this.markPos.y + 0.5, this.markPos.z,
-                    3, MARK_ZONE_RADIUS * 0.5, 0.4, MARK_ZONE_RADIUS * 0.5, 0.0);
+            MiniBossFx.groundRing(serverLevel, this.markPos, this.fxTheme(), MARK_ZONE_RADIUS);
         }
         if (this.markZoneTicks % 10 == 0) {
             for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
@@ -558,10 +524,15 @@ public class SilentPriest extends MiniBossEntity {
                             this.markPos.x + MARK_ZONE_RADIUS, this.markPos.y + 2.5,
                             this.markPos.z + MARK_ZONE_RADIUS),
                     e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
+                Vec3 horizontal = victim.position().subtract(this.markPos).multiply(1, 0, 1);
+                if (horizontal.lengthSqr() > MARK_ZONE_RADIUS * MARK_ZONE_RADIUS) {
+                    continue;
+                }
                 victim.hurt(this.damageSources().mobAttack(this),
                         (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.25F);
                 victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 1));
                 victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 30, 0));
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
             }
         }
         if (this.markZoneTicks <= 0) {
@@ -574,35 +545,25 @@ public class SilentPriest extends MiniBossEntity {
         boolean hit = super.doHurtTarget(target);
         if (hit && !this.level().isClientSide) {
             this.triggerAnim("attack_controller", "attack");
-            if (this.level() instanceof ServerLevel serverLevel) {
-                BossFx.impactBurst(serverLevel,
-                        target.position().add(0, target.getBbHeight() * 0.5, 0), ParticleTypes.SPORE_BLOSSOM_AIR);
-            }
         }
         return hit;
     }
 
     @Override
     public void die(DamageSource source) {
+        boolean wasDead = this.dead;
         super.die(source);
+        if (wasDead || !this.dead) {
+            return;
+        }
         if (this.level() instanceof ServerLevel serverLevel) {
-            // 死亡演出:领域彻底散去,灰雾向外散开
+
             this.setDomainActive(false);
-            serverLevel.sendParticles(ParticleTypes.SQUID_INK,
-                    this.getX(), this.getY() + 1.0, this.getZ(), 40, 1.5, 1.0, 1.5, 0.05);
-            serverLevel.sendParticles(ParticleTypes.NOTE,
-                    this.getX(), this.getY() + 2.0, this.getZ(), 12, 1.0, 0.8, 1.0, 1.0);
-            double radius = settlementRadius();
-            for (ServerPlayer player : serverLevel.players()) {
-                if (player.distanceToSqr(this) <= radius * radius) {
-                    player.sendSystemMessage(
-                            Component.translatable("message.unknown_echoes.silent_priest.defeated"));
-                }
-            }
+            // 领域随死亡收束：环画在 DOMAIN_RADIUS 上，读成"静默解除了"。
+            MiniBossFx.expandingRing(serverLevel, this.position(), this.fxTheme(),
+                    DOMAIN_RADIUS, 1.0D);
         }
     }
-
-    // ---- 音效:领域内本体也保持静默 ----
 
     @Override
     protected SoundEvent getAmbientSound() {
@@ -618,8 +579,6 @@ public class SilentPriest extends MiniBossEntity {
     protected SoundEvent getDeathSound() {
         return ModSounds.SILENT_PRIEST_DEATH.get();
     }
-
-    // ---- NBT ----
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
@@ -638,13 +597,14 @@ public class SilentPriest extends MiniBossEntity {
         this.domainCooldown = Math.max(60, Math.min(DOMAIN_INTERVAL_WHISPER,
                 tag.getInt("DomainCooldown")));
         this.staggerTicksRemaining = Math.max(0, Math.min(STAGGER_TICKS, tag.getInt("StaggerTicks")));
+        if (this.domainTicksRemaining > 0) {
+            this.staggerTicksRemaining = 0;
+        }
         this.domainCandlePositions.clear();
         this.domainCandlesInitialized = false;
         this.setDomainActive(this.domainTicksRemaining > 0);
         this.setStaggered(this.staggerTicksRemaining > 0);
     }
-
-    // ---- GeckoLib ----
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {

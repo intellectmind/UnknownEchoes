@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "mode=wayfarer": { "model": "unknown_echoes:block/realm_service_plinth_wayfarer" },
+    "mode=confluence": { "model": "unknown_echoes:block/realm_service_plinth_confluence" },
+    "mode=interlayer": { "model": "unknown_echoes:block/realm_service_plinth_interlayer" }
+  }
+}

@@ -23,7 +23,8 @@ public final class ThemedEchoArmorModel<T extends LivingEntity> extends Humanoid
         TIDE_STALKER,
         TRUE_SIGHT_SHADOW,
         SILENT_WATCH,
-        ECHO_OATH
+        ECHO_OATH,
+        RESONATOR
     }
 
     private ThemedEchoArmorModel(ModelPart root) {
@@ -193,7 +194,7 @@ public final class ThemedEchoArmorModel<T extends LivingEntity> extends Humanoid
         float flare = switch (style) {
             case WIND_WALKER, LISTENER -> 0.18F;
             case TIDE_STALKER, TRUE_SIGHT_SHADOW -> 0.14F;
-            case ECHO_OATH -> 0.12F;
+            case ECHO_OATH, RESONATOR -> 0.12F;
             default -> 0.08F;
         };
         PartDefinition body = root.getChild("body");
@@ -220,7 +221,7 @@ public final class ThemedEchoArmorModel<T extends LivingEntity> extends Humanoid
 
     private static void addBoots(PartDefinition root, Style style, CubeDeformation deformation) {
         float flare = switch (style) {
-            case WIND_WALKER, TIDE_STALKER -> 0.22F;
+            case WIND_WALKER, TIDE_STALKER, RESONATOR -> 0.22F;
             case ECHO_TRAVELER, LISTENER -> 0.17F;
             default -> 0.12F;
         };
@@ -240,7 +241,8 @@ public final class ThemedEchoArmorModel<T extends LivingEntity> extends Humanoid
                 PartPose.ZERO);
 
         if (style == Style.WIND_WALKER || style == Style.TIDE_STALKER
-                || style == Style.ECHO_TRAVELER || style == Style.TRUE_SIGHT_SHADOW) {
+                || style == Style.ECHO_TRAVELER || style == Style.TRUE_SIGHT_SHADOW
+                || style == Style.RESONATOR) {
             CubeListBuilder fin = CubeListBuilder.create().texOffs(106, 18);
             if (mirror) {
                 fin.mirror();
@@ -275,6 +277,8 @@ public final class ThemedEchoArmorModel<T extends LivingEntity> extends Humanoid
                         -5.9F, 0.24F, -2.9F, 0.14F, 0.78F, -4.5F, 1.02F);
                 case ECHO_OATH -> new HelmetShape(true, true, true,
                         -6.3F, -0.10F, -3.5F, 0.16F, 0.54F, -5.6F, 0.78F);
+                case RESONATOR -> new HelmetShape(true, true, true,
+                        -6.7F, -0.14F, -4.1F, 0.22F, 0.66F, -6.5F, 0.88F);
             };
         }
     }
@@ -291,6 +295,7 @@ public final class ThemedEchoArmorModel<T extends LivingEntity> extends Humanoid
                 case TRUE_SIGHT_SHADOW -> new ChestShape(-0.20F, 0.24F, 0.18F, -0.10F);
                 case SILENT_WATCH -> new ChestShape(0.05F, 0.19F, 0.22F, 0.12F);
                 case ECHO_OATH -> new ChestShape(-0.35F, 0.32F, 0.24F, -0.08F);
+                case RESONATOR -> new ChestShape(-0.50F, 0.40F, 0.26F, -0.12F);
             };
         }
     }

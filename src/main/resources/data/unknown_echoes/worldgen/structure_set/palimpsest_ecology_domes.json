@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:palimpsest_ecology_dome", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 66,
+    "separation": 28,
+    "salt": 184297563,
+    "frequency": 0.0
+  }
+}

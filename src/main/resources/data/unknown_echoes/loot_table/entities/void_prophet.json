@@ -1,25 +1,5 @@
 {
   "type": "minecraft:entity",
-  "pools": [
-    {
-      "rolls": 1,
-      "entries": [
-        { "type": "minecraft:item", "name": "unknown_echoes:deep_ore_scrap", "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 4 } } ] }
-      ]
-    },
-    {
-      "rolls": 1,
-      "entries": [
-        { "type": "minecraft:item", "name": "unknown_echoes:gravity_core_fragment" }
-      ]
-    },
-    {
-      "rolls": 1,
-      "conditions": [ { "condition": "minecraft:random_chance", "chance": 0.65 } ],
-      "entries": [
-        { "type": "minecraft:item", "name": "unknown_echoes:space_anchor_shard", "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] }
-      ]
-    }
-  ],
+  "pools": [],
   "random_sequence": "unknown_echoes:entities/void_prophet"
 }

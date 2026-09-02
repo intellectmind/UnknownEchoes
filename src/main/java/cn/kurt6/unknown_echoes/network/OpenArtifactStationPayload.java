@@ -7,11 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-/**
- * 服务端 → 客户端:打开回响总览的"神器"页并携带台座上下文(记录台/升级台坐标与类型)。
- * 5.8:神器台/记录台交互统一进入总览壳,不开独立原版界面。
- * stationMode: 0=记录台(领取/复领) 1=升级台(升级/调谐)
- */
+/** 服务端 → 客户端:打开回响总览的"神器"页并携带台座上下文(记录台/升级台坐标与类型)。 */
 public record OpenArtifactStationPayload(int stationMode, BlockPos pos)
         implements CustomPacketPayload {
 

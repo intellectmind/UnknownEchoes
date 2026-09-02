@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:gravity_hammer", "weight": 1 },
+        { "type": "minecraft:item", "name": "unknown_echoes:anchor_blade", "weight": 1 },
+        { "type": "minecraft:item", "name": "unknown_echoes:gravity_core_fragment", "weight": 7, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 4 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_alloy_ingot", "weight": 6, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 4 } } ] },
+        { "type": "minecraft:item", "name": "minecraft:diamond", "weight": 3, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] }
+      ]
+    },
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 3, "max": 5 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:sky_quartz", "weight": 8, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 3, "max": 7 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:space_anchor_shard", "weight": 7, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 4 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:attuned_echo_gem", "weight": 3 },
+        { "type": "minecraft:item", "name": "minecraft:experience_bottle", "weight": 5, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 4, "max": 9 } } ] }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/deep/gravity_crown_vault"
+}

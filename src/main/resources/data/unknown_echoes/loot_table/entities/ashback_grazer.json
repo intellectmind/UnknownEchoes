@@ -1,0 +1,48 @@
+{
+  "type": "minecraft:entity",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:deep_ore_scrap",
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": { "type": "minecraft:uniform", "min": 1, "max": 2 }
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        { "condition": "minecraft:random_chance", "chance": 0.55 }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:ashback_moss_meat",
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": { "type": "minecraft:uniform", "min": 1, "max": 2 }
+            },
+            {
+              "function": "minecraft:enchanted_count_increase",
+              "enchantment": "minecraft:looting",
+              "count": { "type": "minecraft:uniform", "min": 0.0, "max": 1.0 },
+              "limit": 4
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        { "condition": "minecraft:random_chance", "chance": 0.65 }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:entities/ashback_grazer"
+}

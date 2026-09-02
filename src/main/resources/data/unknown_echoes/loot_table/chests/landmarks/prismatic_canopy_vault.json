@@ -1,0 +1,34 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 5, "max": 7 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_metal_ingot", "weight": 4, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:crystal_song_shard", "weight": 4, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:attuned_echo_gem", "weight": 3 },
+        { "type": "minecraft:item", "name": "unknown_echoes:record_tracing_paper", "weight": 5, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:dream_nectar_tart", "weight": 6, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:moss_honey_stew", "weight": 6, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } }] }
+      ]
+    },
+    {
+      "rolls": 1,
+      "conditions": [{ "condition": "minecraft:random_chance", "chance": 0.14 }],
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_index", "weight": 2 },
+        { "type": "minecraft:item", "name": "unknown_echoes:attuned_echo_gem", "weight": 1 }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "minecraft:amethyst_shard", "weight": 5, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] },
+        { "type": "minecraft:item", "name": "minecraft:glass", "weight": 4, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 4 } } ] },
+        { "type": "minecraft:item", "name": "minecraft:gold_ingot", "weight": 3, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] },
+        { "type": "minecraft:item", "name": "minecraft:experience_bottle", "weight": 2, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/landmarks/prismatic_canopy_vault"
+}

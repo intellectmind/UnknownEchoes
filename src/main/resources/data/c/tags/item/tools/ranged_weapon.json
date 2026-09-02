@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:echo_longbow",
+    "unknown_echoes:dream_bloom_bow",
+    "unknown_echoes:gravity_inversion_bow",
+    "unknown_echoes:tide_crossbow",
+    "unknown_echoes:ash_script_crossbow"
+  ]
+}

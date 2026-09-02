@@ -2,7 +2,6 @@ package cn.kurt6.unknown_echoes.client.gui;
 
 import cn.kurt6.unknown_echoes.artifact.ArtifactType;
 import cn.kurt6.unknown_echoes.client.ClientArtifactCache;
-import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -25,28 +24,15 @@ public final class ArtifactHudOverlay {
     private static final int COL_GOLD = 0xFFD8B76A;
     private static final int COL_TEXT = 0xFFF2F6FF;
     private static final int COL_DIM = 0xFFCFE7FF;
-    private static final String[] ARTIFACT_IDS = {
-            ArtifactType.STORM_COMPASS.getId(),
-            ArtifactType.TIDE_LANTERN.getId(),
-            ArtifactType.ECHO_LENS.getId(),
-            ArtifactType.TIME_HOURGLASS.getId(),
-            ArtifactType.DIMENSION_ANCHOR.getId(),
-            ArtifactType.RIFT_ANCHOR.getId()
-    };
-    private static final ItemStack[] ICONS = {
-            new ItemStack(ModItems.STORM_COMPASS.get()),
-            new ItemStack(ModItems.TIDE_LANTERN.get()),
-            new ItemStack(ModItems.ECHO_LENS.get()),
-            new ItemStack(ModItems.TIME_HOURGLASS.get()),
-            new ItemStack(ModItems.DIMENSION_ANCHOR.get()),
-            new ItemStack(ModItems.RIFT_ANCHOR.get())
-    };
+    private static final ArtifactType[] ARTIFACT_TYPES = ArtifactType.values();
+    private static final ItemStack[] ICONS = java.util.Arrays.stream(ARTIFACT_TYPES)
+            .map(type -> new ItemStack(type.getCredentialItem()))
+            .toArray(ItemStack[]::new);
 
-    // 每帧渲染的文本组件按值缓存,数值每秒才变一次,不逐帧新建
-    private static final Component[] TITLE_CACHE = new Component[ARTIFACT_IDS.length];
-    private static final int[] TITLE_LEVEL = new int[ARTIFACT_IDS.length];
-    private static final Component[] STATE_CACHE = new Component[ARTIFACT_IDS.length];
-    private static final int[] STATE_COOLDOWN = new int[ARTIFACT_IDS.length];
+    private static final Component[] TITLE_CACHE = new Component[ARTIFACT_TYPES.length];
+    private static final int[] TITLE_LEVEL = new int[ARTIFACT_TYPES.length];
+    private static final Component[] STATE_CACHE = new Component[ARTIFACT_TYPES.length];
+    private static final int[] STATE_COOLDOWN = new int[ARTIFACT_TYPES.length];
     private static Component energyText = null;
     private static int energyTextValue = -1;
     private static int energyTextMax = -1;
@@ -73,9 +59,9 @@ public final class ArtifactHudOverlay {
         renderPanel(graphics, x, y, height);
         renderEnergy(graphics, mc, x, y);
         int rowY = y + 15;
-        for (int i = 0; i < ARTIFACT_IDS.length; i++) {
-            if (ClientArtifactCache.isClaimed(ARTIFACT_IDS[i])
-                    && (renderAll || ARTIFACT_IDS[i].equals(held))) {
+        for (int i = 0; i < ARTIFACT_TYPES.length; i++) {
+            String id = ARTIFACT_TYPES[i].getId();
+            if (ClientArtifactCache.isClaimed(id) && (renderAll || id.equals(held))) {
                 renderArtifactRow(graphics, mc, i, x, rowY);
                 rowY += ROW_HEIGHT;
             }
@@ -123,7 +109,7 @@ public final class ArtifactHudOverlay {
 
     private static void renderArtifactRow(GuiGraphics graphics, Minecraft mc,
                                           int index, int x, int y) {
-        String id = ARTIFACT_IDS[index];
+        String id = ARTIFACT_TYPES[index].getId();
         ClientArtifactCache.Entry entry = ClientArtifactCache.get(id);
         if (entry == null) {
             return;
@@ -162,8 +148,8 @@ public final class ArtifactHudOverlay {
     }
 
     private static boolean hasClaimedArtifact() {
-        for (String id : ARTIFACT_IDS) {
-            if (ClientArtifactCache.isClaimed(id)) {
+        for (ArtifactType type : ARTIFACT_TYPES) {
+            if (ClientArtifactCache.isClaimed(type.getId())) {
                 return true;
             }
         }
@@ -172,8 +158,8 @@ public final class ArtifactHudOverlay {
 
     private static int claimedCount() {
         int count = 0;
-        for (String id : ARTIFACT_IDS) {
-            if (ClientArtifactCache.isClaimed(id)) {
+        for (ArtifactType type : ARTIFACT_TYPES) {
+            if (ClientArtifactCache.isClaimed(type.getId())) {
                 count++;
             }
         }
@@ -188,10 +174,11 @@ public final class ArtifactHudOverlay {
     private static String heldArtifactId(Player player) {
         ItemStack mainHand = player.getMainHandItem();
         ItemStack offhand = player.getOffhandItem();
-        for (int i = 0; i < ARTIFACT_IDS.length; i++) {
-            if (ClientArtifactCache.isClaimed(ARTIFACT_IDS[i])
+        for (int i = 0; i < ARTIFACT_TYPES.length; i++) {
+            String id = ARTIFACT_TYPES[i].getId();
+            if (ClientArtifactCache.isClaimed(id)
                     && (mainHand.is(ICONS[i].getItem()) || offhand.is(ICONS[i].getItem()))) {
-                return ARTIFACT_IDS[i];
+                return id;
             }
         }
         return null;

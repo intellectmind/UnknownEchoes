@@ -8,7 +8,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -32,7 +31,8 @@ public class GravityFieldCoreBlockEntity extends BlockEntity {
     private static final double FIELD_HEIGHT = 6.0D;
     /** 每两 tick 施加一次，必须覆盖同期原版重力才会形成可见的反转上浮。 */
     private static final double FULL_ACCELERATION = 0.19D;
-    private static final double ATTUNED_ACCELERATION = 0.10D;
+    /** 重力回响只削弱场强；仍需高于两 tick 的原版重力，避免玩家看起来完全不受影响。 */
+    private static final double ATTUNED_ACCELERATION = 0.17D;
 
     private int remainingTicks;
     private int phaseTicks;
@@ -71,7 +71,7 @@ public class GravityFieldCoreBlockEntity extends BlockEntity {
 
     public static void serverTick(Level level, BlockPos pos, BlockState state,
                                   GravityFieldCoreBlockEntity core) {
-        // 方块被外部改回非激活状态时，立即停止旧 NBT 中残留的计时器。
+
         if (!state.getValue(GravityFieldCoreBlock.ACTIVE)) {
             if (core.remainingTicks > 0 || core.phaseTicks > 0) {
                 core.remainingTicks = 0;
@@ -100,10 +100,8 @@ public class GravityFieldCoreBlockEntity extends BlockEntity {
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME,
                     SoundSource.BLOCKS, 0.85F,
                     state.getValue(GravityFieldCoreBlock.INVERTED) ? 1.35F : 0.65F);
-            notifyPhase(serverLevel, pos, state.getValue(GravityFieldCoreBlock.INVERTED));
         }
         if (core.remainingTicks == 0) {
-            notifyPlayers(serverLevel, pos, "message.unknown_echoes.gravity_field.stopped");
             core.deactivate();
             return;
         }
@@ -115,7 +113,8 @@ public class GravityFieldCoreBlockEntity extends BlockEntity {
                             ? ParticleTypes.END_ROD : ParticleTypes.REVERSE_PORTAL);
             GravityFieldCoreBlock.emitAnchorGuidance(serverLevel, pos);
         }
-        if (level.getGameTime() % 2 != 0) {
+        long gameTime = level.getGameTime();
+        if (Math.floorMod(gameTime, 2L) != 0L) {
             return;
         }
 
@@ -123,6 +122,7 @@ public class GravityFieldCoreBlockEntity extends BlockEntity {
         AABB field = fieldBounds(pos);
         for (Entity entity : serverLevel.getEntitiesOfClass(Entity.class, field,
                 candidate -> candidate.isAlive() && !candidate.isNoGravity()
+                        && horizontalDistanceSqr(candidate, pos) <= FIELD_RADIUS * FIELD_RADIUS
                         && (candidate instanceof LivingEntity
                         || candidate instanceof ItemEntity
                         || candidate instanceof ExperienceOrb
@@ -148,25 +148,18 @@ public class GravityFieldCoreBlockEntity extends BlockEntity {
             }
         }
 
-        if (level.getGameTime() % 4 == 0) {
-            double y = pos.getY() + 1.0 + (level.getGameTime() % 20) * 0.2;
+        if (Math.floorMod(gameTime, 4L) == 0L) {
+            double y = pos.getY() + 1.0 + Math.floorMod(gameTime, 20L) * 0.2;
             serverLevel.sendParticles(inverted ? ParticleTypes.REVERSE_PORTAL : ParticleTypes.PORTAL,
                     pos.getX() + 0.5, y, pos.getZ() + 0.5,
                     8, 1.6, 1.1, 1.6, 0.04);
         }
     }
 
-    private static void notifyPhase(ServerLevel level, BlockPos pos, boolean inverted) {
-        notifyPlayers(level, pos, inverted
-                ? "message.unknown_echoes.gravity_field.phase_up"
-                : "message.unknown_echoes.gravity_field.phase_down");
-    }
-
-    private static void notifyPlayers(ServerLevel level, BlockPos pos, String messageKey) {
-        for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class, fieldBounds(pos),
-                candidate -> candidate.isAlive() && !candidate.isSpectator())) {
-            player.displayClientMessage(Component.translatable(messageKey), true);
-        }
+    private static double horizontalDistanceSqr(Entity entity, BlockPos pos) {
+        double dx = entity.getX() - (pos.getX() + 0.5D);
+        double dz = entity.getZ() - (pos.getZ() + 0.5D);
+        return dx * dx + dz * dz;
     }
 
     private static AABB fieldBounds(BlockPos pos) {

@@ -27,15 +27,10 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * 水下符文座:潮汐灯塔礁的致盲机制方块(V0.6C 潮汐执灯者)。
- * 复用 TideRuneBlock 的权限/提示思路(无潮汐回响只见模糊水纹),但刻意不写
- * 深渊观测者的净化进度键——这是独立的 Mini Boss 机制(10.4.2 开发边界)。
- * - 有潮汐回响 + 附近执灯者灯亮:交互触发 4 秒致盲与短硬直,符文座进入冷却。
- * - LIT = 可用;冷却后 scheduleTick 自动复位。
- */
+/** 水下符文座:潮汐灯塔礁的致盲机制方块( 潮汐执灯者)。 */
 public class TideRuneSeatBlock extends Block implements SimpleWaterloggedBlock {
     public static final MapCodec<TideRuneSeatBlock> CODEC = simpleCodec(TideRuneSeatBlock::new);
 
@@ -47,7 +42,9 @@ public class TideRuneSeatBlock extends Block implements SimpleWaterloggedBlock {
     /** 符文座生效半径:覆盖整个灯塔礁战场。 */
     private static final double KEEPER_RANGE = 16.0D;
 
-    private static final VoxelShape SHAPE = Block.box(2, 0, 2, 14, 10, 14);
+    private static final VoxelShape SHAPE = Shapes.or(
+            Block.box(1, 0, 1, 15, 7, 15),
+            Block.box(4, 7, 11, 12, 13, 16));
 
     public TideRuneSeatBlock(Properties properties) {
         super(properties);
@@ -97,7 +94,7 @@ public class TideRuneSeatBlock extends Block implements SimpleWaterloggedBlock {
         if (level.isClientSide || !(level instanceof ServerLevel serverLevel)) {
             return InteractionResult.SUCCESS;
         }
-        // 服务端权限判定(红线 #1):没有潮汐回响只看到模糊水纹,水下呼吸 Mod 绕不过
+
         if (!EchoPermission.canUseEchoMechanism(player, EchoAbilityType.TIDE_ECHO)) {
             player.displayClientMessage(
                     Component.translatable("message.unknown_echoes.tide_rune_seat.blurred"), true);
@@ -110,7 +107,7 @@ public class TideRuneSeatBlock extends Block implements SimpleWaterloggedBlock {
         }
         TideLanternKeeper keeper = findKeeper(serverLevel, pos);
         if (keeper == null || !keeper.isLanternLit()) {
-            // 没有可致盲的对象:符文只回应一段水下的余光(教学/回访提示)
+
             player.displayClientMessage(
                     Component.translatable("message.unknown_echoes.tide_rune_seat.idle"), true);
             return InteractionResult.CONSUME;
@@ -128,10 +125,11 @@ public class TideRuneSeatBlock extends Block implements SimpleWaterloggedBlock {
 
     private static TideLanternKeeper findKeeper(ServerLevel level, BlockPos pos) {
         for (TideLanternKeeper keeper : level.getEntitiesOfClass(TideLanternKeeper.class,
-                new AABB(pos).inflate(KEEPER_RANGE))) {
-            if (keeper.isAlive()) {
-                return keeper;
-            }
+                new AABB(pos).inflate(KEEPER_RANGE),
+                keeper -> keeper.isAlive()
+                        && keeper.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D,
+                        pos.getZ() + 0.5D) <= KEEPER_RANGE * KEEPER_RANGE)) {
+            return keeper;
         }
         return null;
     }

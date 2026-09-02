@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import cn.kurt6.unknown_echoes.journal.ClueLocator;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import net.minecraft.core.BlockPos;
@@ -8,8 +9,8 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
@@ -40,12 +41,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
 
-/**
- * 回声鹿:回响森林被动生物(生命 14)。
- * 受击逃跑时短暂留下回响轨迹粒子——指向最近已加载遗迹方向的弱线索表现,
- * 不显示坐标、不写日志、不参与任何进度判定(九章 9.1 设定基线)。
- * 掉落回响纤维(探索者套装材料)。设定:它们仍循着回声巡视早已无人的归途。
- */
+/** 回声鹿:回响森林被动生物(生命 14)。 */
 public class EchoDeer extends Animal implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.echo_deer.idle");
@@ -74,23 +70,25 @@ public class EchoDeer extends Animal implements GeoEntity {
                 .add(Attributes.MOVEMENT_SPEED, 0.27D);
     }
 
+    /** 躲避排在 PanicGoal 之后、繁殖之前:被打到的反应优先,但要在敌怪贴上来之前就走开。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PanicGoal(this, 1.9D));
-        this.goalSelector.addGoal(2, new BreedGoal(this, 1.0D));
-        this.goalSelector.addGoal(3, new TemptGoal(this, 1.1D,
+        this.goalSelector.addGoal(2, new FleeThreatGoal(this, 12.0D, 1.3D, 1.8D));
+        this.goalSelector.addGoal(3, new BreedGoal(this, 1.0D));
+        this.goalSelector.addGoal(4, new TemptGoal(this, 1.1D,
                 stack -> stack.is(Items.WHEAT) || stack.is(Items.GLOW_BERRIES), false));
-        this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.1D));
-        this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 1.0D));
-        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
-        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.1D));
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 1.0D));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
         boolean hurt = super.hurt(source, amount);
-        // 受击触发回响轨迹:只查询已加载遗迹,绝不为粒子表现生成新区块。
+
         if (hurt && !this.level().isClientSide && this.trailCooldown <= 0 && this.isAlive()
                 && ServerConfig.ECHO_DEER_TRAIL_COOLDOWN.get() > 0) {
             this.trailCooldown = ServerConfig.ECHO_DEER_TRAIL_COOLDOWN.get();
@@ -117,7 +115,7 @@ public class EchoDeer extends Animal implements GeoEntity {
         if (this.trailCooldown > 0) {
             --this.trailCooldown;
         }
-        // 回响轨迹:身后逐步亮起一串渐远的微光,朝向最近遗迹(纯表现,无数据)
+
         if (this.trailTicks > 0) {
             --this.trailTicks;
             if (this.trailTicks % 5 == 0) {
@@ -144,24 +142,20 @@ public class EchoDeer extends Animal implements GeoEntity {
         return ModEntities.ECHO_DEER.get().create(level);
     }
 
-    // ---- 声音 ----
-
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.ALLAY_AMBIENT_WITHOUT_ITEM;
+        return ModSounds.ECHO_DEER_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.GOAT_HURT;
+        return ModSounds.ECHO_DEER_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.GOAT_DEATH;
+        return ModSounds.ECHO_DEER_DEATH.get();
     }
-
-    // ---- GeckoLib 动画 ----
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {

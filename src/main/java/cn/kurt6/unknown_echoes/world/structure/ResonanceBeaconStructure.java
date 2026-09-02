@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.world.structure;
 
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -13,20 +14,16 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
 import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 
-/**
- * 残响信标结构:主世界中玩家第一次进入回声境域的入口。
- * 小型祭坛平台,中央是不可破坏的残响信标,四角符文柱。
- */
 public class ResonanceBeaconStructure extends SinglePieceStructure {
     public static final MapCodec<ResonanceBeaconStructure> CODEC = simpleCodec(ResonanceBeaconStructure::new);
 
-    private static final int WIDTH = 7;
-    private static final int DEPTH = 7;
+    private static final int WIDTH = 31;
+    private static final int DEPTH = 31;
+    private static final int HEIGHT = 18;
 
     public ResonanceBeaconStructure(StructureSettings settings) {
         super(Piece::new, WIDTH, DEPTH, settings);
@@ -37,10 +34,10 @@ public class ResonanceBeaconStructure extends SinglePieceStructure {
         return ModStructures.RESONANCE_BEACON_STRUCTURE.get();
     }
 
-    public static class Piece extends ScatteredFeaturePiece {
+    public static class Piece extends EchoStructurePiece {
 
         public Piece(RandomSource random, int x, int z) {
-            super(ModStructures.RESONANCE_BEACON_PIECE.get(), x, 64, z, WIDTH, 5, DEPTH,
+            super(ModStructures.RESONANCE_BEACON_PIECE.get(), x, 64, z, WIDTH, HEIGHT, DEPTH,
                     Direction.Plane.HORIZONTAL.getRandomDirection(random));
         }
 
@@ -61,26 +58,58 @@ public class ResonanceBeaconStructure extends SinglePieceStructure {
             BlockState rune = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
             BlockState beacon = ModBlocks.RESONANCE_BEACON.get().defaultBlockState();
             BlockState air = Blocks.AIR.defaultBlockState();
+            BlockState mossy = ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState();
+            BlockState lamp = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
+            int c = WIDTH / 2;
 
-            // 平台
-            for (int x = 0; x < WIDTH; x++) {
-                for (int z = 0; z < DEPTH; z++) {
-                    this.placeBlock(level, random.nextFloat() < 0.2F ? cracked : bricks, x, 0, z, box);
+            this.generateBox(level, box, 0, 1, 0, WIDTH - 1, HEIGHT - 1, DEPTH - 1,
+                    air, air, false);
+
+            buildSteppedDisk(level, box, c, 0, c, 14, 3, mossy, bricks);
+            buildRuneCauseway(level, box, c, 2, c, Direction.SOUTH,
+                    6, 14, 2, bricks, cracked, rune);
+            architecturalRing(level, box, c, 3, c, 10, rune);
+            buildStairCornice(level, box, c, 2, c, Footprint.square(11), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_SLAB.get().defaultBlockState(), false);
+            buildParapet(level, box, c, 3, c, Footprint.square(13), 5, ModBlocks.ECHO_STONE_BRICK_WALL.get().defaultBlockState(), cracked);
+            architecturalRing(level, box, c, 3, c, 6, cracked);
+
+            int[][] diagonalDirections = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+            for (int[] diagonal : diagonalDirections) {
+                for (int distance = 6; distance <= 12; distance++) {
+                    int height = Math.max(2, 8 - (distance - 6) / 2);
+                    architecturalPillar(level, box, c + diagonal[0] * distance, 1,
+                            c + diagonal[1] * distance, height,
+                            distance % 3 == 0 ? rune : bricks);
                 }
             }
-            this.generateBox(level, box, 0, 1, 0, WIDTH - 1, 4, DEPTH - 1, air, air, false);
-
-            // 四角符文柱
-            for (int y = 1; y <= 2; y++) {
-                this.placeBlock(level, y == 2 ? rune : bricks, 0, y, 0, box);
-                this.placeBlock(level, y == 2 ? rune : bricks, WIDTH - 1, y, 0, box);
-                this.placeBlock(level, y == 2 ? rune : bricks, 0, y, DEPTH - 1, box);
-                this.placeBlock(level, y == 2 ? rune : bricks, WIDTH - 1, y, DEPTH - 1, box);
+            buildCircularColonnade(level, box, c, 3, c, 9, 12, 7,
+                    bricks, rune, cracked);
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                buildCardinalGateway(level, box, c, 3, c, 10, direction,
+                        2, 6, bricks, rune);
             }
 
-            // 中央基座与信标
-            this.placeBlock(level, bricks, WIDTH / 2, 1, DEPTH / 2, box);
-            this.placeBlock(level, beacon, WIDTH / 2, 2, DEPTH / 2, box);
+            for (int pavilionX : new int[]{c - 8, c + 8}) {
+                buildGabledPavilion(level, box, pavilionX, 1, c - 7, Footprint.of(4, 5), 6, 3, mossy, bricks, rune, lamp);
+                buildStairCornice(level, box, pavilionX, 7, c - 7, Footprint.of(4, 5), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_SLAB.get().defaultBlockState(), true);
+                buildSpireFinial(level, box, pavilionX, 8, c - 7, 2, 4,
+                        bricks, rune, lamp);
+            }
+
+            architecturalDisk(level, box, c, 3, c, 4, bricks);
+            architecturalRing(level, box, c, 4, c, 3, rune);
+            this.placeBlock(level, lamp, c, 3, c, box);
+            this.placeBlock(level, beacon, c, 4, c, box);
+            for (int[] point : new int[][]{{c - 6, c - 6}, {c + 6, c - 6},
+                    {c - 6, c + 6}, {c + 6, c + 6}}) {
+                architecturalPillar(level, box, point[0], 3, point[1], 5, bricks);
+                this.placeBlock(level, lamp, point[0], 8, point[1], box);
+            }
+            scatterArchitecturalDebris(level, random, box, c, 1, c,
+                    11, 14, 22, cracked, mossy);
+
+            placeStructureSpawner(level, random, box, c + 10, 2, c - 5,
+                    ModEntities.ECHO_WANDERER.get(), bricks, rune);
         }
     }
 }

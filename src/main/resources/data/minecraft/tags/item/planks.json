@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:echo_planks",
+    "unknown_echoes:whispering_planks",
+    "unknown_echoes:tidewood_planks"
+  ]
+}

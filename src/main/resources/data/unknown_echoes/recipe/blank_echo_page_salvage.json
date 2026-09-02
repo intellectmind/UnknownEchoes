@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:blank_echo_page" },
+    { "item": "unknown_echoes:blank_echo_page" }
+  ],
+  "result": {
+    "id": "unknown_echoes:record_tracing_paper"
+  }
+}

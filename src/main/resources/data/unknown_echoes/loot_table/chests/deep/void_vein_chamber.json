@@ -12,8 +12,8 @@
         { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 162 } } ] },
         { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 164 } } ] },
         { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 166 } } ] },
-        { "type": "minecraft:item", "name": "unknown_echoes:void_research_rubbing", "weight": 3 },
-        { "type": "minecraft:empty", "weight": 2 }
+        { "type": "minecraft:item", "name": "unknown_echoes:void_research_rubbing", "weight": 2 },
+        { "type": "minecraft:empty", "weight": 5 }
       ]
     },
     {

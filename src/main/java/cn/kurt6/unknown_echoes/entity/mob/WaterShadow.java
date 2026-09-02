@@ -1,9 +1,10 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -34,10 +35,7 @@ import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * 镜湖水影:镜湖自然生成的水下敌怪。
- * 区别于潮汐执灯者召唤物,它可自然生成并掉落普通镜湖材料,不发放关键进度。
- */
+/** 镜湖水影:镜湖自然生成的水下敌怪。 */
 public class WaterShadow extends Monster implements GeoEntity {
     private static final RawAnimation SWIM_ANIM =
             RawAnimation.begin().thenLoop("animation.water_shadow.swim");
@@ -60,12 +58,14 @@ public class WaterShadow extends Monster implements GeoEntity {
                 .add(Attributes.FOLLOW_RANGE, 24.0D);
     }
 
+    /** 水生导航没有可站落点,不能用陆地系战术 Goal;群体反应只用不抢 MOVE 的拉群。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.25D, true));
         this.goalSelector.addGoal(5, new RandomSwimmingGoal(this, 0.85D, 30));
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(3, new AlertPackGoal(this, 14.0D));
     }
 
     @Override
@@ -122,17 +122,17 @@ public class WaterShadow extends Monster implements GeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.DROWNED_AMBIENT_WATER;
+        return ModSounds.WATER_SHADOW_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.DROWNED_HURT_WATER;
+        return ModSounds.WATER_SHADOW_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.DROWNED_DEATH_WATER;
+        return ModSounds.WATER_SHADOW_DEATH.get();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.world.structure;
 
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModLootTables;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
 import com.mojang.serialization.MapCodec;
@@ -20,17 +21,12 @@ import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-/**
- * 天空观测站:漂浮群岛主结构(漂浮空岛,固定高度生成,不贴地)。
- * 倒锥形岛体 + 顶部环形观测台;观测站核心(ObservatoryCoreBlock)服务端校验风之回响——
- * 其他 Mod 飞上来也只能看,不能激活(design-principles #1)。
- * 风暴编织者(强化守护者)按规划拆到 V0.6,此处预留场地。
- */
+/** 天空观测站:漂浮群岛主结构(漂浮空岛,固定高度生成,不贴地)。 */
 public class SkyObservatoryStructure extends SinglePieceStructure {
     public static final MapCodec<SkyObservatoryStructure> CODEC = simpleCodec(SkyObservatoryStructure::new);
 
-    private static final int SIZE = 17;
-    private static final int HEIGHT = 14;
+    private static final int SIZE = 41;
+    private static final int HEIGHT = 32;
 
     public SkyObservatoryStructure(StructureSettings settings) {
         super(Piece::new, SIZE, SIZE, settings);
@@ -44,7 +40,7 @@ public class SkyObservatoryStructure extends SinglePieceStructure {
     public static class Piece extends EchoStructurePiece {
 
         public Piece(RandomSource random, int x, int z) {
-            // 漂浮空岛:固定生成在高空(y 175~190,高于尖峭山峰),不做贴地调整
+
             super(ModStructures.SKY_OBSERVATORY_PIECE.get(), x, 175 + random.nextInt(16), z,
                     SIZE, HEIGHT, SIZE, Direction.Plane.HORIZONTAL.getRandomDirection(random));
         }
@@ -63,10 +59,11 @@ public class SkyObservatoryStructure extends SinglePieceStructure {
             BlockState cracked = ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState();
             BlockState grass = ModBlocks.GLOW_GRASS.get().defaultBlockState();
             BlockState moss = Blocks.MOSS_BLOCK.defaultBlockState();
-            int c = SIZE / 2; // 8
+            BlockState chiseled = ModBlocks.WIND_CHISELED_STONE.get().defaultBlockState();
+            BlockState lamp = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
+            int c = SIZE / 2;
 
-            // 倒锥形岛体:自下而上半径 2/4/6/7,顶面为可行走平台
-            int[] radii = {2, 4, 6, 7};
+            int[] radii = {3, 5, 8, 11, 14, 16, 18, 19};
             for (int y = 0; y < radii.length; y++) {
                 int r = radii[y];
                 for (int x = 0; x < SIZE; x++) {
@@ -83,75 +80,86 @@ public class SkyObservatoryStructure extends SinglePieceStructure {
                     }
                 }
             }
-            int top = radii.length; // y=4,平台上一层
+            int top = radii.length;
 
-            // 平台植被:发光草(下方是 moss/windstone,moss 在 dirt tag,windstone 上的会自检存活)
-            for (int i = 0; i < 8; i++) {
-                int x = c - 5 + random.nextInt(11);
-                int z = c - 5 + random.nextInt(11);
+            for (int i = 0; i < 28; i++) {
+                int x = c - 15 + random.nextInt(31);
+                int z = c - 15 + random.nextInt(31);
                 int dx = x - c;
                 int dz = z - c;
-                if (dx * dx + dz * dz <= 36
+                if (dx * dx + dz * dz <= 256
                         && this.getBlock(level, x, top - 1, z, box).is(Blocks.MOSS_BLOCK)) {
                     this.placeBlock(level, grass, x, top, z, box);
                 }
             }
 
-            // 中央观测亭:5x5 石砖,高 4,顶部环形檐
-            for (int x = c - 2; x <= c + 2; x++) {
-                for (int z = c - 2; z <= c + 2; z++) {
-                    boolean wall = x == c - 2 || x == c + 2 || z == c - 2 || z == c + 2;
-                    for (int y = top; y <= top + 3; y++) {
-                        if (wall) {
-                            this.placeBlock(level, random.nextFloat() < 0.25F ? cracked : bricks, x, y, z, box);
-                        } else {
-                            this.placeBlock(level, Blocks.AIR.defaultBlockState(), x, y, z, box);
-                        }
-                    }
-                    this.placeBlock(level, bricks, x, top + 4, z, box); // 顶
-                }
+            buildSteppedDisk(level, box, c, top - 1, c, 13, 3, windStone, bricks);
+            // 悬挑锚点必须高于净空上界 top+6(地板 top+1 加 miniboss 所需 5 格),否则观测层铺进走位区。
+            // 朝北是为了避开风门与四向气流柱。
+            buildCantileverTerraces(level, box, c, top + 10, c,
+                    Direction.NORTH, 3, 7, 4,
+                    windStone, bricks, chiseled, lamp);
+            buildBossArenaMandala(level, box, c, top + 1, c, 11,
+                    chiseled, windStone, lamp);
+            buildArenaLightRing(level, box, c, top + 2, c, 12, 12, 5, bricks, lamp);
+            architecturalRing(level, box, c, top + 2, c, 11, chiseled);
+            buildCircularColonnade(level, box, c, top + 2, c, 10, 16, 10,
+                    bricks, lamp, chiseled);
+            // 收边必须用风蚀岩砖族:借用青色回响石砖会与浅灰风蚀岩撞色。
+            BlockState windStairs = ModBlocks.WIND_ETCHED_BRICK_STAIRS.get().defaultBlockState();
+            BlockState windSlab = ModBlocks.WIND_ETCHED_BRICK_SLAB.get().defaultBlockState();
+            buildStairCornice(level, box, c, top, c, Footprint.square(12), windStairs, windSlab, false);
+            buildParapet(level, box, c, top + 2, c, Footprint.square(13), 5, ModBlocks.WIND_ETCHED_BRICK_WALL.get().defaultBlockState(), chiseled);
+
+            buildStairCornice(level, box, c, top + 12, c, Footprint.square(10), windStairs, windSlab, true);
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                buildCardinalGateway(level, box, c, top + 2, c, 11, direction,
+                        3, 8, windStone, chiseled);
             }
 
-            // 南侧入口:风门封住(服务端校验风之回响)
-            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, top, c - 2, box);
-            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, top + 1, c - 2, box);
+            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, top + 2, c - 10, box);
+            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, top + 3, c - 10, box);
 
-            // 亭内:观测站核心(台座 + 核心)与记录宝箱
-            this.placeBlock(level, bricks, c, top, c, box);
-            this.placeBlock(level, ModBlocks.OBSERVATORY_CORE.get().defaultBlockState(), c, top + 1, c, box);
-            buildAccessibleChest(level, random, box, c + 1, top, c + 1, ModLootTables.SKY_OBSERVATORY_CHEST);
-            buildTrueSightVaultNiche(level, random, box, c + 4, top, c - 4, Direction.WEST);
+            architecturalDisk(level, box, c, top + 2, c, 4, chiseled);
+            this.placeBlock(level, bricks, c, top + 3, c, box);
+            this.placeBlock(level, ModBlocks.OBSERVATORY_CORE.get().defaultBlockState(), c, top + 4, c, box);
+            buildAccessibleChest(level, random, box, c + 6, top + 3, c + 3,
+                    ModLootTables.SKY_OBSERVATORY_CHEST);
+            buildTrueSightVaultNiche(level, random, box, c + 10, top + 3, c - 6, Direction.WEST);
 
-            // V0.6D 神器台座:记录台(领取/复领风暴罗盘)与升级台(升级/调谐),亭内东西两侧
             this.placeBlock(level, ModBlocks.ARTIFACT_RECORD_TABLE.get().defaultBlockState(),
-                    c - 1, top, c + 1, box);
+                    c - 3, top + 3, c + 3, box);
             this.placeBlock(level, ModBlocks.ARTIFACT_TUNING_TABLE.get().defaultBlockState(),
-                    c - 1, top, c - 1, box);
+                    c - 3, top + 3, c - 3, box);
 
-            // 四角风蚀立柱(风暴编织者场地,V0.6A 启用)
-            for (int[] corner : new int[][]{{c - 5, c - 5}, {c + 5, c - 5}, {c - 5, c + 5}, {c + 5, c + 5}}) {
-                for (int y = top; y <= top + 2; y++) {
-                    if (random.nextFloat() < 0.8F) {
-                        this.placeBlock(level, windStone, corner[0], y, corner[1], box);
-                    }
-                }
+            for (int[] corner : new int[][]{{c - 14, c - 14}, {c + 14, c - 14},
+                    {c - 14, c + 14}, {c + 14, c + 14}}) {
+                architecturalDisk(level, box, corner[0], top + 1, corner[1], 4, windStone);
+                architecturalPillar(level, box, corner[0], top - 3, corner[1], 10, chiseled);
+                this.placeBlock(level, lamp, corner[0], top + 7, corner[1], box);
             }
 
-            // 风流平台(V0.6E,10.5 风流追击):平台环绕观测亭四个正向,
-            // 风之权限激活后产生上升气流柱,玩家借气流接近空中的风暴编织者
             BlockState platform = ModBlocks.WIND_CURRENT_PLATFORM.get().defaultBlockState();
-            for (int[] spot : new int[][]{{c - 5, c}, {c + 5, c}, {c, c - 5}, {c, c + 5}}) {
-                this.placeBlock(level, platform, spot[0], top, spot[1], box);
+            for (int[] spot : new int[][]{{c - 15, c}, {c + 15, c}, {c, c - 15}, {c, c + 15}}) {
+                architecturalDisk(level, box, spot[0], top + 1, spot[1], 3, windStone);
+                this.placeBlock(level, platform, spot[0], top + 2, spot[1], box);
             }
 
-            // 风暴编织者场地计时器:埋进岛体中心(y=2 处锥体半径 4,中心必在体内)。
-            // 首次生成与击败后重开都由它驱动(MiniBossSpawnerBlockEntity,V0.6A 公共框架)。
-            this.placeBlock(level, ModBlocks.MINIBOSS_SPAWNER.get().defaultBlockState(), c, 2, c, box);
-            BlockPos spawnerPos = new BlockPos(this.getWorldX(c, c), this.getWorldY(2), this.getWorldZ(c, c));
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                buildRuneCauseway(level, box, c, top + 1, c, direction,
+                        10, 16, 1, bricks, windStone, chiseled);
+            }
+            architecturalRing(level, box, c, top + 20, c, 14, lamp);
+
+            placeStructureSpawner(level, random, box, c + 13, top + 2, c - 5,
+                    ModEntities.WIND_ERODED_SENTINEL.get(), windStone, chiseled);
+
+            this.placeBlock(level, ModBlocks.MINIBOSS_SPAWNER.get().defaultBlockState(), c, 4, c, box);
+            BlockPos spawnerPos = new BlockPos(this.getWorldX(c, c), this.getWorldY(4), this.getWorldZ(c, c));
             if (box.isInside(spawnerPos) && level.getBlockEntity(spawnerPos)
                     instanceof cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlockEntity spawner) {
-                // 生成点:观测亭顶(top+4)再高 4 格的开阔空域
-                spawner.configure(cn.kurt6.unknown_echoes.UnknownEchoes.id("storm_weaver"), top + 6);
+
+                spawner.configure(cn.kurt6.unknown_echoes.UnknownEchoes.id("storm_weaver"), top + 13);
             }
         }
 

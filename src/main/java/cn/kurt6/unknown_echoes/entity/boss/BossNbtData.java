@@ -5,6 +5,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Collection;
@@ -94,6 +95,11 @@ final class BossNbtData {
             return 0.0F;
         }
         return Math.max(0.0F, Math.min(value, Math.max(0.0F, maximum)));
+    }
+
+    static boolean isHorizontalAreaLoaded(ServerLevel level, BlockPos center, int radius) {
+        return cn.kurt6.unknown_echoes.world.LoadedAreaCheck
+                .horizontalRadiusLoaded(level, center, radius);
     }
 
     private static BlockPos decodePosition(int[] coords) {

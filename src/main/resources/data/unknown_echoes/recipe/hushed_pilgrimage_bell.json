@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " M ",
+    "RSR",
+    " A "
+  ],
+  "key": {
+    "M": { "item": "unknown_echoes:mute_crystal" },
+    "R": { "item": "unknown_echoes:silent_resin" },
+    "S": { "item": "unknown_echoes:echo_shard" },
+    "A": { "item": "unknown_echoes:deep_alloy_ingot" }
+  },
+  "result": { "id": "unknown_echoes:hushed_pilgrimage_bell" }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:faint_echo_candy" },
+    { "item": "unknown_echoes:faint_echo_candy" },
+    { "item": "unknown_echoes:faint_echo_candy" },
+    { "item": "unknown_echoes:faint_echo_candy" }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_dust"
+  }
+}

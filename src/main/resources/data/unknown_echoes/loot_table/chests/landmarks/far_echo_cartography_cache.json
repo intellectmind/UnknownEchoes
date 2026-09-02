@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 2, "max": 4 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_shard", "weight": 7, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 6 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_bandage", "weight": 5, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:faint_echo_candy", "weight": 5, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "minecraft:bread", "weight": 6, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } }] },
+        { "type": "minecraft:item", "name": "minecraft:paper", "weight": 6, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 3, "max": 9 } }] },
+        { "type": "minecraft:item", "name": "minecraft:torch", "weight": 5, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 4, "max": 12 } }] }
+      ]
+    },
+    {
+      "rolls": 1,
+      "conditions": [{ "condition": "minecraft:random_chance", "chance": 0.35 }],
+      "entries": [
+        { "type": "minecraft:item", "name": "minecraft:map", "weight": 4 },
+        { "type": "minecraft:item", "name": "minecraft:compass", "weight": 2 },
+        { "type": "minecraft:item", "name": "unknown_echoes:wind_chime_bottle", "weight": 1 }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/landmarks/far_echo_cartography_cache"
+}

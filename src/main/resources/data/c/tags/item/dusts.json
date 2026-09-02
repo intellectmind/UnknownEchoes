@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:echo_dust",
+    "unknown_echoes:illusion_dust",
+    "unknown_echoes:polished_mirror_dust",
+    "unknown_echoes:revealing_powder"
+  ]
+}

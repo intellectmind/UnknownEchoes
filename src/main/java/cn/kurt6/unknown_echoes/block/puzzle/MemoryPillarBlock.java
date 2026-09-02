@@ -22,10 +22,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.List;
 
-/**
- * 记忆柱:Boss 场地机关。玩家激活全部 4 根记忆柱后,遗忘巨像进入破防状态。
- * 只有附近存在存活的遗忘巨像时才能激活;破防窗口结束后由 Boss 重置。
- */
+/** 记忆柱:Boss 场地机关。玩家激活全部 4 根记忆柱后,遗忘巨像进入破防状态。 */
 public class MemoryPillarBlock extends Block {
     public static final MapCodec<MemoryPillarBlock> CODEC = simpleCodec(MemoryPillarBlock::new);
     public static final BooleanProperty ACTIVATED = BooleanProperty.create("activated");
@@ -65,9 +62,6 @@ public class MemoryPillarBlock extends Block {
         List<ForgottenColossus> bosses = level.getEntitiesOfClass(ForgottenColossus.class,
                 new AABB(pos).inflate(BOSS_SEARCH_RADIUS), ForgottenColossus::isAlive);
 
-        // 共鸣信物(V0.6E,5.1.1):战斗结束后的记忆柱是风之信物的"机关核心"——
-        // 破防记录在册者免费复领;只有 Boss 记录(硬杀/旧档)者由柱上风纹补写仪式记录,
-        // 避免巨像已死、机关无法重做导致的卡关(design-principles #3)。
         if (bosses.isEmpty() && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
                 && cn.kurt6.unknown_echoes.ability.EchoAbilityManager.hasDefeatedBoss(serverPlayer,
                         cn.kurt6.unknown_echoes.ability.EchoPermission.FORGOTTEN_COLOSSUS_ID)
@@ -75,8 +69,6 @@ public class MemoryPillarBlock extends Block {
                         cn.kurt6.unknown_echoes.ability.EchoAbilityType.WIND_ECHO)) {
             if (!cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.hasRitualRecord(serverPlayer,
                     cn.kurt6.unknown_echoes.ability.EchoAbilityType.WIND_ECHO)) {
-                serverPlayer.displayClientMessage(
-                        Component.translatable("message.unknown_echoes.pillar.remedial"), true);
                 cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.grantRitual(serverPlayer,
                         cn.kurt6.unknown_echoes.ability.EchoAbilityType.WIND_ECHO);
                 return InteractionResult.CONSUME;
@@ -93,8 +85,6 @@ public class MemoryPillarBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        // 亮灭、顺序判定与破防由巨像的 Simon 序列回响统一裁决(服务端权威);
-        // 方块不再自行点亮,避免"点哪亮哪"绕过顺序。
         bosses.get(0).onMemoryPillarClicked(pos, player);
         return InteractionResult.CONSUME;
     }

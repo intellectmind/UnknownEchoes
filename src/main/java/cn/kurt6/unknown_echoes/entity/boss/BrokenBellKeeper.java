@@ -1,8 +1,8 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.entity.ai.CirclePreferredRangeGoal;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -42,17 +42,6 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 残钟看守:残钟废塔 Mini Boss(残钟荒原,设计文档 10.5)。
- *
- * 机制(计时窗破甲,设计红线 #4——窗外攻击不破甲):
- * - 看守平时披甲受护(未破防)。周期性举起钟摆"鸣钟蓄力"(toll 读条)——这就是计时窗:
- *   窗内被玩家击中 → 踉跄破甲(stagger),护甲脱落 7 秒(可全额输出);放任读条结束 →
- *   鸣钟轰出冲击波(减速 + 伤害),回到披甲。
- * - 钟锤过顶砸(hammer):近战重击带溅射 + 击退。
- * - 延迟齿轮爆(gearburst):向目标周围埋 2-3 枚齿轮雷,引信到点爆裂(范围伤害)。
- * 结算沿用 MiniBossEntity 个人首杀/重复发放(MiniBossRewardTable)。
- */
 public class BrokenBellKeeper extends MiniBossEntity {
     public static final ResourceLocation MINIBOSS_ID = UnknownEchoes.id("broken_bell_keeper");
 
@@ -70,12 +59,18 @@ public class BrokenBellKeeper extends MiniBossEntity {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
     private static final int ARENA_RADIUS = 14;
-    private static final int EXPOSED_WINDOW = 140;  // 破甲暴露 7s
-    private static final int WINDUP_TICKS = 50;     // 鸣钟蓄力(计时窗)2.5s
+    private static final int EXPOSED_WINDOW = 140;
+    private static final int WINDUP_TICKS = 50;
     private static final int GEAR_FUSE = 26;
+    /** 鸣钟的水平结算半径。预警环与命中环都画在这个值上，改了两处会一起跟随。 */
+    private static final double TOLL_RADIUS = 6.0D;
+    /** 齿轮弹的水平结算半径。预警区画在这个值上，画小了玩家会站在圈外仍被炸。 */
+    private static final double GEAR_BLAST_RADIUS = 2.5D;
+    /** 铁锤溅射半径，以被击者为心。 */
+    private static final double HAMMER_SPLASH_RADIUS = 2.0D;
 
-    private int exposedTicks = 0;     // >0 = 护甲脱落,可全额输出
-    private int windupTicks = 0;      // >0 = 鸣钟计时窗(可被打断破甲)
+    private int exposedTicks = 0;
+    private int windupTicks = 0;
     private int tollCooldown = 120;
     private int hammerCooldown = 40;
     private int gearburstCooldown = 160;
@@ -106,8 +101,14 @@ public class BrokenBellKeeper extends MiniBossEntity {
                 .add(Attributes.FOLLOW_RANGE, 32.0D);
     }
 
+    /**
+     * 绕圈半径必须落在齿爆的射程区间(距离平方 16 到 18²)内,否则永久贴脸会让齿爆一次都放不出来。
+     * 优先级数必须小于近战:MOVE 只能被更小的数抢走,排在后面等于永不触发。
+     */
     @Override
     protected void registerGoals() {
+        this.goalSelector.addGoal(1, new CirclePreferredRangeGoal(this, 5.0D, 8.0D, 0.9D,
+                () -> this.windupTicks > 0));
         this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.0D, true));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.55D));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
@@ -127,7 +128,7 @@ public class BrokenBellKeeper extends MiniBossEntity {
 
     @Override
     protected boolean isDamageGuarded() {
-        // 仅在破甲暴露窗口内可全额输出;其余(含鸣钟计时窗)都披甲受护
+
         return this.exposedTicks <= 0;
     }
 
@@ -141,24 +142,20 @@ public class BrokenBellKeeper extends MiniBossEntity {
         if (this.windupTicks <= 0) {
             return;
         }
-        Vec3 core = this.position().add(0, 1.3, 0);
-        BossFx.guidanceMarker(level, core, ParticleTypes.END_ROD);
-        for (int i = 0; i < 4; i++) {
-            double angle = Math.PI * 0.5 * i;
-            Vec3 outer = core.add(Math.cos(angle) * 2.8, 0, Math.sin(angle) * 2.8);
-            BossFx.guidanceLink(level, outer, core, ParticleTypes.CRIT);
-        }
+        // 鸣钟的破防窗口靠"打断蓄力"取得，所以引导画的是钟体本身而不是某个方块。
+        MiniBossFx.objectiveMarker(level, this.position().add(0, 1.3, 0),
+                this.fxTheme(), level.getGameTime());
     }
 
     @Override
-    protected void grantSettlement(ServerPlayer player, boolean firstKill) {
-        MiniBossRewardTable.grantBrokenBellKeeper(this, player, firstKill);
+    protected void grantSettlement(boolean firstKill) {
+        MiniBossRewardTable.grantBrokenBellKeeper(this, firstKill);
     }
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
         boolean result = super.hurt(source, amount);
-        // 计时窗内被玩家击中 → 踉跄破甲
+
         if (result && !this.level().isClientSide && this.windupTicks > 0 && this.exposedTicks <= 0
                 && source.getEntity() instanceof ServerPlayer
                 && this.level() instanceof ServerLevel serverLevel) {
@@ -169,11 +166,12 @@ public class BrokenBellKeeper extends MiniBossEntity {
         return result;
     }
 
-    // ---- 主循环 ----
-
     @Override
     public void aiStep() {
         super.aiStep();
+        if (this.isSpawnerBindingPaused()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -184,8 +182,8 @@ public class BrokenBellKeeper extends MiniBossEntity {
         if (this.exposedTicks > 0) {
             this.exposedTicks--;
             if (this.tickCount % 5 == 0) {
-                serverLevel.sendParticles(ParticleTypes.SCRAPE,
-                        this.getX(), this.getY() + 1.4, this.getZ(), 4, 0.7, 0.8, 0.7, 0.0);
+                MiniBossFx.breachAura(serverLevel, this, this.fxTheme(),
+                        serverLevel.getGameTime());
             }
         } else if (this.windupTicks > 0) {
             this.tickWindup(serverLevel);
@@ -200,16 +198,11 @@ public class BrokenBellKeeper extends MiniBossEntity {
         this.tickGearBombs(serverLevel);
     }
 
-    /** 鸣钟蓄力:计时窗内绕身金色火花环(可被击中打断破甲);窗满则轰出冲击波。 */
     private void tickWindup(ServerLevel serverLevel) {
-        double spin = this.windupTicks * 0.4;
-        BossFx.chargeSpiral(serverLevel, this.position().add(0, 0.7, 0), this.tickCount, ParticleTypes.CRIT);
-        for (int i = 0; i < 6; i++) {
-            double a = spin + Math.PI * 2 * i / 6;
-            serverLevel.sendParticles(ParticleTypes.CRIT,
-                    this.getX() + Math.cos(a) * 2.2, this.getY() + 1.2, this.getZ() + Math.sin(a) * 2.2,
-                    1, 0.02, 0.05, 0.02, 0.0);
-        }
+        // 预警环画在鸣钟的结算半径上，让玩家知道要退到哪里；同时汇聚表达"正在蓄力"。
+        double progress = 1.0D - this.windupTicks / (double) WINDUP_TICKS;
+        MiniBossFx.chargeConverge(serverLevel, this.position(), this.fxTheme(),
+                TOLL_RADIUS, progress);
         if (--this.windupTicks <= 0) {
             this.castToll(serverLevel);
         }
@@ -222,35 +215,36 @@ public class BrokenBellKeeper extends MiniBossEntity {
         this.broadcastHint(serverLevel, "message.unknown_echoes.broken_bell_keeper.windup");
     }
 
-    /** 鸣钟冲击波:未被打断时,环形 AoE 伤害 + 减速;之后回到披甲。 */
     private void castToll(ServerLevel serverLevel) {
         this.tollCooldown = 220;
-        serverLevel.playSound(null, this.blockPosition(), ModSounds.BROKEN_BELL_KEEPER_ATTACK.get(),
-                SoundSource.HOSTILE, 1.6F, 0.6F);
+        serverLevel.playSound(null, this.blockPosition(), ModSounds.BROKEN_BELL_KEEPER_TOLL.get(),
+                SoundSource.HOSTILE, 1.6F, 1.0F);
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.6F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                this.getBoundingBox().inflate(6.0, 2.0, 6.0),
+                this.getBoundingBox().inflate(TOLL_RADIUS, 2.0, TOLL_RADIUS),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1), this);
-        }
-        for (int ring = 1; ring <= 6; ring++) {
-            for (int i = 0; i < 18; i++) {
-                double a = Math.PI * 2 * i / 18;
-                serverLevel.sendParticles(ParticleTypes.POOF,
-                        this.getX() + Math.cos(a) * ring, this.getY() + 0.4, this.getZ() + Math.sin(a) * ring,
-                        1, 0.0, 0.0, 0.0, 0.0);
+            Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
+            if (away.lengthSqr() > TOLL_RADIUS * TOLL_RADIUS) {
+                continue;
+            }
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1), this);
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
             }
         }
-        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.1, 0), 6.0, ParticleTypes.END_ROD);
-        BossFx.impactBurst(serverLevel, this.position().add(0, 1.0, 0), ParticleTypes.END_ROD);
+        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), TOLL_RADIUS);
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 0.6, 0),
+                30.0D, 0.72F, 9, this.combatImpactColor());
     }
 
     private void enterExposed(ServerLevel serverLevel) {
         this.exposedTicks = EXPOSED_WINDOW;
         this.tollCooldown = 240;
-        serverLevel.playSound(null, this.blockPosition(), ModSounds.BROKEN_BELL_KEEPER_HURT.get(),
-                SoundSource.HOSTILE, 1.4F, 0.7F);
+        serverLevel.playSound(null, this.blockPosition(), ModSounds.BROKEN_BELL_KEEPER_EXPOSED.get(),
+                SoundSource.HOSTILE, 1.4F, 1.0F);
+        MiniBossFx.breachAura(serverLevel, this, this.fxTheme(), serverLevel.getGameTime());
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                24.0D, 0.42F, 6, this.combatImpactColor());
         this.broadcastHint(serverLevel, "message.unknown_echoes.broken_bell_keeper.exposed");
     }
 
@@ -265,12 +259,11 @@ public class BrokenBellKeeper extends MiniBossEntity {
         }
     }
 
-    /** 延迟齿轮爆:目标周围埋 2-3 枚齿轮雷,引信到点爆裂。 */
     private void castGearburst(ServerLevel serverLevel, LivingEntity target) {
         this.gearburstCooldown = 200;
         this.triggerAnim("attack_controller", "gearburst");
-        serverLevel.playSound(null, this.blockPosition(), ModSounds.BROKEN_BELL_KEEPER_ATTACK.get(),
-                SoundSource.HOSTILE, 1.2F, 1.1F);
+        serverLevel.playSound(null, this.blockPosition(), ModSounds.BROKEN_BELL_KEEPER_GEARBURST.get(),
+                SoundSource.HOSTILE, 1.2F, 1.0F);
         Vec3 anchor = Vec3.atCenterOf(this.arenaAnchor());
         int count = 2 + this.random.nextInt(2);
         for (int i = 0; i < count; i++) {
@@ -292,62 +285,59 @@ public class BrokenBellKeeper extends MiniBossEntity {
             bomb.fuse--;
             if (bomb.fuse > 0) {
                 if (bomb.fuse % 3 == 0) {
-                    double r = 1.6 * bomb.fuse / GEAR_FUSE + 0.3;
-                    for (int i = 0; i < 8; i++) {
-                        double a = Math.PI * 2 * i / 8;
-                        serverLevel.sendParticles(ParticleTypes.SMOKE,
-                                bomb.pos.x + Math.cos(a) * r, bomb.pos.y + 0.1, bomb.pos.z + Math.sin(a) * r,
-                                1, 0.0, 0.0, 0.0, 0.0);
-                    }
-                    serverLevel.sendParticles(ParticleTypes.CRIT, bomb.pos.x, bomb.pos.y + 0.3, bomb.pos.z,
-                            2, 0.1, 0.1, 0.1, 0.0);
+                    // 预警区画在结算半径上，随引信推进收紧；画小了玩家会站在圈外仍被炸。
+                    MiniBossFx.impactZone(serverLevel, bomb.pos, this.fxTheme(), GEAR_BLAST_RADIUS,
+                            1.0D - bomb.fuse / (double) GEAR_FUSE);
                 }
                 return false;
             }
-            // 爆裂
-            serverLevel.sendParticles(ParticleTypes.EXPLOSION, bomb.pos.x, bomb.pos.y + 0.5, bomb.pos.z, 1, 0, 0, 0, 0);
-            serverLevel.sendParticles(ParticleTypes.CRIT, bomb.pos.x, bomb.pos.y + 0.5, bomb.pos.z, 14, 0.5, 0.4, 0.5, 0.1);
-            BossFx.impactBurst(serverLevel, bomb.pos.add(0, 0.45, 0), ParticleTypes.CRIT);
+
+            MiniBossFx.groundRing(serverLevel, bomb.pos, this.fxTheme(), GEAR_BLAST_RADIUS);
+            BossFx.cinematicImpact(serverLevel, bomb.pos.add(0, 0.45, 0),
+                    20.0D, 0.34F, 4, this.combatImpactColor());
             serverLevel.playSound(null, net.minecraft.core.BlockPos.containing(bomb.pos),
                     SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 0.8F, 1.2F);
             for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                    new AABB(bomb.pos.x - 2.5, bomb.pos.y - 1.5, bomb.pos.z - 2.5,
-                            bomb.pos.x + 2.5, bomb.pos.y + 2.0, bomb.pos.z + 2.5),
+                    new AABB(bomb.pos.x - GEAR_BLAST_RADIUS, bomb.pos.y - 1.5,
+                            bomb.pos.z - GEAR_BLAST_RADIUS,
+                            bomb.pos.x + GEAR_BLAST_RADIUS, bomb.pos.y + 2.0,
+                            bomb.pos.z + GEAR_BLAST_RADIUS),
                     e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
-                victim.hurt(this.damageSources().mobAttack(this), damage);
-                Vec3 away = victim.position().subtract(bomb.pos).multiply(1, 0, 1);
-                if (away.lengthSqr() > 1.0E-4) {
-                    Vec3 dir = away.normalize();
-                    victim.setDeltaMovement(victim.getDeltaMovement().add(dir.x * 0.5, 0.35, dir.z * 0.5));
-                    victim.hurtMarked = true;
+                if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                    MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+                    Vec3 away = victim.position().subtract(bomb.pos).multiply(1, 0, 1);
+                    if (away.lengthSqr() > 1.0E-4) {
+                        Vec3 dir = away.normalize();
+                        victim.setDeltaMovement(victim.getDeltaMovement().add(
+                                dir.x * 0.5, 0.35, dir.z * 0.5));
+                        victim.hurtMarked = true;
+                    }
                 }
             }
             return true;
         });
     }
 
-    /** 近战 = 钟锤过顶砸:命中带溅射 + 击退。 */
     @Override
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
         if (hit && !this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
             this.triggerAnim("attack_controller", "hammer");
             serverLevel.playSound(null, this.blockPosition(), ModSounds.BROKEN_BELL_KEEPER_ATTACK.get(),
-                    SoundSource.HOSTILE, 1.2F, 0.8F);
+                    SoundSource.HOSTILE, 1.2F, 1.0F);
             if (this.hammerCooldown <= 0 && target instanceof LivingEntity primary) {
                 this.hammerCooldown = 30;
                 float splash = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.4F;
                 for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                        primary.getBoundingBox().inflate(2.0),
+                        primary.getBoundingBox().inflate(HAMMER_SPLASH_RADIUS),
                         e -> e != this && e != primary && !e.isSpectator() && !(e instanceof Enemy))) {
-                    victim.hurt(this.damageSources().mobAttack(this), splash);
+                    if (victim.hurt(this.damageSources().mobAttack(this), splash)) {
+                        MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+                    }
                 }
-                serverLevel.sendParticles(ParticleTypes.CRIT,
-                        target.getX(), target.getY() + 0.5, target.getZ(), 10, 0.4, 0.3, 0.4, 0.1);
-                BossFx.sweepArc(serverLevel, this.position().add(0, 0.8, 0),
-                        target.position().subtract(this.position()), 3.2, ParticleTypes.CRIT);
-                BossFx.impactBurst(serverLevel,
-                        target.position().add(0, target.getBbHeight() * 0.5, 0), ParticleTypes.CRIT);
+                // 溅射是以被击者为心的球，所以环画在它脚下而不是看守脚下。
+                MiniBossFx.groundRing(serverLevel, primary.position(), this.fxTheme(),
+                        HAMMER_SPLASH_RADIUS);
             }
         }
         return hit;
@@ -355,10 +345,10 @@ public class BrokenBellKeeper extends MiniBossEntity {
 
     private void broadcastHint(ServerLevel serverLevel, String key) {
         double radius = settlementRadius();
-        for (ServerPlayer player : serverLevel.players()) {
-            if (player.distanceToSqr(this) <= radius * radius) {
-                player.displayClientMessage(Component.translatable(key), true);
-            }
+        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(radius),
+                candidate -> candidate.distanceToSqr(this) <= radius * radius)) {
+            player.displayClientMessage(Component.translatable(key), true);
         }
     }
 
@@ -389,6 +379,9 @@ public class BrokenBellKeeper extends MiniBossEntity {
         super.readAdditionalSaveData(tag);
         this.exposedTicks = BossNbtData.clampTimer(tag.getInt("ExposedTicks"), EXPOSED_WINDOW);
         this.windupTicks = BossNbtData.clampTimer(tag.getInt("WindupTicks"), WINDUP_TICKS);
+        if (this.exposedTicks > 0) {
+            this.windupTicks = 0;
+        }
     }
 
     @Override

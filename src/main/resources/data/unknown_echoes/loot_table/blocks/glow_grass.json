@@ -5,34 +5,43 @@
       "rolls": 1,
       "bonus_rolls": 0,
       "entries": [
-        { "type": "minecraft:item", "name": "unknown_echoes:glow_grass" }
-      ],
-      "conditions": [
-        { "condition": "minecraft:survives_explosion" }
-      ]
-    },
-    {
-      "rolls": 1,
-      "bonus_rolls": 0,
-      "entries": [
         {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:echo_fiber",
-          "functions": [
+          "type": "minecraft:alternatives",
+          "children": [
             {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 2
-              }
+              "type": "minecraft:item",
+              "name": "unknown_echoes:glow_grass",
+              "conditions": [
+                {
+                  "condition": "minecraft:match_tool",
+                  "predicate": {
+                    "items": ["minecraft:shears", "unknown_echoes:echo_shears"]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "unknown_echoes:echo_fiber",
+              "functions": [
+                {
+                  "function": "minecraft:set_count",
+                  "count": {
+                    "type": "minecraft:uniform",
+                    "min": 1,
+                    "max": 2
+                  }
+                }
+              ],
+              "conditions": [
+                { "condition": "minecraft:random_chance", "chance": 0.35 }
+              ]
             }
           ]
         }
       ],
       "conditions": [
-        { "condition": "minecraft:survives_explosion" },
-        { "condition": "minecraft:random_chance", "chance": 0.35 }
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ],

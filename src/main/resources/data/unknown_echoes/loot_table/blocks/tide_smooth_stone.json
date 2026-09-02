@@ -8,6 +8,9 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:tide_smooth_stone"
         }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

@@ -6,12 +6,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * 玩家个人神器数据 + 回响能量池(NeoForge Data Attachment,与 EchoAbilityData 同模式)。
- * 服务端权威:等级、调谐词条、凭据序号、能量全部存这里;物品只是凭据(12.2)。
- * 能量用 1/20 点定点数存储(energyTwentieths),小数恢复余量用 1/100 个 twentieth 记录。
- * 按 gameTime 差值惰性恢复,无每 tick 开销。
- */
 public class ArtifactData {
     public static final int CURRENT_DATA_VERSION = 4;
     private static final int MAX_ID_LENGTH = 128;
@@ -32,11 +26,9 @@ public class ArtifactData {
     ).apply(instance, ArtifactData::new));
 
     private int dataVersion;
-    /** 神器 id → 当前等级(1-3)。存在即视为已领取资格落账。 */
     private final Map<String, Integer> levels = new HashMap<>();
-    /** 神器 id → 当前调谐词条(空串=未调谐)。 */
     private final Map<String, String> tunings = new HashMap<>();
-    /** 神器 id → 当前有效凭据序号。复领时自增,旧凭据自动作废(12.2 防冒用)。 */
+    /** 神器 id → 当前有效凭据序号；复领时自增，旧凭据自动作废。 */
     private final Map<String, Integer> serials = new HashMap<>();
     /** 神器私有绑定数据。格式由对应效果处理器校验，物品凭据不保存坐标。 */
     private final Map<String, String> bindings = new HashMap<>();
@@ -49,6 +41,8 @@ public class ArtifactData {
 
     /** 冷却(神器 id → 冷却结束 gameTime)。瞬态:不入存档,死亡/重登即清,体验向数据。 */
     private final transient Map<String, Long> cooldownEnds = new HashMap<>();
+    /** 冷却原始时长,用于时间回拨后按实际时长钳制截止值。 */
+    private final transient Map<String, Long> cooldownDurations = new HashMap<>();
 
     public ArtifactData() {
         this.dataVersion = CURRENT_DATA_VERSION;
@@ -61,7 +55,7 @@ public class ArtifactData {
                         Map<String, Integer> serials, Map<String, String> bindings, int energyTwentieths,
                         int energyRemainderHundredths, long energyGameTime) {
         this.dataVersion = CURRENT_DATA_VERSION;
-        // 旧档也必须保留当前仍存在的神器数据;新增字段由 Codec 默认值补齐。
+
         copyCurrentArtifacts(levels, tunings, serials, bindings);
         this.energyTwentieths = energyTwentieths;
         this.energyRemainderHundredths = Math.max(0, Math.min(99, energyRemainderHundredths));
@@ -111,15 +105,15 @@ public class ArtifactData {
         levels.put(type.getId(), Math.max(1, Math.min(ArtifactType.MAX_LEVEL, level)));
     }
 
-    /** 当前调谐词条;空串表示未调谐(1 级或玩家尚未选择)。 */
     public String getTuning(ArtifactType type) {
         return tunings.getOrDefault(type.getId(), "");
     }
 
-    /** 管理员撤销:清除等级与调谐;序号刻意保留,使流通中的旧凭据全部失效。 */
+    /** 管理员撤销:清除等级、调谐和私有绑定;序号保留,使流通中的旧凭据全部失效。 */
     public void removeArtifact(ArtifactType type) {
         levels.remove(type.getId());
         tunings.remove(type.getId());
+        bindings.remove(type.getId());
     }
 
     public void setTuning(ArtifactType type, String word) {
@@ -135,7 +129,10 @@ public class ArtifactData {
     /** 发新凭据:序号自增并返回。旧序号凭据从此不再通过校验。 */
     public int nextSerial(ArtifactType type) {
         int current = getSerial(type);
-        int next = current == Integer.MAX_VALUE ? Integer.MAX_VALUE : current + 1;
+        if (current == Integer.MAX_VALUE) {
+            return 0;
+        }
+        int next = current + 1;
         serials.put(type.getId(), next);
         return next;
     }
@@ -180,7 +177,17 @@ public class ArtifactData {
         return cooldownEnds.getOrDefault(type.getId(), 0L);
     }
 
-    public void setCooldownEnd(ArtifactType type, long gameTime) {
+    public long getCooldownDuration(ArtifactType type) {
+        return cooldownDurations.getOrDefault(type.getId(), 0L);
+    }
+
+    public void setCooldown(ArtifactType type, long gameTime, long duration) {
         cooldownEnds.put(type.getId(), gameTime);
+        cooldownDurations.put(type.getId(), Math.max(0L, duration));
+    }
+
+    public void clearCooldown(ArtifactType type) {
+        cooldownEnds.remove(type.getId());
+        cooldownDurations.remove(type.getId());
     }
 }

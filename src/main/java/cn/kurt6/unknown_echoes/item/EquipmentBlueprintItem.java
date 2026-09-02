@@ -8,11 +8,7 @@ import net.minecraft.world.item.TooltipFlag;
 
 import java.util.List;
 
-/**
- * 装备图纸:第一维度武器的配方线索(V0.5C 只发线索,武器本体 V0.6 落地)。
- * 非关键奖励,可正常进宝箱/掉落(设计文档 11.4:只有普通材料与非关键图纸可进掉落表)。
- * 图纸不解锁任何权限,只展示材料清单与出处提示。
- */
+/** 装备图纸：提供第一维度武器的配方线索。 */
 public class EquipmentBlueprintItem extends Item {
     /** 对应武器的 lang 子键(wind_spear / tide_crossbow / true_sight_blade)。 */
     private final String weaponKey;
@@ -22,7 +18,6 @@ public class EquipmentBlueprintItem extends Item {
         this.weaponKey = weaponKey;
     }
 
-    // 图纸是线索而非耗材:合成武器后留在合成栏,一张图纸可反复参照
     @Override
     public boolean hasCraftingRemainingItem(ItemStack stack) {
         return true;
@@ -36,12 +31,8 @@ public class EquipmentBlueprintItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.blueprint.header")
-                .withStyle(ChatFormatting.GOLD, ChatFormatting.ITALIC));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.blueprint." + weaponKey + ".materials")
                 .withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.blueprint." + weaponKey + ".hint")
-                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.blueprint.keeps")
                 .withStyle(ChatFormatting.DARK_GRAY));
     }

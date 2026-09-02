@@ -8,6 +8,9 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:wind_chiseled_stone"
         }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

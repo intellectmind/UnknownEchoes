@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "mode=idle": { "model": "unknown_echoes:block/deep_provision_brazier_idle" },
+    "mode=folded": { "model": "unknown_echoes:block/deep_provision_brazier_folded" },
+    "mode=gravity": { "model": "unknown_echoes:block/deep_provision_brazier_gravity" },
+    "mode=hushed": { "model": "unknown_echoes:block/deep_provision_brazier_hushed" }
+  }
+}

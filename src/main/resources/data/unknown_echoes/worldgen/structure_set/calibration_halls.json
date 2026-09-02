@@ -2,8 +2,9 @@
   "structures": [{ "structure": "unknown_echoes:calibration_hall", "weight": 1 }],
   "placement": {
     "type": "minecraft:random_spread",
-    "spacing": 36,
-    "separation": 12,
-    "salt": 1690072584
+    "spacing": 128,
+    "separation": 64,
+    "salt": 1690072584,
+    "frequency": 1.0
   }
 }

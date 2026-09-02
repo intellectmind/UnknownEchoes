@@ -1,10 +1,11 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -30,10 +31,7 @@ import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * 风袋蛾:回声峭壁的被动飞虫,提供风囊膜普通材料。
- * 它不承载风之能力或线索记录,避免把关键进度放进掉落物。
- */
+/** 风袋蛾:回声峭壁的被动飞虫,提供风囊膜普通材料。 */
 public class WindSacMoth extends PathfinderMob implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.wind_sac_moth.idle");
@@ -66,15 +64,17 @@ public class WindSacMoth extends PathfinderMob implements GeoEntity {
         return navigation;
     }
 
+    /** 躲避排在 PanicGoal 之后:被打到的反应优先,但要在敌怪贴上来之前就走开。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PanicGoal(this, 1.45D));
-        this.goalSelector.addGoal(2, new TemptGoal(this, 1.0D,
+        this.goalSelector.addGoal(2, new FleeThreatGoal(this, 9.0D, 1.1D, 1.4D));
+        this.goalSelector.addGoal(3, new TemptGoal(this, 1.0D,
                 stack -> stack.is(ModItems.DREAM_NECTAR.get()) || stack.is(ModItems.CRYSTAL_FEATHER.get()), false));
-        this.goalSelector.addGoal(3, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
-        this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
+        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
     }
 
     @Override
@@ -98,17 +98,17 @@ public class WindSacMoth extends PathfinderMob implements GeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.PHANTOM_FLAP;
+        return ModSounds.WIND_SAC_MOTH_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.PHANTOM_HURT;
+        return ModSounds.WIND_SAC_MOTH_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.PHANTOM_DEATH;
+        return ModSounds.WIND_SAC_MOTH_DEATH.get();
     }
 
     @Override

@@ -9,10 +9,10 @@ import cn.kurt6.unknown_echoes.entity.mob.TideWaterShade;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
+import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -61,22 +61,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * 潮汐执灯者:镜湖湖底灯塔废墟区域守护者 / Mini Boss(V0.6C,设计文档 10.4.2)。
- *
- * 机制:持一盏潮汐灯,灯亮时受未破防双保险保护;两条破灯路线——
- * - 引导其"执灯冲刺"撞上亮灯浮标:灯火熄灭 7 秒(浮标 20 秒冷却,非一次性);
- * - 持潮汐回响交互水下符文座:4 秒致盲 + 短硬直(符文座 20 秒冷却)。
- * 灯亮时远程压制(灯光灼射直线光束,1.2 秒光路预警;锁定召唤水影,场上限 2);
- * 灯熄/致盲期间近战化,全额伤害输出窗口。
- * 低血(<40%)"潮涌":周期性水流速度脉冲推搡玩家(只做速度+粒子,不改水方块),
- * 灯光节奏加快,但每次破灯硬直 +1 秒作为补偿。
- * 结算(个人):首杀 = 潮痕拓片 + 水下符文片 + 镜湖碎片 + 潮汐研究点 +1 + 灯塔线索记录;
- * 重复 = 普通材料 + 低概率拓片。不发放任何基础能力(红线 #2)。
- */
 public class TideLanternKeeper extends MiniBossEntity {
 
     public static final ResourceLocation MINIBOSS_ID = UnknownEchoes.id("tide_lantern_keeper");
+
+    @Override
+    public boolean requiresWaterSpawn() {
+        return true;
+    }
 
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.tide_lantern_keeper.idle");
@@ -96,30 +88,33 @@ public class TideLanternKeeper extends MiniBossEntity {
     private static final EntityDataAccessor<Boolean> DATA_STAGGERED =
             SynchedEntityData.defineId(TideLanternKeeper.class, EntityDataSerializers.BOOLEAN);
 
-    private static final int ARENA_RADIUS = 10;
+    private static final int ARENA_RADIUS = 13;
     private static final int MECHANIC_SCAN_RADIUS = 16;
-    private static final int MECHANIC_SCAN_HEIGHT = 8;
+    /** 灯塔战场的机关位于 Boss 下方约 14 至 17 格,扫描必须覆盖整座竖井。 */
+    private static final int MECHANIC_SCAN_HEIGHT = 20;
     private static final int MECHANIC_ANCHOR_CAP = 8;
     private static final int GUIDANCE_ANCHOR_BATCH = 3;
+    /** 竖井区块未加载时的重扫退避:引导每 5 tick 触发一次,不退避会持续重入扫描门槛。 */
+    private static final int GUIDANCE_SCAN_RETRY_TICKS = 600;
 
     /** 灯熄时长(浮标破灯):7 秒。 */
     private static final int LANTERN_OUT_TICKS = 140;
     /** 符文致盲:4 秒。 */
     private static final int BLIND_TICKS = 80;
-    /** 破灯硬直:2.5 秒;低血潮涌期 +1 秒补偿。 */
+    /** 破灯硬直：基础 2.5 秒，低血潮涌期额外增加 1 秒。 */
     private static final int STAGGER_TICKS = 50;
     private static final int STAGGER_BONUS_TICKS = 20;
 
-    // 灯光灼射:1.2 秒光路预警 → 直线光束
     private static final int BEAM_TELEGRAPH_TICKS = 24;
     private static final double BEAM_RANGE = 14.0D;
-    // 执灯冲刺:0.75 秒收束预警 → 直线冲刺(可被引导撞浮标)
+
     private static final int DASH_TELEGRAPH_TICKS = 15;
     private static final int DASH_MAX_TICKS = 14;
-    // 潮汐摆尾:近身范围击退
+
     private static final double TAIL_RANGE = 2.8D;
-    /** 水影同场上限。 */
     private static final int SHADE_CAP = 2;
+    private static final double SHADE_OWNER_SEARCH_RADIUS =
+            TideWaterShade.OWNER_TETHER_RANGE + 2.0D;
 
     private int lanternOutTicks = 0;
     private int blindTicks = 0;
@@ -140,6 +135,7 @@ public class TideLanternKeeper extends MiniBossEntity {
     private final List<BlockPos> guidanceBuoys = new ArrayList<>();
     private final List<BlockPos> guidanceRuneSeats = new ArrayList<>();
     private boolean guidanceAnchorsScanned = false;
+    private long guidanceScanRetryAt = Long.MIN_VALUE;
 
     public TideLanternKeeper(EntityType<? extends Monster> type, Level level) {
         super(type, level, BossEvent.BossBarColor.BLUE);
@@ -176,8 +172,6 @@ public class TideLanternKeeper extends MiniBossEntity {
         builder.define(DATA_STAGGERED, false);
     }
 
-    // ---- 水栖体征 ----
-
     @Override
     protected PathNavigation createNavigation(Level level) {
         return new WaterBoundPathNavigation(this, level);
@@ -185,7 +179,7 @@ public class TideLanternKeeper extends MiniBossEntity {
 
     @Override
     public boolean canDrownInFluidType(net.neoforged.neoforge.fluids.FluidType type) {
-        // NeoForge 将 canBreatheUnderwater 改为 final(gotchas #6),水栖防溺水走 FluidType
+
         if (type == net.neoforged.neoforge.common.NeoForgeMod.WATER_TYPE.value()) {
             return false;
         }
@@ -208,8 +202,6 @@ public class TideLanternKeeper extends MiniBossEntity {
         return false;
     }
 
-    // ---- MiniBoss 契约 ----
-
     @Override
     protected ResourceLocation minibossId() {
         return MINIBOSS_ID;
@@ -222,7 +214,7 @@ public class TideLanternKeeper extends MiniBossEntity {
 
     @Override
     protected boolean isDamageGuarded() {
-        // 灯亮且未被致盲/硬直时受机制保护;破灯与致盲都是输出窗口
+
         return this.isLanternLit() && this.blindTicks <= 0 && this.staggerTicks <= 0;
     }
 
@@ -233,7 +225,7 @@ public class TideLanternKeeper extends MiniBossEntity {
 
     @Override
     protected void tickMechanicGuidance(ServerLevel level) {
-        if (!this.guidanceAnchorsScanned) {
+        if (!this.guidanceAnchorsScanned && level.getGameTime() >= this.guidanceScanRetryAt) {
             this.scanGuidanceAnchors(level);
         }
         Vec3 core = this.position().add(0, this.getBbHeight() * 0.55, 0);
@@ -241,12 +233,14 @@ public class TideLanternKeeper extends MiniBossEntity {
         int guidedBuoys = 0;
         for (int i = 0; i < this.guidanceBuoys.size() && guidedBuoys < GUIDANCE_ANCHOR_BATCH; i++) {
             BlockPos pos = this.guidanceBuoys.get((buoyStart + i) % this.guidanceBuoys.size());
+            if (!level.hasChunkAt(pos)) {
+                continue;
+            }
             BlockState state = level.getBlockState(pos);
             if (state.getBlock() instanceof TideBuoyBlock && state.getValue(TideBuoyBlock.LIT)) {
                 Vec3 buoy = Vec3.atCenterOf(pos).add(0, 0.45, 0);
-                BossFx.guidanceMarker(level, buoy, ParticleTypes.GLOW);
-                BossFx.guidanceLink(level, core, buoy,
-                        BossFx.waterBubbleOr(level, buoy, ParticleTypes.SPLASH));
+                MiniBossFx.objectiveMarker(level, buoy, this.fxTheme(), level.getGameTime());
+                MiniBossFx.objectiveLink(level, buoy, core, this.fxTheme(), level.getGameTime());
                 guidedBuoys++;
             }
         }
@@ -254,11 +248,14 @@ public class TideLanternKeeper extends MiniBossEntity {
         int guidedRunes = 0;
         for (int i = 0; i < this.guidanceRuneSeats.size() && guidedRunes < GUIDANCE_ANCHOR_BATCH; i++) {
             BlockPos pos = this.guidanceRuneSeats.get((runeStart + i) % this.guidanceRuneSeats.size());
+            if (!level.hasChunkAt(pos)) {
+                continue;
+            }
             BlockState state = level.getBlockState(pos);
             if (state.getBlock() instanceof TideRuneSeatBlock && state.getValue(TideRuneSeatBlock.LIT)) {
                 Vec3 rune = Vec3.atCenterOf(pos).add(0, 0.35, 0);
-                BossFx.guidanceMarker(level, rune, ParticleTypes.END_ROD);
-                BossFx.guidanceLink(level, rune, core, ParticleTypes.GLOW);
+                MiniBossFx.objectiveMarker(level, rune, this.fxTheme(), level.getGameTime());
+                MiniBossFx.objectiveLink(level, rune, core, this.fxTheme(), level.getGameTime());
                 guidedRunes++;
             }
         }
@@ -272,11 +269,9 @@ public class TideLanternKeeper extends MiniBossEntity {
     }
 
     @Override
-    protected void grantSettlement(ServerPlayer player, boolean firstKill) {
-        MiniBossRewardTable.grantTideLanternKeeper(this, player, firstKill);
+    protected void grantSettlement(boolean firstKill) {
+        MiniBossRewardTable.grantTideLanternKeeper(this, firstKill);
     }
-
-    // ---- 机制状态 ----
 
     public boolean isLanternLit() {
         return this.entityData.get(DATA_LANTERN_LIT);
@@ -294,7 +289,6 @@ public class TideLanternKeeper extends MiniBossEntity {
         return this.getHealth() < this.getMaxHealth() * 0.4F;
     }
 
-    /** 水下符文座触发:4 秒致盲 + 短硬直(TideRuneSeatBlock 调用,服务端权威)。 */
     public void applyRuneBlind(Player trigger) {
         if (!this.isAlive() || this.level().isClientSide) {
             return;
@@ -306,20 +300,23 @@ public class TideLanternKeeper extends MiniBossEntity {
             serverLevel.sendParticles(ParticleTypes.SQUID_INK,
                     this.getX(), this.getEyeY(), this.getZ(), 16, 0.4, 0.3, 0.4, 0.03);
             serverLevel.playSound(null, this.blockPosition(),
-                    ModSounds.TIDE_LANTERN_KEEPER_HURT.get(), SoundSource.HOSTILE, 1.4F, 0.6F);
+                    ModSounds.TIDE_LANTERN_KEEPER_HURT.get(), SoundSource.HOSTILE, 1.4F, 1.0F);
+            BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                    22.0D, 0.34F, 5, 0x54D9E8);
         }
     }
 
-    /** 浮标破灯:灯火熄灭 7 秒 + 硬直(低血潮涌期硬直 +1 秒补偿)。 */
     private void extinguishLantern(ServerLevel serverLevel) {
         this.lanternOutTicks = LANTERN_OUT_TICKS;
         this.setLanternLit(false);
         this.startStagger(STAGGER_TICKS + (this.isSurgePhase() ? STAGGER_BONUS_TICKS : 0));
         this.cancelWindups();
         serverLevel.playSound(null, this.blockPosition(),
-                ModSounds.TIDE_LANTERN_KEEPER_SHATTER.get(), SoundSource.HOSTILE, 1.6F, 0.8F);
+                ModSounds.TIDE_LANTERN_KEEPER_SHATTER.get(), SoundSource.HOSTILE, 1.6F, 1.0F);
         serverLevel.sendParticles(ParticleTypes.WAX_OFF,
                 this.getX(), this.getEyeY(), this.getZ(), 24, 0.6, 0.6, 0.6, 0.05);
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                28.0D, 0.58F, 8, 0x54D9E8);
     }
 
     private void startStagger(int ticks) {
@@ -338,8 +335,13 @@ public class TideLanternKeeper extends MiniBossEntity {
     }
 
     private void scanGuidanceAnchors(ServerLevel level) {
-        this.guidanceAnchorsScanned = true;
         BlockPos anchor = this.arenaAnchor();
+        if (!isScanAreaLoaded(level, anchor, MECHANIC_SCAN_RADIUS)) {
+            this.guidanceScanRetryAt = level.getGameTime() + GUIDANCE_SCAN_RETRY_TICKS;
+            return;
+        }
+        this.guidanceBuoys.clear();
+        this.guidanceRuneSeats.clear();
         for (BlockPos pos : BlockPos.betweenClosed(
                 anchor.offset(-MECHANIC_SCAN_RADIUS, -MECHANIC_SCAN_HEIGHT, -MECHANIC_SCAN_RADIUS),
                 anchor.offset(MECHANIC_SCAN_RADIUS, MECHANIC_SCAN_HEIGHT, MECHANIC_SCAN_RADIUS))) {
@@ -355,13 +357,19 @@ public class TideLanternKeeper extends MiniBossEntity {
                 break;
             }
         }
+        this.guidanceAnchorsScanned = true;
     }
 
-    // ---- 主循环 ----
+    private static boolean isScanAreaLoaded(ServerLevel level, BlockPos center, int radius) {
+        return LoadedAreaCheck.horizontalRadiusLoaded(level, center, radius);
+    }
 
     @Override
     public void aiStep() {
         super.aiStep();
+        if (this.isSpawnerBindingPaused()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -372,7 +380,7 @@ public class TideLanternKeeper extends MiniBossEntity {
         if (this.lanternOutTicks > 0 && --this.lanternOutTicks == 0) {
             this.setLanternLit(true);
             serverLevel.playSound(null, this.blockPosition(),
-                    ModSounds.TIDE_LANTERN_KEEPER_AMBIENT.get(), SoundSource.HOSTILE, 1.4F, 1.3F);
+                    ModSounds.TIDE_LANTERN_KEEPER_RELIGHT.get(), SoundSource.HOSTILE, 1.4F, 1.0F);
             serverLevel.sendParticles(ParticleTypes.GLOW,
                     this.getX(), this.getEyeY(), this.getZ(), 12, 0.5, 0.5, 0.5, 0.03);
         }
@@ -388,7 +396,6 @@ public class TideLanternKeeper extends MiniBossEntity {
             return;
         }
 
-        // 灯亮巡游时的灯雾演出
         if (this.isLanternLit() && this.tickCount % 8 == 0) {
             serverLevel.sendParticles(ParticleTypes.GLOW,
                     this.getX(), this.getEyeY() + 0.4, this.getZ(), 1, 0.3, 0.2, 0.3, 0.0);
@@ -407,16 +414,18 @@ public class TideLanternKeeper extends MiniBossEntity {
             return;
         }
         this.surgeCooldown = 160;
-        // 以本体为中心的旋向脉冲:把水中玩家往切线方向推一把
+
         boolean clockwise = (this.tickCount / 160) % 2 == 0;
+        double surgeRadius = ARENA_RADIUS + 4.0D;
         for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
-                this.getBoundingBox().inflate(ARENA_RADIUS + 4, 6, ARENA_RADIUS + 4),
+                this.getBoundingBox().inflate(surgeRadius, 6, surgeRadius),
                 p -> !p.isSpectator())) {
             if (!player.isInWater()) {
                 continue;
             }
             Vec3 toPlayer = player.position().subtract(this.position()).multiply(1, 0, 1);
-            if (toPlayer.lengthSqr() < 1.0E-4) {
+            if (toPlayer.lengthSqr() < 1.0E-4
+                    || toPlayer.lengthSqr() > surgeRadius * surgeRadius) {
                 continue;
             }
             Vec3 dir = toPlayer.normalize();
@@ -424,8 +433,6 @@ public class TideLanternKeeper extends MiniBossEntity {
             player.setDeltaMovement(player.getDeltaMovement().add(
                     tangent.x * 0.7, 0.1, tangent.z * 0.7));
             player.hurtMarked = true;
-            player.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.tide_lantern_keeper.surge"), true);
         }
         for (int i = 0; i < 24; i++) {
             double angle = Math.PI * 2 * i / 24;
@@ -441,7 +448,6 @@ public class TideLanternKeeper extends MiniBossEntity {
         if (this.dashCooldown > 0) this.dashCooldown--;
         if (this.tailCooldown > 0) this.tailCooldown--;
 
-        // 冲刺推进:直线突进,命中亮灯浮标 → 破灯;命中玩家 → 伤害 + 击退
         if (this.dashTicks > 0) {
             this.tickDash(serverLevel);
             return;
@@ -450,7 +456,7 @@ public class TideLanternKeeper extends MiniBossEntity {
             this.tickDashTelegraph(serverLevel);
             return;
         }
-        // 光束预警与释放
+
         if (this.beamTelegraphTicks > 0) {
             this.tickBeamTelegraph(serverLevel);
             return;
@@ -462,13 +468,13 @@ public class TideLanternKeeper extends MiniBossEntity {
         }
 
         double distSq = this.distanceToSqr(target);
-        // 潮汐摆尾:近身把玩家推离符文座(灯亮灯熄都可用)
+
         if (this.tailCooldown <= 0 && distSq <= TAIL_RANGE * TAIL_RANGE) {
             this.doTailSweep(serverLevel);
             return;
         }
         if (!this.isLanternLit()) {
-            return; // 灯熄期:只保留近战与摆尾
+            return;
         }
         int beamInterval = this.isSurgePhase() ? 100 : 140;
         if (this.beamCooldown <= 0 && distSq <= BEAM_RANGE * BEAM_RANGE && this.hasLineOfSight(target)) {
@@ -478,9 +484,9 @@ public class TideLanternKeeper extends MiniBossEntity {
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "attack");
             serverLevel.playSound(null, this.blockPosition(),
-                    ModSounds.TIDE_LANTERN_KEEPER_AMBIENT.get(), SoundSource.HOSTILE, 1.4F, 1.6F);
+                    ModSounds.TIDE_LANTERN_KEEPER_BEAM_WARN.get(), SoundSource.HOSTILE, 1.2F, 1.0F);
         } else if (this.dashCooldown <= 0 && distSq >= 4.0 * 4.0) {
-            // 锁定玩家当前位置直线冲刺——站在浮标后即可引导撞灯(机制核心)
+
             Vec3 lockPos = target.position().add(0, target.getBbHeight() * 0.4, 0);
             this.dashDir = lockPos.subtract(this.position()).normalize();
             this.dashTelegraphTicks = DASH_TELEGRAPH_TICKS;
@@ -491,7 +497,6 @@ public class TideLanternKeeper extends MiniBossEntity {
         }
     }
 
-    /** 光路预警:1.2 秒灯光收束铺出直线光路(10.4.2:水中有光路预警)。 */
     private void tickBeamTelegraph(ServerLevel serverLevel) {
         if (this.beamDir == null) {
             this.beamTelegraphTicks = 0;
@@ -509,7 +514,6 @@ public class TideLanternKeeper extends MiniBossEntity {
         }
     }
 
-    /** 灯光灼射:直线光束,命中伤害 + 发光标记(方便水影追击)。 */
     private void fireBeam(ServerLevel serverLevel) {
         if (!this.isAlive() || this.beamDir == null) {
             return;
@@ -520,6 +524,10 @@ public class TideLanternKeeper extends MiniBossEntity {
         for (double d = 0.5; d <= BEAM_RANGE; d += 0.5) {
             Vec3 point = start.add(this.beamDir.scale(d));
             BlockPos pointPos = BlockPos.containing(point);
+            if (!serverLevel.hasChunkAt(pointPos)) {
+                beamReach = Math.max(0.0D, d - 0.5D);
+                break;
+            }
             BlockState pointState = serverLevel.getBlockState(pointPos);
             if (!pointState.isAir() && pointState.isSolidRender(serverLevel, pointPos)) {
                 beamReach = Math.max(0.0D, d - 0.5D);
@@ -543,17 +551,18 @@ public class TideLanternKeeper extends MiniBossEntity {
             if (offLine > 1.3) {
                 continue;
             }
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            victim.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                    net.minecraft.world.effect.MobEffects.GLOWING, 60, 0));
-            this.summonShade(serverLevel, victim);
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                victim.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                        net.minecraft.world.effect.MobEffects.GLOWING, 60, 0));
+                this.summonShade(serverLevel, victim);
+            }
         }
         serverLevel.playSound(null, this.blockPosition(),
                 ModSounds.TIDE_LANTERN_KEEPER_BEAM.get(), SoundSource.HOSTILE, 1.6F, 1.0F);
+        BossFx.cinematicImpact(serverLevel, end, 24.0D, 0.32F, 4, 0x7FEFFF);
         this.beamDir = null;
     }
 
-    /** 冲刺预警:灯光收束到冲刺路径(10.4.2)。 */
     private void tickDashTelegraph(ServerLevel serverLevel) {
         if (this.dashDir == null) {
             this.dashTelegraphTicks = 0;
@@ -568,11 +577,10 @@ public class TideLanternKeeper extends MiniBossEntity {
         if (--this.dashTelegraphTicks == 0) {
             this.dashTicks = DASH_MAX_TICKS;
             serverLevel.playSound(null, this.blockPosition(),
-                    ModSounds.TIDE_LANTERN_KEEPER_DASH.get(), SoundSource.HOSTILE, 1.4F, 0.9F);
+                    ModSounds.TIDE_LANTERN_KEEPER_DASH.get(), SoundSource.HOSTILE, 1.4F, 1.0F);
         }
     }
 
-    /** 冲刺推进:每 tick 检查路径上的浮标与玩家。 */
     private void tickDash(ServerLevel serverLevel) {
         if (this.dashDir == null) {
             this.dashTicks = 0;
@@ -588,7 +596,6 @@ public class TideLanternKeeper extends MiniBossEntity {
         serverLevel.sendParticles(ParticleTypes.GLOW,
                 this.getX(), this.getY() + 1.1, this.getZ(), 2, 0.25, 0.25, 0.25, 0.02);
 
-        // 浮标判定:包围盒外扩 1 格内的亮灯浮标被撞灭 → 破灯
         BlockPos min = BlockPos.containing(this.getBoundingBox().inflate(1.0).getMinPosition());
         BlockPos max = BlockPos.containing(this.getBoundingBox().inflate(1.0).getMaxPosition());
         for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
@@ -601,22 +608,28 @@ public class TideLanternKeeper extends MiniBossEntity {
                 return;
             }
         }
-        // 玩家判定:冲刺撞人 = 伤害 + 击退
+
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(0.6),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy) && e.isAlive()
                         && !this.dashHitVictims.contains(e.getUUID()))) {
-            victim.hurt(this.damageSources().mobAttack(this),
+            boolean hurt = victim.hurt(this.damageSources().mobAttack(this),
                     (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE));
             this.dashHitVictims.add(victim.getUUID());
-            Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
-            if (away.lengthSqr() > 1.0E-4) {
-                Vec3 dir = away.normalize();
-                victim.setDeltaMovement(victim.getDeltaMovement().add(dir.x * 0.9, 0.3, dir.z * 0.9));
-                victim.hurtMarked = true;
+            if (hurt) {
+                Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
+                if (away.lengthSqr() > 1.0E-4) {
+                    Vec3 dir = away.normalize();
+                    victim.setDeltaMovement(victim.getDeltaMovement().add(
+                            dir.x * 0.9, 0.3, dir.z * 0.9));
+                    victim.hurtMarked = true;
+                }
+                BossFx.cinematicImpact(serverLevel,
+                        victim.position().add(0.0D, victim.getBbHeight() * 0.5D, 0.0D),
+                        18.0D, 0.2F, 3, 0x54D9E8);
             }
         }
-        // 撞墙提前结束
+
         if (this.horizontalCollision || this.verticalCollision) {
             this.dashTicks = 0;
         }
@@ -626,7 +639,6 @@ public class TideLanternKeeper extends MiniBossEntity {
         }
     }
 
-    /** 潮汐摆尾:近身范围击退,把玩家推离符文座。 */
     private void doTailSweep(ServerLevel serverLevel) {
         this.tailCooldown = 100;
         this.triggerAnim("attack_controller", "attack");
@@ -634,26 +646,33 @@ public class TideLanternKeeper extends MiniBossEntity {
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(TAIL_RANGE, 1.5, TAIL_RANGE),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy) && e.isAlive())) {
-            victim.hurt(this.damageSources().mobAttack(this), damage);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
-            if (away.lengthSqr() > 1.0E-4) {
-                Vec3 dir = away.normalize();
-                victim.setDeltaMovement(victim.getDeltaMovement().add(dir.x * 1.1, 0.35, dir.z * 1.1));
-                victim.hurtMarked = true;
+            if (away.lengthSqr() > TAIL_RANGE * TAIL_RANGE) {
+                continue;
+            }
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                if (away.lengthSqr() > 1.0E-4) {
+                    Vec3 dir = away.normalize();
+                    victim.setDeltaMovement(victim.getDeltaMovement().add(
+                            dir.x * 1.1, 0.35, dir.z * 1.1));
+                    victim.hurtMarked = true;
+                }
             }
         }
         serverLevel.sendParticles(ParticleTypes.BUBBLE_POP,
                 this.getX(), this.getY() + 0.8, this.getZ(), 20, 1.2, 0.5, 1.2, 0.06);
         serverLevel.playSound(null, this.blockPosition(),
-                ModSounds.TIDE_LANTERN_KEEPER_AMBIENT.get(), SoundSource.HOSTILE, 1.4F, 0.7F);
+                ModSounds.TIDE_LANTERN_KEEPER_TAIL_SWEEP.get(), SoundSource.HOSTILE, 1.2F, 1.0F);
         BossFx.groundShockwave(serverLevel, this.position().add(0, 0.2, 0), TAIL_RANGE, ParticleTypes.BUBBLE_POP);
         BossFx.impactBurst(serverLevel, this.position().add(0, 1.0, 0), ParticleTypes.SOUL_FIRE_FLAME);
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 0.8, 0),
+                24.0D, 0.38F, 5, 0x54D9E8);
     }
 
-    /** 水影召唤:灯光锁定的追击添加物,同场上限 2,随灯/本体消亡。 */
     private void summonShade(ServerLevel serverLevel, LivingEntity target) {
         long alive = serverLevel.getEntitiesOfClass(TideWaterShade.class,
-                this.getBoundingBox().inflate(ARENA_RADIUS + 8), TideWaterShade::isAlive).size();
+                this.getBoundingBox().inflate(SHADE_OWNER_SEARCH_RADIUS),
+                shade -> shade.isAlive() && shade.isOwnedBy(this)).size();
         if (alive >= SHADE_CAP) {
             return;
         }
@@ -661,18 +680,52 @@ public class TideLanternKeeper extends MiniBossEntity {
         if (shade == null) {
             return;
         }
-        Vec3 spawn = this.position().add(
-                (this.random.nextDouble() - 0.5) * 3, 0.5, (this.random.nextDouble() - 0.5) * 3);
+        Vec3 spawn = this.findShadeSpawn(serverLevel, shade);
+        if (spawn == null) {
+            shade.discard();
+            return;
+        }
         shade.moveTo(spawn.x, spawn.y, spawn.z, this.getYRot(), 0);
         shade.bindOwner(this);
         shade.setTarget(target);
         shade.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()),
                 MobSpawnType.MOB_SUMMONED, null);
         if (!serverLevel.addFreshEntity(shade)) {
+            shade.discard();
             return;
         }
         serverLevel.sendParticles(ParticleTypes.SQUID_INK,
                 spawn.x, spawn.y + 0.8, spawn.z, 10, 0.3, 0.4, 0.3, 0.02);
+    }
+
+    private Vec3 findShadeSpawn(ServerLevel level, TideWaterShade shade) {
+        for (int attempt = 0; attempt < 12; attempt++) {
+            double angle = this.random.nextDouble() * Math.PI * 2.0D;
+            double distance = 1.5D + this.random.nextDouble() * 2.5D;
+            Vec3 destination = new Vec3(this.getX() + Math.cos(angle) * distance,
+                    this.getY() + (this.random.nextDouble() - 0.5D) * 2.0D,
+                    this.getZ() + Math.sin(angle) * distance);
+            AABB moved = shade.getBoundingBox().move(destination.subtract(shade.position()));
+            BlockPos min = BlockPos.containing(moved.minX, moved.minY, moved.minZ);
+            BlockPos max = BlockPos.containing(moved.maxX - 1.0E-7D,
+                    moved.maxY - 1.0E-7D, moved.maxZ - 1.0E-7D);
+            if (!level.isInWorldBounds(min) || !level.isInWorldBounds(max)
+                    || !level.getWorldBorder().isWithinBounds(moved)) {
+                continue;
+            }
+            boolean loaded = true;
+            for (int x : new int[]{min.getX(), max.getX()}) {
+                for (int z : new int[]{min.getZ(), max.getZ()}) {
+                    if (!level.hasChunkAt(new BlockPos(x, min.getY(), z))) {
+                        loaded = false;
+                    }
+                }
+            }
+            if (loaded && level.noCollision(shade, moved)) {
+                return destination;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -690,31 +743,41 @@ public class TideLanternKeeper extends MiniBossEntity {
 
     @Override
     public void die(DamageSource source) {
+        boolean wasDead = this.dead;
         super.die(source);
+        if (wasDead || !this.dead) {
+            return;
+        }
         if (this.level() instanceof ServerLevel serverLevel) {
-            // 灯火彻底熄灭:残灯余光散入湖水;水影随之消散
-            for (TideWaterShade shade : serverLevel.getEntitiesOfClass(TideWaterShade.class,
-                    this.getBoundingBox().inflate(ARENA_RADIUS + 12))) {
-                shade.beginFade();
-            }
+
+            this.fadeOwnedShades(serverLevel);
             serverLevel.sendParticles(ParticleTypes.GLOW,
                     this.getX(), this.getEyeY(), this.getZ(), 40, 1.2, 1.0, 1.2, 0.05);
             serverLevel.sendParticles(
                     BossFx.waterBubbleOr(serverLevel, this.position(), ParticleTypes.SPLASH),
                     this.getX(), this.getY(), this.getZ(), 30, 1.0, 1.2, 1.0, 0.04);
-            double radius = settlementRadius();
-            for (ServerPlayer player : serverLevel.players()) {
-                if (player.distanceToSqr(this) <= radius * radius) {
-                    player.sendSystemMessage(Component.translatable(
-                            "message.unknown_echoes.tide_lantern_keeper.defeated"));
-                }
-            }
+        }
+    }
+
+    private void fadeOwnedShades(ServerLevel serverLevel) {
+        for (TideWaterShade shade : serverLevel.getEntitiesOfClass(TideWaterShade.class,
+                this.getBoundingBox().inflate(SHADE_OWNER_SEARCH_RADIUS),
+                shade -> shade.isOwnedBy(this))) {
+            shade.beginFade();
         }
     }
 
     @Override
+    public void remove(Entity.RemovalReason reason) {
+        if (reason.shouldDestroy() && this.level() instanceof ServerLevel serverLevel) {
+            this.fadeOwnedShades(serverLevel);
+        }
+        super.remove(reason);
+    }
+
+    @Override
     public boolean checkSpawnObstruction(net.minecraft.world.level.LevelReader level) {
-        // 出生在水中的灯塔废墟中央(MiniBossSpawnerBlock 上方),不要求露天
+
         return level.isUnobstructed(this);
     }
 
@@ -722,8 +785,6 @@ public class TideLanternKeeper extends MiniBossEntity {
     public boolean isInArenaWater() {
         return this.level().getFluidState(this.blockPosition()).is(FluidTags.WATER);
     }
-
-    // ---- 音效 ----
 
     @Override
     protected SoundEvent getAmbientSound() {
@@ -739,8 +800,6 @@ public class TideLanternKeeper extends MiniBossEntity {
     protected SoundEvent getDeathSound() {
         return ModSounds.TIDE_LANTERN_KEEPER_DEATH.get();
     }
-
-    // ---- NBT ----
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
@@ -760,8 +819,6 @@ public class TideLanternKeeper extends MiniBossEntity {
         this.setLanternLit(this.lanternOutTicks <= 0);
         this.entityData.set(DATA_STAGGERED, this.staggerTicks > 0);
     }
-
-    // ---- GeckoLib ----
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {

@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 4, "max": 6 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_core", "weight": 4, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_shard", "weight": 8, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 4, "max": 10 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_ink_page", "weight": 5, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:wind_crisp", "weight": 5, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "minecraft:emerald", "weight": 4, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 6 } }] },
+        { "type": "minecraft:item", "name": "minecraft:spyglass", "weight": 2 }
+      ]
+    },
+    {
+      "rolls": 1,
+      "conditions": [{ "condition": "minecraft:random_chance", "chance": 0.2 }],
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:storm_compass_part", "weight": 3 },
+        { "type": "minecraft:item", "name": "unknown_echoes:record_tracing_paper", "weight": 2 },
+        { "type": "minecraft:item", "name": "unknown_echoes:clue_map", "weight": 1 }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/landmarks/far_echo_cartography_vault"
+}

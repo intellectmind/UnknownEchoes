@@ -114,7 +114,7 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:clue_map",
           "weight": 1,
-          "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:clue_structure": "small_echo_ruin" } } ]
+          "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:clue_structure": "unknown_echoes:small_echo_ruin" } } ]
         },
         {
           "type": "minecraft:empty",

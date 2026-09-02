@@ -3,7 +3,9 @@ package cn.kurt6.unknown_echoes.event;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoArmorSets;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.item.NightVisionSupport;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
+import cn.kurt6.unknown_echoes.world.structure.LoadedStructureLookup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
@@ -18,6 +20,8 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -32,12 +36,16 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
-/**
- * 套装件数效果(第 6 章,服务端判定):装备只增强既有能力/场景体验,不授予权限。
- * 成本控制:40 tick 周期检查 + 事件回调,不做每 tick 大范围扫描。
- */
+/** 套装件数效果(服务端判定):装备只增强既有能力/场景体验,不授予权限。 */
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
 public class EchoArmorSetEvents {
+
+    private static final int SET_EFFECT_REFRESH_INTERVAL_TICKS = 40;
+    /** 夜视时长统一由 NightVisionSupport 按轮询周期换算，保证剩余时长不进入原版闪烁区。 */
+    private static final int SUSTAINED_NIGHT_VISION_DURATION_TICKS =
+            NightVisionSupport.sustainedDuration(SET_EFFECT_REFRESH_INTERVAL_TICKS);
+    private static final float TRUE_SIGHT_ILLUSION_DAMAGE_MULTIPLIER = 1.15F;
+    private static final float TRUE_SIGHT_ILLUSION_RESISTANCE_MULTIPLIER = 0.70F;
 
     /** 探索者 2 件:判定"遗迹内"的结构集合(数据包可调)。 */
     private static final TagKey<Structure> ECHO_RUINS = TagKey.create(Registries.STRUCTURE,
@@ -62,18 +70,19 @@ public class EchoArmorSetEvents {
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.isSpectator()
-                || player.tickCount % 40 != 0) {
+        if (!(event.getEntity() instanceof ServerPlayer player)
+                || player.tickCount % SET_EFFECT_REFRESH_INTERVAL_TICKS != 0) {
             return;
         }
         int pieces = EchoArmorSets.explorerPieces(player);
-        // 2 件:遗迹内可见度提升(亮度表现;周期刷新,时长盖过检查间隔避免闪烁)
-        if (pieces >= 2 && player.level() instanceof ServerLevel serverLevel
-                && serverLevel.structureManager()
-                        .getStructureWithPieceAt(player.blockPosition(), ECHO_RUINS).isValid()) {
-            player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 320, 0, true, false, false));
+        if (player.isSpectator()) {
+            NightVisionSupport.release(player, NightVisionSupport.Source.ARMOR_SET);
+            clearSetModifiers(player);
+            return;
         }
-        // 4 件:小幅移速 + 小幅抗性(瞬态修饰符,卸下装备后下个检查周期移除)
+
+        boolean nightVisionSupplied = hasExplorerNightVision(player, pieces);
+
         applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), SPEED_ID, 0.05D,
                 AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, pieces >= 4);
         applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), TOUGHNESS_ID, 1.0D,
@@ -82,12 +91,26 @@ public class EchoArmorSetEvents {
                 AttributeModifier.Operation.ADD_VALUE, pieces >= 4);
 
         boolean inEchoRealm = player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID);
-        applyEchoRealmSetEffects(player, inEchoRealm);
+        nightVisionSupplied |= applyEchoRealmSetEffects(player, inEchoRealm);
         boolean inDeepEchoes = player.level().dimension().location().equals(EchoPermission.DEEP_ECHOES_ID);
-        applyDeepSetEffects(player, inDeepEchoes);
+        nightVisionSupplied |= applyDeepSetEffects(player, inDeepEchoes);
+
+        if (nightVisionSupplied) {
+            refreshNightVision(player, SUSTAINED_NIGHT_VISION_DURATION_TICKS, true);
+        } else {
+
+            NightVisionSupport.release(player, NightVisionSupport.Source.ARMOR_SET);
+        }
     }
 
-    private static void applyEchoRealmSetEffects(ServerPlayer player, boolean inEchoRealm) {
+    private static boolean hasExplorerNightVision(ServerPlayer player, int explorerPieces) {
+        return explorerPieces >= 2
+                && player.level() instanceof ServerLevel serverLevel
+                && LoadedStructureLookup.hasStructurePieceAt(
+                        serverLevel, player.blockPosition(), ECHO_RUINS);
+    }
+
+    private static boolean applyEchoRealmSetEffects(ServerPlayer player, boolean inEchoRealm) {
         int traveler = EchoArmorSets.echoTravelerPieces(player);
         int wind = EchoArmorSets.windWalkerPieces(player);
         int tide = EchoArmorSets.tideStalkerPieces(player);
@@ -102,33 +125,28 @@ public class EchoArmorSetEvents {
         applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), WIND_SPEED_ID, 0.03D,
                 AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, wind >= 2 && inEchoRealm);
         if (wind >= 2 && inEchoRealm && !player.onGround() && !player.isInWater()) {
-            player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 60, 0, true, false, true));
+            addEffectIfMissing(player, MobEffects.SLOW_FALLING, 60, true);
         }
 
-        if (tide >= 2 && player.isEyeInFluid(FluidTags.WATER)) {
-            player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 260, 0, true, false, true));
-        }
+        boolean nightVisionSupplied = tide >= 2 && player.isEyeInFluid(FluidTags.WATER);
         if (tide >= 4 && player.isEyeInFluid(FluidTags.WATER)) {
-            player.addEffect(new MobEffectInstance(MobEffects.DOLPHINS_GRACE, 80, 0, true, false, true));
+            addEffectIfMissing(player, MobEffects.DOLPHINS_GRACE, 80, true);
         }
         applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), TIDE_SWIM_SPEED_ID, 0.08D,
                 AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, tide >= 4 && player.isEyeInFluid(FluidTags.WATER));
 
-        if (trueSight >= 2 && inEchoRealm) {
-            player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 260, 0, true, false, true));
-        }
+        nightVisionSupplied |= trueSight >= 2 && inEchoRealm;
 
         boolean inSilentSwamp = isInBiome(player, SILENT_SWAMP_ID);
-        if (silent >= 2 && inSilentSwamp) {
-            player.removeEffect(MobEffects.BLINDNESS);
-            player.removeEffect(MobEffects.DARKNESS);
+        if (silent >= 2) {
+            protectFromSilentControl(player, MobEffects.BLINDNESS, inSilentSwamp);
+            protectFromSilentControl(player, MobEffects.DARKNESS, inSilentSwamp);
         }
-        if (silent >= 4 && inSilentSwamp) {
-            player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
-            player.removeEffect(MobEffects.WEAKNESS);
+        if (silent >= 4) {
+            protectFromSilentControl(player, MobEffects.MOVEMENT_SLOWDOWN, inSilentSwamp);
+            protectFromSilentControl(player, MobEffects.WEAKNESS, inSilentSwamp);
         }
 
-        // 守誓套装:第一维度毕业装备,基础套装效果不再锁维度;回声境域内"誓约共鸣"额外强化。
         boolean oathActive = oath >= 4;
         applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), OATH_SPEED_ID, 0.05D,
                 AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, oath >= 2);
@@ -143,16 +161,37 @@ public class EchoArmorSetEvents {
         if (oath >= 2) {
             reduceMinorControl(player);
         }
+        return nightVisionSupplied;
     }
 
-    private static void applyDeepSetEffects(ServerPlayer player, boolean inDeepEchoes) {
-        if (!inDeepEchoes || EchoArmorSets.abyssWalkerPieces(player) < 4) {
+    private static boolean applyDeepSetEffects(ServerPlayer player, boolean inDeepEchoes) {
+        if (EchoArmorSets.abyssWalkerPieces(player) < 4) {
+            return false;
+        }
+        int maxDuration = inDeepEchoes ? 40 : 80;
+        shortenEffect(player, MobEffects.DARKNESS, maxDuration);
+        shortenEffect(player, MobEffects.WEAKNESS, maxDuration);
+        shortenEffect(player, MobEffects.MOVEMENT_SLOWDOWN, maxDuration);
+        shortenEffect(player, MobEffects.DIG_SLOWDOWN, maxDuration);
+        return inDeepEchoes;
+    }
+
+    /** 套装轮询仅在效果缺失或即将过期时补发；夜视走独立阈值。 */
+    private static void addEffectIfMissing(ServerPlayer player, Holder<MobEffect> effect,
+                                            int duration, boolean showIcon) {
+        MobEffectInstance current = player.getEffect(effect);
+        if (current != null && (current.getAmplifier() > 0
+                || current.getDuration() < 0
+                || current.getDuration() > Math.max(1, duration / 2))) {
             return;
         }
-        shortenEffect(player, MobEffects.DARKNESS, 40);
-        shortenEffect(player, MobEffects.WEAKNESS, 40);
-        shortenEffect(player, MobEffects.MOVEMENT_SLOWDOWN, 40);
-        shortenEffect(player, MobEffects.DIG_SLOWDOWN, 40);
+        player.addEffect(new MobEffectInstance(effect, duration, 0, true, false, showIcon));
+    }
+
+    private static void refreshNightVision(ServerPlayer player, int duration, boolean showIcon) {
+        NightVisionSupport.sustain(player, NightVisionSupport.Source.ARMOR_SET, duration,
+                SET_EFFECT_REFRESH_INTERVAL_TICKS, showIcon,
+                player.server.overworld().getGameTime());
     }
 
     private static void sendNearbyResourceHints(ServerPlayer player) {
@@ -161,17 +200,30 @@ public class EchoArmorSetEvents {
         }
         int sent = 0;
         BlockPos center = player.blockPosition();
-        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-6, -3, -6),
-                center.offset(6, 3, 6))) {
-            if (sent >= 3) {
-                return;
-            }
-            if (level.getBlockState(pos).is(RESOURCE_BLOCKS)
-                    && player.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) > 4.0D) {
-                level.sendParticles(ParticleTypes.END_ROD,
-                        pos.getX() + 0.5D, pos.getY() + 0.75D, pos.getZ() + 0.5D,
-                        2, 0.18D, 0.12D, 0.18D, 0.0D);
-                sent++;
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int xOffset = -6; xOffset <= 6; xOffset++) {
+            for (int zOffset = -6; zOffset <= 6; zOffset++) {
+                if (xOffset * xOffset + zOffset * zOffset > 6 * 6) {
+                    continue;
+                }
+                cursor.set(center.getX() + xOffset, center.getY(), center.getZ() + zOffset);
+                if (!level.hasChunkAt(cursor)) {
+                    continue;
+                }
+                for (int yOffset = -3; yOffset <= 3; yOffset++) {
+                    cursor.setY(center.getY() + yOffset);
+                    if (!level.getBlockState(cursor).is(RESOURCE_BLOCKS)
+                            || player.distanceToSqr(cursor.getX() + 0.5D,
+                            cursor.getY() + 0.5D, cursor.getZ() + 0.5D) <= 4.0D) {
+                        continue;
+                    }
+                    level.sendParticles(player, ParticleTypes.END_ROD, false,
+                            cursor.getX() + 0.5D, cursor.getY() + 0.75D, cursor.getZ() + 0.5D,
+                            2, 0.18D, 0.12D, 0.18D, 0.0D);
+                    if (++sent >= 3) {
+                        return;
+                    }
+                }
             }
         }
     }
@@ -181,6 +233,15 @@ public class EchoArmorSetEvents {
         shortenEffect(player, MobEffects.WEAKNESS, 60);
         shortenEffect(player, MobEffects.DIG_SLOWDOWN, 60);
         shortenEffect(player, MobEffects.BLINDNESS, 60);
+    }
+
+    private static void protectFromSilentControl(ServerPlayer player, Holder<MobEffect> effect,
+                                                   boolean inSilentSwamp) {
+        if (inSilentSwamp) {
+            player.removeEffect(effect);
+        } else {
+            shortenEffect(player, effect, 100);
+        }
     }
 
     private static void shortenEffect(ServerPlayer player, Holder<MobEffect> effect) {
@@ -218,8 +279,8 @@ public class EchoArmorSetEvents {
     }
 
     /**
-     * 探索者 4 件:略微降低回响生物的仇恨范围——
-     * 远距离(>8 格)的索敌被取消,近身仍正常战斗;只影响本 Mod 的环境敌对生物(tag 可调)。
+     * 探索者 4 件:降低回响生物的仇恨范围,取消 8 格外的索敌,近身仍正常战斗。
+     * 只影响本 Mod 的环境敌对生物(tag 可调)。
      */
     @SubscribeEvent
     public static void onChangeTarget(LivingChangeTargetEvent event) {
@@ -245,9 +306,11 @@ public class EchoArmorSetEvents {
                 && player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID)) {
             event.setDamageMultiplier(event.getDamageMultiplier() * 0.85F);
         }
-        if (EchoArmorSets.abyssWalkerPieces(player) >= 2
-                && player.level().dimension().location().equals(EchoPermission.DEEP_ECHOES_ID)) {
-            event.setDamageMultiplier(event.getDamageMultiplier() * 0.65F);
+        if (EchoArmorSets.abyssWalkerPieces(player) >= 2) {
+            boolean inDeepEchoes = player.level().dimension().location()
+                    .equals(EchoPermission.DEEP_ECHOES_ID);
+            event.setDamageMultiplier(event.getDamageMultiplier()
+                    * (inDeepEchoes ? 0.65F : 0.80F));
         }
     }
 
@@ -262,6 +325,13 @@ public class EchoArmorSetEvents {
 
     @SubscribeEvent
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+        if (event.getSource().getEntity() instanceof ServerPlayer attacker
+                && event.getEntity() != attacker
+                && !event.getEntity().isAlliedTo(attacker)
+                && event.getEntity().getType().is(ModEntityTags.ILLUSION_MOBS)
+                && EchoArmorSets.trueSightShadowPieces(attacker) >= 2) {
+            event.setAmount(event.getAmount() * TRUE_SIGHT_ILLUSION_DAMAGE_MULTIPLIER);
+        }
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
@@ -277,9 +347,9 @@ public class EchoArmorSetEvents {
         if (event.getSource().getEntity() != null
                 && event.getSource().getEntity().getType().is(ModEntityTags.ILLUSION_MOBS)
                 && EchoArmorSets.trueSightShadowPieces(player) >= 4) {
-            event.setAmount(event.getAmount() * 0.75F);
+            event.setAmount(event.getAmount() * TRUE_SIGHT_ILLUSION_RESISTANCE_MULTIPLIER);
         }
-        // 守誓套装减伤全维度生效;回声境域内誓约共鸣把非玩家攻击减伤提升到 25%。
+
         int oath = EchoArmorSets.echoOathPieces(player);
         if (oath >= 2 && isEnvironmentalDamage(event.getSource())) {
             event.setAmount(event.getAmount() * 0.75F);
@@ -288,26 +358,56 @@ public class EchoArmorSetEvents {
                 && !(event.getSource().getEntity() instanceof Player)) {
             event.setAmount(event.getAmount() * (inEchoRealm ? 0.75F : 0.85F));
         }
-        if (inDeepEchoes && EchoArmorSets.abyssWalkerPieces(player) >= 2) {
-            if (isEnvironmentalDamage(event.getSource())
-                    && !event.getSource().is(DamageTypeTags.IS_FALL)) {
-                event.setAmount(event.getAmount() * 0.70F);
-            } else if (event.getSource().getEntity() != null
-                    && event.getSource().getEntity().getType().is(ModEntityTags.DEEP_ECHOES_HOSTILES)) {
-                event.setAmount(event.getAmount() * 0.85F);
-            }
+        int abyssPieces = EchoArmorSets.abyssWalkerPieces(player);
+        if (abyssPieces >= 2 && isEnvironmentalDamage(event.getSource())
+                && !event.getSource().is(DamageTypeTags.IS_FALL)) {
+            event.setAmount(event.getAmount() * (inDeepEchoes ? 0.70F : 0.85F));
+        }
+        if (abyssPieces >= 4 && event.getSource().getEntity() != null
+                && !(event.getSource().getEntity() instanceof Player)) {
+            boolean deepHostile = inDeepEchoes
+                    && event.getSource().getEntity().getType()
+                    .is(ModEntityTags.DEEP_ECHOES_HOSTILES);
+            event.setAmount(event.getAmount() * (deepHostile ? 0.80F : 0.90F));
         }
     }
 
     private static boolean isPvpDamage(DamageSource source) {
-        return source.getEntity() instanceof Player || source.getDirectEntity() instanceof Player;
+        return isPlayerControlled(source.getEntity()) || isPlayerControlled(source.getDirectEntity());
+    }
+
+    private static boolean isPlayerControlled(Entity entity) {
+        return entity instanceof Player
+                || entity instanceof TamableAnimal tamable && tamable.getOwner() instanceof Player;
+    }
+
+    private static void clearSetModifiers(ServerPlayer player) {
+        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), SPEED_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
+        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), TOUGHNESS_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
+        applyModifier(player.getAttribute(Attributes.ARMOR), ARMOR_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
+        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), WIND_SPEED_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
+        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), TIDE_SWIM_SPEED_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
+        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), OATH_SPEED_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
+        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_TOUGHNESS_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
+        applyModifier(player.getAttribute(Attributes.ARMOR), OATH_ARMOR_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
+        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_REALM_TOUGHNESS_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
+        applyModifier(player.getAttribute(Attributes.ARMOR), OATH_REALM_ARMOR_ID, 0.0D,
+                AttributeModifier.Operation.ADD_VALUE, false);
     }
 
     private static boolean isEnvironmentalDamage(DamageSource source) {
         return source.getEntity() == null && source.getDirectEntity() == null;
     }
 
-    /** 实体 tag 引用集中处。 */
     public static final class ModTags {
         public static final TagKey<net.minecraft.world.entity.EntityType<?>> ECHO_REALM_HOSTILES =
                 TagKey.create(Registries.ENTITY_TYPE, UnknownEchoes.id("echo_realm_hostiles"));

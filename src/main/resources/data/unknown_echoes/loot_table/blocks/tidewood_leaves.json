@@ -8,6 +8,9 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:tidewood_leaves"
         }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

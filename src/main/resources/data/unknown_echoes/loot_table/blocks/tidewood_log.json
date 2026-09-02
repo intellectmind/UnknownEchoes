@@ -8,6 +8,9 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:tidewood_log"
         }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

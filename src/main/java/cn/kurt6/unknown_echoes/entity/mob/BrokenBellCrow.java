@@ -1,10 +1,11 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
@@ -37,10 +38,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
 
-/**
- * 残钟鸦:残钟荒原与回声峭壁的中立飞行生态。
- * 只提供普通残钟材料与区域氛围,不发放关键进度或线索坐标。
- */
+/** 残钟鸦:残钟荒原与回声峭壁的中立飞行生态。 */
 public class BrokenBellCrow extends Animal implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.broken_bell_crow.idle");
@@ -74,17 +72,19 @@ public class BrokenBellCrow extends Animal implements GeoEntity {
         return navigation;
     }
 
+    /** 躲避排在 PanicGoal 之后、繁殖之前:被打到的反应优先,但要在敌怪贴上来之前就走开。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PanicGoal(this, 1.55D));
-        this.goalSelector.addGoal(2, new BreedGoal(this, 1.0D));
-        this.goalSelector.addGoal(3, new TemptGoal(this, 1.05D,
+        this.goalSelector.addGoal(2, new FleeThreatGoal(this, 12.0D, 1.15D, 1.5D));
+        this.goalSelector.addGoal(3, new BreedGoal(this, 1.0D));
+        this.goalSelector.addGoal(4, new TemptGoal(this, 1.05D,
                 stack -> stack.is(Items.WHEAT_SEEDS) || stack.is(Items.BEETROOT_SEEDS), false));
-        this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.1D));
-        this.goalSelector.addGoal(5, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
-        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 7.0F));
-        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.1D));
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 7.0F));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
     @Override
@@ -119,17 +119,17 @@ public class BrokenBellCrow extends Animal implements GeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.PARROT_AMBIENT;
+        return ModSounds.BROKEN_BELL_CROW_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.PARROT_HURT;
+        return ModSounds.BROKEN_BELL_CROW_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.PARROT_DEATH;
+        return ModSounds.BROKEN_BELL_CROW_DEATH.get();
     }
 
     @Override

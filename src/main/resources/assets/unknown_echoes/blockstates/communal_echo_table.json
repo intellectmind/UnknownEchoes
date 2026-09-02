@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "mode=idle": { "model": "unknown_echoes:block/communal_echo_table_idle" },
+    "mode=far_bell": { "model": "unknown_echoes:block/communal_echo_table_far_bell" },
+    "mode=canopy": { "model": "unknown_echoes:block/communal_echo_table_canopy" },
+    "mode=interlayer": { "model": "unknown_echoes:block/communal_echo_table_interlayer" }
+  }
+}

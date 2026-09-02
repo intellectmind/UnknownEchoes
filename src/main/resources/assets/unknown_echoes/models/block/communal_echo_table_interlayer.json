@@ -1,0 +1,4 @@
+{
+  "parent": "unknown_echoes:block/communal_echo_table_base",
+  "textures": { "core": "unknown_echoes:block/communal_echo_table_interlayer" }
+}

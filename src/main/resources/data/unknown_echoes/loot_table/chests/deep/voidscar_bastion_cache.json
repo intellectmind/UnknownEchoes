@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 3, "max": 5 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:void_rift_shard", "weight": 9, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:folded_carapace", "weight": 7, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_ore_scrap", "weight": 8, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] },
+        { "type": "minecraft:item", "name": "minecraft:obsidian", "weight": 5, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_bandage", "weight": 4, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_alloy_ingot", "weight": 2 }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/deep/voidscar_bastion_cache"
+}

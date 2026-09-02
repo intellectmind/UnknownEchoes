@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:echo_log",
+    "unknown_echoes:whispering_log",
+    "unknown_echoes:tidewood_log"
+  ]
+}

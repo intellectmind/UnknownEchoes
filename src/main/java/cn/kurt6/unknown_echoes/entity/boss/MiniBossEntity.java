@@ -1,8 +1,10 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
+import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlock;
 import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlockEntity;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.entity.EntityHitboxProfiles;
 import cn.kurt6.unknown_echoes.registry.ModDataComponents;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.BlockPos;
@@ -18,6 +20,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
@@ -26,32 +29,19 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Mini Boss 公共框架(设计文档 10.4.1 / V0.6A):强化守护者 / 区域守护者共用的战斗骨架。
- * 与主线 Boss 的差异:不发放基础能力、场地更小、可重复挑战(重复击败只给普通奖励)。
- *
- * 框架职责(子类不要各自复制):
- * - 未破防双保险:{@link #isDamageGuarded()} 为 true 时,伤害 = min(伤害 x 乘数, 上限),
- *   沿用 ServerConfig 的 BOSS_UNBROKEN_* 两项(设计红线 #4)。
- * - 参与者个人结算:伤害过 / 战斗期间在场即登记;死亡时只对"仍在结算半径内"的参与者
- *   逐人调用 {@link #grantSettlement},首杀与重复击败由个人 Boss 击败记录区分(红线 #3)。
- * - 场地重开:死亡时通知绑定的 {@link MiniBossSpawnerBlockEntity} 启动重开计时
- *   (MINIBOSS_ARENA_REOPEN / _TICKS,服务器可配置)。
- * - 常规 Boss 体征:Boss 血条、不自然消失、不可拴绳、脱战回血、场地锚点限制。
- */
 public abstract class MiniBossEntity extends Monster implements GeoEntity, BossDamageGuard {
     private static final String PENDING_REWARD_PREFIX = "pending_miniboss_reward|";
     private static final int MAX_PENDING_REWARD_COUNT = 4096;
-    private static final int GUIDANCE_INTERVAL = 5;
-    private static final Set<UUID> PLAYERS_WITH_PENDING = new HashSet<>();
-
     protected final ServerBossEvent bossEvent;
     protected final Set<UUID> participants = new HashSet<>();
 
@@ -62,6 +52,7 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
 
     private int guardedHintCooldown = 0;
     private int outOfCombatTicks = 0;
+    private boolean spawnerBindingPaused = false;
 
     protected MiniBossEntity(EntityType<? extends Monster> type, Level level,
                              BossEvent.BossBarColor barColor) {
@@ -70,7 +61,17 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
                 BossEvent.BossBarOverlay.PROGRESS);
     }
 
-    // ---- 子类契约 ----
+    /** 让大型小 Boss 使用贴合主体的 X/Z 长方形碰撞箱；未配置 profile 的实体保持注册尺寸。 */
+    @Override
+    protected AABB makeBoundingBox() {
+        return EntityHitboxProfiles.make(this);
+    }
+
+    @Override
+    public void setYRot(float yRot) {
+        super.setYRot(yRot);
+        EntityHitboxProfiles.refresh(this);
+    }
 
     /** 个人击败记录用的 Boss ID(EchoAbilityManager.markBossDefeated)。 */
     protected abstract ResourceLocation minibossId();
@@ -78,29 +79,44 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
     /** 场地半径:游荡限制与参与登记基于它。 */
     protected abstract int arenaRadius();
 
+    /** 需要整只身体位于水柱中的水下 MiniBoss 覆盖此方法。 */
+    public boolean requiresWaterSpawn() {
+        return false;
+    }
+
     /** 当前是否处于"未破防"机制保护(true = 伤害乘数 + 单次上限生效)。 */
     protected abstract boolean isDamageGuarded();
 
-    /**
-     * 个人结算:对每位场地内参与者调用一次。
-     * firstKill = 该玩家第一次击败本守护者;重复击败只给普通奖励与研究进度(10.4.1)。
-     */
-    protected abstract void grantSettlement(ServerPlayer player, boolean firstKill);
+    /** 本场唯一掉落。firstKill=true 时使用首杀包，否则使用重复挑战包。 */
+    protected abstract void grantSettlement(boolean firstKill);
 
     /** 未破防时打在身上的含蓄提示 lang 键;返回 null 则不提示。 */
     protected String guardedHintKey() {
         return null;
     }
 
+    /** 本只 Mini Boss 的演出配色。形状走 MiniBossFx，不要在子类里拼裸粒子。 */
+    protected final MiniBossFxTheme.Theme fxTheme() {
+        return MiniBossFxTheme.of(this.minibossId().getPath());
+    }
+
+    /**
+     * 近战命中与未破防反馈共用的主题色。
+     *
+     * 从 fxTheme 的 core 换算，不要再写一张手填的 id -> 色号表：两张表会各自漂移，
+     * 而屏幕脉冲与粒子同屏出现，颜色不一致时玩家读成两只怪。
+     */
+    protected int combatImpactColor() {
+        return MiniBossFxTheme.packedCore(this.fxTheme());
+    }
+
     protected void tickMechanicGuidance(ServerLevel level) {
     }
 
-    /** 结算半径:覆盖场地外缘一圈,死亡瞬间在范围内的参与者才拿奖励(红线 #4)。 */
+    /** 结算半径:覆盖场地外缘一圈,死亡瞬间在范围内的参与者才拿奖励。 */
     protected double settlementRadius() {
-        return arenaRadius() + 12;
+        return arenaRadius() + ServerConfig.MINIBOSS_SETTLEMENT_RADIUS_BONUS.get();
     }
-
-    // ---- 公共逻辑 ----
 
     public void bindSpawner(BlockPos spawnerPos) {
         this.spawnerPos = spawnerPos;
@@ -112,8 +128,21 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
 
     @Override
     public void aiStep() {
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
+            this.spawnerBindingPaused = this.tickSpawnerBinding(serverLevel);
+            if (this.spawnerBindingPaused) {
+                return;
+            }
+        } else {
+            this.spawnerBindingPaused = false;
+        }
         super.aiStep();
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        if (this.isAlive() && this.tickCount % 20 == 0
+                && !this.retrySpawnerRegistration(serverLevel)) {
+            this.discard();
             return;
         }
         if (this.homePos == null) {
@@ -123,49 +152,56 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
         if (this.guardedHintCooldown > 0) {
             this.guardedHintCooldown--;
         }
-        // 参与者登记:战斗期间(有目标)每秒登记结算半径内玩家
+        List<ServerPlayer> nearbyPlayers = null;
+
         if (this.tickCount % 20 == 0 && this.getTarget() != null) {
-            double radius = settlementRadius();
-            for (ServerPlayer player : serverLevel.players()) {
-                if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
-                    BossNbtData.addParticipant(this.participants, player.getUUID());
-                }
+            nearbyPlayers = nearbySettlementPlayers(serverLevel);
+            for (ServerPlayer player : nearbyPlayers) {
+                BossNbtData.addParticipant(this.participants, player.getUUID());
             }
         }
-        if (this.tickCount % GUIDANCE_INTERVAL == 0 && this.isDamageGuarded()
-                && this.hasNearbyGuidanceViewer(serverLevel)) {
-            this.tickMechanicGuidance(serverLevel);
+        int guidanceInterval = ServerConfig.MINIBOSS_GUIDANCE_INTERVAL_TICKS.get();
+        if (this.tickCount % guidanceInterval == 0 && this.isDamageGuarded()) {
+            List<ServerPlayer> guidancePlayers =
+                    nearbyPlayers == null ? nearbySettlementPlayers(serverLevel) : nearbyPlayers;
+            if (this.hasNearbyGuidanceViewer(guidancePlayers)) {
+                this.tickMechanicGuidance(serverLevel);
+            }
         }
         this.tickOutOfCombatRegen();
         this.bossEvent.setProgress(this.getHealth() / this.getMaxHealth());
     }
 
-    private boolean hasNearbyGuidanceViewer(ServerLevel level) {
+    private List<ServerPlayer> nearbySettlementPlayers(ServerLevel level) {
         double radius = settlementRadius();
-        for (ServerPlayer player : level.players()) {
-            if (!player.isSpectator() && player.isAlive() && player.distanceToSqr(this) <= radius * radius) {
+        AABB bounds = this.getBoundingBox().inflate(radius);
+        return level.getEntitiesOfClass(ServerPlayer.class, bounds,
+                player -> !player.isSpectator() && player.distanceToSqr(this) <= radius * radius);
+    }
+
+    private boolean hasNearbyGuidanceViewer(List<ServerPlayer> nearbyPlayers) {
+        for (ServerPlayer player : nearbyPlayers) {
+            if (player.isAlive()) {
                 return true;
             }
         }
         return false;
     }
 
-    /** 脱战回血:无存活目标持续 5 秒后每秒回 2% 最大生命,减员消耗战不可行。 */
+    /** 脱战回血:判据与配置口径由 OutOfCombatRegen 统一持有。 */
     private void tickOutOfCombatRegen() {
-        LivingEntity target = this.getTarget();
-        if (target != null && target.isAlive()) {
-            this.outOfCombatTicks = 0;
-            return;
-        }
-        if (++this.outOfCombatTicks > 100 && this.outOfCombatTicks % 20 == 0
-                && this.getHealth() < this.getMaxHealth()) {
-            this.heal(this.getMaxHealth() * 0.02F);
-        }
+        this.outOfCombatTicks = OutOfCombatRegen.tick(this, this.outOfCombatTicks);
     }
+
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        // 守护者之间不互相伤害(召唤物 / 环境怪误伤免疫)
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
+                && this.isSpawnerCombatBlocked(serverLevel)
+                && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            return false;
+        }
+
         if (!this.level().isClientSide && source.getEntity() instanceof Enemy) {
             return false;
         }
@@ -174,6 +210,24 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
             BossNbtData.addParticipant(this.participants, attacker.getUUID());
         }
         return super.hurt(source, amount);
+    }
+
+    @Override
+    public boolean doHurtTarget(Entity target) {
+        if (this.level() instanceof ServerLevel serverLevel
+                && this.isSpawnerCombatBlocked(serverLevel)) {
+            return false;
+        }
+        boolean hit = super.doHurtTarget(target);
+        if (hit && !this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
+            Vec3 impact = target.position().add(0.0D, target.getBbHeight() * 0.5D, 0.0D);
+            if (target instanceof LivingEntity victim) {
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+            }
+            BossFx.cinematicImpact(serverLevel, impact, 18.0D, 0.16F, 3,
+                    this.combatImpactColor());
+        }
+        return hit;
     }
 
     @Override
@@ -192,61 +246,112 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
         if (hintKey != null && this.guardedHintCooldown <= 0
                 && source.getEntity() instanceof ServerPlayer player) {
             player.displayClientMessage(Component.translatable(hintKey), true);
+            if (this.level() instanceof ServerLevel serverLevel) {
+                BossFx.cinematicImpact(serverLevel,
+                        this.position().add(0.0D, this.getBbHeight() * 0.5D, 0.0D),
+                        18.0D, 0.12F, 3, this.combatImpactColor());
+            }
             this.guardedHintCooldown = 40;
         }
     }
 
     @Override
     public void die(DamageSource source) {
+        boolean wasDead = this.dead;
         super.die(source);
-        if (!(this.level() instanceof ServerLevel serverLevel)) {
+        if (wasDead || !this.dead || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
-        // 个人结算:首杀写击败记录 + 完整奖励;重复击败只给普通奖励(grantSettlement 自行区分)
-        double radius = settlementRadius();
-        for (ServerPlayer player : serverLevel.players()) {
-            if (!player.isSpectator() && this.participants.contains(player.getUUID())
-                    && player.distanceToSqr(this) <= radius * radius) {
+        boolean hasEligibleParticipant = false;
+        boolean firstKillDrop = false;
+
+        for (ServerPlayer player : nearbySettlementPlayers(serverLevel)) {
+            if (this.participants.contains(player.getUUID())) {
                 boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player, minibossId());
+                hasEligibleParticipant = true;
+
+                // 记录写失败也要累计首杀,否则记录已满时整队会拿到复战包,丢掉首杀材料与残页。
+                firstKillDrop |= firstKill;
                 if (firstKill && !EchoAbilityManager.markBossDefeated(player, minibossId())) {
                     player.sendSystemMessage(Component.translatable(
                             "message.unknown_echoes.progress_record.full"));
-                    continue;
                 }
-                this.grantSettlement(player, firstKill);
             }
         }
-        // 场地重开:通知绑定的计时器(没有绑定时为一次性生成,保持已有行为)
-        if (this.spawnerPos != null
-                && serverLevel.getBlockEntity(this.spawnerPos) instanceof MiniBossSpawnerBlockEntity spawner) {
-            spawner.onBossDefeated();
+        if (hasEligibleParticipant) {
+            this.grantSettlement(firstKillDrop);
+        }
+
+        if (this.spawnerPos != null) {
+            MiniBossSpawnerBlockEntity.onBossDefeated(serverLevel, this.spawnerPos, this.getUUID());
         }
     }
 
-    /** 结算发放物品:优先进背包,满了落在玩家脚下(普通材料允许掉落,红线 #2 只针对关键奖励)。 */
-    protected static void giveItem(ServerPlayer player, ItemStack stack) {
-        if (!player.getInventory().add(stack)) {
-            player.drop(stack, false);
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        if (this.level() instanceof ServerLevel serverLevel
+                && !this.retrySpawnerRegistration(serverLevel)) {
+            this.discard();
         }
     }
 
-    protected void giveFirstKillItem(ServerPlayer player, ItemStack stack) {
-        ItemStack copy = stack.copy();
-        if (canFitEntireStack(player, copy) && player.getInventory().add(copy)) {
-            return;
+    private boolean retrySpawnerRegistration(ServerLevel level) {
+        if (this.spawnerPos == null || !level.hasChunkAt(this.spawnerPos)) {
+            return true;
         }
-        if (rememberPendingFirstKillItem(player, stack)) {
-            player.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.miniboss.reward_pending", stack.getHoverName()), true);
+        if (level.getBlockEntity(this.spawnerPos) instanceof MiniBossSpawnerBlockEntity spawner) {
+            return spawner.onBossAdded(this.getUUID());
+        }
+        return level.getBlockState(this.spawnerPos).getBlock() instanceof MiniBossSpawnerBlock;
+    }
+
+    private boolean tickSpawnerBinding(ServerLevel level) {
+        if (this.spawnerPos == null) {
+            return false;
+        }
+        MiniBossSpawnerBlockEntity.BindingState state =
+                MiniBossSpawnerBlockEntity.bindingState(level, this.spawnerPos, this);
+        if (state == MiniBossSpawnerBlockEntity.BindingState.UNAVAILABLE) {
+            this.setTarget(null);
+            this.getNavigation().stop();
+            this.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            return true;
+        }
+        if (state == MiniBossSpawnerBlockEntity.BindingState.INVALID) {
+            this.clearSpawnerPresence(level);
+            this.discard();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isSpawnerCombatBlocked(ServerLevel level) {
+        return this.spawnerPos != null
+                && MiniBossSpawnerBlockEntity.bindingState(level, this.spawnerPos, this)
+                != MiniBossSpawnerBlockEntity.BindingState.VALID;
+    }
+
+    protected final boolean isSpawnerBindingPaused() {
+        return this.spawnerBindingPaused;
+    }
+
+    public void clearSpawnerPresence(ServerLevel level) {
+        if (this.spawnerPos != null) {
+            MiniBossSpawnerBlockEntity.onBossDestroyed(level, this.spawnerPos, this.getUUID());
         }
     }
 
-    public static void retryPendingFirstKillRewards(ServerPlayer player) {
-        if (!PLAYERS_WITH_PENDING.contains(player.getUUID())) {
-            return;
-        }
+    public boolean hasSpawnerBinding() {
+        return this.spawnerPos != null;
+    }
+
+    public BlockPos spawnerPos() {
+        return this.spawnerPos;
+    }
+
+    public static void loadPendingFirstKillRewards(ServerPlayer player) {
         Set<String> mechanisms = EchoAbilityManager.getData(player).getActivatedMechanisms();
-        boolean stillPending = false;
         Iterator<String> iterator = mechanisms.iterator();
         while (iterator.hasNext()) {
             String key = iterator.next();
@@ -262,43 +367,10 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
             if (reward.pageId() >= 0) {
                 stack.set(ModDataComponents.PAGE_ID.get(), reward.pageId());
             }
-            if (canFitEntireStack(player, stack) && player.getInventory().add(stack)) {
-                iterator.remove();
-                player.displayClientMessage(Component.translatable(
-                        "message.unknown_echoes.miniboss.reward_claimed", stack.getHoverName()), true);
-            } else {
-                stillPending = true;
-            }
+            BossRewardDropData.dropOrQueue(player.serverLevel(),
+                    player.getX(), player.getY(), player.getZ(), stack);
+            iterator.remove();
         }
-        if (!stillPending) {
-            PLAYERS_WITH_PENDING.remove(player.getUUID());
-        }
-    }
-
-    public static void loadPendingFirstKillRewards(ServerPlayer player) {
-        PLAYERS_WITH_PENDING.add(player.getUUID());
-        retryPendingFirstKillRewards(player);
-    }
-
-    public static void clearPendingPlayer(UUID playerId) {
-        PLAYERS_WITH_PENDING.remove(playerId);
-    }
-
-    public static void clearAllPendingPlayers() {
-        PLAYERS_WITH_PENDING.clear();
-    }
-
-    private boolean rememberPendingFirstKillItem(ServerPlayer player, ItemStack stack) {
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        int pageId = stack.getOrDefault(ModDataComponents.PAGE_ID.get(), -1);
-        if (!EchoAbilityManager.activateMechanism(player,
-                PENDING_REWARD_PREFIX + minibossId() + "|" + itemId + "|" + stack.getCount()
-                        + "|" + pageId)) {
-            player.drop(stack.copy(), false);
-            return false;
-        }
-        PLAYERS_WITH_PENDING.add(player.getUUID());
-        return true;
     }
 
     private static PendingReward parsePendingReward(String key) {
@@ -345,38 +417,14 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
             case "dream_bloom_keeper" -> 86;
             case "broken_bell_keeper" -> 92;
             case "lost_recorder_chief" -> 104;
+            case "inverted_gatekeeper" -> 146;
+            case "ash_scribe" -> 167;
             default -> -1;
         };
     }
 
-    private static boolean canFitEntireStack(ServerPlayer player, ItemStack stack) {
-        int remaining = stack.getCount();
-        int max = stack.getMaxStackSize();
-        for (ItemStack slot : player.getInventory().items) {
-            if (slot.isEmpty()) {
-                remaining -= max;
-            } else if (ItemStack.isSameItemSameComponents(slot, stack)) {
-                remaining -= Math.max(0, max - slot.getCount());
-            }
-            if (remaining <= 0) {
-                return true;
-            }
-        }
-        for (ItemStack slot : player.getInventory().offhand) {
-            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, stack)) {
-                remaining -= Math.max(0, max - slot.getCount());
-            }
-            if (remaining <= 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private record PendingReward(Item item, int count, int pageId) {
     }
-
-    // ---- Boss 体征 ----
 
     @Override
     public void startSeenByPlayer(ServerPlayer player) {
@@ -397,7 +445,7 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
 
     @Override
     public void checkDespawn() {
-        // 守护者不自然消失;场地重开由 MiniBossSpawnerBlockEntity 负责
+
     }
 
     @Override
@@ -410,8 +458,6 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
         super.setCustomName(name);
         this.bossEvent.setName(this.getDisplayName());
     }
-
-    // ---- NBT ----
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {

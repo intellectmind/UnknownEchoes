@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:archive_chisel" }
+  ],
+  "result": { "id": "unknown_echoes:palimpsest_leaf" }
+}

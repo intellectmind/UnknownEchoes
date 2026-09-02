@@ -113,6 +113,11 @@
           "type": "minecraft:item",
           "name": "minecraft:name_tag",
           "weight": 1
+        },
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:memory_echo_stone",
+          "weight": 3
         }
       ]
     },

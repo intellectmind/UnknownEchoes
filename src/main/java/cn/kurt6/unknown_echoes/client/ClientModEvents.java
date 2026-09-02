@@ -4,9 +4,11 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.client.model.EchoArmorModel;
 import cn.kurt6.unknown_echoes.client.model.ThemedEchoArmorModel;
 import cn.kurt6.unknown_echoes.client.render.AbyssWatcherRenderer;
+import cn.kurt6.unknown_echoes.client.render.AshScribeRenderer;
 import cn.kurt6.unknown_echoes.client.gui.EchoStatusHudOverlay;
 import cn.kurt6.unknown_echoes.client.render.BrokenBellKeeperRenderer;
 import cn.kurt6.unknown_echoes.client.render.CrystalSongkeeperRenderer;
+import cn.kurt6.unknown_echoes.client.render.DeepEcologyRenderer;
 import cn.kurt6.unknown_echoes.client.render.DreamBloomKeeperRenderer;
 import cn.kurt6.unknown_echoes.client.render.EchoProjectionRenderer;
 import cn.kurt6.unknown_echoes.client.render.LostRecorderChiefRenderer;
@@ -15,7 +17,9 @@ import cn.kurt6.unknown_echoes.client.render.RiftWardenRenderer;
 import cn.kurt6.unknown_echoes.client.render.CrystalFeatherBirdRenderer;
 import cn.kurt6.unknown_echoes.client.render.SilentWalkerRenderer;
 import cn.kurt6.unknown_echoes.client.render.EchoWandererRenderer;
+import cn.kurt6.unknown_echoes.client.render.EndingRecordTableRenderer;
 import cn.kurt6.unknown_echoes.client.render.ForgottenColossusRenderer;
+import cn.kurt6.unknown_echoes.client.render.InvertedGatekeeperRenderer;
 import cn.kurt6.unknown_echoes.client.render.SilentPriestRenderer;
 import cn.kurt6.unknown_echoes.client.render.StormWeaverRenderer;
 import cn.kurt6.unknown_echoes.client.render.TideBoltRenderer;
@@ -25,6 +29,9 @@ import cn.kurt6.unknown_echoes.client.render.TideLanternKeeperRenderer;
 import cn.kurt6.unknown_echoes.client.render.TideWaterShadeRenderer;
 import cn.kurt6.unknown_echoes.client.render.VoidProphetRenderer;
 import cn.kurt6.unknown_echoes.client.render.WorldEchoRenderer;
+import cn.kurt6.unknown_echoes.client.render.WorldEchoWingsLayer;
+import cn.kurt6.unknown_echoes.client.render.WorldResonanceAltarRenderer;
+import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModArmorMaterials;
 import cn.kurt6.unknown_echoes.registry.ModItems;
@@ -32,6 +39,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -44,6 +52,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
@@ -129,15 +138,16 @@ public class ClientModEvents {
         if (armor.getMaterial().is(ModArmorMaterials.ECHO_OATH.getKey())) {
             return ThemedEchoArmorModel.Style.ECHO_OATH;
         }
+        if (armor.getMaterial().is(ModArmorMaterials.RESONATOR.getKey())) {
+            return ThemedEchoArmorModel.Style.RESONATOR;
+        }
         return null;
     }
 
-    /** 打开回响总览(默认 K)。 */
     public static final KeyMapping OPEN_ECHO_OVERVIEW = new KeyMapping(
             "key.unknown_echoes.echo_overview", InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_K, "key.categories.unknown_echoes");
 
-    /** 武器主战技(默认 R,可改键)。 */
     public static final KeyMapping WEAPON_SKILL = new KeyMapping(
             "key.unknown_echoes.weapon_skill", InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_R, "key.categories.unknown_echoes");
@@ -147,6 +157,10 @@ public class ClientModEvents {
             "key.unknown_echoes.weapon_secondary_skill", InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_X, "key.categories.unknown_echoes");
 
+    public static final KeyMapping ECHO_TOOL_SKILL = new KeyMapping(
+            "key.unknown_echoes.echo_tool_skill", InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_Z, "key.categories.unknown_echoes");
+
     public static final KeyMapping GRAVITY_ATTUNE = new KeyMapping(
             "key.unknown_echoes.gravity_attune", InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_G, "key.categories.unknown_echoes");
@@ -155,19 +169,31 @@ public class ClientModEvents {
             "key.unknown_echoes.void_step", InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_V, "key.categories.unknown_echoes");
 
-    /** 统一神器快捷键，默认未绑定，避免占用玩法键。 */
     public static final KeyMapping ARTIFACT_USE = new KeyMapping(
             "key.unknown_echoes.artifact_use", InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_UNKNOWN, "key.categories.unknown_echoes");
+            GLFW.GLFW_KEY_U, "key.categories.unknown_echoes");
+
+    /** 手持物品主动技能(默认 C)：不占用右键交互。 */
+    public static final KeyMapping ITEM_ACTIVE_SKILL = new KeyMapping(
+            "key.unknown_echoes.item_active_skill", InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_C, "key.categories.unknown_echoes");
+
+    /** 手持物品副功能(默认 B)：不占用 Shift+右键。 */
+    public static final KeyMapping ITEM_ALTERNATE_SKILL = new KeyMapping(
+            "key.unknown_echoes.item_alternate_skill", InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_B, "key.categories.unknown_echoes");
 
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(OPEN_ECHO_OVERVIEW);
         event.register(WEAPON_SKILL);
         event.register(WEAPON_SECONDARY_SKILL);
+        event.register(ECHO_TOOL_SKILL);
         event.register(GRAVITY_ATTUNE);
         event.register(VOID_STEP);
         event.register(ARTIFACT_USE);
+        event.register(ITEM_ACTIVE_SKILL);
+        event.register(ITEM_ALTERNATE_SKILL);
     }
 
     @SubscribeEvent
@@ -196,16 +222,21 @@ public class ClientModEvents {
                 ModItems.ECHO_OATH_HELMET.get(), ModItems.ECHO_OATH_CHESTPLATE.get(),
                 ModItems.ECHO_OATH_LEGGINGS.get(), ModItems.ECHO_OATH_BOOTS.get(),
                 ModItems.ABYSS_WALKER_HELMET.get(), ModItems.ABYSS_WALKER_CHESTPLATE.get(),
-                ModItems.ABYSS_WALKER_LEGGINGS.get(), ModItems.ABYSS_WALKER_BOOTS.get());
+                ModItems.ABYSS_WALKER_LEGGINGS.get(), ModItems.ABYSS_WALKER_BOOTS.get(),
+                ModItems.RESONATOR_HELMET.get(), ModItems.RESONATOR_CHESTPLATE.get(),
+                ModItems.RESONATOR_LEGGINGS.get(), ModItems.RESONATOR_BOOTS.get(),
+                ModItems.WORLD_ECHO_WINGS.get());
     }
 
-    /** 潮汐弩拉弦/装填模型谓词(V0.6C 视觉重做):自定义弩不继承原版 crossbow 的 ItemProperties。 */
+    /** 潮汐弩拉弦/装填模型谓词( 视觉重做):自定义弩不继承原版 crossbow 的 ItemProperties。 */
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
             registerBowPredicates(ModItems.ECHO_LONGBOW.get());
             registerBowPredicates(ModItems.DREAM_BLOOM_BOW.get());
-            registerTideCrossbowPredicates(ModItems.TIDE_CROSSBOW.get());
+            registerBowPredicates(ModItems.GRAVITY_INVERSION_BOW.get());
+            registerCrossbowPredicates(ModItems.TIDE_CROSSBOW.get());
+            registerCrossbowPredicates(ModItems.ASH_SCRIPT_CROSSBOW.get());
         });
     }
 
@@ -225,7 +256,7 @@ public class ClientModEvents {
                                 ? 1.0F : 0.0F);
     }
 
-    private static void registerTideCrossbowPredicates(Item item) {
+    private static void registerCrossbowPredicates(Item item) {
         ItemProperties.register(item,
                 ResourceLocation.withDefaultNamespace("pull"),
                 (stack, level, entity, seed) -> {
@@ -247,6 +278,10 @@ public class ClientModEvents {
 
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.ENDING_RECORD_TABLE.get(),
+                EndingRecordTableRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.WORLD_RESONANCE_ALTAR.get(),
+                WorldResonanceAltarRenderer::new);
         event.registerEntityRenderer(ModEntities.ECHO_WANDERER.get(), EchoWandererRenderer::new);
         event.registerEntityRenderer(ModEntities.FORGOTTEN_COLOSSUS.get(), ForgottenColossusRenderer::new);
         event.registerEntityRenderer(ModEntities.ABYSS_WATCHER.get(), AbyssWatcherRenderer::new);
@@ -271,6 +306,10 @@ public class ClientModEvents {
                 cn.kurt6.unknown_echoes.client.render.GlowRabbitRenderer::new);
         event.registerEntityRenderer(ModEntities.MIRROR_TAIL_FISH.get(),
                 cn.kurt6.unknown_echoes.client.render.MirrorTailFishRenderer::new);
+        event.registerEntityRenderer(ModEntities.ECHO_CUTTLEFISH.get(),
+                context -> new DeepEcologyRenderer<>(context, "echo_cuttlefish", 0.28F, -0.1188D));
+        event.registerEntityRenderer(ModEntities.PEARLBACK_RAY.get(),
+                context -> new DeepEcologyRenderer<>(context, "pearlback_ray", 0.45F, -0.1938D));
         event.registerEntityRenderer(ModEntities.MOSS_BACK_TURTLE.get(),
                 cn.kurt6.unknown_echoes.client.render.MossBackTurtleRenderer::new);
         event.registerEntityRenderer(ModEntities.DREAMING_DEER.get(),
@@ -298,7 +337,9 @@ public class ClientModEvents {
         event.registerEntityRenderer(ModEntities.BROKEN_BELL_KEEPER.get(), BrokenBellKeeperRenderer::new);
         event.registerEntityRenderer(ModEntities.DREAM_BLOOM_KEEPER.get(), DreamBloomKeeperRenderer::new);
         event.registerEntityRenderer(ModEntities.LOST_RECORDER_CHIEF.get(), LostRecorderChiefRenderer::new);
-        // 深层回响生态
+        event.registerEntityRenderer(ModEntities.INVERTED_GATEKEEPER.get(), InvertedGatekeeperRenderer::new);
+        event.registerEntityRenderer(ModEntities.ASH_SCRIBE.get(), AshScribeRenderer::new);
+
         event.registerEntityRenderer(ModEntities.FOLDPAGE_BUG.get(),
                 cn.kurt6.unknown_echoes.client.render.FoldpageBugRenderer::new);
         event.registerEntityRenderer(ModEntities.ANCHOR_SHELL_BEAST.get(),
@@ -307,5 +348,37 @@ public class ClientModEvents {
                 cn.kurt6.unknown_echoes.client.render.AbyssLurkerRenderer::new);
         event.registerEntityRenderer(ModEntities.VOID_WANDERER.get(),
                 cn.kurt6.unknown_echoes.client.render.VoidWandererRenderer::new);
+        event.registerEntityRenderer(ModEntities.RIFT_GLIDER.get(),
+                context -> new DeepEcologyRenderer<>(context, "rift_glider", 0.72F, -0.32D));
+        event.registerEntityRenderer(ModEntities.ASHBACK_GRAZER.get(),
+                context -> new DeepEcologyRenderer<>(context, "ashback_grazer", 0.7F));
+        event.registerEntityRenderer(ModEntities.HUSHLIGHT_JELLY.get(),
+                context -> new DeepEcologyRenderer<>(context, "hushlight_jelly", 0.52F));
+        event.registerEntityRenderer(ModEntities.FOLDED_MANTIS.get(),
+                context -> new DeepEcologyRenderer<>(context, "folded_mantis", 0.58F, -0.0669D));
+        event.registerEntityRenderer(ModEntities.GRAVITY_RAM.get(),
+                context -> new DeepEcologyRenderer<>(context, "gravity_ram", 0.76F));
+        event.registerEntityRenderer(ModEntities.ASHVEIL_STALKER.get(),
+                context -> new DeepEcologyRenderer<>(context, "ashveil_stalker", 0.58F));
+    }
+
+    @SubscribeEvent
+    public static void onRegisterAdditionalModels(ModelEvent.RegisterAdditional event) {
+        for (var model : EndingRecordTableRenderer.KINETIC_MODELS) {
+            event.register(model);
+        }
+        for (var model : WorldResonanceAltarRenderer.KINETIC_MODELS) {
+            event.register(model);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
+        for (var skin : event.getSkins()) {
+            PlayerRenderer renderer = event.getSkin(skin);
+            if (renderer != null) {
+                renderer.addLayer(new WorldEchoWingsLayer(renderer));
+            }
+        }
     }
 }

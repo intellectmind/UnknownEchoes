@@ -1,0 +1,7 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "unknown_echoes:block/sealed_stone"
+  },
+  "elements": []
+}

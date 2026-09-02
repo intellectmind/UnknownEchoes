@@ -6,10 +6,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 
-/**
- * 武器属性工具:按"面板总值"直接声明攻击伤害/攻速(设计文档 V0.6B 数值为设定基线,
- * 原版换算:总伤害 = 玩家基础 1.0 + 修饰值,总攻速 = 基础 4.0 + 修饰值)。
- */
+/** 武器属性工具：按面板总值声明攻击伤害与攻速。 */
 final class WeaponAttributes {
 
     private WeaponAttributes() {

@@ -17,11 +17,7 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
-/**
- * 顺序符文柱:谜题元素。ORDER(0-7)是柱身记号(点数 1-8),LIT 表示已点亮。
- * 右键时把自己的 ORDER 报给附近的谜题核心,由核心按自己的乱序序列判定对错。
- * 墙上高处嵌着的常亮柱是顺序提示,不参与判定(核心只重置低处的柱)。
- */
+/** 顺序符文柱:谜题元素。ORDER(0-7)是柱身记号(点数 1-8),LIT 表示已点亮。 */
 public class SequenceRuneBlock extends Block {
     public static final MapCodec<SequenceRuneBlock> CODEC = simpleCodec(SequenceRuneBlock::new);
     public static final IntegerProperty ORDER = IntegerProperty.create("order", 0, 7);
@@ -52,8 +48,6 @@ public class SequenceRuneBlock extends Block {
             return InteractionResult.SUCCESS;
         }
         if (state.getValue(LIT)) {
-            player.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.sequence_rune.lit"), true);
             return InteractionResult.CONSUME;
         }
 
@@ -69,15 +63,42 @@ public class SequenceRuneBlock extends Block {
         return InteractionResult.CONSUME;
     }
 
-    private static PuzzleCoreBlockEntity findCore(Level level, BlockPos origin) {
-        for (BlockPos pos : BlockPos.betweenClosed(
-                origin.offset(-CORE_SEARCH_RADIUS, -4, -CORE_SEARCH_RADIUS),
-                origin.offset(CORE_SEARCH_RADIUS, 4, CORE_SEARCH_RADIUS))) {
-            if (level.getBlockState(pos).is(ModBlocks.PUZZLE_CORE.get())
-                    && level.getBlockEntity(pos) instanceof PuzzleCoreBlockEntity core) {
-                return core;
+    /** 步纹符文与顺序符文共用:在附近寻找谜题核心或音序核心。 */
+    static PuzzleCoreBlockEntity findCore(Level level, BlockPos origin) {
+        PuzzleCoreBlockEntity nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
+        int minChunkX = (origin.getX() - CORE_SEARCH_RADIUS) >> 4;
+        int maxChunkX = (origin.getX() + CORE_SEARCH_RADIUS) >> 4;
+        int minChunkZ = (origin.getZ() - CORE_SEARCH_RADIUS) >> 4;
+        int maxChunkZ = (origin.getZ() + CORE_SEARCH_RADIUS) >> 4;
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                if (!level.hasChunk(chunkX, chunkZ)) {
+                    continue;
+                }
+                for (var blockEntity : level.getChunk(chunkX, chunkZ).getBlockEntities().values()) {
+                    if (!(blockEntity instanceof PuzzleCoreBlockEntity core)) {
+                        continue;
+                    }
+                    BlockPos pos = blockEntity.getBlockPos();
+                    if (Math.abs((long) pos.getX() - origin.getX()) > CORE_SEARCH_RADIUS
+                            || Math.abs((long) pos.getY() - origin.getY()) > 4
+                            || Math.abs((long) pos.getZ() - origin.getZ()) > CORE_SEARCH_RADIUS) {
+                        continue;
+                    }
+                    BlockState state = blockEntity.getBlockState();
+                    if (!state.is(ModBlocks.PUZZLE_CORE.get())
+                            && !state.is(ModBlocks.CHIME_ECHO_CORE.get())) {
+                        continue;
+                    }
+                    double distance = pos.distSqr(origin);
+                    if (distance < nearestDistance) {
+                        nearest = core;
+                        nearestDistance = distance;
+                    }
+                }
             }
         }
-        return null;
+        return nearest;
     }
 }

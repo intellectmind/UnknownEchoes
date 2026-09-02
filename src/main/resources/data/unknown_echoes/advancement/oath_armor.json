@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:regional_armor",
+  "parent": "unknown_echoes:oathbound_alloy",
   "display": {
     "icon": {
       "id": "unknown_echoes:echo_oath_chestplate"
@@ -21,16 +21,24 @@
       "conditions": {
         "items": [
           {
-            "items": ["unknown_echoes:echo_oath_helmet"]
+            "items": [
+              "unknown_echoes:echo_oath_helmet"
+            ]
           },
           {
-            "items": ["unknown_echoes:echo_oath_chestplate"]
+            "items": [
+              "unknown_echoes:echo_oath_chestplate"
+            ]
           },
           {
-            "items": ["unknown_echoes:echo_oath_leggings"]
+            "items": [
+              "unknown_echoes:echo_oath_leggings"
+            ]
           },
           {
-            "items": ["unknown_echoes:echo_oath_boots"]
+            "items": [
+              "unknown_echoes:echo_oath_boots"
+            ]
           }
         ]
       }

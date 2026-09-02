@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:enter_deep_echoes",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:deep_route_node"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.fracture_hall.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.fracture_hall.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

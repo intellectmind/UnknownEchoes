@@ -1,6 +1,9 @@
 {
   "replace": false,
   "values": [
-    "unknown_echoes:echo_pickaxe"
+    "unknown_echoes:echo_pickaxe",
+    "unknown_echoes:deep_alloy_pickaxe",
+    "unknown_echoes:archive_chisel",
+    "unknown_echoes:orrery_calibrator"
   ]
 }

@@ -8,10 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
-/**
- * 统一权限检测。所有关键交互(风门、信标、奖励)都从这里判定,
- * 保证飞行/传送/高伤害 Mod 无法绕过世界规则。
- */
+/** 统一权限检测。所有关键交互(风门、信标、奖励)都从这里判定, 保证飞行/传送/高伤害 Mod 无法绕过世界规则。 */
 public class EchoPermission {
     public static final ResourceLocation RESONANCE_BEACON_ID = UnknownEchoes.id("resonance");
     public static final ResourceLocation FORGOTTEN_COLOSSUS_ID = UnknownEchoes.id("forgotten_colossus");
@@ -29,10 +26,6 @@ public class EchoPermission {
     public static final String WORLD_ECHO_REWARD_READY_KEY = "ending:world_echo_reward_ready";
     public static final String WORLD_ECHO_COMPLETE_KEY = "ending:world_echo_complete";
 
-    /**
-     * 通用回响机关权限判定(V0.2 起所有新机关统一走这里)。
-     * 服务端校验玩家能力数据;ability_permission_required=false 时全部放行。
-     */
     public static boolean canUseEchoMechanism(Player player, EchoAbilityType requiredAbility) {
         if (player.isSpectator()) {
             return false;
@@ -43,7 +36,7 @@ public class EchoPermission {
         return EchoAbilityManager.hasAbility(player, requiredAbility);
     }
 
-    /** 组合条件:需要同时拥有全部列出的能力(如 V0.5 潮汐 + 真视机关)。 */
+    /** 组合条件:需要同时拥有全部列出的能力(如 潮汐 + 真视机关)。 */
     public static boolean canUseEchoMechanism(Player player, EchoAbilityType... requiredAbilities) {
         if (player.isSpectator()) {
             return false;
@@ -67,14 +60,14 @@ public class EchoPermission {
         return canUseEchoMechanism(player, EchoAbilityType.WIND_ECHO);
     }
 
-    /** 潮汐机关(水下符文、深海信标、潮汐净化等)。 */
     public static boolean canUseTideMechanism(Player player) {
         return canUseEchoMechanism(player, EchoAbilityType.TIDE_ECHO);
     }
 
     public static boolean canEnterEchoRealm(Player player) {
         return !player.isSpectator()
-                && EchoAbilityManager.hasActivatedBeacon(player, RESONANCE_BEACON_ID);
+                && EchoAbilityManager.hasActivatedBeacon(player, RESONANCE_BEACON_ID)
+                && EchoAbilityManager.hasUnlockedDimension(player, ECHO_REALM_ID);
     }
 
     public static boolean canCalibrateAbyssBeacon(ServerPlayer player) {

@@ -5,8 +5,8 @@
   "biome_tags": [
     "unknown_echoes:has_echo_world_tree"
   ],
-  "spacing": 96,
-  "separation": 32,
+  "spacing": 112,
+  "separation": 38,
   "salt": 702501,
   "allow_multiple": true,
   "priority": 1,

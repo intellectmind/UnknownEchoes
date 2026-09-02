@@ -1,74 +1,84 @@
 # Unknown Echoes
 
-> Still under development. Feedback is welcome.
+**Other languages: [English](README.md) ｜ [中文](README_zh.md)**
 
-> Step out, listen to the echoes of the earth, and discover a world long forgotten.
+**Download: [Modrinth](https://modrinth.com/mod/unknown-echoes) ｜ [Curseforge](https://www.curseforge.com/minecraft/mc-mods/unknown-echoes)**
 
-**Unknown Echoes** is an adventure Mod centered around exploration, puzzle-solving, boss battles, and progressive ability growth.
+**Unknown Echoes** is an adventure mod built around exploration, puzzles, boss fights, and ability progression. Explore ten biomes in the Echo Realm, then descend through six biomes across the three strata of Deep Echoes. Five Echo abilities, six artifacts, and multiple equipment paths unlock through personal progress.
 
-You will open the gateway to the **Echo Realm**, track ancient echoes across ten biomes, and then descend through three strata spanning six biomes in the Second Dimension. Five Echo powers, six artifacts, and a new equipment route unfold through personal exploration.
+> You can follow the advancement tree step by step as you play. Press **K** to open the Echo Overview.
+
+> Tip: Netherite armor is the baseline difficulty setting for entering this mod's dimensions. Use **/unknownechoes** command for testing.
+
+> Shaders are recommended: mobs and blocks carry a large set of emissive layers.
 
 ---
 
 ## Quick Start
 
-### Entering the Echo Realm (First Dimension)
+### Entering the Echo Realm
 
-1. **Craft an Echo Realm Key**: Use **Resonance Shards + Resonance Core** to craft an *Echo Realm Key*.
-2. **Find a Resonance Beacon**: Resonance Beacons naturally generate in the Overworld (Resonance Beacon Ruins).
+1. **Craft an Echo Realm Key**: Use **4 Echo Shards + 1 Echo Core**.
+2. **Find a Resonance Beacon**: Resonance Beacon Ruins generate naturally in the Overworld.
 3. **Awaken the Beacon**: Right-click the beacon while holding the key.
 4. **Enter the Echo Realm**: Right-click the activated beacon.
-5. **Return to the Overworld**: Right-click the beacon within the realm to return to the Overworld spawn point/respawn point.
+5. **Return to the Overworld**: Right-click the beacon inside the realm to return to your Overworld spawn or respawn point.
 
-### Entering the Deep Echoes (Second Dimension)
+### Entering Deep Echoes
 
-1. **Complete the Echo Realm Main Questline**: Obtain the Wind Echo, Tidal Echo, and True Sight Echo. Defeat the three main bosses, complete all three archive trials at the Echo Grand Archive in the Echo Cliffs, then operate its Archive Terminal. The terminal records a clue to the nearest altar in your exploration journal.
-2. **Find an Abyssal Beacon Altar**: Altars naturally generate in the Echo Cliffs biome.
-3. **Activate the Deep Passage**: With an empty hand, right-click the Abyssal Beacon to calibrate Wind, Tide and True Sight in order. Right-click again after each stage's animation ends.
-4. **Enter the Deep Echoes**: After the final activation animation ends, right-click the Abyssal Beacon again.
-5. **Return to the Echo Realm**: Right-click the Abyssal Beacon in the Riftlayer Hall.
+1. **Complete the Echo Realm main story**: Obtain Wind Echo, Tide Echo, and True Sight Echo; defeat the three main bosses; then complete the three archive trials in the Echo Grand Archive. Its terminal records a clue to the nearest altar in your journal.
+2. **Find an Abyss Beacon Altar**: These altars generate naturally in the Echo Cliffs.
+3. **Activate the deep passage**: With an empty hand, right-click the Abyss Beacon to calibrate Wind, Tide, and True Sight in order. Right-click again after each animation ends.
+4. **Enter Deep Echoes**: Right-click the beacon after the final activation animation.
+5. **Return to the Echo Realm**: Right-click the Abyss Beacon in the Fracture Hall.
 
 ---
 
 ## Core Gameplay
 
-1. Explore the **Echoing Forest**, find the Memory Pillar Courtyard, defeat the **Forgotten Colossus**, and unlock the **Wind Echo**.
-2. Explore the **Mirror Lake / Tidal Lighthouse Reef**, delve into the Sunken Sanctum, defeat the **Abyssal Observer**, and unlock the **Tidal Echo**.
-3. Explore the **Mirror Dust Corridor**, breach the Mirror Sanctum, defeat the **Mirror Guardian**, and unlock the **True Sight Echo**.
-4. Gather materials, ancient pages, and structure records across the 10 First Dimension biomes and 6 Second Dimension biomes, and challenge 8 **Regional Guardians (Mini Bosses)**.
-5. Unlock and upgrade 6 **Core Artifacts** based on your exploration progress, strengthening five ability paths.
-6. Find the Grand Archive at **Echo Cliffs**, and claim your personal graduation reward and clues leading deeper once you've achieved sufficient completion.
+1. Explore the **Echo Forest**, find the Memory Pillar Courtyard, defeat the **Forgotten Colossus**, and unlock **Wind Echo**.
+2. Explore **Mirror Lake and the Tide Lighthouse Reef**, enter the Sunken Temple, defeat the **Abyss Watcher**, and unlock **Tide Echo**.
+3. Explore the **Mirror Dust Cloister**, enter the Mirror Temple, defeat the **Mirror Guardian**, and unlock **True Sight Echo**.
+4. Explore 16 biomes across both realms, gathering materials, Ancient Pages, and ruin records while challenging 10 **regional guardians**.
+5. Unlock and upgrade 6 **core artifacts** through personal exploration progress, strengthening five ability paths.
+6. Find the Echo Grand Archive in the **Echo Cliffs** to complete the main story and reveal a clue leading deeper.
 
 ---
 
 ## Bosses and Regional Guardians
 
-### Five Main Bosses
+### Six Main Bosses
 
-Each main boss has a **Guard Break mechanic**: They heavily resist damage while their guard is up. You must use the arena's environmental mechanics to create a vulnerability window before you can deal effective damage.
+Main bosses resist most damage until their guard breaks. Use each arena's mechanisms to create an opening, then attack.
 
-| Main Boss | Arena | Unlocks Ability |
-|---|---|---|
-| **Forgotten Colossus** | Memory Pillar Courtyard (Echoing Forest) | Wind Echo |
-| **Abyssal Observer** | Sunken Sanctum (Mirror Lake / Tidal Lighthouse Reef) | Tidal Echo |
-| **Mirror Guardian** | Mirror Sanctum (Mirror Dust Corridor) | True Sight Echo |
-| **Void Prophet** | Calibration Hall (Inverted Chasm) | Gravity Echo |
-| **Rift Warden** | Void Vein Chamber (Silent Abyss) | Void Echo |
+| Main Boss | Arena                                                | Unlocks Ability |
+|---|------------------------------------------------------|---|
+| **Forgotten Colossus** | Memory Pillar Courtyard (Echo Forest)             | Wind Echo |
+| **Abyss Watcher** | Sunken Temple (Mirror Lake / Tide Lighthouse Reef) | Tide Echo |
+| **Mirror Guardian** | Mirror Temple (Mirror Dust Cloister)                | True Sight Echo |
+| **Void Prophet** | Calibration Hall (Inverted Chasm)                    | Gravity Echo |
+| **Rift Warden** | Void Vein Chamber (Silent Abyss)                     | Void Echo |
+| **World Echo** | World Resonance Hall (Silent Abyss)                  | None |
 
-> **World Echo Entity** Summon it at the World Resonance Palace after collecting all five echoes and completing the endgame conditions. (Not yet implemented)
-
-### Eight Regional Guardians (Mini Bosses)
+### Eight Echo Realm Regional Guardians
 
 | Guardian | Biome / Location |
 |---|---|
 | Storm Weaver | Floating Isles · Sky Observatory |
-| Tidal Lamplighter | Tidal Lighthouse Reef |
-| Mirror Dust Steward | Mirror Dust Corridor |
-| Silent Priest | Muted Marsh · Silent Altar |
-| Crystal Song Keeper | Crystal Song Grove · Crystal Song Grand Hall |
-| Broken Bell Warden | Broken Bell Wasteland · Broken Bell Ruined Tower |
-| Slumbering Bloom Warden | Slumbering Flower Field · Underground Greenhouse |
-| Chief Lost Archivist | Echo Cliffs · Damaged Archive |
+| Tide Lantern Keeper | Tide Lighthouse Reef |
+| Mirror Dust Butler | Mirror Dust Cloister |
+| Silent Priest | Silent Swamp · Silent Altar |
+| Crystal Songkeeper | Crystal Song Grove · Crystal Song Hall |
+| Broken Bell Keeper | Broken Bell Wastes · Broken Bell Tower |
+| Dream Bloom Keeper | Dreaming Meadow · Underground Greenhouse |
+| Lost Recorder Chief | Echo Cliffs · Archive Remnant Hall |
+
+### Two Deep Echoes Regional Guardians
+
+| Guardian | Biome / Location |
+|---|---|
+| Ash Scribe | Folded Corridors · Folded Celestial Archive |
+| Inverted Gatekeeper | Inverted Chasm · Inverted Pendulum Palace |
 
 ---
 
@@ -79,34 +89,36 @@ They are unlocked and upgraded based on your **personal exploration progress**.
 | Artifact | Role |
 |---|---|
 | **Storm Compass** | Short-duration flight · Aerial maneuvering |
-| **Tidal Lantern** | Survival sustainability |
+| **Tide Lantern** | Survival |
 | **Echo Lens** | Damage output · Detection |
-| **Time Hourglass** | Time Freeze · Area Control |
+| **Hourglass** | Time Freeze · Area Control |
 | **Dimension Anchor** | Cross-Dimension Return |
 | **Rift Anchor** | Deep Echoes Return |
 
 ---
 
-## Ten Biomes
+## Biomes
 
-| Biome | Defining Keywords |
+### Echo Realm
+
+| Biome | Highlights |
 |---|---|
-| Echoing Forest | Entry-level, basic resources, main Wind line structures |
+| Echo Forest | Basic resources, Wind path |
 | Floating Isles | High-altitude wind erosion, wind-based materials, Storm Compass progress |
-| Mirror Lake | Surface exploration, Tidal mainline entrance |
-| Tidal Lighthouse Reef | Deep-water reefs, Tidal Lantern progress |
-| Mirror Dust Corridor | Illusions, false/true layers, True Sight mainline enhancement |
-| Muted Marsh | Oppressive environment, silence theme, pressure-resistant equipment |
+| Mirror Lake | Surface exploration, Tide path |
+| Tide Lighthouse Reef | Deep-water ruins, Tide Lantern progression |
+| Mirror Dust Cloister | Illusions, false/true layers, True Sight progression |
+| Silent Swamp | Suppressive hazards, silence, defensive equipment |
 | Crystal Song Grove | Musical crystals, crystal song materials |
-| Slumbering Flower Field | Supply, merchants, low-combat recovery |
-| Broken Bell Wasteland | Timer mechanisms, heavy enemies, mechanical materials |
-| Echo Cliffs | Endgame, Grand Archive, second dimension prelude |
+| Dreaming Meadow | Supplies, trade, recovery |
+| Broken Bell Wastes | Timed mechanisms, heavy enemies, mechanical materials |
+| Echo Cliffs | Endgame, Echo Grand Archive, Deep Echoes access |
 
-### Second Dimension Biomes
+### Deep Echoes
 
-The Second Dimension has three connected strata, each split into two biomes. Use the Abyssal Beacon in the Riftlayer Hall to return to the Echo Realm.
+Deep Echoes has three connected strata, each split into two biomes. Use the Abyss Beacon in the Fracture Hall to return to the Echo Realm.
 
-| Biome | Defining Keywords |
+| Biome | Highlights |
 |---|---|
 | Folded Corridors | Deep entrance, Foldpage Bugs, folded archives and waystations |
 | Shattered Archive | Misfiled catalogs, sequence runes, hidden True Sight records |

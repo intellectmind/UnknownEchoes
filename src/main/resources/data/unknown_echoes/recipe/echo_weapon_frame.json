@@ -16,6 +16,7 @@
     }
   ],
   "result": {
-    "id": "unknown_echoes:echo_weapon_frame"
+    "id": "unknown_echoes:echo_weapon_frame",
+    "count": 2
   }
 }

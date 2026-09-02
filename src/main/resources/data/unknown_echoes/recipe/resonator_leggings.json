@@ -1,0 +1,13 @@
+{
+  "type": "unknown_echoes:component_preserving_shapeless",
+  "category": "equipment",
+  "base": { "item": "unknown_echoes:abyss_walker_leggings" },
+  "ingredients": [
+    { "item": "unknown_echoes:resonance_alloy_ingot" },
+    { "item": "unknown_echoes:resonance_alloy_ingot" },
+    { "item": "unknown_echoes:last_record_fragment" },
+    { "item": "unknown_echoes:last_record_fragment" },
+    { "item": "unknown_echoes:world_echo_residue" }
+  ],
+  "result": { "id": "unknown_echoes:resonator_leggings" }
+}

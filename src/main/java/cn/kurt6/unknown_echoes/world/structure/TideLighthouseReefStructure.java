@@ -6,6 +6,7 @@ import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlockEntity;
 import cn.kurt6.unknown_echoes.block.tide.TideBuoyBlock;
 import cn.kurt6.unknown_echoes.block.tide.TideRuneSeatBlock;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModLootTables;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
 import com.mojang.serialization.MapCodec;
@@ -18,6 +19,7 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -27,18 +29,13 @@ import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-/**
- * 潮汐灯塔礁:镜湖深水区的环形礁盘 + 半倒塌灯塔废墟(V0.6C 镜湖区域变体,设计文档 4.3.2)。
- * 承载潮汐执灯者 Mini Boss:三枚水中浮标(破灯)+ 三座水下符文座(致盲)分布在外环与
- * 不同高度,中央灯塔残柱作为掩体。普通探索给水下符文片/镜湖碎片/残页线索(宝箱)。
- * 挑战门槛:MiniBossSpawnerBlock 服务端校验 TIDE_ECHO 或深渊观测者击败记录(红线 #1)。
- */
+/** 潮汐灯塔礁：镜湖深水区的环形礁盘与半倒塌灯塔废墟。 */
 public class TideLighthouseReefStructure extends SinglePieceStructure {
     public static final MapCodec<TideLighthouseReefStructure> CODEC =
             simpleCodec(TideLighthouseReefStructure::new);
 
-    private static final int SIZE = 25;
-    private static final int HEIGHT = 12;
+    private static final int SIZE = 41;
+    private static final int HEIGHT = 22;
 
     public TideLighthouseReefStructure(StructureSettings settings) {
         super(Piece::new, SIZE, SIZE, settings);
@@ -46,17 +43,21 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
 
     @Override
     public java.util.Optional<GenerationStub> findGenerationPoint(GenerationContext context) {
-        // 深水礁盘:只生成在镜湖深水(灯塔高 9 + 浮标层,要求中心水深 ≥ 11)。
-        // 不调用 super——SinglePieceStructure 默认拒绝水下放置(gotchas #16)。
-        //
-        // CRITICAL: 不在此处做连续水方块校验——/locate 会对每个候选区块调用此方法,
-        // 累积的噪声柱采样会拖服务端主线程超看门狗限制。这里用五点高度图预判,严格校验推迟到 postProcess。
-        if (!LakeBedPlacement.hasSubmergedFootprint(context, SIZE, 11, 6)) {
+        Piece piece = new Piece(context.random(),
+                context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ());
+        BoundingBox footprint = piece.getBoundingBox();
+        if (!LakeBedPlacement.hasSubmergedFootprint(context,
+                footprint.minX(), footprint.minZ(), SIZE, 11, 6)) {
             return java.util.Optional.empty();
         }
+        int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(
+                context, footprint.minX(), footprint.minZ(), SIZE, SIZE);
+        if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
+            return java.util.Optional.empty();
+        }
+        piece.anchorToLakeFloor(floorY);
         return onTopOfChunkCenter(context, Heightmap.Types.OCEAN_FLOOR_WG,
-                builder -> builder.addPiece(new Piece(context.random(),
-                        context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ())));
+                builder -> builder.addPiece(piece));
     }
 
     @Override
@@ -83,6 +84,14 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
             this.rejected = tag.getBoolean("Rejected");
         }
 
+        public void anchorToLakeFloor(int floorY) {
+            if (this.oceanFloorY >= 0) {
+                return;
+            }
+            this.oceanFloorY = floorY;
+            this.boundingBox.move(0, floorY - this.boundingBox.minY() - 1, 0);
+        }
+
         @Override
         protected void addAdditionalSaveData(StructurePieceSerializationContext context, CompoundTag tag) {
             super.addAdditionalSaveData(context, tag);
@@ -90,7 +99,6 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
             tag.putBoolean("Rejected", this.rejected);
         }
 
-        /** 对齐湖底并校验水深,首次成功后锁定。 */
         private boolean adjustToLakeFloor(WorldGenLevel level, BoundingBox chunkBox, ChunkGenerator generator) {
             if (this.rejected) {
                 return false;
@@ -98,25 +106,15 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
             if (this.oceanFloorY >= 0) {
                 return true;
             }
-            int total = 0;
-            int count = 0;
-            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-            for (int z = this.boundingBox.minZ(); z <= this.boundingBox.maxZ(); z++) {
-                for (int x = this.boundingBox.minX(); x <= this.boundingBox.maxX(); x++) {
-                    cursor.set(x, 64, z);
-                    if (chunkBox.isInside(cursor)) {
-                        total += level.getHeight(Heightmap.Types.OCEAN_FLOOR_WG, x, z);
-                        count++;
-                    }
-                }
-            }
-            if (count == 0) {
+            int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(level, generator,
+                    this.boundingBox.minX(), this.boundingBox.minZ(), SIZE, SIZE);
+            if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
+                this.rejected = true;
                 return false;
             }
-            this.oceanFloorY = total / count;
+            this.oceanFloorY = floorY;
 
-            // 水深校验:25×25 四角可能跨到未就绪区块,用噪声柱(gotcha #30);中心 ≥11,四角 ≥6
-            if (!LakeBedPieceHelper.checkWaterDepthByNoise(level, generator,
+            if (!LakeBedPieceHelper.checkWaterDepthByBaseHeight(level, generator,
                     this.boundingBox.minX(), this.boundingBox.minZ(), SIZE, SIZE, 11, 6)) {
                 this.rejected = true;
                 return false;
@@ -133,22 +131,27 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
             if (!this.adjustToLakeFloor(level, box, generator)) {
                 return;
             }
+            box = LakeBedPieceHelper.intersection(box, this.boundingBox);
+            if (box == null) {
+                return;
+            }
 
-            BlockState bricks = ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState();
-            BlockState stone = ModBlocks.MIRROR_STONE.get().defaultBlockState();
+            BlockState bricks = ModBlocks.REEF_LIMESTONE_BRICKS.get().defaultBlockState();
+            BlockState stone = ModBlocks.REEF_LIMESTONE.get().defaultBlockState();
             BlockState runeBricks = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
-            BlockState deepslate = Blocks.COBBLED_DEEPSLATE.defaultBlockState();
+            BlockState deepslate = ModBlocks.TIDEWORN_REEFSTONE.get().defaultBlockState();
             BlockState buoy = ModBlocks.TIDE_BUOY.get().defaultBlockState()
                     .setValue(TideBuoyBlock.LIT, Boolean.TRUE)
                     .setValue(TideBuoyBlock.WATERLOGGED, Boolean.TRUE);
             BlockState seat = ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState()
                     .setValue(TideRuneSeatBlock.LIT, Boolean.TRUE)
                     .setValue(TideRuneSeatBlock.WATERLOGGED, Boolean.TRUE);
-            BlockState chain = Blocks.CHAIN.defaultBlockState();
-            BlockState lantern = Blocks.SEA_LANTERN.defaultBlockState();
-            int c = SIZE / 2; // 12
 
-            // 环形礁盘:半径 8-11 的抬升环,深板岩混镜石,留出蚀空缺口
+            BlockState chain = Blocks.CHAIN.defaultBlockState()
+                    .setValue(BlockStateProperties.WATERLOGGED, Boolean.TRUE);
+            BlockState lantern = Blocks.SEA_LANTERN.defaultBlockState();
+            int c = SIZE / 2;
+
             for (int x = 0; x < SIZE; x++) {
                 for (int z = 0; z < SIZE; z++) {
                     int dx = x - c;
@@ -162,24 +165,24 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
                             this.placeBlock(level, deepslate, x, 2, z, box);
                         }
                     }
-                    // 礁盘内圈地坪:镜石散铺(战场地面,不满铺保留湖底)
+
                     if (distSq < 64 && random.nextFloat() < 0.4F) {
                         this.placeBlock(level, random.nextFloat() < 0.4F ? bricks : stone, x, 1, z, box);
                     }
                 }
             }
 
-            // 中央灯塔基座:5×5 环墙,半倒塌(越高越残缺),内部留空
-            for (int y = 1; y <= 8; y++) {
-                float keep = 1.0F - (y - 2) * 0.13F;
-                for (int dx = -2; dx <= 2; dx++) {
-                    for (int dz = -2; dz <= 2; dz++) {
-                        boolean wall = Math.abs(dx) == 2 || Math.abs(dz) == 2;
+            for (int y = 1; y <= 16; y++) {
+                float keep = Math.max(0.48F, 1.0F - (y - 2) * 0.045F);
+                int radius = y <= 10 ? 4 : 3;
+                for (int dx = -radius; dx <= radius; dx++) {
+                    for (int dz = -radius; dz <= radius; dz++) {
+                        boolean wall = Math.abs(dx) == radius || Math.abs(dz) == radius;
                         if (!wall) {
                             continue;
                         }
-                        // 东面 y1-2 开门洞
-                        if (dx == 2 && Math.abs(dz) <= 0 && y <= 2) {
+
+                        if (dx == radius && Math.abs(dz) <= 1 && y <= 3) {
                             continue;
                         }
                         if (random.nextFloat() < keep) {
@@ -189,11 +192,16 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
                     }
                 }
             }
-            // 破碎灯室:残存的灯——湖面远望可见的微光源
-            this.placeBlock(level, lantern, c, 8, c, box);
-            this.placeBlock(level, bricks, c, 7, c, box);
 
-            // 三枚水中浮标:外环三角分布,锚链垂到礁盘
+            this.placeBlock(level, lantern, c, 17, c, box);
+            this.placeBlock(level, bricks, c, 16, c, box);
+
+            BlockState reefStairs = ModBlocks.REEF_LIMESTONE_BRICK_STAIRS.get().defaultBlockState();
+            BlockState reefSlab = ModBlocks.REEF_LIMESTONE_BRICK_SLAB.get().defaultBlockState();
+            buildStairCornice(level, box, c, 10, c, Footprint.square(4), reefStairs, reefSlab, true);
+            buildStairCornice(level, box, c, 15, c, Footprint.square(3), reefStairs, reefSlab, true);
+            buildParapet(level, box, c, 16, c, Footprint.square(4), 3, ModBlocks.REEF_LIMESTONE_BRICK_WALL.get().defaultBlockState(), runeBricks);
+
             int[][] buoyOffsets = {{8, 0}, {-4, 7}, {-4, -7}};
             for (int[] offset : buoyOffsets) {
                 int bx = c + offset[0];
@@ -205,26 +213,54 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
                 this.placeBlock(level, buoy, bx, 5, bz, box);
             }
 
-            // 三座水下符文座:不同高度(礁盘 / 塔侧台 / 礁岩柱),分散站位
-            this.placeBlock(level, seat, c - 8, 2, c, box);          // 礁盘西缘
+            this.placeBlock(level, seat, c - 8, 2, c, box);
             this.placeBlock(level, bricks, c + 3, 1, c + 3, box);
             this.placeBlock(level, bricks, c + 3, 2, c + 3, box);
             this.placeBlock(level, bricks, c + 3, 3, c + 3, box);
-            this.placeBlock(level, seat, c + 3, 4, c + 3, box);      // 塔侧高台
+            this.placeBlock(level, seat, c + 3, 4, c + 3, box);
             this.placeBlock(level, deepslate, c + 5, 1, c - 6, box);
             this.placeBlock(level, deepslate, c + 5, 2, c - 6, box);
-            this.placeBlock(level, seat, c + 5, 3, c - 6, box);      // 礁岩柱
+            this.placeBlock(level, seat, c + 5, 3, c - 6, box);
 
-            // 探索奖励:灯塔基座内的回访宝箱(水下符文片/镜湖碎片/残页线索)
             buildAccessibleChest(level, random, box, c - 1, 1, c - 1,
                     ModLootTables.TIDE_LIGHTHOUSE_REEF_CHEST);
 
-            // 守护者场地计时器:埋在塔基,服务端校验 TIDE_ECHO 或深渊观测者记录后才生成
+            architecturalRing(level, box, c, 1, c, 18, deepslate);
+            architecturalRing(level, box, c, 2, c, 15, bricks);
+            for (int i = 0; i < 12; i++) {
+                double angle = i * Math.PI / 6.0D;
+                int x = c + (int) Math.round(Math.cos(angle) * 17);
+                int z = c + (int) Math.round(Math.sin(angle) * 17);
+                int height = 5 + i % 4;
+                architecturalPillar(level, box, x, 1, z, height, bricks);
+                this.placeBlock(level, ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState(),
+                        x, height + 1, z, box);
+            }
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                buildRuneCauseway(level, box, c, 1, c, direction,
+                        10, 19, 2, stone, deepslate, runeBricks);
+                int x = c + direction.getStepX() * 18;
+                int z = c + direction.getStepZ() * 18;
+                architecturalPillar(level, box, x, 1, z, 11, bricks);
+                this.placeBlock(level, lantern, x, 12, z, box);
+            }
+            buildAccessibleChest(level, random, box, c + 13, 2, c + 4,
+                    ModLootTables.TIDE_LIGHTHOUSE_REEF_CHEST);
+
+            placeSubmergedStructureSpawner(level, random, box, c - 12, 2, c - 9,
+                    ModEntities.WATER_SHADOW.get(), deepslate, bricks);
+            buildBossArenaMandala(level, box, c, 1, c, 14,
+                    runeBricks, bricks, ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState());
+            buildArenaLightRing(level, box, c, 2, c, 12, 12, 4, bricks,
+                    ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState());
+
             this.placeBlock(level, ModBlocks.MINIBOSS_SPAWNER.get().defaultBlockState(), c, 0, c, box);
             BlockPos spawnerPos = new BlockPos(this.getWorldX(c, c), this.getWorldY(0), this.getWorldZ(c, c));
             if (box.isInside(spawnerPos)
                     && level.getBlockEntity(spawnerPos) instanceof MiniBossSpawnerBlockEntity spawner) {
-                spawner.configure(UnknownEchoes.id("tide_lantern_keeper"), 10);
+
+                // 刷怪器埋在局部 y=0,主体从抬高后的灯塔冠部上方出生。
+                spawner.configure(UnknownEchoes.id("tide_lantern_keeper"), 19);
                 spawner.setChallengeGate(EchoAbilityType.TIDE_ECHO,
                         UnknownEchoes.id("abyss_watcher"),
                         "message.unknown_echoes.tide_lighthouse.locked");

@@ -1,8 +1,6 @@
 {
   "parent": "unknown_echoes:block/tide_buoy",
   "textures": {
-    "1": "unknown_echoes:block/tide_buoy_off",
-    "2": "unknown_echoes:block/tide_buoy_off",
-    "particle": "unknown_echoes:block/tide_buoy_off"
+    "lamp": "unknown_echoes:block/tide_buoy_lamp_off"
   }
 }

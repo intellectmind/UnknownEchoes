@@ -1,6 +1,22 @@
 {
   "parent": "unknown_echoes:block/world_resonance_altar",
   "display": {
-    "gui": { "rotation": [30, 225, 0], "translation": [0, 0, 0], "scale": [0.625, 0.625, 0.625] }
+    "gui": {
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.44,
+        0.44,
+        0.44
+      ]
+    }
   }
 }

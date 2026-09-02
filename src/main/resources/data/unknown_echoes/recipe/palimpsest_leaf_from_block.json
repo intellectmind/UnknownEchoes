@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:palimpsest_block" }
+  ],
+  "result": { "id": "unknown_echoes:palimpsest_leaf", "count": 9 }
+}

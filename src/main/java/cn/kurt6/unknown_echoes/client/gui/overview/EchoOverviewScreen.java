@@ -11,13 +11,16 @@ import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.artifact.ArtifactType;
 import cn.kurt6.unknown_echoes.journal.AncientPageCatalog;
 import cn.kurt6.unknown_echoes.journal.DeepEchoesProgressCatalog;
+import cn.kurt6.unknown_echoes.journal.ExplorationClue;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.world.DeepEchoesBiomeCatalog;
 import cn.kurt6.unknown_echoes.world.EchoRealmBiomeCatalog;
+import cn.kurt6.unknown_echoes.world.wonder.WorldWonderType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -27,21 +30,14 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
 
-/**
- * 回响总览(EchoOverviewScreen,5.8 系统模块 UI 统一入口壳):
- * 所有系统模块共用这一个界面——K/J/物品右键只是不同的初始页参数。
- * 布局(5.8.0):左侧"共鸣脊线"纵向导航 / 中心内容区(总览页为"残响星盘")/
- * 右侧"回声旁注"(选中页的进度与下一条线索)/ 底部"同步状态条"。
- * 已落地页:总览 / 能力 / 探索日志 / 残页与研究 / 神器 / 迷途交易 / 回声索引 / 选项。
- * 边界:本界面不承担任何解锁/授予逻辑;数据全部来自服务端同步缓存(红线 #6/#9);
- * 客户端开关只改 ClientConfig 表现项。ESC 逐层返回:弹层 → 页面 → 总览 → 关闭。
- */
 public class EchoOverviewScreen extends Screen {
 
     private static final ResourceLocation ICONS =
@@ -61,7 +57,6 @@ public class EchoOverviewScreen extends Screen {
     private static final int MODULE_ICON_ATLAS_WIDTH = 320;
     private static final int ABILITY_ICON_ATLAS_WIDTH = 160;
 
-    // ---- 5.8 色板:镜湖暗蓝 + 回响青线 + 氧化金记忆墨迹 ----
     private static final int COL_BACKDROP_TOP = 0xE507111D;
     private static final int COL_BACKDROP_BOTTOM = 0xF303050A;
     private static final int COL_VOID = 0xFA020306;
@@ -85,48 +80,32 @@ public class EchoOverviewScreen extends Screen {
     private static final int COL_DIM = 0xFF7C8D96;
     private static final int COL_SILHOUETTE = 0xFF3D4852;
 
-    /** 模块页:顺序即共鸣脊线导航顺序(5.8.0)。 */
+    /** 模块页:顺序即共鸣脊线导航顺序。 */
     public enum ModulePage {
-        OVERVIEW("overview", true),
-        ABILITY("ability", true),
-        JOURNAL("journal", true),
-        RESEARCH("research", true),
-        ARTIFACT("artifact", true),
-        TRADE("trade", true),
-        INDEX("index", true),
-        OPTIONS("options", true);
+        OVERVIEW("overview"),
+        ABILITY("ability"),
+        JOURNAL("journal"),
+        RESEARCH("research"),
+        ARTIFACT("artifact"),
+        TRADE("trade"),
+        INDEX("index"),
+        OPTIONS("options");
 
         final String id;
-        /** false = 暂未苏醒的模块入口。 */
-        final boolean awake;
         private final Component title;
-        private final Component subtitle;
-        private final Component note;
 
-        ModulePage(String id, boolean awake) {
+        ModulePage(String id) {
             this.id = id;
-            this.awake = awake;
             this.title = Component.translatable("overview.unknown_echoes.page." + id);
-            this.subtitle = Component.translatable("overview.unknown_echoes.subtitle." + id);
-            this.note = Component.translatable("overview.unknown_echoes.note." + id);
         }
 
         Component title() {
             return this.title;
         }
-
-        Component subtitle() {
-            return this.subtitle;
-        }
-
-        Component note() {
-            return this.note;
-        }
     }
 
-    /** 探索日志章节(原 JournalBookScreen 章节迁入,5.8"回响档案")。 */
     private enum JournalChapter {
-        SUMMARY, BIOMES, STRUCTURES, MOBS, BOSSES, ABILITIES, PAGES, REVISIT
+        SUMMARY, CLUES, BIOMES, STRUCTURES, MOBS, BOSSES, ABILITIES, PAGES, REVISIT
     }
 
     private static final ModulePage[] MODULE_PAGES = ModulePage.values();
@@ -147,12 +126,10 @@ public class EchoOverviewScreen extends Screen {
     private static final Component[] ARTIFACT_HINTS = artifactComponents("overview.unknown_echoes.artifact.hint.");
     private static final Component[] CREDENTIAL_TOKEN_NAMES = abilityComponents(
             "overview.unknown_echoes.credentials.token.");
-    private static final Component NOTE_HEADER =
-            Component.translatable("overview.unknown_echoes.note.header");
-    private static final Component NOTE_NEXT =
-            Component.translatable("overview.unknown_echoes.note.next");
-    private static final Component NAV_TITLE_TOP = Component.literal("UNKNOWN");
-    private static final Component NAV_TITLE_BOTTOM = Component.literal("ECHOES");
+    private static final Component NAV_TITLE_TOP =
+            Component.translatable("overview.unknown_echoes.brand.top");
+    private static final Component NAV_TITLE_BOTTOM =
+            Component.translatable("overview.unknown_echoes.brand.bottom");
     private static final Component POPUP_CLOSE =
             Component.translatable("overview.unknown_echoes.popup.close");
     private static final Component ENERGY_POOL =
@@ -167,18 +144,6 @@ public class EchoOverviewScreen extends Screen {
             Component.translatable("overview.unknown_echoes.artifact.ready");
     private static final Component ARTIFACT_UNCLAIMED =
             Component.translatable("overview.unknown_echoes.artifact.unclaimed");
-    private static final Component CLUE_START =
-            Component.translatable("overview.unknown_echoes.clue.start");
-    private static final Component CLUE_LIGHTHOUSE =
-            Component.translatable("overview.unknown_echoes.clue.lighthouse");
-    private static final Component CLUE_CLOISTER =
-            Component.translatable("overview.unknown_echoes.clue.cloister");
-    private static final Component CLUE_TIDE =
-            Component.translatable("overview.unknown_echoes.clue.tide");
-    private static final Component CLUE_SIGHT =
-            Component.translatable("overview.unknown_echoes.clue.sight");
-    private static final Component CLUE_RESEARCH =
-            Component.translatable("overview.unknown_echoes.clue.research");
     private static final Component SCREEN_TITLE =
             Component.translatable("overview.unknown_echoes.title");
 
@@ -193,7 +158,13 @@ public class EchoOverviewScreen extends Screen {
             "spatial_rift", "void_vein_chamber", "folded_waystation",
             "gravity_shard_spire", "hushed_refuge", "misfiled_catalog_well",
             "folded_scriptorium", "inverted_archive_tower", "suspended_survey_station",
-            "fractured_anchor_station", "severed_archive_vault", "world_resonance_hall"
+            "fractured_anchor_station", "severed_archive_vault", "resonance_foundry",
+            "gravity_crown_observatory", "voidscar_bastion", "shattered_codex_vault",
+            "weightless_orrery_court", "hushed_cathedral", "riftglass_citadel",
+            "folded_celestial_archive", "inverted_pendulum_palace", "riftworn_memorial_court",
+            "world_resonance_hall", "far_echo_cartography_court", "chorus_confluence_court",
+            "palimpsest_ecology_dome", "far_bell_wayfarer_harbor",
+            "prismatic_canopy_conservatory", "interlayer_expedition_ring"
     };
     private static final List<String> KNOWN_BIOMES = java.util.stream.Stream.concat(
             EchoRealmBiomeCatalog.PATHS.stream(), DeepEchoesBiomeCatalog.PATHS.stream()).toList();
@@ -204,7 +175,6 @@ public class EchoOverviewScreen extends Screen {
             "wind_eroded_sentinel", "echo_remnant", "water_shadow", "mirror_dust_decoy",
             "foldpage_bug", "anchor_shell_beast", "abyss_lurker", "void_wanderer"
     };
-    /** 守护者记录页:主线 Boss 在前,区域守护者(Mini Boss)在后。 */
     private static final String[] MAIN_BOSSES = {
             "forgotten_colossus", "abyss_watcher", "mirror_guardian"
     };
@@ -216,13 +186,19 @@ public class EchoOverviewScreen extends Screen {
             "forgotten_colossus", "abyss_watcher", "mirror_guardian",
             "storm_weaver", "tide_lantern_keeper", "mirror_dust_butler", "silent_priest",
             "crystal_songkeeper", "broken_bell_keeper", "dream_bloom_keeper", "lost_recorder_chief",
-            "void_prophet", "rift_warden", "world_echo"
+            "void_prophet", "rift_warden", "world_echo", "inverted_gatekeeper", "ash_scribe"
     };
 
-    private static final int NAV_WIDTH = 118;
-    private static final int NOTE_WIDTH = 108;
+    private static final int NAV_WIDTH_WIDE = 118;
+    private static final int NAV_WIDTH_MID = 98;
+    private static final int NAV_WIDTH_COMPACT = 48;
     private static final int STATUS_HEIGHT = 16;
     private static final int HEADER_HEIGHT = 24;
+    private static final int JOURNAL_CHAPTER_BUTTON_HEIGHT = 18;
+    private static final int JOURNAL_CHAPTER_GAP = 5;
+    /** 文本行页的行高。渲染、点击命中与滚轮共用，不要在调用点各写一份。 */
+    private static final int LINE_ROW_HEIGHT = 14;
+    private static final int JOURNAL_CHAPTER_WIDE_COLUMNS = 5;
     private static final int BUTTON_ATLAS_WIDTH = 96;
     private static final int BUTTON_ATLAS_HEIGHT = 60;
     private static final int BUTTON_SLICE_WIDTH = 96;
@@ -232,7 +208,6 @@ public class EchoOverviewScreen extends Screen {
     private static final int T7_REQUIRED_MINI_BOSSES = 6;
     private static final int T7_REQUIRED_SCORE = 150;
     private static final int INDEX_EXPANSION_ONE_PAGES = 60;
-    /** 回响聚焦动效时长(tick,5.8 交互主张:短暂扫亮,不做花哨长动画)。 */
     private static final int FOCUS_TICKS = 8;
     private static final String[] MODULE_INDICES = {"01", "02", "03", "04", "05", "06", "07"};
 
@@ -244,30 +219,20 @@ public class EchoOverviewScreen extends Screen {
     private final Component[] overviewStatusCache = new Component[MODULE_PAGES.length];
     private Component statusRegion = Component.empty();
     private Component statusEnergy = Component.empty();
-    private Component statusSync = Component.empty();
-    private Component nextClue = CLUE_START;
     private boolean statusEnergyDormant = true;
-    private boolean statusSynced = false;
 
-    /** 内容区缓存行(滚动列表;每行可带点击动作)。 */
     private final List<Line> lines = new ArrayList<>();
-    /** 自绘按钮/页签/开关交互区。 */
     private final List<ActionButton> actionButtons = new ArrayList<>();
     private final Map<ArtifactType, ItemStack> artifactIcons = new EnumMap<>(ArtifactType.class);
-    /** 阅读弹层:null = 未打开。 */
     private ReadingPopup popup = null;
     /** 神器/交易页像素滚动(rebuild 时行与按钮一起偏移)。 */
     private int pageScroll = 0;
     /** 弹层文本分行缓存(换弹层才重排,不每帧 split)。 */
     private ReadingPopup popupLinesFor = null;
     private List<FormattedCharSequence> popupLines = List.of();
-    /** 旁注文本分行缓存(tick 刷新)。 */
-    private List<FormattedCharSequence> sideNoteLines = List.of();
-    private List<FormattedCharSequence> sideClueLines = List.of();
-    /** 凭据信物持有状态缓存(tick 刷新,替代每帧全背包扫描)。 */
+    /** tick 刷新,替代每帧全背包扫描。 */
     private final boolean[] credentialHolding = new boolean[CREDENTIAL_ABILITIES.length];
 
-    /** 残页右键直接打开阅读弹层(AncientPageItem 客户端分支调用)。 */
     public static void openAncientPage(int pageId) {
         EchoOverviewScreen screen = new EchoOverviewScreen(ModulePage.RESEARCH);
         screen.popup = new ReadingPopup(
@@ -289,7 +254,6 @@ public class EchoOverviewScreen extends Screen {
         Minecraft.getInstance().setScreen(screen);
     }
 
-    /** 迷途旅者交易入口(TradeListPayload):打开总览"迷途交易"页(已打开则刷新)。 */
     public static void openTrades() {
         if (Minecraft.getInstance().screen instanceof EchoOverviewScreen open
                 && open.page == ModulePage.TRADE) {
@@ -303,8 +267,6 @@ public class EchoOverviewScreen extends Screen {
         super(SCREEN_TITLE);
         this.page = initialPage;
     }
-
-    // ---- 布局 ----
 
     private int panelLeft() {
         return 6;
@@ -322,12 +284,27 @@ public class EchoOverviewScreen extends Screen {
         return this.height - 6;
     }
 
+    private boolean compactLayout() {
+        return this.width < 520;
+    }
+
+    private boolean wideLayout() {
+        return this.width >= 620;
+    }
+
+    private int navWidth() {
+        if (compactLayout()) {
+            return NAV_WIDTH_COMPACT;
+        }
+        return wideLayout() ? NAV_WIDTH_WIDE : NAV_WIDTH_MID;
+    }
+
     private int contentLeft() {
-        return panelLeft() + NAV_WIDTH + 6;
+        return panelLeft() + navWidth() + 6;
     }
 
     private int contentRight() {
-        return this.page == ModulePage.OVERVIEW ? panelRight() - 4 : panelRight() - NOTE_WIDTH - 6;
+        return panelRight() - 4;
     }
 
     private int contentWidth() {
@@ -344,6 +321,32 @@ public class EchoOverviewScreen extends Screen {
 
     private int contentHeight() {
         return contentBottom() - contentTop();
+    }
+
+    private int journalChapterColumns() {
+        return contentWidth() >= 360 ? JOURNAL_CHAPTER_WIDE_COLUMNS : 2;
+    }
+
+    private int journalContentTop() {
+        int columns = journalChapterColumns();
+        int rows = (JOURNAL_CHAPTERS.length + columns - 1) / columns;
+        return contentTop() + rows * JOURNAL_CHAPTER_BUTTON_HEIGHT
+                + (rows - 1) * JOURNAL_CHAPTER_GAP + 8;
+    }
+
+    /** 文本行页的首行 Y。渲染、点击与滚轮必须用同一坐标函数，否则命中行会错位。 */
+    private int lineListTop() {
+        return this.page == ModulePage.JOURNAL ? journalContentTop() : contentTop() + 8;
+    }
+
+    /** 可见行数,下限必须是 1:小 GUI 下可用高度会算成负值,渲染循环恒不成立,日志页整块空白。 */
+    private int lineListVisibleRows() {
+        return Math.max(1, (contentBottom() - 26 - lineListTop()) / LINE_ROW_HEIGHT);
+    }
+
+    /** 行滚动上限。滚轮与渲染都按它钳制，避免滚过尾行后出现空白页。 */
+    private int lineScrollMax() {
+        return Math.max(0, this.lines.size() - lineListVisibleRows());
     }
 
     @Override
@@ -366,7 +369,6 @@ public class EchoOverviewScreen extends Screen {
         rebuildWithPageScroll(0);
     }
 
-    /** 滚动/同步刷新用:保留滚动量重建。 */
     private void rebuildKeepingScroll() {
         rebuildWithPageScroll(Math.max(0, Math.min(this.pageScroll, pageScrollMax())));
     }
@@ -390,6 +392,14 @@ public class EchoOverviewScreen extends Screen {
         }
     }
 
+    /** 日志同步到达后刷新当前章节，让后台定位结果立即出现在面板。 */
+    public static void onJournalSync() {
+        if (Minecraft.getInstance().screen instanceof EchoOverviewScreen open
+                && open.page == ModulePage.JOURNAL) {
+            open.rebuildKeepingScroll();
+        }
+    }
+
     @Override
     public void tick() {
         if (this.focusTicks < FOCUS_TICKS) {
@@ -405,35 +415,29 @@ public class EchoOverviewScreen extends Screen {
             }
         }
         Minecraft minecraft = Minecraft.getInstance();
-        String dimension = minecraft.level == null
-                ? "unknown" : minecraft.level.dimension().location().getPath();
+        Component dimensionName;
+        if (minecraft.level == null) {
+            dimensionName = Component.translatable("overview.unknown_echoes.status.region_unknown");
+        } else {
+            ResourceLocation dimension = minecraft.level.dimension().location();
+            dimensionName = Component.translatableWithFallback(
+                    "dimension." + dimension.getNamespace() + "." + dimension.getPath(),
+                    dimension.getPath());
+        }
         this.statusRegion = Component.translatable("overview.unknown_echoes.status.region",
-                Component.translatableWithFallback("dimension.unknown_echoes." + dimension, dimension));
+                dimensionName);
         int energy = ClientArtifactCache.getEnergy();
         this.statusEnergyDormant = energy < 0;
         this.statusEnergy = this.statusEnergyDormant
                 ? Component.translatable("overview.unknown_echoes.status.energy_dormant")
                 : Component.translatable("overview.unknown_echoes.status.energy",
                         energy, ClientArtifactCache.getMaxEnergy());
-        this.statusSynced = !ClientJournalCache.structures().isEmpty()
-                || !ClientJournalCache.pages().isEmpty()
-                || ClientAbilityCache.hasAbility(EchoAbilityType.WIND_ECHO)
-                || ClientAbilityCache.hasAbility(EchoAbilityType.TIDE_ECHO);
-        this.statusSync = Component.translatable(this.statusSynced
-                ? "overview.unknown_echoes.status.synced"
-                : "overview.unknown_echoes.status.unsynced");
-        this.nextClue = nextClue();
-        this.sideNoteLines = this.font.split(this.page.note(), NOTE_WIDTH - 10);
-        this.sideClueLines = this.nextClue == null
-                ? List.of() : this.font.split(this.nextClue, NOTE_WIDTH - 10);
         if (this.page == ModulePage.ARTIFACT) {
             for (int i = 0; i < CREDENTIAL_ABILITIES.length; i++) {
                 this.credentialHolding[i] = clientHasToken(CREDENTIAL_ABILITIES[i]);
             }
         }
     }
-
-    // ---- 页面构建 ----
 
     private void buildPage() {
         switch (this.page) {
@@ -459,17 +463,21 @@ public class EchoOverviewScreen extends Screen {
         addIndexLine("overview.unknown_echoes.index.biomes",
                 EchoRealmBiomeCatalog.countKnown(ClientJournalCache.biomes()),
                 EchoRealmBiomeCatalog.REQUIRED_COUNT, T7_REQUIRED_BIOMES);
+        int firstDimensionPages = AncientPageCatalog.countFirstDimensionPages(ClientJournalCache.pages());
         addIndexLine("overview.unknown_echoes.index.pages",
-                ClientJournalCache.pages().size(), Math.max(ClientJournalCache.knownPages(), 80),
+                firstDimensionPages, AncientPageCatalog.FIRST_DIMENSION_TOTAL,
                 T7_REQUIRED_PAGES);
         addIndexLine("overview.unknown_echoes.index.mini_bosses", miniBossCount(), MINI_BOSSES.length,
                 T7_REQUIRED_MINI_BOSSES);
         addIndexLine("overview.unknown_echoes.index.score", score, T7_REQUIRED_SCORE, T7_REQUIRED_SCORE);
         addWrapped(Component.empty(), null);
-        addWrapped(Component.translatable("overview.unknown_echoes.index.target",
-                Component.translatable("overview.unknown_echoes.index.target." + visibleBackfillTarget()))
-                .withStyle(ChatFormatting.AQUA), null);
-        addWrapped(Component.empty(), null);
+        String backfillTarget = visibleBackfillTarget();
+        if (!backfillTarget.equals("ready")) {
+            addWrapped(Component.translatable("overview.unknown_echoes.index.target",
+                    Component.translatable("overview.unknown_echoes.index.target." + backfillTarget))
+                    .withStyle(ChatFormatting.AQUA), null);
+            addWrapped(Component.empty(), null);
+        }
         addWrapped(Component.translatable("overview.unknown_echoes.index.deep_header")
                 .withStyle(ChatFormatting.GOLD), null);
         addIndexLine("overview.unknown_echoes.index.deep_abilities", deepAbilityCount(),
@@ -506,7 +514,7 @@ public class EchoOverviewScreen extends Screen {
                         .withStyle(done ? ChatFormatting.GREEN : ChatFormatting.GRAY)), null);
     }
 
-    /** 神器页(V0.6D,5.8):记录台=领取/复领;升级台=升级/调谐;台外只是誊录,按钮不可用。 */
+    /** 神器页:记录台=领取/复领;升级台=升级/调谐;台外只是誊录,按钮不可用。 */
     private void buildArtifactPage() {
         cn.kurt6.unknown_echoes.artifact.ArtifactType[] types = ARTIFACT_TYPES;
         for (int i = 0; i < types.length; i++) {
@@ -527,32 +535,39 @@ public class EchoOverviewScreen extends Screen {
                 var entry = cn.kurt6.unknown_echoes.client.ClientArtifactCache.get(type.getId());
                 addActionButton(new ActionButton(contentRight() - 96, rowY + 6, 88, 18,
                         Component.translatable("overview.unknown_echoes.artifact.upgrade"),
-                        // 供给实时读缓存:升级/调谐结果同步到达后按钮状态立即正确
+
                         () -> ClientArtifactCache.isClaimed(type.getId())
                                 && artifactLevel(type) < cn.kurt6.unknown_echoes.artifact.ArtifactType.MAX_LEVEL,
                         () -> sendArtifactAction(
                                 cn.kurt6.unknown_echoes.network.ArtifactActionPayload.ACTION_UPGRADE,
                                 type, ""),
                         false));
-                // 调谐词条(2 级解锁;研究 4 追加隐藏词条;选择只发请求,服务端校验)
+
                 java.util.List<String> words = new ArrayList<>(type.getTuningWords());
                 if (ClientAbilityCache.getResearchLevel(type.getLinkedAbility())
                         >= cn.kurt6.unknown_echoes.artifact.ArtifactType.HIDDEN_WORD_RESEARCH_LEVEL) {
                     words.add(type.getHiddenWord());
                 }
                 String current = entry == null ? "" : entry.tuning();
-                int wx = contentLeft() + 6;
+                int wordGap = 6;
+                int wordCount = Math.max(1, words.size());
+                int wordWidth = Mth.clamp(
+                        (contentWidth() - 12 - wordGap * (wordCount - 1)) / wordCount,
+                        52, 112);
+                int wordGroupWidth = wordCount * wordWidth + (wordCount - 1) * wordGap;
+                int wx = contentLeft() + (contentWidth() - wordGroupWidth) / 2;
                 for (String word : words) {
                     Component label = Component.translatable(
                             "artifact.unknown_echoes." + type.getId() + ".tuning." + word);
-                    int w = Math.max(64, this.font.width(label) + 18);
-                    addActionButton(new ActionButton(wx, rowY + 50, w, 18, label,
+                    addActionButton(new ActionButton(wx, rowY + 50, wordWidth, 18, label,
                             () -> ClientArtifactCache.isClaimed(type.getId()) && artifactLevel(type) >= 2,
                             () -> sendArtifactAction(
                                     cn.kurt6.unknown_echoes.network.ArtifactActionPayload.ACTION_TUNE,
                                     type, word),
-                            word.equals(current)));
-                    wx += w + 6;
+                            word.equals(current),
+                            Component.translatable("overview.unknown_echoes.artifact."
+                                    + type.getId() + ".tuning." + word)));
+                    wx += wordWidth + wordGap;
                 }
             }
         }
@@ -566,6 +581,22 @@ public class EchoOverviewScreen extends Screen {
     private static Component artifactEnergyCost(ClientArtifactCache.Entry entry) {
         return Component.translatable("overview.unknown_echoes.artifact.energy_cost",
                 formatEnergyCost(entry.energyCostTwentieths()));
+    }
+
+    private static void addArtifactLevelTip(List<Component> tooltip, ArtifactType type,
+                                            int level, ChatFormatting formatting) {
+        String key = "overview.unknown_echoes.artifact." + type.getId() + ".l" + level;
+        tooltip.add(Component.translatable(key).withStyle(formatting));
+        int detailCount = type == ArtifactType.ECHO_LENS ? 1
+                : type == ArtifactType.TIDE_LANTERN ? switch (level) {
+                    case 1 -> 2;
+                    case 2 -> 3;
+                    default -> 5;
+                } : 0;
+        for (int detail = 1; detail <= detailCount; detail++) {
+            String suffix = detail == 1 ? ".detail" : ".detail" + detail;
+            tooltip.add(Component.translatable(key + suffix).withStyle(formatting));
+        }
     }
 
     private static String formatEnergyCost(int twentieths) {
@@ -582,7 +613,16 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private int artifactRowY(int index) {
-        return contentTop() + 8 + index * 82 - this.pageScroll;
+        return contentTop() + 8 + index * artifactCardStride() - this.pageScroll;
+    }
+
+    private int artifactCardHeight() {
+        return this.stationMode == cn.kurt6.unknown_echoes.network.OpenArtifactStationPayload.MODE_TUNING
+                ? 72 : 44;
+    }
+
+    private int artifactCardStride() {
+        return artifactCardHeight() + 10;
     }
 
     private void sendArtifactAction(int action, cn.kurt6.unknown_echoes.artifact.ArtifactType type,
@@ -603,7 +643,7 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private void buildAbilityPage() {
-        // 滑翔开关(自动触发开关,5.8 能力页;同一开关也出现在"选项"抽屉)
+
         addActionButton(new ActionButton(contentLeft(), contentBottom() - 24, 152, 20,
                 toggleLabel("overview.unknown_echoes.option.glide", ClientConfig.WIND_THIRD_JUMP_GLIDE.get()),
                 () -> ClientAbilityCache.hasAbility(EchoAbilityType.WIND_ECHO)
@@ -621,23 +661,25 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private void buildJournalPage() {
-        // 章节标签:横向一排小按钮(5.8:模块切换横向滑移感)
-        int x = contentLeft();
-        for (JournalChapter c : JOURNAL_CHAPTERS) {
+
+        int columns = journalChapterColumns();
+        int buttonWidth = (contentWidth() - (columns - 1) * JOURNAL_CHAPTER_GAP) / columns;
+        for (int i = 0; i < JOURNAL_CHAPTERS.length; i++) {
+            JournalChapter c = JOURNAL_CHAPTERS[i];
+            int column = i % columns;
+            int row = i / columns;
+            int x = contentLeft() + column * (buttonWidth + JOURNAL_CHAPTER_GAP);
+            int y = contentTop() + row * (JOURNAL_CHAPTER_BUTTON_HEIGHT + JOURNAL_CHAPTER_GAP);
+            int width = column == columns - 1 ? contentRight() - x : buttonWidth;
             Component label = Component.translatable("overview.unknown_echoes.journal." + c.name().toLowerCase());
-            int w = this.font.width(label) + 16;
-            if (x + w > contentRight()) {
-                break;
-            }
             JournalChapter target = c;
-            addActionButton(new ActionButton(x, contentTop(), w, 18, label,
+            addActionButton(new ActionButton(x, y, width, JOURNAL_CHAPTER_BUTTON_HEIGHT, label,
                     () -> this.chapter != target,
                     () -> {
                         this.chapter = target;
                         rebuild();
                     },
                     this.chapter == c));
-            x += w + 4;
         }
         buildJournalLines();
     }
@@ -657,29 +699,47 @@ public class EchoOverviewScreen extends Screen {
                 content.add(count("journal.unknown_echoes.pages",
                         ClientJournalCache.pages().size(), ClientJournalCache.knownPages()));
             }
-            case BIOMES -> {
-                for (String biome : KNOWN_BIOMES) {
-                    content.add(discoveredEntry(ClientJournalCache.biomes().contains(id(biome)),
-                            Component.translatable("biome.unknown_echoes." + biome)));
+            case CLUES -> {
+                List<ExplorationClue> clues = ClientJournalCache.clues().stream()
+                        .sorted(Comparator.comparing(ExplorationClue::visited))
+                        .toList();
+                for (ExplorationClue clue : clues) {
+                    content.add(clueLine(clue));
+                }
+                if (clues.isEmpty()) {
+                    content.add(Component.translatable("journal.unknown_echoes.clue.none")
+                            .withStyle(ChatFormatting.GRAY));
                 }
             }
-            case STRUCTURES -> {
-                for (String structure : KNOWN_STRUCTURES) {
-                    content.add(discoveredEntry(ClientJournalCache.structures().contains(id(structure)),
-                            Component.translatable("structure.unknown_echoes." + structure)));
+            case BIOMES -> {
+                for (String biome : KNOWN_BIOMES) {
+                    addDiscoveredEntry(content, ClientJournalCache.biomes().contains(id(biome)),
+                            Component.translatable("biome.unknown_echoes." + biome));
                 }
+                addNoRecordsIfEmpty(content);
+            }
+            case STRUCTURES -> {
+                for (String structure : knownStructurePaths()) {
+                    boolean discovered = ClientJournalCache.structures().contains(id(structure));
+                    addDiscoveredEntry(content, discovered,
+                            Component.translatable("structure.unknown_echoes." + structure));
+                    addWonderHint(content, structure, discovered);
+                }
+                addNoRecordsIfEmpty(content);
             }
             case MOBS -> {
                 for (String mob : KNOWN_MOBS) {
-                    content.add(discoveredEntry(ClientJournalCache.mobs().contains(id(mob)),
-                            Component.translatable("entity.unknown_echoes." + mob)));
+                    addDiscoveredEntry(content, ClientJournalCache.mobs().contains(id(mob)),
+                            Component.translatable("entity.unknown_echoes." + mob));
                 }
+                addNoRecordsIfEmpty(content);
             }
             case BOSSES -> {
                 for (String boss : JOURNAL_BOSSES) {
-                    content.add(discoveredEntry(ClientJournalCache.bosses().contains(id(boss)),
-                            Component.translatable("entity.unknown_echoes." + boss)));
+                    addDiscoveredEntry(content, ClientJournalCache.bosses().contains(id(boss)),
+                            Component.translatable("entity.unknown_echoes." + boss));
                 }
+                addNoRecordsIfEmpty(content);
             }
             case ABILITIES -> {
                 for (EchoAbilityType type : ABILITY_TYPES) {
@@ -696,8 +756,6 @@ public class EchoOverviewScreen extends Screen {
                                 .append(name.copy().withStyle(ChatFormatting.GRAY)));
                     }
                 }
-                content.add(Component.translatable("journal.unknown_echoes.book.research_note")
-                        .withStyle(ChatFormatting.DARK_GRAY));
             }
             case PAGES -> {
                 addPageCategories();
@@ -710,10 +768,6 @@ public class EchoOverviewScreen extends Screen {
                         "journal.unknown_echoes.revisit.hidden_room");
                 any |= addRevisit(content, EchoAbilityType.WIND_ECHO, "sky_observatory",
                         "journal.unknown_echoes.revisit.observatory");
-                any |= addRevisitMechanism(content, "clue:tide_lighthouse",
-                        "journal.unknown_echoes.revisit.tide_lighthouse");
-                any |= addRevisitMechanism(content, "clue:mirror_hidden_room",
-                        "journal.unknown_echoes.revisit.mirror_cloister");
                 if (!any) {
                     content.add(Component.translatable("journal.unknown_echoes.book.no_revisit")
                             .withStyle(ChatFormatting.GRAY));
@@ -725,8 +779,69 @@ public class EchoOverviewScreen extends Screen {
         }
     }
 
+    private List<String> knownStructurePaths() {
+        LinkedHashSet<String> structures = new LinkedHashSet<>(List.of(KNOWN_STRUCTURES));
+        if (this.minecraft != null && this.minecraft.level != null) {
+            this.minecraft.level.registryAccess().registry(Registries.STRUCTURE)
+                    .ifPresent(registry -> registry.keySet().stream()
+                            .filter(id -> id.getNamespace().equals(UnknownEchoes.MODID))
+                            .map(ResourceLocation::getPath)
+                            .sorted()
+                            .forEach(structures::add));
+        }
+        return List.copyOf(structures);
+    }
+
+    private Component clueLine(ExplorationClue clue) {
+        ResourceLocation structureId = ResourceLocation.tryParse(clue.structureId());
+        Component structureName = structureId == null
+                ? Component.translatable("artifact.unknown_echoes.storm_compass.unknown_ruin")
+                : Component.translatable("structure.unknown_echoes." + structureId.getPath());
+        if (clue.visited()) {
+            return Component.literal("◆ ").withStyle(ChatFormatting.DARK_AQUA)
+                    .append(Component.translatable("journal.unknown_echoes.clue.visited", structureName)
+                            .withStyle(ChatFormatting.GRAY));
+        }
+
+        ResourceLocation clueDimension = ResourceLocation.tryParse(clue.dimension());
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null || minecraft.player == null || clueDimension == null
+                || !minecraft.level.dimension().location().equals(clueDimension)) {
+            Component dimensionName = clueDimension == null
+                    ? Component.translatable("overview.unknown_echoes.status.region_unknown")
+                    : Component.translatableWithFallback(
+                            "dimension." + clueDimension.getNamespace() + "." + clueDimension.getPath(),
+                            clueDimension.getPath());
+            return Component.literal("◇ ").withStyle(ChatFormatting.GOLD)
+                    .append(Component.translatable("journal.unknown_echoes.clue.other_dimension",
+                                    structureName, dimensionName)
+                            .withStyle(ChatFormatting.GRAY));
+        }
+
+        double dx = clue.pos().getX() + 0.5D - minecraft.player.getX();
+        double dz = clue.pos().getZ() + 0.5D - minecraft.player.getZ();
+        double distance = Math.sqrt(dx * dx + dz * dz);
+        String direction = clueDirection(dx, dz);
+        String distanceKey = distance < 200.0D ? "near" : distance < 800.0D ? "mid" : "far";
+        return Component.literal("◇ ").withStyle(ChatFormatting.GOLD)
+                .append(Component.translatable("journal.unknown_echoes.clue.active",
+                                structureName,
+                                Component.translatable("direction.unknown_echoes." + direction),
+                                Component.translatable("message.unknown_echoes.storm_compass.dist." + distanceKey))
+                        .withStyle(ChatFormatting.GRAY));
+    }
+
+    private static String clueDirection(double dx, double dz) {
+        double angle = Math.toDegrees(Math.atan2(dx, -dz));
+        if (angle < 0.0D) {
+            angle += 360.0D;
+        }
+        String[] directions = {"n", "ne", "e", "se", "s", "sw", "w", "nw"};
+        return directions[(int) Math.floor(((angle + 22.5D) % 360.0D) / 45.0D)];
+    }
+
     private void buildResearchPage() {
-        // 上半:研究进度概览;下半:残页集(点击打开阅读弹层)
+
         for (EchoResearchLine line : EchoResearchLine.values()) {
             boolean unlocked = !line.isAbilityGated()
                     ? line.getRequiredBiomes().isEmpty()
@@ -775,26 +890,49 @@ public class EchoOverviewScreen extends Screen {
     private static net.minecraft.network.chat.MutableComponent abilityHint(EchoAbilityType type) {
         if (type == EchoAbilityType.GRAVITY_ECHO) {
             return Component.translatable("screen.unknown_echoes.ability_panel.hint.gravity_echo",
+                    Component.keybind("key.unknown_echoes.gravity_attune"),
                     cooldownSecondsText(ServerConfig.GRAVITY_ACTIVE_COOLDOWN_TICKS, 0));
         }
         if (type == EchoAbilityType.VOID_ECHO) {
             return Component.translatable("screen.unknown_echoes.ability_panel.hint.void_echo",
+                    Component.keybind("key.unknown_echoes.void_step"),
                     cooldownSecondsText(ServerConfig.VOID_STEP_COOLDOWN_TICKS, 0));
         }
         return ABILITY_HINTS[type.ordinal()].copy();
     }
 
-    /** 重力/虚空冷却提示实时读取同步后的服务器配置,与实际结算共用折减公式,不再写死数值。 */
+    /** 重力/虚空冷却提示实时读取同步后的服务器配置,与实际结算共用折减公式,不得写死数值。 */
     private static Object[] researchHintArgs(EchoResearchLine line, int nextLevel) {
         if (line == EchoResearchLine.GRAVITY) {
-            return new Object[]{cooldownSecondsText(
-                    ServerConfig.GRAVITY_ACTIVE_COOLDOWN_TICKS, nextLevel)};
+            return new Object[]{
+                    gravityRadiusText(nextLevel),
+                    gravityDurationSecondsText(nextLevel),
+                    cooldownSecondsText(ServerConfig.GRAVITY_ACTIVE_COOLDOWN_TICKS, nextLevel)
+            };
         }
         if (line == EchoResearchLine.VOID) {
             return new Object[]{cooldownSecondsText(
                     ServerConfig.VOID_STEP_COOLDOWN_TICKS, nextLevel)};
         }
         return new Object[0];
+    }
+
+    private static String gravityRadiusText(int research) {
+        double base = ServerConfig.SPEC.isLoaded()
+                ? ServerConfig.GRAVITY_ACTIVE_RADIUS.get()
+                : ServerConfig.GRAVITY_ACTIVE_RADIUS.getDefault();
+        double radius = DeepEchoAbilityHandler.gravityRadius(base, research);
+        return radius == Math.rint(radius) ? String.valueOf((int) radius)
+                : String.format(java.util.Locale.ROOT, "%.1f", radius);
+    }
+
+    private static String gravityDurationSecondsText(int research) {
+        int base = ServerConfig.SPEC.isLoaded()
+                ? ServerConfig.GRAVITY_ACTIVE_DURATION_TICKS.get()
+                : ServerConfig.GRAVITY_ACTIVE_DURATION_TICKS.getDefault();
+        int ticks = DeepEchoAbilityHandler.gravityDurationTicks(base, research);
+        return ticks % 20 == 0 ? String.valueOf(ticks / 20)
+                : String.format(java.util.Locale.ROOT, "%.1f", ticks / 20.0D);
     }
 
     private static String cooldownSecondsText(net.neoforged.neoforge.common.ModConfigSpec.IntValue baseTicks,
@@ -845,11 +983,9 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private void buildOptionsPage() {
-        // 客户端表现项开关(5.8:配置抽屉只管客户端;服务端 ServerConfig 走文件/整合包)
+
         int y = contentTop() + 4;
         y = addToggle(y, "overview.unknown_echoes.option.glide", ClientConfig.WIND_THIRD_JUMP_GLIDE);
-        y = addToggle(y, "overview.unknown_echoes.option.unlock_message",
-                ClientConfig.SHOW_ABILITY_UNLOCK_MESSAGE);
         y = addToggle(y, "overview.unknown_echoes.option.particles", ClientConfig.ENABLE_ECHO_PARTICLES);
         addToggle(y, "overview.unknown_echoes.option.ambient", ClientConfig.PLAY_ECHO_AMBIENT_SOUNDS);
     }
@@ -875,8 +1011,6 @@ public class EchoOverviewScreen extends Screen {
         this.actionButtons.add(button);
     }
 
-    // ---- 渲染 ----
-
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         float focus = Mth.clamp((this.focusTicks + partialTick) / FOCUS_TICKS, 0.0F, 1.0F);
@@ -884,12 +1018,12 @@ public class EchoOverviewScreen extends Screen {
         renderNav(graphics, mouseX, mouseY, focus);
         renderHeader(graphics, focus);
         renderContent(graphics, mouseX, mouseY, focus);
-        if (this.page != ModulePage.OVERVIEW) {
-            renderSideNote(graphics);
-        }
         renderStatusBar(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderActionButtons(graphics, mouseX, mouseY);
+        if (this.popup == null) {
+            renderResponsiveTooltips(graphics, mouseX, mouseY);
+        }
         if (this.popup != null) {
             renderPopup(graphics, mouseX, mouseY);
         }
@@ -897,16 +1031,16 @@ public class EchoOverviewScreen extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // 背景在 render() 自绘(回响聚焦动效需要控制透明度),这里只压暗世界
+
     }
 
     private void renderBackdrop(GuiGraphics graphics, float focus) {
+        int navWidth = navWidth();
         int alphaTop = (int) ((COL_BACKDROP_TOP >>> 24) * focus) << 24 | (COL_BACKDROP_TOP & 0xFFFFFF);
         int alphaBottom = (int) ((COL_BACKDROP_BOTTOM >>> 24) * focus) << 24 | (COL_BACKDROP_BOTTOM & 0xFFFFFF);
         graphics.fillGradient(0, 0, this.width, this.height, alphaTop, alphaBottom);
         graphics.fillGradient(0, 0, this.width, this.height, 0x11000000, 0x88000000);
 
-        // 主面板:外层暗玻璃 + 内层石质雾面,让背景纹理保留层次但不抢文字。
         drawGlassPanel(graphics, panelLeft(), panelTop(), panelRight(), panelBottom(), COL_ACCENT_DIM, true);
         graphics.setColor(0.70F, 0.88F, 0.92F, 0.56F * focus);
         graphics.blit(OVERVIEW_BACKDROP, panelLeft() + 3, panelTop() + 3, 0, 0,
@@ -920,7 +1054,7 @@ public class EchoOverviewScreen extends Screen {
                 panelLeft() + 92, panelBottom() - 4, 0x2538A59E, 0x00101824);
         graphics.fillGradient(panelRight() - 148, panelTop() + 4,
                 panelRight() - 4, panelBottom() - 4, 0x20E2C276, 0x0003050A);
-        drawSoftGrid(graphics, panelLeft() + NAV_WIDTH + 12, panelTop() + 48,
+        drawSoftGrid(graphics, panelLeft() + navWidth + 12, panelTop() + 48,
                 panelRight() - 16, panelBottom() - STATUS_HEIGHT - 10, 0x1138A59E);
 
         int cx = (panelLeft() + panelRight()) / 2;
@@ -935,10 +1069,9 @@ public class EchoOverviewScreen extends Screen {
             drawFineDivider(graphics, panelLeft() + 12, y, panelRight() - 12,
                     i % 2 == 0 ? 0x1A62E6D8 : 0x168D7440);
         }
-        graphics.fill(panelLeft() + NAV_WIDTH + 1, panelTop() + 2,
-                panelLeft() + NAV_WIDTH + 2, panelBottom() - 2, 0x772D8B86);
+        graphics.fill(panelLeft() + navWidth + 1, panelTop() + 2,
+                panelLeft() + navWidth + 2, panelBottom() - 2, 0x772D8B86);
 
-        // 回响聚焦:顶部青线随动效扫亮
         int sweep = (int) ((panelRight() - panelLeft()) * focus);
         graphics.fill(panelLeft() + 3, panelTop() + 3, panelLeft() + 3 + sweep, panelTop() + 4, COL_ACCENT);
         graphics.fill(panelLeft() + 3, panelBottom() - 4,
@@ -946,7 +1079,7 @@ public class EchoOverviewScreen extends Screen {
         graphics.fillGradient(panelLeft() + 8, panelTop() + 6,
                 panelLeft() + 8 + Math.max(0, sweep - 12), panelTop() + 8, 0x0062E6D8, COL_ACCENT_GLOW);
         for (int i = 0; i < 9; i++) {
-            int px = panelLeft() + NAV_WIDTH + 24 + i * 37;
+            int px = panelLeft() + navWidth + 24 + i * 37;
             int py = panelTop() + 18 + (i * 29) % Math.max(24, panelBottom() - panelTop() - 44);
             graphics.fill(px, py, px + 1, py + 1, i % 3 == 0 ? COL_GOLD_DIM : COL_ACCENT_DIM);
         }
@@ -958,69 +1091,90 @@ public class EchoOverviewScreen extends Screen {
         graphics.fillGradient(x - 6, y - 5, contentRight() + 1, y + 19, 0x9A142330, 0x2203050A);
         graphics.fillGradient(x - 6, y - 5, x + 120, y + 19, 0x3438A59E, 0x00101824);
         graphics.fill(x - 6, y - 5, x - 3, y + 19, COL_GOLD_DIM);
+        graphics.fillGradient(x - 2, y - 4, x + 22, y + 18, 0x6638A59E, 0xAA03050A);
+        graphics.renderOutline(x - 2, y - 4, 24, 22, COL_EDGE_SOFT);
+        drawCornerMarks(graphics, x - 2, y - 4, x + 22, y + 18, COL_GOLD_DIM);
+        float iconShade = 0.72F + 0.28F * focus;
+        graphics.setColor(iconShade, iconShade, iconShade, 1.0F);
+        graphics.blit(ICONS, x + 1, y - 2, 18, 18,
+                moduleIconU(this.page), 0.0F, ICON_SIZE, ICON_SIZE,
+                MODULE_ICON_ATLAS_WIDTH, ICON_SIZE);
+        graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         graphics.fill(contentRight() - 48, y - 3, contentRight() - 46, y + 17, COL_ACCENT_DIM);
         graphics.fill(contentRight() - 38, y + 3, contentRight() - 22, y + 4, COL_EDGE_SOFT);
         graphics.fill(contentRight() - 34, y + 8, contentRight() - 16, y + 9, COL_GOLD_DIM);
+        int textX = x + 27;
         if (focus >= 1.0F || (this.focusTicks * 3) % 2 == 0) {
-            graphics.drawString(this.font, this.page.title(), x, y, COL_GOLD, true);
+            graphics.drawString(this.font, this.page.title(), textX, y, COL_GOLD, true);
         }
-        graphics.drawString(this.font,
-                this.page.subtitle().copy().withStyle(ChatFormatting.ITALIC),
-                x + this.font.width(this.page.title()) + 8, y, COL_DIM, false);
-        drawFineDivider(graphics, x, y + 13, contentRight(), COL_ACCENT_DIM);
-        graphics.fill(x, y + 14, x + Math.max(24, contentWidth() / 5), y + 15, COL_ACCENT);
+        drawFineDivider(graphics, textX, y + 13, contentRight(), COL_ACCENT_DIM);
+        graphics.fill(textX, y + 14, textX + Math.max(24, contentWidth() / 5), y + 15, COL_ACCENT);
         drawRuneTick(graphics, contentRight() - 20, y + 4, COL_GOLD_DIM);
     }
 
     private void renderNav(GuiGraphics graphics, int mouseX, int mouseY, float focus) {
         int x = panelLeft();
         int top = panelTop();
-        graphics.fillGradient(x, top, x + NAV_WIDTH, panelBottom(), 0xE0142431, 0xF004070C);
-        graphics.fillGradient(x + 3, top + 4, x + NAV_WIDTH - 4, panelBottom() - 4,
+        int navWidth = navWidth();
+        boolean compact = compactLayout();
+        graphics.fillGradient(x, top, x + navWidth, panelBottom(), 0xE0142431, 0xF004070C);
+        graphics.fillGradient(x + 3, top + 4, x + navWidth - 4, panelBottom() - 4,
                 0x44294755, 0x77000000);
-        drawSoftGrid(graphics, x + 6, top + 34, x + NAV_WIDTH - 8, panelBottom() - 10, 0x1038A59E);
-        graphics.fill(x + NAV_WIDTH, top, x + NAV_WIDTH + 1, panelBottom(), COL_EDGE);
-        graphics.fill(x + NAV_WIDTH - 2, top + 6, x + NAV_WIDTH - 1, panelBottom() - 8, COL_ACCENT_HAZE);
-        graphics.fillGradient(x + 6, top + 5, x + NAV_WIDTH - 8, top + 28, 0x2538A59E, 0x0003050A);
-        graphics.drawString(this.font, NAV_TITLE_TOP,
-                x + 7, top + 6, COL_GOLD_DIM, false);
-        graphics.drawString(this.font, NAV_TITLE_BOTTOM,
-                x + 18, top + 16, COL_ACCENT_DIM, false);
-        drawFineDivider(graphics, x + 7, top + 29, x + NAV_WIDTH - 8, COL_EDGE_SOFT);
+        drawSoftGrid(graphics, x + 6, top + 34, x + navWidth - 8, panelBottom() - 10, 0x1038A59E);
+        graphics.fill(x + navWidth, top, x + navWidth + 1, panelBottom(), COL_EDGE);
+        graphics.fill(x + navWidth - 2, top + 6, x + navWidth - 1, panelBottom() - 8, COL_ACCENT_HAZE);
+        graphics.fillGradient(x + 6, top + 5, x + navWidth - 8, top + 28, 0x2538A59E, 0x0003050A);
+        if (compact) {
+            graphics.setColor(1.0F, 1.0F, 1.0F, 0.92F);
+            graphics.blit(STAR_DISC, x + 11, top + 4, 26, 26,
+                    0.0F, 0.0F, 96, 96, 96, 96);
+            graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+        } else {
+            graphics.drawString(this.font, NAV_TITLE_TOP,
+                    x + 7, top + 6, COL_GOLD_DIM, false);
+            graphics.drawString(this.font, NAV_TITLE_BOTTOM,
+                    x + 18, top + 16, COL_ACCENT_DIM, false);
+            if (navWidth >= NAV_WIDTH_WIDE) {
+                graphics.setColor(1.0F, 1.0F, 1.0F, 0.72F);
+                graphics.blit(STAR_DISC, x + navWidth - 30, top + 5, 22, 22,
+                        0.0F, 0.0F, 96, 96, 96, 96);
+                graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+            }
+        }
+        drawFineDivider(graphics, x + 7, top + 29, x + navWidth - 8, COL_EDGE_SOFT);
         for (int i = 0; i < MODULE_PAGES.length; i++) {
             ModulePage entry = MODULE_PAGES[i];
             int rowY = navRowY(i);
-            boolean hovered = mouseX >= x && mouseX < x + NAV_WIDTH
+            boolean hovered = mouseX >= x && mouseX < x + navWidth
                     && mouseY >= rowY && mouseY < rowY + 20;
             boolean selected = entry == this.page;
             if (selected) {
-                graphics.fillGradient(x + 1, rowY - 2, x + NAV_WIDTH - 3, rowY + 21,
+                graphics.fillGradient(x + 1, rowY - 2, x + navWidth - 3, rowY + 21,
                         0x705BE8D8, 0x18101824);
-                graphics.fillGradient(x + 6, rowY + 2, x + NAV_WIDTH - 18, rowY + 18,
+                graphics.fillGradient(x + 6, rowY + 2, x + navWidth - (compact ? 6 : 18), rowY + 18,
                         0x30E2C276, 0x00101824);
                 graphics.fill(x + 2, rowY + 1, x + 4, rowY + 18, COL_ACCENT);
-                graphics.fill(x + NAV_WIDTH - 6, rowY + 4, x + NAV_WIDTH - 4, rowY + 14, COL_GOLD);
-                graphics.renderOutline(x + 1, rowY - 2, NAV_WIDTH - 4, 23, COL_EDGE_SOFT);
+                graphics.fill(x + navWidth - 6, rowY + 4, x + navWidth - 4, rowY + 14, COL_GOLD);
+                graphics.renderOutline(x + 1, rowY - 2, navWidth - 4, 23, COL_EDGE_SOFT);
             } else if (hovered || this.navFocus == i) {
-                graphics.fillGradient(x + 2, rowY, x + NAV_WIDTH - 3, rowY + 20,
+                graphics.fillGradient(x + 2, rowY, x + navWidth - 3, rowY + 20,
                         0x305BE8D8, 0x0A101824);
                 graphics.fill(x + 3, rowY + 3, x + 4, rowY + 17, COL_ACCENT_DIM);
             }
-            // 图标:未苏醒模块压暗成剪影
-            float shadeF = entry.awake ? 1.0F : 0.35F;
             if (selected || hovered) {
                 graphics.fillGradient(x + 5, rowY + 1, x + 30, rowY + 19,
                         selected ? 0x355BE8D8 : 0x2038A59E, 0x00101824);
             }
-            graphics.setColor(shadeF, shadeF, shadeF, 1.0F);
-            graphics.blit(ICONS, x + 7, rowY, 20, 20,
+            int iconX = compact ? x + (navWidth - 20) / 2 : x + 7;
+            graphics.blit(ICONS, iconX, rowY, 20, 20,
                     i * (float) ICON_SIZE, 0.0F, ICON_SIZE, ICON_SIZE,
                     MODULE_ICON_ATLAS_WIDTH, ICON_SIZE);
-            graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-            int color = selected ? COL_TEXT : (entry.awake ? COL_DIM : COL_SILHOUETTE);
-            graphics.drawString(this.font, entry.title(), x + 34, rowY + 6, color, false);
-            if (selected || hovered) {
-                drawRuneTick(graphics, x + NAV_WIDTH - 16, rowY + 7, selected ? COL_GOLD : COL_ACCENT_DIM);
+            int color = selected ? COL_TEXT : COL_DIM;
+            if (!compact) {
+                graphics.drawString(this.font, entry.title(), x + 34, rowY + 6, color, false);
+            }
+            if (!compact && (selected || hovered)) {
+                drawRuneTick(graphics, x + navWidth - 16, rowY + 7, selected ? COL_GOLD : COL_ACCENT_DIM);
             }
         }
     }
@@ -1042,11 +1196,7 @@ public class EchoOverviewScreen extends Screen {
                 0x2D5BE8D8, 0x00101824);
         drawSoftGrid(graphics, contentLeft() + 5, contentTop() + 22,
                 contentRight() - 10, contentBottom() - 30, 0x0C38A59E);
-        if (!this.page.awake) {
-            renderSilhouettePage(graphics);
-            return;
-        }
-        // 滚动文本行(日志/研究/守护者页;能力页为自绘行)
+
         if (this.page == ModulePage.ABILITY) {
             renderAbilityRows(graphics, mouseX, mouseY);
             return;
@@ -1059,11 +1209,13 @@ public class EchoOverviewScreen extends Screen {
             renderTradePage(graphics, mouseX, mouseY);
             return;
         }
-        int top = this.page == ModulePage.JOURNAL ? contentTop() + 24 : contentTop() + 8;
-        int rowHeight = 14;
-        int visible = (contentBottom() - 26 - top) / rowHeight;
-        int max = Math.max(0, this.lines.size() - visible);
+        int top = lineListTop();
+        int rowHeight = LINE_ROW_HEIGHT;
+        int visible = lineListVisibleRows();
+        int max = lineScrollMax();
         this.scroll = Mth.clamp(this.scroll, 0, max);
+        int railX = contentLeft() + 5;
+        graphics.fill(railX, top - 2, railX + 1, contentBottom() - 26, 0x5538A59E);
         int y = top;
         for (int i = this.scroll; i < Math.min(this.lines.size(), this.scroll + visible); i++) {
             Line lineEntry = this.lines.get(i);
@@ -1071,117 +1223,190 @@ public class EchoOverviewScreen extends Screen {
                     && mouseX >= contentLeft() && mouseX < contentRight()
                     && mouseY >= y && mouseY < y + rowHeight;
             if ((i - this.scroll) % 2 == 0) {
-                graphics.fillGradient(contentLeft(), y - 2, contentRight() - 5, y + rowHeight - 1,
+                graphics.fillGradient(contentLeft() + 8, y - 2, contentRight() - 6, y + rowHeight - 1,
                         0x30142330, 0x0803050A);
             }
             if (hovered) {
-                graphics.fillGradient(contentLeft(), y - 2, contentRight() - 5, y + rowHeight - 1,
+                graphics.fillGradient(contentLeft() + 7, y - 2, contentRight() - 6, y + rowHeight - 1,
                         COL_ACCENT_GLOW, 0x20101824);
-                graphics.fill(contentLeft(), y - 2, contentLeft() + 2, y + rowHeight - 1, COL_ACCENT);
+                graphics.fill(contentLeft() + 7, y - 2, contentLeft() + 9, y + rowHeight - 1, COL_ACCENT);
                 graphics.fill(contentRight() - 8, y + 1, contentRight() - 6, y + rowHeight - 4, COL_GOLD_DIM);
             }
-            graphics.drawString(this.font, lineEntry.text, contentLeft() + 6, y + 1,
+            if (this.font.width(lineEntry.text) > 0) {
+                int nodeColor = lineEntry.action != null ? COL_GOLD_DIM : COL_ACCENT_DIM;
+                graphics.fill(railX - 2, y + 4, railX + 3, y + 7, 0xAA071018);
+                graphics.fill(railX - 1, y + 5, railX + 2, y + 6,
+                        hovered ? COL_ACCENT : nodeColor);
+            }
+            graphics.drawString(this.font, lineEntry.text, contentLeft() + 12, y + 1,
                     hovered ? COL_ACCENT : COL_TEXT, false);
             y += rowHeight;
         }
         if (max > 0) {
-            // 滚动指示
+
             int barH = Math.max(8, (contentBottom() - top) * visible / this.lines.size());
             int barY = top + (contentBottom() - 26 - top - barH) * this.scroll / max;
-            graphics.fill(contentRight() - 4, top, contentRight() - 1,
-                    contentBottom() - 26, 0x66101824);
-            graphics.fill(contentRight() - 3, barY, contentRight() - 1, barY + barH, COL_ACCENT_DIM);
+            int trackX = contentRight() - 5;
+            int trackBottom = contentBottom() - 26;
+            graphics.fill(trackX - 1, top, trackX + 3, trackBottom, 0x66101824);
+            graphics.fill(trackX, top + 2, trackX + 2, trackBottom - 2, 0x8835505A);
+            for (int tickY = top + 6; tickY < trackBottom - 4; tickY += 16) {
+                graphics.fill(trackX - 1, tickY, trackX + 3, tickY + 1, 0x5538A59E);
+            }
+            graphics.fillGradient(trackX - 1, barY, trackX + 3, barY + barH,
+                    COL_GOLD_DIM, COL_ACCENT_DIM);
+            graphics.fill(trackX, barY + 1, trackX + 2, barY + Math.max(2, barH - 1), COL_ACCENT);
         }
     }
 
-    /** 总览页:残响星盘——可用模块大入口 + 未解锁剪影(5.8.0)。 */
     private void renderOverviewDisc(GuiGraphics graphics, int mouseX, int mouseY) {
-        int cx = (contentLeft() + contentRight()) / 2;
+        OverviewLayout layout = overviewLayout();
         int cy = (contentTop() + contentBottom()) / 2;
         drawGlassPanel(graphics, contentLeft(), contentTop(), contentRight(), contentBottom(), COL_ACCENT_DIM, false);
         graphics.fillGradient(contentLeft() + 6, contentTop() + 6, contentRight() - 6, contentBottom() - 6,
                 0x44142330, 0x1703060A);
-        graphics.fillGradient(contentLeft() + 10, contentTop() + 12, contentLeft() + 166, contentBottom() - 12,
-                0x24294755, 0x0503060A);
-        graphics.fillGradient(contentLeft() + 16, cy - 84, contentLeft() + 168, cy + 84,
-                0x3A5BE8D8, 0x00101824);
-        graphics.fillGradient(contentLeft() + 32, cy - 54, contentLeft() + 138, cy + 58,
-                0x18E2C276, 0x00101824);
-        graphics.setColor(1.0F, 1.0F, 1.0F, 0.88F);
-        graphics.blit(STAR_DISC, contentLeft() + 14, cy - 66, 132, 132,
-                0.0F, 0.0F, 96, 96, 96, 96);
-        graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-        graphics.renderOutline(contentLeft() + 28, cy - 52, 104, 104, 0x3359D6C8);
-        graphics.renderOutline(contentLeft() + 40, cy - 40, 80, 80, 0x448D7440);
-        graphics.renderOutline(contentLeft() + 52, cy - 28, 56, 56, 0x5538A59E);
-        drawCornerMarks(graphics, contentLeft() + 12, contentTop() + 12,
-                contentLeft() + 166, contentBottom() - 12, COL_EDGE_FAINT);
-        graphics.drawString(this.font, SCREEN_TITLE,
-                contentLeft() + 28, contentTop() + 18, COL_GOLD, true);
-        graphics.drawString(this.font, ModulePage.OVERVIEW.subtitle(),
-                contentLeft() + 28, contentTop() + 31, COL_DIM, false);
-        drawFineDivider(graphics, contentLeft() + 30, contentTop() + 44, contentLeft() + 150, COL_ACCENT_DIM);
-        drawRuneTick(graphics, contentLeft() + 137, contentTop() + 31, COL_GOLD_DIM);
+        if (layout.showDisc()) {
+            int discLeft = contentLeft() + 8;
+            int discRight = layout.startX() - 8;
+            int discSize = Math.min(184, Math.max(88,
+                    Math.min(discRight - discLeft - 20, contentHeight() - 44)));
+            int discX = discLeft + Math.max(0, (discRight - discLeft - discSize) / 2);
+            int discY = cy - discSize / 2 + 8;
+            graphics.fillGradient(discLeft, contentTop() + 12, discRight, contentBottom() - 12,
+                    0x24294755, 0x0503060A);
+            graphics.fillGradient(discLeft + 6, cy - discSize / 2 - 8, discRight, cy + discSize / 2 + 8,
+                    0x3A5BE8D8, 0x00101824);
+            graphics.setColor(1.0F, 1.0F, 1.0F, 0.88F);
+            graphics.blit(STAR_DISC, discX, discY, discSize, discSize,
+                    0.0F, 0.0F, 96, 96, 96, 96);
+            graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+            graphics.renderOutline(discX + 14, discY + 14, discSize - 28, discSize - 28, 0x3359D6C8);
+            graphics.renderOutline(discX + 24, discY + 24, discSize - 48, discSize - 48, 0x448D7440);
+            drawCornerMarks(graphics, discLeft, contentTop() + 12, discRight, contentBottom() - 12,
+                    COL_EDGE_FAINT);
+            graphics.drawString(this.font, SCREEN_TITLE,
+                    discLeft + 10, contentTop() + 18, COL_GOLD, true);
+            if (discRight - discLeft >= 142) {
+                drawFineDivider(graphics, discLeft + 10, contentTop() + 35, discRight - 10, COL_ACCENT_DIM);
+            }
+        } else {
+            graphics.setColor(0.48F, 0.76F, 0.78F, 0.12F);
+            graphics.blit(STAR_DISC, contentRight() - 78, contentBottom() - 78, 68, 68,
+                    0.0F, 0.0F, 96, 96, 96, 96);
+            graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+        }
 
-        int cols = 2;
-        int cardW = Math.min(138, Math.max(100, (contentWidth() - 190) / 2));
-        int cardH = 42;
-        int gap = 8;
-        int startX = Math.max(contentLeft() + 174, contentRight() - (cols * cardW + gap) - 12);
-        int startY = contentTop() + 18;
-        graphics.fillGradient(startX - 8, startY - 8,
-                startX + cols * cardW + gap + 8, Math.min(contentBottom() - 10, startY + 4 * (cardH + gap) + 4),
+        int cardsBottom = layout.startY() + layout.rows() * layout.cardH()
+                + (layout.rows() - 1) * layout.gap();
+        graphics.fillGradient(layout.startX() - 6, layout.startY() - 6,
+                layout.startX() + layout.cols() * layout.cardW() + (layout.cols() - 1) * layout.gap() + 6,
+                cardsBottom + 6,
                 0x2C142330, 0x0803050A);
-        drawCornerMarks(graphics, startX - 8, startY - 8,
-                startX + cols * cardW + gap + 8, Math.min(contentBottom() - 10, startY + 4 * (cardH + gap) + 4),
+        drawCornerMarks(graphics, layout.startX() - 6, layout.startY() - 6,
+                layout.startX() + layout.cols() * layout.cardW() + (layout.cols() - 1) * layout.gap() + 6,
+                cardsBottom + 6,
                 COL_EDGE_FAINT);
         for (int i = 0; i < OVERVIEW_PAGES.length; i++) {
             ModulePage entry = OVERVIEW_PAGES[i];
-            int x = startX + (i % cols) * (cardW + gap);
-            int y = startY + (i / cols) * (cardH + gap);
-            boolean hovered = mouseX >= x && mouseX < x + cardW && mouseY >= y && mouseY < y + cardH;
-            int connectorY = y + cardH / 2;
-            graphics.fillGradient(contentLeft() + 128, connectorY, x, connectorY + 1,
-                    hovered ? 0x2259D6C8 : 0x0E8D7440, 0x00101824);
-            graphics.fillGradient(x, y, x + cardW, y + cardH,
-                    hovered ? COL_CARD_HOVER : COL_CARD,
-                    entry.awake ? 0xAA071018 : 0xAA05070B);
-            graphics.fillGradient(x + 3, y + 2, x + cardW - 4, y + 14,
+            int x = layout.startX() + (i % layout.cols()) * (layout.cardW() + layout.gap());
+            int y = layout.startY() + (i / layout.cols()) * (layout.cardH() + layout.gap());
+            boolean hovered = mouseX >= x && mouseX < x + layout.cardW()
+                    && mouseY >= y && mouseY < y + layout.cardH();
+            if (layout.showDisc()) {
+                int connectorY = y + layout.cardH() / 2;
+                graphics.fillGradient(contentLeft() + layout.discWidth() - 12, connectorY,
+                        x, connectorY + 1, hovered ? 0x2259D6C8 : 0x0E8D7440, 0x00101824);
+            }
+            graphics.fillGradient(x, y, x + layout.cardW(), y + layout.cardH(),
+                    hovered ? COL_CARD_HOVER : COL_CARD, 0xAA071018);
+            graphics.fillGradient(x + 3, y + 2, x + layout.cardW() - 4, y + 13,
                     hovered ? 0x465BE8D8 : 0x243A5C67, 0x00101824);
-            graphics.fill(x, y, x + 2, y + cardH,
-                    hovered ? COL_ACCENT : (entry.awake ? COL_ACCENT_DIM : 0xFF18222A));
-            graphics.fill(x + 5, y + cardH - 2, x + cardW - 7, y + cardH - 1,
+            graphics.fill(x, y, x + 2, y + layout.cardH(),
+                    hovered ? COL_ACCENT : COL_ACCENT_DIM);
+            graphics.fill(x + 5, y + layout.cardH() - 2,
+                    x + layout.cardW() - 7, y + layout.cardH() - 1,
                     hovered ? COL_ACCENT_DIM : COL_EDGE_FAINT);
-            graphics.renderOutline(x, y, cardW, cardH,
-                    hovered ? COL_ACCENT : (entry.awake ? COL_EDGE : 0xFF161E26));
-            drawCornerMarks(graphics, x, y, x + cardW, y + cardH,
-                    hovered ? COL_ACCENT : (entry.awake ? COL_EDGE_SOFT : 0x55161E26));
-            float shadeF = entry.awake ? 1.0F : 0.3F;
-            graphics.fillGradient(x + 6, y + 5, x + 36, y + 35,
+            graphics.renderOutline(x, y, layout.cardW(), layout.cardH(),
+                    hovered ? COL_ACCENT : COL_EDGE);
+            drawCornerMarks(graphics, x, y, x + layout.cardW(), y + layout.cardH(),
+                    hovered ? COL_ACCENT : COL_EDGE_SOFT);
+            int iconSize = layout.cardW() < 118 || layout.cardH() < 40 ? 20 : 28;
+            int iconX = x + 7;
+            int iconY = y + (layout.cardH() - iconSize) / 2;
+            graphics.fillGradient(x + 5, iconY - 2, x + iconSize + 10, iconY + iconSize + 2,
                     hovered ? 0x355BE8D8 : 0x18101824, 0x00101824);
-            graphics.setColor(shadeF, shadeF, shadeF, 1.0F);
-            graphics.blit(ICONS, x + 8, y + 7, 28, 28,
+            graphics.blit(ICONS, iconX, iconY, iconSize, iconSize,
                     moduleIconU(entry), 0.0F, ICON_SIZE, ICON_SIZE,
                     MODULE_ICON_ATLAS_WIDTH, ICON_SIZE);
-            graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-            graphics.drawString(this.font, entry.title(), x + 42, y + 7,
-                    entry.awake ? COL_TEXT : COL_SILHOUETTE, false);
+            int textX = x + iconSize + 14;
+            boolean showIndex = layout.cardW() >= 150;
+            int textRight = x + layout.cardW() - (showIndex ? 22 : 5);
+            graphics.enableScissor(textX, y + 2, textRight, y + layout.cardH() - 2);
+            graphics.drawString(this.font, entry.title(), textX, y + 6, COL_TEXT, false);
             Component status = this.overviewStatusCache[entry.ordinal()];
             if (status == null) {
                 status = overviewStatus(entry);
             }
-            graphics.drawString(this.font, status, x + 42, y + 21,
-                    entry.awake ? COL_DIM : COL_SILHOUETTE, false);
-            String index = MODULE_INDICES[i];
-            graphics.drawString(this.font, index, x + cardW - 18, y + 5,
-                    hovered ? COL_GOLD : COL_EDGE, false);
+            graphics.drawString(this.font, status, textX, y + Math.min(20, layout.cardH() - 12),
+                    COL_DIM, false);
+            graphics.disableScissor();
+            if (showIndex) {
+                String index = MODULE_INDICES[i];
+                graphics.drawString(this.font, index, x + layout.cardW() - 18, y + 5,
+                        hovered ? COL_GOLD : COL_EDGE, false);
+            }
             if (hovered) {
-                graphics.fill(x + 42, y + cardH - 5, x + cardW - 18, y + cardH - 4, COL_ACCENT_DIM);
+                graphics.fill(textX, y + layout.cardH() - 5,
+                        x + layout.cardW() - 8, y + layout.cardH() - 4, COL_ACCENT_DIM);
             }
         }
     }
 
-    /** 总览卡片的一行状态(右侧旁注的精简版)。 */
+    private void renderResponsiveTooltips(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (compactLayout() && mouseX >= panelLeft() && mouseX < panelLeft() + navWidth()) {
+            for (int i = 0; i < MODULE_PAGES.length; i++) {
+                int rowY = navRowY(i);
+                if (mouseY >= rowY && mouseY < rowY + 20) {
+                    graphics.renderComponentTooltip(this.font,
+                            List.of(MODULE_PAGES[i].title()), mouseX, mouseY);
+                    return;
+                }
+            }
+        }
+        if (this.page == ModulePage.OVERVIEW) {
+            OverviewLayout layout = overviewLayout();
+            if (layout.cardW() < 150) {
+                ModulePage hovered = overviewCardAt(mouseX, mouseY);
+                if (hovered != null) {
+                    graphics.renderComponentTooltip(this.font,
+                            List.of(hovered.title(), overviewStatus(hovered)), mouseX, mouseY);
+                }
+            }
+        }
+    }
+
+    private OverviewLayout overviewLayout() {
+        int innerLeft = contentLeft() + 8;
+        int innerRight = contentRight() - 8;
+        boolean showDisc = contentWidth() >= 340;
+        int discWidth = showDisc ? Math.min(166, Math.max(112, contentWidth() / 3)) : 0;
+        int gap = 6;
+        int cardsLeft = innerLeft + (showDisc ? discWidth + 8 : 0);
+        int availableWidth = Math.max(96, innerRight - cardsLeft);
+        int cols = availableWidth >= 202 ? 2 : 1;
+        int cardWidth = Math.min(164, Math.max(88,
+                (availableWidth - (cols - 1) * gap) / cols));
+        int totalWidth = cols * cardWidth + (cols - 1) * gap;
+        int startX = innerRight - totalWidth;
+        int rows = (OVERVIEW_PAGES.length + cols - 1) / cols;
+        int availableHeight = Math.max(120, contentHeight() - 20);
+        int cardHeight = Mth.clamp((availableHeight - (rows - 1) * gap) / rows, 30, 48);
+        int totalHeight = rows * cardHeight + (rows - 1) * gap;
+        int startY = contentTop() + Math.max(8, (contentHeight() - totalHeight) / 2);
+        return new OverviewLayout(showDisc, discWidth, cols, rows,
+                cardWidth, cardHeight, gap, startX, startY);
+    }
+
     private Component overviewStatus(ModulePage entry) {
         return switch (entry) {
             case ABILITY -> {
@@ -1208,90 +1433,85 @@ public class EchoOverviewScreen extends Screen {
                 yield Component.translatable("overview.unknown_echoes.status.artifact",
                         claimed, ARTIFACT_TYPES.length);
             }
-            case TRADE -> Component.translatable(
-                    cn.kurt6.unknown_echoes.client.ClientTradeCache.hasSession()
-                            ? "overview.unknown_echoes.status.trade_open"
-                            : "overview.unknown_echoes.status.trade_idle");
+            case TRADE -> Component.empty();
             case INDEX -> Component.translatable("overview.unknown_echoes.status.index",
                     visibleCompletionScore(), T7_REQUIRED_SCORE);
-            case OPTIONS -> Component.translatable("overview.unknown_echoes.status.options");
-            default -> Component.translatable("overview.unknown_echoes.status.dormant");
+            case OPTIONS -> Component.empty();
+            case OVERVIEW -> Component.empty();
         };
     }
 
-    /** 剪影占位页:V0.6D/E 落地的模块先给含蓄文案,不开独立界面(5.8)。 */
-    private void renderSilhouettePage(GuiGraphics graphics) {
-        int cx = (contentLeft() + contentRight()) / 2;
-        int cy = (contentTop() + contentBottom()) / 2;
-        graphics.setColor(0.25F, 0.28F, 0.32F, 1.0F);
-        graphics.blit(ICONS, cx - 24, cy - 40, 48, 48,
-                moduleIconU(this.page), 0.0F, ICON_SIZE, ICON_SIZE,
-                MODULE_ICON_ATLAS_WIDTH, ICON_SIZE);
-        graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-        Component hint = Component.translatable("overview.unknown_echoes.dormant." + this.page.id);
-        List<FormattedCharSequence> split = this.font.split(hint, contentRight() - contentLeft() - 40);
-        int y = cy - split.size() * 5;
-        for (FormattedCharSequence seq : split) {
-            int w = this.font.width(seq);
-            graphics.drawString(this.font, seq, cx - w / 2, y, COL_DIM, false);
-            y += 11;
-        }
-    }
-
-    /** 能力页:图标行 + 解锁状态 + 研究刻度 + 悬停提示(原 AbilityPanelScreen 迁入)。 */
     private void renderAbilityRows(GuiGraphics graphics, int mouseX, int mouseY) {
         EchoAbilityType[] types = ABILITY_TYPES;
         int x = contentLeft() + 2;
-        int rowY = contentTop() + 8;
+        int rowAreaTop = contentTop() + 8;
+        int rowsBottom = contentBottom() - 46;
+        int rowAreaHeight = Math.max(1, rowsBottom - rowAreaTop);
+        int cardHeight = Mth.clamp((rowAreaHeight - (types.length - 1) * 4)
+                / Math.max(1, types.length), 21, 38);
+        int rowGap = types.length <= 1 ? 0 : Mth.clamp(
+                (rowAreaHeight - types.length * cardHeight) / (types.length - 1), 3, 12);
+        int rowStep = cardHeight + rowGap;
+        int blockHeight = types.length * cardHeight + (types.length - 1) * rowGap;
+        int rowY = rowAreaTop + Math.max(0, (rowAreaHeight - blockHeight) / 2);
         java.util.List<Component> tooltip = null;
         for (int i = 0; i < types.length; i++) {
             EchoAbilityType type = types[i];
             boolean unlocked = ClientAbilityCache.hasAbility(type);
             boolean hovered = mouseX >= x && mouseX <= contentRight() - 4
-                    && mouseY >= rowY && mouseY < rowY + 34;
-            graphics.fillGradient(x - 2, rowY - 1, contentRight() - 4, rowY + 33,
+                    && mouseY >= rowY && mouseY < rowY + cardHeight;
+            graphics.fillGradient(x - 2, rowY - 1, contentRight() - 4, rowY + cardHeight,
                     hovered ? COL_CARD_HOVER : COL_CARD,
                     unlocked ? 0x55101824 : 0x4405070B);
-            graphics.fillGradient(x + 4, rowY + 2, contentRight() - 14, rowY + 12,
+            graphics.fillGradient(x + 4, rowY + 2, contentRight() - 14,
+                    rowY + Math.min(12, cardHeight - 2),
                     unlocked ? 0x2259D6C8 : 0x113D4852, 0x00101824);
-            graphics.fill(x - 2, rowY - 1, x + 1, rowY + 33,
+            graphics.fill(x - 2, rowY - 1, x + 1, rowY + cardHeight,
                     unlocked ? COL_ACCENT : COL_SILHOUETTE);
-            graphics.renderOutline(x - 2, rowY - 1, contentRight() - x - 2, 34,
+            graphics.renderOutline(x - 2, rowY - 1, contentRight() - x - 2, cardHeight + 1,
                     hovered ? COL_ACCENT : COL_EDGE_SOFT);
             if (hovered) {
-                drawCornerMarks(graphics, x - 2, rowY - 1, contentRight() - 4, rowY + 33, COL_ACCENT);
+                drawCornerMarks(graphics, x - 2, rowY - 1,
+                        contentRight() - 4, rowY + cardHeight, COL_ACCENT);
             }
+            int iconSize = Math.min(28, Math.max(16, cardHeight - 5));
+            int iconY = rowY + (cardHeight - iconSize) / 2;
             float shadeF = unlocked ? 1.0F : 0.35F;
             graphics.setColor(shadeF, shadeF, shadeF, 1.0F);
-            graphics.blit(ABILITY_ICONS, x + 7, rowY + 3, 28, 28,
+            graphics.blit(ABILITY_ICONS, x + 7, iconY, iconSize, iconSize,
                     i * (float) ICON_SIZE, 0.0F, ICON_SIZE, ICON_SIZE,
                     ABILITY_ICON_ATLAS_WIDTH, ICON_SIZE);
             graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
 
             Component name = ABILITY_NAMES[type.ordinal()];
-            graphics.drawString(this.font, name, x + 44, rowY + 4,
+            int textX = x + iconSize + 15;
+            int pipX = contentRight() - 70;
+            graphics.enableScissor(textX, rowY, pipX - 4, rowY + cardHeight);
+            graphics.drawString(this.font, name, textX, rowY + 3,
                     unlocked ? COL_TEXT : COL_SILHOUETTE, true);
             Component status = unlocked ? ABILITY_UNLOCKED : ABILITY_LOCKED;
-            graphics.drawString(this.font, status, x + 44, rowY + 14,
-                    unlocked ? COL_ACCENT : COL_SILHOUETTE, false);
-            // 最近失败提示(V0.6E,5.7:含蓄文案,服务端同步;无记录则不占行)
+            if (cardHeight >= 22) {
+                graphics.drawString(this.font, status, textX, rowY + 13,
+                        unlocked ? COL_ACCENT : COL_SILHOUETTE, false);
+            }
+
             String failure = ClientAbilityCache.getLastFailure(type);
-            if (unlocked && !failure.isEmpty()) {
+            if (cardHeight >= 32 && unlocked && !failure.isEmpty()) {
                 graphics.drawString(this.font,
                         Component.translatable("overview.unknown_echoes.failure." + failure)
                                 .withStyle(ChatFormatting.ITALIC),
-                        x + 44, rowY + 24, COL_DIM, false);
+                        textX, rowY + 23, COL_DIM, false);
             }
+            graphics.disableScissor();
 
-            int pipX = contentRight() - 70;
             if (unlocked) {
                 int research = ClientAbilityCache.getResearchLevel(type);
+                int pipSize = cardHeight < 28 ? 7 : 10;
+                int pipY = rowY + (cardHeight - pipSize) / 2;
                 for (int pip = 0; pip < 4; pip++) {
-                    int color = pip < research ? COL_ACCENT : 0xFF1C2630;
                     int px = pipX + pip * 14;
-                    graphics.fillGradient(px, rowY + 10, px + 10, rowY + 20,
-                            color, pip < research ? COL_ACCENT_DIM : 0xFF0B1118);
-                    graphics.renderOutline(px, rowY + 10, 10, 10, pip < research ? COL_ACCENT_DIM : COL_EDGE);
+                    drawInstrumentPip(graphics, px, pipY, pipSize, pipSize,
+                            pip < research, COL_ACCENT, COL_ACCENT_DIM);
                 }
             }
             if (hovered) {
@@ -1302,12 +1522,12 @@ public class EchoOverviewScreen extends Screen {
                                 ClientAbilityCache.getResearchLevel(type)).withStyle(ChatFormatting.AQUA), hint)
                         : java.util.List.of(hint);
             }
-            rowY += 38;
+            rowY += rowStep;
         }
         if (tooltip != null) {
             graphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
         }
-        // 能量栏位(V0.6D,12.2:能量显示在能力管理面板;不做常驻 HUD)
+
         int energyNow = cn.kurt6.unknown_echoes.client.ClientArtifactCache.getEnergy();
         int max = cn.kurt6.unknown_echoes.client.ClientArtifactCache.getMaxEnergy();
         int barY = contentBottom() - 38;
@@ -1322,16 +1542,23 @@ public class EchoOverviewScreen extends Screen {
         if (energyNow >= 0 && max > 0) {
             int fill = (int) ((long) barW * energyNow / max);
             graphics.fillGradient(barX, barY, barX + fill, barY + 8, COL_ACCENT, COL_ACCENT_DIM);
+            if (fill > 2) {
+                graphics.fill(barX + 1, barY + 1, barX + fill - 1, barY + 2, 0x885CFFF0);
+            }
+            for (int segment = 1; segment < 12; segment++) {
+                int segmentX = barX + segment * barW / 12;
+                graphics.fill(segmentX, barY + 1, segmentX + 1, barY + 7, 0xAA071018);
+            }
             if (fill > 4) {
                 graphics.fill(barX + fill - 2, barY + 1, barX + fill, barY + 7, COL_GOLD);
             }
-            String text = energyNow + " / " + max;
-            graphics.drawString(this.font, text,
-                    barX + barW - this.font.width(text) - 2, barY - 11, COL_ACCENT_DIM, false);
+            Component value = Component.translatable(
+                    "overview.unknown_echoes.energy.value", energyNow, max);
+            graphics.drawString(this.font, value,
+                    barX + barW - this.font.width(value) - 2, barY - 11, COL_ACCENT_DIM, false);
         }
     }
 
-    /** 神器页(V0.6D):凭据卡片——等级刻度/调谐词条/冷却;数据全部来自 ArtifactSyncPayload。 */
     private void renderArtifactPage(GuiGraphics graphics, int mouseX, int mouseY) {
         var types = ARTIFACT_TYPES;
         java.util.List<Component> artifactHoverTip = null;
@@ -1341,46 +1568,47 @@ public class EchoOverviewScreen extends Screen {
             int rowY = artifactRowY(i);
             var entry = cn.kurt6.unknown_echoes.client.ClientArtifactCache.get(type.getId());
             boolean claimed = entry != null;
-            int cardBottom = rowY + (this.stationMode
-                    == cn.kurt6.unknown_echoes.network.OpenArtifactStationPayload.MODE_TUNING ? 72 : 44);
+            int cardBottom = rowY + artifactCardHeight();
+            boolean hovered = mouseX >= contentLeft() && mouseX <= contentRight() - 4
+                    && mouseY >= Math.max(rowY - 2, contentTop())
+                    && mouseY < Math.min(cardBottom, contentBottom() - 16);
             graphics.fillGradient(contentLeft(), rowY - 2, contentRight() - 4, cardBottom,
-                    COL_CARD, claimed ? 0x55101824 : 0x4405070B);
+                    hovered ? COL_CARD_HOVER : COL_CARD, claimed ? 0x55101824 : 0x4405070B);
             graphics.fillGradient(contentLeft() + 4, rowY + 1, contentRight() - 10, rowY + 18,
-                    claimed ? COL_GOLD_GLOW : 0x113D4852, 0x00101824);
+                    hovered ? COL_ACCENT_HAZE : (claimed ? COL_GOLD_GLOW : 0x113D4852), 0x00101824);
             graphics.fill(contentLeft(), rowY - 2, contentLeft() + 3, cardBottom,
-                    claimed ? COL_GOLD : COL_SILHOUETTE);
+                    hovered ? COL_ACCENT : (claimed ? COL_GOLD : COL_SILHOUETTE));
             graphics.renderOutline(contentLeft(), rowY - 2,
-                    contentRight() - contentLeft() - 4, cardBottom - rowY + 2, COL_EDGE_SOFT);
-            if (claimed) {
-                drawCornerMarks(graphics, contentLeft(), rowY - 2, contentRight() - 4, cardBottom, COL_GOLD_DIM);
+                    contentRight() - contentLeft() - 4, cardBottom - rowY + 2,
+                    hovered ? COL_ACCENT_DIM : COL_EDGE_SOFT);
+            if (claimed || hovered) {
+                drawCornerMarks(graphics, contentLeft(), rowY - 2, contentRight() - 4, cardBottom,
+                        hovered ? COL_ACCENT : COL_GOLD_DIM);
             }
-            // 凭据物品作图标(物品只是凭据,图标恰如其分)
-            graphics.fillGradient(contentLeft() + 5, rowY + 3, contentLeft() + 27, rowY + 25,
-                    0x77101824, 0xAA03050A);
-            graphics.renderOutline(contentLeft() + 5, rowY + 3, 22, 22,
-                    claimed ? COL_GOLD_DIM : COL_EDGE_SOFT);
+
+            drawItemSocket(graphics, contentLeft() + 5, rowY + 3, 22,
+                    claimed ? COL_GOLD_DIM : COL_EDGE_SOFT, hovered);
             graphics.renderItem(artifactIcons.computeIfAbsent(type,
                     key -> new ItemStack(key.getCredentialItem())), contentLeft() + 8, rowY + 6);
+            graphics.drawString(this.font, MODULE_INDICES[i], contentLeft() + 9, rowY + 30,
+                    hovered ? COL_ACCENT_DIM : (claimed ? COL_GOLD_DIM : COL_SILHOUETTE), false);
             Component name = ARTIFACT_NAMES[type.ordinal()];
             graphics.drawString(this.font, name, contentLeft() + 32, rowY + 2,
                     claimed ? COL_TEXT : COL_SILHOUETTE, true);
             if (claimed) {
-                // 等级刻度(3 级)
+
                 int pipX = contentLeft() + 32;
                 for (int pip = 0; pip < cn.kurt6.unknown_echoes.artifact.ArtifactType.MAX_LEVEL; pip++) {
-                    int color = pip < entry.level() ? COL_GOLD : 0xFF1C2630;
                     int px = pipX + pip * 12;
-                    graphics.fillGradient(px, rowY + 14, px + 8, rowY + 20,
-                            color, pip < entry.level() ? COL_GOLD_DIM : 0xFF0B1118);
-                    graphics.renderOutline(px, rowY + 14, 8, 6, pip < entry.level() ? COL_GOLD_DIM : COL_EDGE);
+                    drawInstrumentPip(graphics, px, rowY + 14, 9, 7,
+                            pip < entry.level(), COL_GOLD, COL_GOLD_DIM);
                 }
                 Component tuning = entry.tuning().isEmpty()
                         ? ARTIFACT_UNTUNED
                         : Component.translatable("artifact.unknown_echoes." + type.getId()
                                 + ".tuning." + entry.tuning());
                 graphics.drawString(this.font,
-                        Component.translatable("overview.unknown_echoes.artifact.tuning_label")
-                                .append(": ").append(tuning),
+                        Component.translatable("overview.unknown_echoes.artifact.tuning_value", tuning),
                         contentLeft() + 32, rowY + 24, COL_ACCENT_DIM, false);
                 int cooldown = cn.kurt6.unknown_echoes.client.ClientArtifactCache
                         .getCooldownSeconds(type.getId());
@@ -1401,35 +1629,35 @@ public class EchoOverviewScreen extends Screen {
                         ARTIFACT_HINTS[type.ordinal()],
                         contentLeft() + 32, rowY + 28, COL_DIM, false);
             }
-            if (mouseX >= contentLeft() && mouseX <= contentRight() - 4
-                    && mouseY >= Math.max(rowY - 2, contentTop())
-                    && mouseY < Math.min(cardBottom, contentBottom() - 16)) {
+            if (hovered) {
                 java.util.List<Component> tip = new ArrayList<>();
                 tip.add(name.copy().withStyle(claimed ? ChatFormatting.GOLD : ChatFormatting.GRAY));
                 if (claimed) {
                     int lvl = entry.level();
                     tip.add(Component.translatable("overview.unknown_echoes.artifact.tip.current", lvl)
                             .withStyle(ChatFormatting.GOLD));
-                    tip.add(Component.translatable("overview.unknown_echoes.artifact." + type.getId() + ".l" + lvl)
-                            .withStyle(ChatFormatting.AQUA));
+                    addArtifactLevelTip(tip, type, lvl, ChatFormatting.AQUA);
                     tip.add(artifactEnergyCost(entry).copy().withStyle(ChatFormatting.DARK_AQUA));
+                    if (!entry.tuning().isEmpty()) {
+                        tip.add(Component.translatable("overview.unknown_echoes.artifact."
+                                        + type.getId() + ".tuning." + entry.tuning())
+                                .withStyle(ChatFormatting.GRAY));
+                    }
                     if (lvl < cn.kurt6.unknown_echoes.artifact.ArtifactType.MAX_LEVEL) {
                         tip.add(Component.translatable("overview.unknown_echoes.artifact.tip.next", lvl + 1)
                                 .withStyle(ChatFormatting.DARK_GRAY));
-                        tip.add(Component.translatable("overview.unknown_echoes.artifact." + type.getId() + ".l" + (lvl + 1))
-                                .withStyle(ChatFormatting.GRAY));
-                    } else {
-                        tip.add(Component.translatable("overview.unknown_echoes.artifact.tip.maxed")
+                        addArtifactLevelTip(tip, type, lvl + 1, ChatFormatting.GRAY);
+                        tip.add(Component.translatable("tooltip.unknown_echoes.artifact."
+                                        + type.getId() + ".upgrade_" + (lvl + 1))
                                 .withStyle(ChatFormatting.DARK_GRAY));
                     }
                 } else {
-                    tip.add(Component.translatable("overview.unknown_echoes.artifact.tip.locked")
-                            .withStyle(ChatFormatting.DARK_GRAY));
+                    tip.add(ARTIFACT_HINTS[type.ordinal()].copy().withStyle(ChatFormatting.DARK_GRAY));
                 }
                 artifactHoverTip = tip;
             }
         }
-        // ---- 凭据与誓记(V0.6E,5.8):共鸣信物与神器凭据的状态登记 ----
+
         int credY = artifactRowY(types.length) + 4;
         graphics.drawString(this.font,
                 Component.translatable("overview.unknown_echoes.credentials.header"),
@@ -1449,24 +1677,21 @@ public class EchoOverviewScreen extends Screen {
             boolean lit = fulfilled || ritual || holding;
             Component line = Component.literal(lit ? "✦ " : "◇ ")
                     .withStyle(lit ? ChatFormatting.DARK_AQUA : ChatFormatting.GRAY)
-                    .append(CREDENTIAL_TOKEN_NAMES[ability.ordinal()])
-                    .append(Component.literal(" — ").withStyle(ChatFormatting.DARK_GRAY))
-                    .append(Component.translatable("overview.unknown_echoes.credentials." + stateKey)
-                            .withStyle(lit ? ChatFormatting.AQUA : ChatFormatting.DARK_GRAY));
+                    .append(Component.translatable("overview.unknown_echoes.credentials.entry",
+                            CREDENTIAL_TOKEN_NAMES[ability.ordinal()],
+                            Component.translatable("overview.unknown_echoes.credentials." + stateKey)
+                                    .withStyle(lit ? ChatFormatting.AQUA : ChatFormatting.DARK_GRAY)));
             graphics.drawString(this.font, line, contentLeft() + 8, credY,
                     lit ? COL_TEXT : COL_SILHOUETTE, false);
             credY += 12;
         }
         graphics.disableScissor();
-        // 台座上下文提示(底部固定行,不随滚动)
-        String contextKey = switch (this.stationMode) {
-            case 0 -> "overview.unknown_echoes.artifact.at_record";
-            case 1 -> "overview.unknown_echoes.artifact.at_tuning";
-            default -> "overview.unknown_echoes.artifact.no_station";
-        };
-        graphics.drawString(this.font, Component.translatable(contextKey)
-                        .withStyle(ChatFormatting.ITALIC),
-                contentLeft() + 4, contentBottom() - 12, COL_DIM, false);
+        if (this.stationMode < 0) {
+            graphics.drawString(this.font,
+                    Component.translatable("overview.unknown_echoes.artifact.no_station")
+                            .withStyle(ChatFormatting.ITALIC),
+                    contentLeft() + 4, contentBottom() - 12, COL_DIM, false);
+        }
         if (artifactHoverTip != null) {
             graphics.renderComponentTooltip(this.font, artifactHoverTip, mouseX, mouseY);
         }
@@ -1492,7 +1717,6 @@ public class EchoOverviewScreen extends Screen {
         return false;
     }
 
-    /** 迷途交易页(V0.6D,5.8):旅者摊卷——行点击即购买请求,成交由服务端校验。 */
     private void renderTradePage(GuiGraphics graphics, int mouseX, int mouseY) {
         var cache = cn.kurt6.unknown_echoes.client.ClientTradeCache.getEntries();
         if (!cn.kurt6.unknown_echoes.client.ClientTradeCache.hasSession()) {
@@ -1509,6 +1733,9 @@ public class EchoOverviewScreen extends Screen {
         graphics.drawString(this.font,
                 Component.translatable("overview.unknown_echoes.trade.header"),
                 contentLeft() + 4, contentTop() + 6, COL_GOLD, true);
+        drawFineDivider(graphics, contentLeft() + 4, contentTop() + 17,
+                contentRight() - 8, COL_EDGE_SOFT);
+        ItemStack hoveredStack = ItemStack.EMPTY;
         graphics.enableScissor(contentLeft(), contentTop() + 16, contentRight(), contentBottom() - 14);
         for (int i = 0; i < cache.size(); i++) {
             var entry = cache.get(i);
@@ -1530,36 +1757,67 @@ public class EchoOverviewScreen extends Screen {
                     hovered ? 0x2259D6C8 : 0x118D7440, 0x00101824);
             graphics.renderOutline(contentLeft(), rowY, contentRight() - contentLeft() - 4, 22,
                     hovered ? COL_ACCENT : COL_EDGE_SOFT);
+            if (soldOut) {
+                for (int scanX = contentLeft() + 8; scanX < contentRight() - 10; scanX += 14) {
+                    graphics.fill(scanX, rowY + 3, scanX + 1, rowY + 19, 0x223D4852);
+                    graphics.fill(scanX + 1, rowY + 3, scanX + 5, rowY + 4, 0x163D4852);
+                }
+            } else if (hovered) {
+                drawCornerMarks(graphics, contentLeft(), rowY, contentRight() - 4, rowY + 22, COL_ACCENT);
+                graphics.fill(contentLeft() + 8, rowY + 19, contentRight() - 12, rowY + 20,
+                        COL_ACCENT_DIM);
+            }
             float shade = soldOut ? 0.4F : 1.0F;
             graphics.setColor(shade, shade, shade, 1.0F);
-            renderTradeCosts(graphics, entry.costs(), contentLeft() + 6, rowY + 3);
-            graphics.drawString(this.font, "→", contentLeft() + 48, rowY + 7,
-                    soldOut ? COL_SILHOUETTE : COL_GOLD_DIM, false);
-            graphics.renderItem(entry.result(), contentLeft() + 62, rowY + 3);
-            graphics.renderItemDecorations(this.font, entry.result(), contentLeft() + 62, rowY + 3);
+            int costsX = contentLeft() + 7;
+            int itemY = rowY + 3;
+            renderTradeCosts(graphics, entry.costs(), costsX, itemY,
+                    soldOut ? COL_EDGE_FAINT : COL_GOLD_DIM);
+            drawExchangeBridge(graphics, contentLeft() + 48, rowY + 11,
+                    soldOut ? COL_SILHOUETTE : (hovered ? COL_ACCENT : COL_GOLD_DIM));
+            int resultX = contentLeft() + 64;
+            drawItemSocket(graphics, resultX - 1, itemY - 1, 18,
+                    soldOut ? COL_EDGE_FAINT : COL_ACCENT_DIM, hovered);
+            graphics.renderItem(entry.result(), resultX, itemY);
+            graphics.renderItemDecorations(this.font, entry.result(), resultX, itemY);
             graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-            Component label = entry.result().getHoverName();
-            graphics.drawString(this.font, label, contentLeft() + 86, rowY + 7,
-                    soldOut ? COL_SILHOUETTE : COL_TEXT, false);
             Component uses = entry.usesLeft() < 0
                     ? Component.translatable("overview.unknown_echoes.trade.unlimited")
                     : Component.translatable("overview.unknown_echoes.trade.uses", entry.usesLeft());
+            int usesX = contentRight() - this.font.width(uses) - 10;
+            int labelX = contentLeft() + 87;
+            int labelWidth = Math.max(0, usesX - labelX - 8);
+            Component label = fitComponent(entry.result().getHoverName(), labelWidth);
+            graphics.drawString(this.font, label, labelX, rowY + 7,
+                    soldOut ? COL_SILHOUETTE : COL_TEXT, false);
             graphics.drawString(this.font, uses,
-                    contentRight() - this.font.width(uses) - 10, rowY + 7,
+                    usesX, rowY + 7,
                     soldOut ? COL_SILHOUETTE : COL_DIM, false);
+            if (mouseY >= contentTop() + 16 && mouseY < contentBottom() - 14) {
+                int shownCosts = Math.min(2, entry.costs().size());
+                for (int costIndex = 0; costIndex < shownCosts; costIndex++) {
+                    int costX = costsX + costIndex * 22;
+                    if (mouseX >= costX && mouseX < costX + 16
+                            && mouseY >= itemY && mouseY < itemY + 16) {
+                        hoveredStack = entry.costs().get(costIndex);
+                    }
+                }
+                if (mouseX >= resultX && mouseX < resultX + 16
+                        && mouseY >= itemY && mouseY < itemY + 16) {
+                    hoveredStack = entry.result();
+                }
+            }
         }
         graphics.disableScissor();
-        graphics.drawString(this.font,
-                Component.translatable("overview.unknown_echoes.trade.footer")
-                        .withStyle(ChatFormatting.ITALIC),
-                contentLeft() + 4, contentBottom() - 12, COL_DIM, false);
+        if (!hoveredStack.isEmpty()) {
+            graphics.renderTooltip(this.font, hoveredStack, mouseX, mouseY);
+        }
     }
 
     private int tradeRowY(int index) {
         return contentTop() + 22 + index * 24 - this.pageScroll;
     }
 
-    /** 神器/交易页的最大滚动量(其余页面走 lines 滚动)。 */
     private int pageScrollMax() {
         if (this.page == ModulePage.TRADE) {
             if (!cn.kurt6.unknown_echoes.client.ClientTradeCache.hasSession()) {
@@ -1570,122 +1828,79 @@ public class EchoOverviewScreen extends Screen {
         }
         if (this.page == ModulePage.ARTIFACT) {
             int credentials = 4 + 15 + CREDENTIAL_ABILITIES.length * 12 + 18;
-            return Math.max(0, 8 + ARTIFACT_TYPES.length * 82 + credentials - contentHeight());
+            return Math.max(0,
+                    8 + ARTIFACT_TYPES.length * artifactCardStride() + credentials - contentHeight());
         }
         return 0;
     }
 
     private void renderTradeCosts(GuiGraphics graphics, List<net.minecraft.world.item.ItemStack> costs,
-                                  int x, int y) {
+                                  int x, int y, int accent) {
         int shown = Math.min(2, costs.size());
         for (int i = 0; i < shown; i++) {
-            int itemX = x + i * 19;
+            int itemX = x + i * 22;
+            drawItemSocket(graphics, itemX - 1, y - 1, 18, accent, false);
             graphics.renderItem(costs.get(i), itemX, y);
             graphics.renderItemDecorations(this.font, costs.get(i), itemX, y);
             if (i == 0 && shown > 1) {
-                graphics.drawString(this.font, "+", x + 16, y + 6, COL_GOLD_DIM, false);
+                graphics.fill(x + 18, y + 7, x + 21, y + 8, accent);
+                graphics.fill(x + 19, y + 6, x + 20, y + 9, accent);
             }
         }
         if (costs.size() > 2) {
-            graphics.drawString(this.font, "...", x + 36, y + 6, COL_DIM, false);
-        }
-    }
-
-    /** 右侧"回声旁注":选中页的最近进度与下一条线索(5.8.0)。 */
-    private void renderSideNote(GuiGraphics graphics) {
-        int x = panelRight() - NOTE_WIDTH - 2;
-        int top = contentTop();
-        drawGlassPanel(graphics, x, top, panelRight() - 2, contentBottom(), COL_GOLD_DIM, false);
-        graphics.fillGradient(x + 3, top + 3, panelRight() - 5, contentBottom() - 3,
-                0x68142330, 0xA005080D);
-        graphics.fillGradient(x + 4, top + 4, panelRight() - 8, top + 36,
-                0x2EE2C276, 0x00101824);
-        drawSoftGrid(graphics, x + 6, top + 18, panelRight() - 9, contentBottom() - 8, 0x0D38A59E);
-        graphics.fill(x, top, x + 2, contentBottom(), COL_GOLD_DIM);
-        int textX = x + 5;
-        int y = top + 5;
-        graphics.drawString(this.font,
-                NOTE_HEADER, textX, y, COL_GOLD, false);
-        drawFineDivider(graphics, textX, y + 10, panelRight() - 8, COL_EDGE_SOFT);
-        y += 13;
-        for (FormattedCharSequence seq : this.sideNoteLines) {
-            graphics.drawString(this.font, seq, textX, y, COL_DIM, false);
-            y += 10;
-        }
-        y += 4;
-        if (!this.sideClueLines.isEmpty()) {
-            int boxTop = y - 2;
-            int boxBottom = Math.min(contentBottom() - 7, boxTop + 52);
-            graphics.fillGradient(textX - 2, boxTop, panelRight() - 8, boxBottom,
-                    0x26294755, 0x1103050A);
-            graphics.renderOutline(textX - 2, boxTop, panelRight() - textX - 6,
-                    boxBottom - boxTop, COL_EDGE_FAINT);
-            graphics.drawString(this.font,
-                    NOTE_NEXT, textX, y, COL_GOLD, false);
-            y += 12;
-            for (FormattedCharSequence seq : this.sideClueLines) {
-                graphics.drawString(this.font, seq, textX, y, COL_ACCENT_DIM, false);
-                y += 10;
+            for (int tick = 0; tick < 3; tick++) {
+                graphics.fill(x + 42 + tick * 2, y + 7, x + 43 + tick * 2, y + 8, COL_DIM);
             }
         }
     }
 
-    /** 下一条可执行线索:按已同步进度给含蓄指引,不泄露隐藏答案(红线 #9)。 */
-    private Component nextClue() {
-        boolean wind = ClientAbilityCache.hasAbility(EchoAbilityType.WIND_ECHO);
-        boolean tide = ClientAbilityCache.hasAbility(EchoAbilityType.TIDE_ECHO);
-        boolean sight = ClientAbilityCache.hasAbility(EchoAbilityType.TRUE_SIGHT_ECHO);
-        if (!wind && !tide && !sight) {
-            return CLUE_START;
-        }
-        if (tide && !ClientJournalCache.structures().contains(id("tide_lighthouse_reef"))) {
-            return CLUE_LIGHTHOUSE;
-        }
-        if (sight && !ClientJournalCache.structures().contains(id("mirror_dust_cloister"))) {
-            return CLUE_CLOISTER;
-        }
-        if (!tide) {
-            return CLUE_TIDE;
-        }
-        if (!sight) {
-            return CLUE_SIGHT;
-        }
-        return CLUE_RESEARCH;
-    }
-
-    /** 底部"同步状态条":区域 / 能量摘要(V0.6D 前为占位)/ 同步状态(5.8.0)。 */
     private void renderStatusBar(GuiGraphics graphics) {
+        int navWidth = navWidth();
+        int availableWidth = panelRight() - panelLeft() - navWidth;
         int y = panelBottom() - STATUS_HEIGHT;
-        graphics.fillGradient(panelLeft() + NAV_WIDTH + 1, y, panelRight(), panelBottom(),
+        graphics.fillGradient(panelLeft() + navWidth + 1, y, panelRight(), panelBottom(),
                 0xDD142330, 0xF003050A);
-        graphics.fill(panelLeft() + NAV_WIDTH + 1, y, panelRight(), y + 1, COL_EDGE_SOFT);
-        graphics.fill(panelLeft() + NAV_WIDTH + 1, y + 1,
-                panelLeft() + NAV_WIDTH + 80, y + 2, COL_ACCENT_DIM);
+        graphics.fill(panelLeft() + navWidth + 1, y, panelRight(), y + 1, COL_EDGE_SOFT);
+        graphics.fill(panelLeft() + navWidth + 1, y + 1,
+                panelLeft() + navWidth + 80, y + 2, COL_ACCENT_DIM);
         graphics.fillGradient(panelRight() - 126, y + 1, panelRight() - 5, panelBottom() - 2,
                 0x255BE8D8, 0x0003050A);
         graphics.fillGradient(contentLeft() - 2, y + 2, contentLeft() + 160, panelBottom() - 2,
                 0x16E2C276, 0x00101824);
-        graphics.drawString(this.font, this.statusRegion, contentLeft(), y + 3, COL_DIM, false);
-        graphics.drawString(this.font, this.statusEnergy,
-                (panelLeft() + panelRight()) / 2 - this.font.width(this.statusEnergy) / 2 + NAV_WIDTH / 2,
-                y + 3, this.statusEnergyDormant ? COL_SILHOUETTE : COL_ACCENT_DIM, false);
-        graphics.drawString(this.font, this.statusSync,
-                panelRight() - this.font.width(this.statusSync) - 6, y + 3,
-                this.statusSynced ? COL_ACCENT_DIM : COL_SILHOUETTE, false);
+        if (availableWidth >= 250) {
+            graphics.drawString(this.font, this.statusRegion, contentLeft(), y + 3, COL_DIM, false);
+        }
+        if (availableWidth >= 430) {
+            graphics.drawString(this.font, this.statusEnergy,
+                    (contentLeft() + panelRight()) / 2 - this.font.width(this.statusEnergy) / 2,
+                    y + 3, this.statusEnergyDormant ? COL_SILHOUETTE : COL_ACCENT_DIM, false);
+        }
     }
 
-    /** 阅读弹层:残页/拓片的单页书面阅读(5.8 残页与研究)。 */
     private void renderPopup(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.fill(0, 0, this.width, this.height, 0x99000000);
         int w = 150;
         int h = 180;
         int x = (this.width - w) / 2;
         int y = (this.height - h) / 2;
-        graphics.fillGradient(x - 10, y - 10, x + w + 10, y + h + 12, 0xAA03050A, 0xDD000000);
+        graphics.fillGradient(x - 14, y - 13, x + w + 14, y + h + 15,
+                0x55142330, 0xEE000000);
+        graphics.fillGradient(x - 10, y - 9, x + w + 10, y + h + 11,
+                0xAA101824, 0xDD03050A);
+        graphics.renderOutline(x - 9, y - 8, w + 18, h + 16, COL_EDGE_FAINT);
+        graphics.fill(x - 8, y - 6, x - 6, y + h + 6, COL_GOLD_DIM);
         drawCornerMarks(graphics, x - 8, y - 8, x + w + 8, y + h + 8, COL_GOLD_DIM);
         graphics.blit(PAPER, x, y, 0, 0, w, h, w, h);
+        graphics.setColor(0.43F, 0.34F, 0.18F, 0.10F);
+        graphics.blit(STAR_DISC, x + 34, y + 70, 82, 82,
+                0.0F, 0.0F, 96, 96, 96, 96);
+        graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+        graphics.fill(x + 9, y + 26, x + 10, y + h - 14, 0x226B5018);
+        graphics.fill(x + w - 10, y + 26, x + w - 9, y + h - 14, 0x226B5018);
         graphics.drawCenteredString(this.font, this.popup.title.copy().withStyle(ChatFormatting.BOLD),
                 x + w / 2, y + 10, 0xFF6B5018);
+        drawFineDivider(graphics, x + 15, y + 23, x + w - 15, 0x886B5018);
+        drawRuneTick(graphics, x + w - 24, y + 18, 0xAA80642A);
         if (this.popupLinesFor != this.popup) {
             this.popupLinesFor = this.popup;
             this.popupLines = this.font.split(this.popup.text, w - 24);
@@ -1698,12 +1913,22 @@ public class EchoOverviewScreen extends Screen {
             graphics.drawString(this.font, seq, x + 12, textY, 0xFF3A372E, false);
             textY += 10;
         }
-        graphics.drawCenteredString(this.font, POPUP_CLOSE, x + w / 2, y + h + 6, COL_DIM);
+        for (int mark = -1; mark <= 1; mark++) {
+            graphics.fill(x + w / 2 + mark * 4, y + h - 10,
+                    x + w / 2 + mark * 4 + 1, y + h - 9, 0x886B5018);
+        }
+        int closeWidth = this.font.width(POPUP_CLOSE) + 18;
+        int closeX = x + (w - closeWidth) / 2;
+        graphics.fillGradient(closeX, y + h + 2, closeX + closeWidth, y + h + 15,
+                0xCC101824, 0xEE03050A);
+        graphics.renderOutline(closeX, y + h + 2, closeWidth, 13, COL_EDGE_SOFT);
+        graphics.fill(closeX + 4, y + h + 12, closeX + closeWidth - 4, y + h + 13, COL_GOLD_DIM);
+        graphics.drawCenteredString(this.font, POPUP_CLOSE, x + w / 2, y + h + 5, COL_DIM);
     }
 
-    /** 自绘按钮:统一替换原版灰按钮,保留 Minecraft GUI 的轻量输入模型。 */
     private void renderActionButtons(GuiGraphics graphics, int mouseX, int mouseY) {
         boolean clip = this.page == ModulePage.ARTIFACT;
+        List<Component> tooltip = null;
         if (clip) {
             graphics.enableScissor(contentLeft(), contentTop(), contentRight(), contentBottom() - 16);
         }
@@ -1724,6 +1949,15 @@ public class EchoOverviewScreen extends Screen {
                     enabled ? 0x2238A59E : 0x113D4852, 0x00101824);
             graphics.renderOutline(button.x, button.y, button.width, button.height,
                     !enabled ? COL_EDGE_FAINT : (button.active ? COL_GOLD_DIM : (hovered ? COL_ACCENT_DIM : COL_EDGE_SOFT)));
+            int guideColor = !enabled ? COL_EDGE_FAINT
+                    : (button.active ? COL_GOLD : (hovered ? COL_ACCENT : COL_EDGE_SOFT));
+            int guideY = button.y + button.height / 2;
+            graphics.fill(button.x + 4, guideY - 2, button.x + 5, guideY + 2, guideColor);
+            graphics.fill(button.x + button.width - 5, guideY - 2,
+                    button.x + button.width - 4, guideY + 2, guideColor);
+            graphics.fill(button.x + button.width / 2 - 5, button.y + 2,
+                    button.x + button.width / 2 + 5, button.y + 3,
+                    enabled ? (button.active ? COL_GOLD_DIM : COL_ACCENT_DIM) : COL_EDGE_FAINT);
             if (enabled && (button.active || hovered)) {
                 drawCornerMarks(graphics, button.x, button.y, button.x + button.width, button.y + button.height,
                         button.active ? COL_GOLD : COL_ACCENT);
@@ -1732,15 +1966,21 @@ public class EchoOverviewScreen extends Screen {
                         button.active ? COL_GOLD_DIM : COL_ACCENT_DIM);
             }
             int color = !enabled ? COL_SILHOUETTE : (button.active ? COL_GOLD : (hovered ? COL_ACCENT : COL_TEXT));
-            graphics.drawCenteredString(this.font, button.label,
+            Component buttonLabel = fitComponent(button.label, Math.max(0, button.width - 18));
+            graphics.drawCenteredString(this.font, buttonLabel,
                     button.x + button.width / 2, button.y + (button.height - 8) / 2, color);
+            if (hovered && button.tooltip != null) {
+                tooltip = List.of(button.label.copy().withStyle(ChatFormatting.GOLD),
+                        button.tooltip.copy().withStyle(ChatFormatting.GRAY));
+            }
         }
         if (clip) {
             graphics.disableScissor();
         }
+        if (tooltip != null) {
+            graphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
+        }
     }
-
-    // ---- 输入 ----
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -1758,16 +1998,16 @@ public class EchoOverviewScreen extends Screen {
                 return true;
             }
         }
-        // 共鸣脊线导航
+
         for (int i = 0; i < MODULE_PAGES.length; i++) {
             int rowY = navRowY(i);
-            if (mouseX >= panelLeft() && mouseX < panelLeft() + NAV_WIDTH
+            if (mouseX >= panelLeft() && mouseX < panelLeft() + navWidth()
                     && mouseY >= rowY && mouseY < rowY + 20) {
                 switchPage(MODULE_PAGES[i]);
                 return true;
             }
         }
-        // 总览星盘卡片
+
         if (this.page == ModulePage.OVERVIEW) {
             ModulePage clicked = overviewCardAt(mouseX, mouseY);
             if (clicked != null) {
@@ -1775,7 +2015,7 @@ public class EchoOverviewScreen extends Screen {
                 return true;
             }
         }
-        // 迷途交易:行点击=购买请求(服务端校验成交,5.8 边界)
+
         if (this.page == ModulePage.TRADE
                 && cn.kurt6.unknown_echoes.client.ClientTradeCache.hasSession()) {
             var entries = cn.kurt6.unknown_echoes.client.ClientTradeCache.getEntries();
@@ -1799,11 +2039,11 @@ public class EchoOverviewScreen extends Screen {
                 }
             }
         }
-        // 内容区可点击行(残页阅读)
-        if (this.page.awake && this.page != ModulePage.ABILITY && this.page != ModulePage.OVERVIEW) {
-            int top = this.page == ModulePage.JOURNAL ? contentTop() + 24 : contentTop() + 8;
-            int rowHeight = 14;
-            int visible = (contentBottom() - 26 - top) / rowHeight;
+
+        if (this.page != ModulePage.ABILITY && this.page != ModulePage.OVERVIEW) {
+            int top = lineListTop();
+            int rowHeight = LINE_ROW_HEIGHT;
+            int visible = lineListVisibleRows();
             int index = this.scroll + (int) ((mouseY - top) / rowHeight);
             if (mouseX >= contentLeft() && mouseX < contentRight()
                     && mouseY >= top && index >= 0 && index < this.lines.size()
@@ -1819,18 +2059,12 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private ModulePage overviewCardAt(double mouseX, double mouseY) {
-        int cx = (contentLeft() + contentRight()) / 2;
-        int cy = (contentTop() + contentBottom()) / 2;
-        int cols = 2;
-        int cardW = Math.min(138, Math.max(100, (contentWidth() - 190) / 2));
-        int cardH = 42;
-        int gap = 8;
-        int startX = Math.max(contentLeft() + 174, contentRight() - (cols * cardW + gap) - 12);
-        int startY = contentTop() + 18;
+        OverviewLayout layout = overviewLayout();
         for (int i = 0; i < OVERVIEW_PAGES.length; i++) {
-            int x = startX + (i % cols) * (cardW + gap);
-            int y = startY + (i / cols) * (cardH + gap);
-            if (mouseX >= x && mouseX < x + cardW && mouseY >= y && mouseY < y + cardH) {
+            int x = layout.startX() + (i % layout.cols()) * (layout.cardW() + layout.gap());
+            int y = layout.startY() + (i / layout.cols()) * (layout.cardH() + layout.gap());
+            if (mouseX >= x && mouseX < x + layout.cardW()
+                    && mouseY >= y && mouseY < y + layout.cardH()) {
                 return OVERVIEW_PAGES[i];
             }
         }
@@ -1861,7 +2095,9 @@ public class EchoOverviewScreen extends Screen {
             }
         }
         if (this.popup == null && !this.lines.isEmpty()) {
-            this.scroll = Math.max(0, this.scroll - (int) Math.signum(deltaY) * 3);
+
+            this.scroll = Mth.clamp(this.scroll - (int) Math.signum(deltaY) * 3,
+                    0, lineScrollMax());
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
@@ -1869,7 +2105,7 @@ public class EchoOverviewScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // ESC 逐层返回:弹层 → 页面 → 总览 → 关闭(5.8 交互主张)
+
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             if (this.popup != null) {
                 this.popup = null;
@@ -1882,7 +2118,7 @@ public class EchoOverviewScreen extends Screen {
             onClose();
             return true;
         }
-        // 键盘焦点:上下键在共鸣脊线移动,回车进入(手柄/键盘可用)
+
         if (keyCode == GLFW.GLFW_KEY_DOWN || keyCode == GLFW.GLFW_KEY_UP) {
             int delta = keyCode == GLFW.GLFW_KEY_DOWN ? 1 : -1;
             this.navFocus = Math.floorMod(
@@ -1903,8 +2139,6 @@ public class EchoOverviewScreen extends Screen {
         return false;
     }
 
-    // ---- 工具 ----
-
     private static void drawGlassPanel(GuiGraphics graphics, int left, int top, int right, int bottom,
                                        int accent, boolean active) {
         graphics.fillGradient(left, top, right, bottom, COL_PANEL_DEEP, COL_VOID);
@@ -1914,6 +2148,26 @@ public class EchoOverviewScreen extends Screen {
         graphics.renderOutline(left, top, right - left, bottom - top, active ? accent : COL_EDGE_SOFT);
         graphics.renderOutline(left + 2, top + 2, right - left - 4, bottom - top - 4, COL_EDGE_FAINT);
         drawCornerMarks(graphics, left, top, right, bottom, active ? accent : COL_EDGE_SOFT);
+    }
+
+    private static void drawItemSocket(GuiGraphics graphics, int x, int y, int size,
+                                       int accent, boolean focused) {
+        graphics.fillGradient(x, y, x + size, y + size,
+                focused ? 0xAA18313C : 0x88101824, 0xCC03050A);
+        graphics.renderOutline(x, y, size, size, accent);
+        int center = x + size / 2;
+        graphics.fill(center - 2, y, center + 2, y + 1, accent);
+        graphics.fill(center - 2, y + size - 1, center + 2, y + size, accent);
+        graphics.fill(x, y + size / 2 - 2, x + 1, y + size / 2 + 2, accent);
+        graphics.fill(x + size - 1, y + size / 2 - 2,
+                x + size, y + size / 2 + 2, accent);
+    }
+
+    private static void drawExchangeBridge(GuiGraphics graphics, int x, int y, int color) {
+        graphics.fill(x, y, x + 12, y + 1, color);
+        graphics.fill(x + 8, y - 2, x + 9, y + 3, color);
+        graphics.fill(x + 9, y - 1, x + 11, y + 2, color);
+        graphics.fill(x + 11, y, x + 13, y + 1, color);
     }
 
     private static void drawCornerMarks(GuiGraphics graphics, int left, int top, int right, int bottom, int color) {
@@ -1945,14 +2199,49 @@ public class EchoOverviewScreen extends Screen {
         graphics.fillGradient((left + right) / 2, y, right, y + 1, color, 0x00101824);
     }
 
+    private static void drawInstrumentPip(GuiGraphics graphics, int x, int y, int width, int height,
+                                          boolean lit, int bright, int dim) {
+        int right = x + width;
+        int bottom = y + height;
+        int edge = lit ? dim : COL_EDGE;
+        int fillTop = lit ? bright : 0xFF1C2630;
+        int fillBottom = lit ? dim : 0xFF090D12;
+        graphics.fillGradient(x + 1, y + 1, right - 1, bottom - 1, fillTop, fillBottom);
+        graphics.fill(x + 2, y, right - 2, y + 1, edge);
+        graphics.fill(x + 2, bottom - 1, right - 2, bottom, edge);
+        graphics.fill(x, y + 2, x + 1, bottom - 2, edge);
+        graphics.fill(right - 1, y + 2, right, bottom - 2, edge);
+        if (lit && width >= 7 && height >= 6) {
+            int highlight = 0x66000000 | (bright & 0x00FFFFFF);
+            graphics.fill(x + 2, y + 2, right - 2, y + 3, highlight);
+            graphics.fill(right - 3, y + 2, right - 2, bottom - 2, dim);
+        }
+    }
+
     private static void drawRuneTick(GuiGraphics graphics, int x, int y, int color) {
         graphics.fill(x, y + 1, x + 2, y + 5, color);
         graphics.fill(x + 2, y, x + 6, y + 1, color);
         graphics.fill(x + 5, y + 1, x + 7, y + 5, color);
     }
 
+    private Component fitComponent(Component component, int maxWidth) {
+        if (maxWidth <= 0) {
+            return Component.empty();
+        }
+        if (this.font.width(component) <= maxWidth) {
+            return component;
+        }
+        String ellipsis = "...";
+        int ellipsisWidth = this.font.width(ellipsis);
+        if (maxWidth <= ellipsisWidth) {
+            return Component.empty();
+        }
+        String prefix = this.font.plainSubstrByWidth(component.getString(), maxWidth - ellipsisWidth);
+        return Component.literal(prefix + ellipsis).withStyle(component.getStyle());
+    }
+
     private void addWrapped(Component component, Runnable action) {
-        int width = contentRight() - contentLeft() - 8;
+        int width = contentRight() - contentLeft() - 16;
         List<FormattedCharSequence> split = this.font.split(component, width);
         if (split.isEmpty()) {
             this.lines.add(new Line(FormattedCharSequence.EMPTY, action));
@@ -1960,7 +2249,7 @@ public class EchoOverviewScreen extends Screen {
         }
         for (FormattedCharSequence seq : split) {
             this.lines.add(new Line(seq, action));
-            action = null; // 多行时只有首行可点击,避免误触
+            action = null;
         }
     }
 
@@ -1974,28 +2263,39 @@ public class EchoOverviewScreen extends Screen {
         return false;
     }
 
-    /** 个人机制记录驱动的回访线索(V0.6C Mini Boss 首杀写入)——记录不同步则不显示。 */
-    private boolean addRevisitMechanism(List<Component> content, String mechanismKey, String langKey) {
-        // 机制记录不在 Journal 同步范围;以结构发现作为近似条件(线索本身是含蓄文案)
-        String structure = mechanismKey.contains("lighthouse") ? "tide_lighthouse_reef" : "mirror_dust_cloister";
-        if (ClientJournalCache.structures().contains(id(structure))) {
-            content.add(Component.translatable(langKey).withStyle(ChatFormatting.DARK_PURPLE));
-            return true;
-        }
-        return false;
-    }
-
     private static Component count(String key, int have, int total) {
         return Component.translatable(key, have, total);
     }
 
-    private static Component discoveredEntry(boolean discovered, Component name) {
+    private static void addDiscoveredEntry(List<Component> content, boolean discovered, Component name) {
         if (discovered) {
-            return Component.literal("✦ ").withStyle(ChatFormatting.DARK_AQUA).append(name);
+            content.add(Component.literal("✦ ").withStyle(ChatFormatting.DARK_AQUA).append(name));
         }
-        return Component.literal("◇ ").withStyle(ChatFormatting.GRAY)
-                .append(Component.translatable("journal.unknown_echoes.book.unknown")
-                        .withStyle(ChatFormatting.GRAY));
+    }
+
+    /**
+     * 未发现的世界奇观显示一句环境提示,发现后由 addDiscoveredEntry 显示正式条目。
+     * 提示键取自 WorldWonderType.getClueKey(),与清单 JSON 的 clue_key 同源。
+     */
+    private static void addWonderHint(List<Component> content, String structurePath,
+                                      boolean discovered) {
+        if (discovered) {
+            return;
+        }
+        WorldWonderType wonder = WorldWonderType.byId(structurePath);
+        if (wonder == null) {
+            return;
+        }
+        content.add(Component.literal("◇ ").withStyle(ChatFormatting.GOLD)
+                .append(Component.translatable(wonder.getClueKey())
+                        .withStyle(ChatFormatting.DARK_GRAY)));
+    }
+
+    private static void addNoRecordsIfEmpty(List<Component> content) {
+        if (content.isEmpty()) {
+            content.add(Component.translatable("journal.unknown_echoes.book.no_records")
+                    .withStyle(ChatFormatting.GRAY));
+        }
     }
 
     private static String bar(int level) {
@@ -2090,7 +2390,8 @@ public class EchoOverviewScreen extends Screen {
         score += Math.min(ClientJournalCache.structures().size() * 2, 40);
         score += ClientAbilityCache.getPuzzleScore();
         score += Math.min(miniBossCount() * 6, 48);
-        score += Math.min(ClientJournalCache.pages().size(), 80);
+        score += Math.min(AncientPageCatalog.countFirstDimensionPages(ClientJournalCache.pages()),
+                AncientPageCatalog.FIRST_DIMENSION_TOTAL);
         score += Math.min(visibleResearchStages() * 5, 45);
         score += Math.min(artifactUnlocks() * 4, 12);
         score += Math.min(artifactUpgradeSteps() * 3, 18);
@@ -2122,7 +2423,8 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private static String visibleBackfillTarget() {
-        if (ClientJournalCache.pages().size() < Math.max(T7_REQUIRED_PAGES, INDEX_EXPANSION_ONE_PAGES)) {
+        if (AncientPageCatalog.countFirstDimensionPages(ClientJournalCache.pages())
+                < Math.max(T7_REQUIRED_PAGES, INDEX_EXPANSION_ONE_PAGES)) {
             return "pages";
         }
         if (miniBossCount() < MINI_BOSSES.length) {
@@ -2147,11 +2449,21 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private record ActionButton(int x, int y, int width, int height, Component label,
-                                BooleanSupplier enabled, Runnable action, boolean active) {
+                                BooleanSupplier enabled, Runnable action, boolean active,
+                                Component tooltip) {
+        private ActionButton(int x, int y, int width, int height, Component label,
+                             BooleanSupplier enabled, Runnable action, boolean active) {
+            this(x, y, width, height, label, enabled, action, active, null);
+        }
+
         boolean contains(double mouseX, double mouseY) {
             return mouseX >= this.x && mouseX < this.x + this.width
                     && mouseY >= this.y && mouseY < this.y + this.height;
         }
+    }
+
+    private record OverviewLayout(boolean showDisc, int discWidth, int cols, int rows,
+                                  int cardW, int cardH, int gap, int startX, int startY) {
     }
 
     private record ReadingPopup(Component title, Component text) {

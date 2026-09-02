@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:echo_realm_complete",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_index"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.echo_index_unlocked.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.echo_index_unlocked.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

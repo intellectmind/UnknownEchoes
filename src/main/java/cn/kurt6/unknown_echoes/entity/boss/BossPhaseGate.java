@@ -11,10 +11,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
-/**
- * 主线 Boss 破防窗口的阶段地板。
- * 高伤害只能把 Boss 推到下一段血线，不能在同一次机制窗口跨多个阶段。
- */
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
 final class BossPhaseGate {
     private static final float EPSILON = 0.01F;

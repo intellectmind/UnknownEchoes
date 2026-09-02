@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:voidscar_bastion",
+  "biomes": "#unknown_echoes:has_voidscar_bastion",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

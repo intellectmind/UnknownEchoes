@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:resonant_cliff_crystal" },
+    { "item": "unknown_echoes:resonant_cliff_crystal" },
+    { "item": "unknown_echoes:resonant_cliff_crystal" },
+    { "item": "unknown_echoes:resonant_cliff_crystal" }
+  ],
+  "result": {
+    "id": "unknown_echoes:sky_quartz"
+  }
+}

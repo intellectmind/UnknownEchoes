@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ABA",
+    "CDC",
+    "AEA"
+  ],
+  "key": {
+    "A": { "item": "unknown_echoes:echo_stone_bricks" },
+    "B": { "item": "minecraft:amethyst_shard" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "D": { "item": "unknown_echoes:echo_metal_ingot" },
+    "E": { "item": "minecraft:crafting_table" }
+  },
+  "result": { "id": "unknown_echoes:realm_service_plinth" }
+}

@@ -1,10 +1,12 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
@@ -36,10 +38,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
 
-/**
- * 梦游鹿:沉眠花海被动生态生物。
- * 喂食沉眠花可在冷却后取得沉眠花蜜,属于普通材料互动,不写入任何关键进度。
- */
+/** 梦游鹿:沉眠花海被动生态生物。 */
 public class DreamingDeer extends Animal implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.dreaming_deer.idle");
@@ -60,17 +59,19 @@ public class DreamingDeer extends Animal implements GeoEntity {
                 .add(Attributes.MOVEMENT_SPEED, 0.24D);
     }
 
+    /** 躲避排在 PanicGoal 之后、繁殖之前:被打到的反应优先,但要在敌怪贴上来之前就走开。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PanicGoal(this, 1.7D));
-        this.goalSelector.addGoal(2, new BreedGoal(this, 1.0D));
-        this.goalSelector.addGoal(3, new TemptGoal(this, 1.0D,
+        this.goalSelector.addGoal(2, new FleeThreatGoal(this, 11.0D, 1.2D, 1.6D));
+        this.goalSelector.addGoal(3, new BreedGoal(this, 1.0D));
+        this.goalSelector.addGoal(4, new TemptGoal(this, 1.0D,
                 stack -> stack.is(ModItems.DREAM_FLOWER.get()) || stack.is(Items.GLOW_BERRIES), false));
-        this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.1D));
-        this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.9D));
-        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
-        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.1D));
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.9D));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
     @Override
@@ -126,17 +127,17 @@ public class DreamingDeer extends Animal implements GeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.ALLAY_AMBIENT_WITH_ITEM;
+        return ModSounds.DREAMING_DEER_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.GOAT_HURT;
+        return ModSounds.DREAMING_DEER_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.GOAT_DEATH;
+        return ModSounds.DREAMING_DEER_DEATH.get();
     }
 
     @Override

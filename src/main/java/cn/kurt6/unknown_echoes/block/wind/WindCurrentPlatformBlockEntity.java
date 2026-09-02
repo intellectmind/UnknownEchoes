@@ -21,26 +21,26 @@ import net.minecraft.world.phys.Vec3;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 风流平台 BlockEntity:激活倒计时 + 上升气流柱(服务端权威)。
- * 气流对柱内全部实体生效(运动效果不查权限,5.2 边界);玩家速度经 hurtMarked 同步。
- * 已加载平台位置登记进静态注册表,供风暴罗盘"风流"词条指示最近平台
- * (只覆盖已加载区块,符合 12.3"不全图扫描未生成结构"的限制)。
- */
+/** 风流平台 BlockEntity:激活倒计时 + 上升气流柱(服务端权威)。 */
 public class WindCurrentPlatformBlockEntity extends BlockEntity {
 
     /** 已加载的平台位置(服务端,按维度);BlockEntity 加载/移除时维护。 */
     private static final Map<ResourceKey<Level>, Set<BlockPos>> LOADED_PLATFORMS = new ConcurrentHashMap<>();
+    /** 重叠气流去重:弱键不持有卸载实体，同一服务端 tick 最多施力一次。 */
+    private static final Map<Entity, Long> LAST_FORCE_TICKS = new WeakHashMap<>();
 
-    /** 气流抬升:每次结算增加的竖直速度与上限。 */
-    private static final double LIFT_ACCEL = 0.20D;
+    /** 每 tick 平滑积分气流推力，避免速度抖动。 */
+    private static final double LIFT_ACCEL = 0.11D;
     private static final double LIFT_MAX_SPEED = 1.15D;
-    /** 顺风推进:玩家看向方向的水平加速与速度上限;潜行时只保留竖直抬升。 */
-    private static final double HORIZONTAL_DRAFT_ACCEL = 0.075D;
+    /** 顺风推进:只限制沿视线方向的风力分量，不截断侧移或其他来源的动量。 */
+    private static final double HORIZONTAL_DRAFT_ACCEL = 0.04D;
     private static final double HORIZONTAL_DRAFT_MAX_SPEED = 0.65D;
-    /** 离开气流后仍短暂保留的速度感。 */
+    /** 低于该水平速度视为"原地停留",只做垂直抬升,不叠加水平气流。 */
+    private static final double HORIZONTAL_DRAFT_MIN_INPUT_SPEED_SQR = 0.01D * 0.01D;
+    /** 离开气流后速度加成的保留时长(tick)。 */
     private static final int SPEED_BUFF_TICKS = 60;
     private static final int SPEED_BUFF_REFRESH_THRESHOLD_TICKS = 40;
 
@@ -51,11 +51,13 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
     }
 
     public void activate(int ticks) {
-        this.activeTicks = Math.max(this.activeTicks, ticks);
+
+        this.activeTicks = Math.max(0, Math.min(Math.max(this.activeTicks, ticks),
+                ServerConfig.WIND_PLATFORM_ACTIVE_TICKS.get()));
         this.setChanged();
     }
 
-    /** 时间沙漏白名单重置入口：只清理临时气流，不改任何个人进度。 */
+    /** 时间沙漏白名单重置入口：只清理临时气流,不改个人进度。 */
     public void deactivate() {
         this.activeTicks = 0;
         if (this.level != null && this.getBlockState().getValue(WindCurrentPlatformBlock.ACTIVE)) {
@@ -80,13 +82,24 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
         if (platform.activeTicks > 0 && !state.getValue(WindCurrentPlatformBlock.ACTIVE)) {
             level.setBlock(pos, state.setValue(WindCurrentPlatformBlock.ACTIVE, Boolean.TRUE), 3);
         }
-        if (!(level instanceof ServerLevel serverLevel) || level.getGameTime() % 2 != 0) {
+        if (!(level instanceof ServerLevel serverLevel)) {
             return;
         }
+        long gameTime = level.getGameTime();
         int height = ServerConfig.WIND_PLATFORM_LIFT_HEIGHT.get();
         AABB column = new AABB(pos.getX() - 0.75, pos.getY() + 0.2, pos.getZ() - 0.75,
                 pos.getX() + 1.75, pos.getY() + height, pos.getZ() + 1.75);
         for (Entity entity : serverLevel.getEntities(null, column)) {
+            if (entity.isRemoved() || entity.isNoGravity() || entity.isPassenger()) {
+                continue;
+            }
+            if (entity instanceof ServerPlayer player
+                    && (player.isSpectator() || player.getAbilities().flying)) {
+                continue;
+            }
+            if (!shouldApplyForce(entity, gameTime)) {
+                continue;
+            }
             Vec3 motion = entity.getDeltaMovement();
             Vec3 boosted = motion;
             if (entity instanceof ServerPlayer player) {
@@ -97,16 +110,17 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
                 boosted = new Vec3(boosted.x, Math.min(LIFT_MAX_SPEED, boosted.y + LIFT_ACCEL), boosted.z);
             }
             entity.setDeltaMovement(boosted);
+            entity.hasImpulse = true;
             entity.fallDistance = 0.0F;
             if (entity instanceof ServerPlayer player) {
-                player.hurtMarked = true; // 服务端速度变更同步到客户端
+                player.hurtMarked = true;
             }
         }
-        // 螺旋风粒子(10.5 风流平台启动演出);随机相位避免多平台同步旋转的机械感
-        if (level.getGameTime() % 4 == 0) {
-            double phase = (level.getGameTime() / 4.0 + pos.hashCode() % 17) * 0.7;
+
+        if (gameTime % 4 == 0) {
+            double phase = (gameTime / 4.0 + pos.hashCode() % 17) * 0.7;
             for (int i = 0; i < 3; i++) {
-                double y = pos.getY() + 0.5 + (level.getGameTime() / 4.0 * 1.3 + i * height / 3.0) % height;
+                double y = pos.getY() + 0.5 + (gameTime / 4.0 * 1.3 + i * height / 3.0) % height;
                 double angle = phase + i * Math.PI * 2 / 3;
                 serverLevel.sendParticles(ParticleTypes.CLOUD,
                         pos.getX() + 0.5 + Math.cos(angle) * 0.7, y, pos.getZ() + 0.5 + Math.sin(angle) * 0.7,
@@ -116,12 +130,7 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
     }
 
     private static Vec3 addHorizontalDraft(ServerPlayer player, Vec3 motion) {
-        if (player.isShiftKeyDown()) {
-            return motion;
-        }
-        double currentSpeedSqr = motion.x * motion.x + motion.z * motion.z;
-        double maxSpeedSqr = HORIZONTAL_DRAFT_MAX_SPEED * HORIZONTAL_DRAFT_MAX_SPEED;
-        if (currentSpeedSqr >= maxSpeedSqr) {
+        if (motion.x * motion.x + motion.z * motion.z < HORIZONTAL_DRAFT_MIN_INPUT_SPEED_SQR) {
             return motion;
         }
         Vec3 look = player.getLookAngle();
@@ -130,28 +139,33 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
             return motion;
         }
         double lookLength = Math.sqrt(lookLengthSqr);
-        double nextX = motion.x + look.x / lookLength * HORIZONTAL_DRAFT_ACCEL;
-        double nextZ = motion.z + look.z / lookLength * HORIZONTAL_DRAFT_ACCEL;
-        double nextSpeed = Math.sqrt(nextX * nextX + nextZ * nextZ);
-        if (nextSpeed > HORIZONTAL_DRAFT_MAX_SPEED) {
-            double scale = HORIZONTAL_DRAFT_MAX_SPEED / nextSpeed;
-            nextX *= scale;
-            nextZ *= scale;
+        double draftX = look.x / lookLength;
+        double draftZ = look.z / lookLength;
+        double alongDraft = motion.x * draftX + motion.z * draftZ;
+        if (alongDraft >= HORIZONTAL_DRAFT_MAX_SPEED) {
+            return motion;
         }
-        return new Vec3(nextX, motion.y, nextZ);
+        double addedDraft = Math.min(HORIZONTAL_DRAFT_ACCEL,
+                HORIZONTAL_DRAFT_MAX_SPEED - alongDraft);
+        return new Vec3(motion.x + draftX * addedDraft, motion.y,
+                motion.z + draftZ * addedDraft);
+    }
+
+    private static boolean shouldApplyForce(Entity entity, long gameTime) {
+        Long previous = LAST_FORCE_TICKS.put(entity, gameTime);
+        return previous == null || previous.longValue() != gameTime;
     }
 
     private static void refreshSpeedBuff(ServerPlayer player) {
         MobEffectInstance current = player.getEffect(MobEffects.MOVEMENT_SPEED);
         if (current != null && (current.getAmplifier() > 0
+                || current.getDuration() < 0
                 || current.getDuration() > SPEED_BUFF_REFRESH_THRESHOLD_TICKS)) {
             return;
         }
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED,
                 SPEED_BUFF_TICKS, 0, true, false, true));
     }
-
-    // ---- 罗盘用平台注册表(只登记已加载区块) ----
 
     @Override
     public void onLoad() {
@@ -186,9 +200,10 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
         }
     }
 
-    /** 服务器停止时清理已加载平台索引,避免跨世界保留旧维度坐标。 */
+    /** 服务器停止时清理运行态，避免跨世界保留旧维度坐标或施力记录。 */
     public static void clearLoadedPlatforms() {
         LOADED_PLATFORMS.clear();
+        LAST_FORCE_TICKS.clear();
     }
 
     /** 最近的已加载风流平台(风暴罗盘"风流"词条用);无 → null。 */

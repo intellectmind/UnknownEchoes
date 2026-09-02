@@ -18,12 +18,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.List;
 
-/**
- * 研究拓片:守护者结算与谜题奖励箱产出的研究材料。
- * V0.7D 起:拓片右键阅读写入基础能力研究线(+1 研究点)并消耗。
- * 风/潮汐/真视未获得基础能力时不消耗。
- * 物品本身可掉落可交易——强化材料明确允许进掉落表(11.1/13.2)。
- */
+/** 研究拓片:守护者结算与谜题奖励箱产出的研究材料。 */
 public class ResearchRubbingItem extends Item {
 
     /** 拓片种类:wind / tide / true_sight / gravity / void。 */
@@ -65,8 +60,7 @@ public class ResearchRubbingItem extends Item {
             } else {
                 int currentLevel = EchoResearchManager.getResearchLevel(serverPlayer, line);
                 if (currentLevel >= EchoResearchManager.MAX_RESEARCH_LEVEL) {
-                    serverPlayer.displayClientMessage(Component.translatable(
-                            "message.unknown_echoes.research_rubbing.saturated"), true);
+                    recycleSaturated(serverPlayer, stack);
                     return InteractionResultHolder.consume(stack);
                 }
                 int nextLevel = currentLevel + 1;
@@ -79,7 +73,8 @@ public class ResearchRubbingItem extends Item {
                 }
                 consumeCosts(serverPlayer, line, nextLevel);
                 EchoResearchManager.addResearchPoints(serverPlayer, line, 1);
-                // 第 2 级起媒材不足就停在当前级:多级阅读不减免任何一级的材料
+                int appliedPoints = 1;
+
                 for (int extra = 1; extra < this.points; extra++) {
                     int reached = EchoResearchManager.getResearchLevel(serverPlayer, line);
                     if (reached >= EchoResearchManager.MAX_RESEARCH_LEVEL) {
@@ -92,16 +87,26 @@ public class ResearchRubbingItem extends Item {
                     }
                     consumeCosts(serverPlayer, line, next);
                     EchoResearchManager.addResearchPoints(serverPlayer, line, 1);
+                    appliedPoints++;
                 }
+                int preservedPoints = 0;
                 if (!serverPlayer.getAbilities().instabuild) {
                     stack.shrink(1);
+                    preservedPoints = this.points - appliedPoints;
+                    if (preservedPoints > 0) {
+                        ItemStack preserved = new ItemStack(baseRubbing(line), preservedPoints);
+                        if (!serverPlayer.getInventory().add(preserved)) {
+                            serverPlayer.drop(preserved, false);
+                        }
+                    }
                 }
                 level.playSound(null, player.blockPosition(),
                         SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.8F, 1.0F);
+                Component researchName = Component.translatable(
+                        "research.unknown_echoes." + line.getId());
                 serverPlayer.displayClientMessage(Component.translatable(
                         "message.unknown_echoes.research_rubbing.absorbed",
-                        Component.translatable("research.unknown_echoes." + line.getId()),
-                        EchoResearchManager.getResearchLevel(serverPlayer, line)), true);
+                        researchName, EchoResearchManager.getResearchLevel(serverPlayer, line)), true);
             }
         }
         return InteractionResultHolder.consume(stack);
@@ -110,11 +115,14 @@ public class ResearchRubbingItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.research_rubbing." + this.kind)
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.research_rubbing." + this.kind,
+                        Component.keybind("key.use"))
                 .withStyle(ChatFormatting.GRAY));
         if (this.points > 1) {
             tooltip.add(Component.translatable("tooltip.unknown_echoes.research_rubbing.condensed")
                     .withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable("tooltip.unknown_echoes.research_rubbing.preserved")
+                    .withStyle(ChatFormatting.DARK_GRAY));
         }
         tooltip.add(Component.translatable("tooltip.unknown_echoes.research_rubbing.cost_hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
@@ -145,9 +153,7 @@ public class ResearchRubbingItem extends Item {
         }
     }
 
-    /**
-     * 拓片阅读按"即将提升到的等级"扣媒材;古代残页仍作为稀有探索理解,不在这里扣。
-     */
+    /** 拓片阅读按"即将提升到的等级"扣媒材;古代残页仍作为稀有探索理解,不在这里扣。 */
     private static List<MaterialCost> upgradeCosts(EchoResearchLine line, int nextLevel) {
         return switch (line) {
             case WIND -> switch (nextLevel) {
@@ -172,7 +178,7 @@ public class ResearchRubbingItem extends Item {
                         cost(ModItems.WATCHER_EYE_SHARD.get(), 1));
                 case 3 -> List.of(cost(ModItems.TIDE_UPGRADE_CORE.get(), 1),
                         cost(ModItems.MIRROR_TIDE_ALLOY_PLATE.get(), 2),
-                        cost(ModItems.TIDE_CORE.get(), 1));
+                        cost(ModItems.BLACK_TIDE_THREAD.get(), 1));
                 case 4 -> List.of(cost(ModItems.TIDE_UPGRADE_CORE.get(), 2),
                         cost(ModItems.WATCHER_EYE_SHARD.get(), 2),
                         cost(ModItems.OATHBOUND_ALLOY.get(), 1));
@@ -186,7 +192,7 @@ public class ResearchRubbingItem extends Item {
                         cost(ModItems.MIRROR_SCALE.get(), 1));
                 case 3 -> List.of(cost(ModItems.TRUE_SIGHT_UPGRADE_CORE.get(), 1),
                         cost(ModItems.ILLUSION_PRISM.get(), 2),
-                        cost(ModItems.TRUE_SIGHT_CORE.get(), 1));
+                        cost(ModItems.BROKEN_REFLECTION.get(), 1));
                 case 4 -> List.of(cost(ModItems.TRUE_SIGHT_UPGRADE_CORE.get(), 2),
                         cost(ModItems.DECOY_SHARD.get(), 2),
                         cost(ModItems.OATHBOUND_ALLOY.get(), 1));
@@ -223,41 +229,38 @@ public class ResearchRubbingItem extends Item {
         };
     }
 
-    private static int countItem(ServerPlayer player, Item item) {
-        int count = 0;
-        for (ItemStack stack : player.getInventory().items) {
-            if (stack.is(item)) {
-                count += stack.getCount();
-            }
-        }
-        for (ItemStack stack : player.getInventory().offhand) {
-            if (stack.is(item)) {
-                count += stack.getCount();
-            }
-        }
-        return count;
+    private static Item baseRubbing(EchoResearchLine line) {
+        return switch (line) {
+            case WIND -> ModItems.WIND_RESEARCH_RUBBING.get();
+            case TIDE -> ModItems.TIDE_RESEARCH_RUBBING.get();
+            case TRUE_SIGHT -> ModItems.TRUE_SIGHT_RESEARCH_RUBBING.get();
+            case GRAVITY -> ModItems.GRAVITY_RESEARCH_RUBBING.get();
+            case VOID -> ModItems.VOID_RESEARCH_RUBBING.get();
+        };
     }
 
-    private static void consumeItem(ServerPlayer player, Item item, int amount) {
-        for (ItemStack stack : player.getInventory().items) {
-            if (amount <= 0) {
-                return;
-            }
-            if (stack.is(item)) {
-                int take = Math.min(amount, stack.getCount());
-                stack.shrink(take);
-                amount -= take;
-            }
+    private void recycleSaturated(ServerPlayer player, ItemStack stack) {
+        if (player.getAbilities().instabuild) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.research_rubbing.saturated"), true);
+            return;
         }
-        for (ItemStack stack : player.getInventory().offhand) {
-            if (amount <= 0) {
-                return;
-            }
-            if (stack.is(item)) {
-                int take = Math.min(amount, stack.getCount());
-                stack.shrink(take);
-                amount -= take;
-            }
+        stack.shrink(1);
+        ItemStack recycled = new ItemStack(ModItems.RECORD_TRACING_PAPER.get(), this.points);
+        if (!player.getInventory().add(recycled)) {
+            player.drop(recycled, false);
         }
+        player.displayClientMessage(Component.translatable(
+                "message.unknown_echoes.research_rubbing.recycled"), true);
     }
+
+    private static int countItem(ServerPlayer player, Item item) {
+        return InventoryPayment.count(player, item);
+    }
+
+
+    private static void consumeItem(ServerPlayer player, Item item, int amount) {
+        InventoryPayment.consume(player, item, amount);
+    }
+
 }

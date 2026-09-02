@@ -9,10 +9,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * 客户端能力缓存,仅用于表现层(二段跳手感、滑翔、HUD、能力面板)。
- * 服务端判定永远以玩家数据为准,客户端不能自行声明解锁。
- */
+/** 客户端能力缓存,仅用于表现层(二段跳手感、滑翔、HUD、能力面板)。 */
 public class ClientAbilityCache {
     private static final Set<String> ABILITIES = new HashSet<>();
     private static final Set<String> BEACONS = new HashSet<>();

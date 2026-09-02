@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "unknown_echoes:echo_hoe"
+    "unknown_echoes:echo_hoe",
+    "unknown_echoes:deep_alloy_hoe"
   ]
 }

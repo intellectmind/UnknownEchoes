@@ -27,17 +27,17 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.portal.DimensionTransition;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * 残响信标:V0.1 核心信标(等级 RESONANCE)。
- * 未激活:需要玩家手持回声境域钥匙唤醒,然后写入玩家个人入口记录。
- * 已激活:再次右键传送进入回声境域;在回声境域中右键则返回主世界。
- * 激活状态记录在玩家数据中(个人进度),钥匙只是一次性入口材料。
- */
+import javax.annotation.Nullable;
+
+/** 残响信标: 核心信标(等级 RESONANCE)。 */
 public class EchoBeaconBlock extends Block {
     public static final MapCodec<EchoBeaconBlock> CODEC = simpleCodec(EchoBeaconBlock::new);
 
@@ -48,6 +48,8 @@ public class EchoBeaconBlock extends Block {
     public static final ResourceKey<Level> ECHO_REALM = ResourceKey.create(
             net.minecraft.core.registries.Registries.DIMENSION, UnknownEchoes.id("echo_realm"));
     public static final BlockPos REALM_ARRIVAL = new BlockPos(0, 100, 0);
+    /** 必须 >= 落点周边所有扫描的最大水平偏移(平台 3、回程信标 4)。 */
+    private static final int ARRIVAL_PREPARE_RADIUS = 4;
 
     public EchoBeaconBlock(Properties properties) {
         super(properties);
@@ -85,22 +87,28 @@ public class EchoBeaconBlock extends Block {
         if (serverPlayer.isSpectator()) {
             return InteractionResult.CONSUME;
         }
-        // 在回声境域中:返回主世界
+
         if (level.dimension().equals(ECHO_REALM)) {
-            teleportBack(serverPlayer);
+            teleportBack(serverPlayer, pos);
             return InteractionResult.CONSUME;
         }
 
         if (EchoAbilityManager.hasActivatedBeacon(serverPlayer, EchoPermission.RESONANCE_BEACON_ID)) {
-            teleportToRealm(serverPlayer);
+            teleportToRealm(serverPlayer, pos);
             return InteractionResult.CONSUME;
         }
 
-        // 未激活:只能用回声境域钥匙唤醒,碎片/核心先在合成台中变成钥匙。
+        // 未激活:只能用回声境域钥匙唤醒
         if (!activationKey.is(ModItems.ECHO_KEY.get())) {
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
             serverPlayer.displayClientMessage(
                     Component.translatable("message.unknown_echoes.beacon.need_key"), true);
+            return InteractionResult.CONSUME;
+        }
+
+        if (!CommonConfig.ENABLE_ECHO_REALM.get()) {
+            serverPlayer.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.realm.disabled"), true);
             return InteractionResult.CONSUME;
         }
 
@@ -115,7 +123,6 @@ public class EchoBeaconBlock extends Block {
             activationKey.shrink(1);
         }
 
-        serverPlayer.sendSystemMessage(Component.translatable("message.unknown_echoes.beacon.activated"));
         level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.0F, 1.2F);
         if (level instanceof ServerLevel serverLevel) {
             serverLevel.sendParticles(ParticleTypes.END_ROD,
@@ -125,8 +132,20 @@ public class EchoBeaconBlock extends Block {
     }
 
     public static void teleportToRealm(ServerPlayer player) {
+        queueTeleportToRealm(player, null);
+    }
+
+    private static void teleportToRealm(ServerPlayer player, BlockPos sourceBeacon) {
+        queueTeleportToRealm(player, sourceBeacon.immutable());
+    }
+
+    private static void queueTeleportToRealm(ServerPlayer player, BlockPos sourceBeacon) {
         if (!CommonConfig.ENABLE_ECHO_REALM.get()) {
             player.displayClientMessage(Component.translatable("message.unknown_echoes.realm.disabled"), true);
+            return;
+        }
+        ServerLevel sourceLevel = player.serverLevel();
+        if (sourceBeacon != null && !isRealmEntryCurrent(player, sourceLevel, sourceBeacon)) {
             return;
         }
         ServerLevel realm = player.server.getLevel(ECHO_REALM);
@@ -138,7 +157,9 @@ public class EchoBeaconBlock extends Block {
             return;
         }
         player.getCooldowns().addCooldown(ModItems.ECHO_KEY.get(), 20);
-        realm.getChunkAt(REALM_ARRIVAL);
+        // 落点在区块边界上(x=z=0),±4 的平台与回程信标横跨 4 个区块。
+        // 只备中心区块会让另外 3 个在循环里逐个同步生成。
+        prepareArrivalChunks(realm, REALM_ARRIVAL, ARRIVAL_PREPARE_RADIUS);
         BlockPos arrival = ensureArrivalPlatform(realm)
                 ? REALM_ARRIVAL : findSafeArrival(realm);
         if (arrival == null || !ensureReturnBeaconNear(realm, arrival)) {
@@ -147,34 +168,126 @@ public class EchoBeaconBlock extends Block {
                     "message.unknown_echoes.realm.arrival_blocked"), true);
             return;
         }
-        // 同线程 server.execute 会立即执行,必须用 TickTask 排到下一 tick 才真正脱离交互 tick(gotcha #0)
+
         player.server.tell(new net.minecraft.server.TickTask(player.server.getTickCount() + 1, () -> {
-            if (player.isRemoved() || !player.isAlive() || player.level() == realm) {
+            if (player.isRemoved() || !player.isAlive() || player.level() != sourceLevel) {
+                return;
+            }
+            if (!CommonConfig.ENABLE_ECHO_REALM.get()
+                    || sourceBeacon != null && !isRealmEntryCurrent(player, sourceLevel, sourceBeacon)
+                    || !isSafeArrival(realm, arrival, player)
+                    || !hasReturnBeaconNear(realm, arrival)) {
                 return;
             }
             player.teleportTo(realm, arrival.getX() + 0.5, arrival.getY(),
                     arrival.getZ() + 0.5, player.getYRot(), player.getXRot());
+            if (player.serverLevel() != realm) {
+                return;
+            }
             ModAdvancements.recordEchoRealmEntry(player);
-            player.displayClientMessage(Component.translatable("message.unknown_echoes.realm.entered"), true);
             realm.playSound(null, arrival, SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 0.5F, 1.0F);
         }));
     }
 
+    private static boolean isRealmEntryCurrent(ServerPlayer player, ServerLevel sourceLevel,
+                                               BlockPos sourceBeacon) {
+        return player.serverLevel() == sourceLevel
+                && EchoPermission.canEnterEchoRealm(player)
+                && sourceLevel.hasChunkAt(sourceBeacon)
+                && sourceLevel.getBlockState(sourceBeacon).is(ModBlocks.RESONANCE_BEACON.get());
+    }
+
     public static void teleportBack(ServerPlayer player) {
+        queueTeleportBack(player, null, null);
+    }
+
+    private static void teleportBack(ServerPlayer player, BlockPos sourceBeacon) {
+        queueTeleportBack(player, sourceBeacon.immutable(), ModBlocks.RESONANCE_BEACON.get());
+    }
+
+    static void teleportBackFromAbyssBeacon(ServerPlayer player, BlockPos sourceBeacon) {
+        queueTeleportBack(player, sourceBeacon.immutable(), ModBlocks.ABYSS_BEACON.get());
+    }
+
+    private static void queueTeleportBack(ServerPlayer player, @Nullable BlockPos sourceBeacon,
+                                          @Nullable Block sourceBlock) {
         ServerLevel overworld = player.server.overworld();
-        BlockPos target = player.getRespawnPosition() != null
-                && player.getRespawnDimension().equals(Level.OVERWORLD)
-                ? player.getRespawnPosition() : overworld.getSharedSpawnPos();
-        // gotcha #0:预加载目标区块;同线程 server.execute 是立即执行,用 TickTask 排到下一 tick
-        overworld.getChunkAt(target);
+        ServerLevel sourceLevel = player.serverLevel();
+        boolean personalRespawn = hasOverworldRespawn(player);
+        BlockPos sharedSpawn = overworld.getSharedSpawnPos();
+        DimensionTransition target = resolveReturnTarget(player, overworld);
+        BlockPos targetPos = BlockPos.containing(target.pos());
+
+        target.newLevel().getChunkAt(targetPos);
         player.server.tell(new net.minecraft.server.TickTask(player.server.getTickCount() + 1, () -> {
-            if (player.isRemoved() || !player.isAlive() || player.level() == overworld) {
+            if (!isReturnSourceCurrent(player, sourceLevel, sourceBeacon, sourceBlock)) {
                 return;
             }
-            player.teleportTo(overworld, target.getX() + 0.5, target.getY() + 1.0,
-                    target.getZ() + 0.5, player.getYRot(), player.getXRot());
-            player.displayClientMessage(Component.translatable("message.unknown_echoes.realm.returned"), true);
+            DimensionTransition currentTarget;
+            if (personalRespawn) {
+                currentTarget = hasOverworldRespawn(player)
+                        ? resolveReturnTarget(player, overworld) : null;
+                if (!sameReturnTarget(target, currentTarget)) {
+                    return;
+                }
+            } else {
+                if (hasOverworldRespawn(player) || !sharedSpawn.equals(overworld.getSharedSpawnPos())) {
+                    return;
+                }
+                currentTarget = target;
+            }
+            if (!isReturnTargetSafe(player, currentTarget)) {
+                return;
+            }
+            player.teleportTo(currentTarget.newLevel(), currentTarget.pos().x, currentTarget.pos().y,
+                    currentTarget.pos().z, currentTarget.yRot(), currentTarget.xRot());
+            if (player.serverLevel() != currentTarget.newLevel()) {
+                return;
+            }
         }));
+    }
+
+    private static boolean isReturnSourceCurrent(ServerPlayer player, ServerLevel sourceLevel,
+                                                 @Nullable BlockPos sourceBeacon,
+                                                 @Nullable Block sourceBlock) {
+        return !player.isRemoved() && player.isAlive() && player.level() == sourceLevel
+                && (sourceBeacon == null || sourceBlock != null
+                && sourceLevel.hasChunkAt(sourceBeacon)
+                && sourceLevel.getBlockState(sourceBeacon).is(sourceBlock));
+    }
+
+    private static boolean hasOverworldRespawn(ServerPlayer player) {
+        return player.getRespawnDimension().equals(Level.OVERWORLD)
+                && player.getRespawnPosition() != null;
+    }
+
+    private static DimensionTransition resolveReturnTarget(ServerPlayer player, ServerLevel overworld) {
+        if (hasOverworldRespawn(player)) {
+            return player.findRespawnPositionAndUseSpawnBlock(true, DimensionTransition.DO_NOTHING);
+        }
+        return new DimensionTransition(overworld, player, DimensionTransition.DO_NOTHING);
+    }
+
+    private static boolean sameReturnTarget(DimensionTransition queued, DimensionTransition current) {
+        return current != null
+                && current.newLevel() == queued.newLevel()
+                && current.pos().equals(queued.pos());
+    }
+
+    private static boolean isReturnTargetSafe(ServerPlayer player, DimensionTransition target) {
+        Vec3 offset = target.pos().subtract(player.position());
+        AABB moved = player.getBoundingBox().move(offset);
+        return target.newLevel().getWorldBorder().isWithinBounds(moved)
+                && target.newLevel().noCollision(player, moved);
+    }
+
+    /** 一次备齐落点周围区块;逐格 getBlockState 会在未加载区块上同步生成。 */
+    private static void prepareArrivalChunks(ServerLevel realm, BlockPos center, int radius) {
+        for (int chunkX = (center.getX() - radius) >> 4; chunkX <= (center.getX() + radius) >> 4; chunkX++) {
+            for (int chunkZ = (center.getZ() - radius) >> 4; chunkZ <= (center.getZ() + radius) >> 4; chunkZ++) {
+                realm.getChunk(chunkX, chunkZ);
+            }
+        }
     }
 
     private static boolean ensureArrivalPlatform(ServerLevel realm) {
@@ -255,10 +368,8 @@ public class EchoBeaconBlock extends Block {
     }
 
     private static boolean ensureReturnBeaconNear(ServerLevel realm, BlockPos arrival) {
-        for (BlockPos pos : BlockPos.betweenClosed(arrival.offset(-4, -1, -4), arrival.offset(4, 1, 4))) {
-            if (realm.getBlockState(pos).is(ModBlocks.RESONANCE_BEACON.get())) {
-                return true;
-            }
+        if (hasReturnBeaconNear(realm, arrival)) {
+            return true;
         }
         for (int radius = 2; radius <= 4; radius++) {
             for (int x = -radius; x <= radius; x++) {
@@ -278,9 +389,30 @@ public class EchoBeaconBlock extends Block {
         return false;
     }
 
+    private static boolean hasReturnBeaconNear(ServerLevel realm, BlockPos arrival) {
+        for (BlockPos pos : BlockPos.betweenClosed(arrival.offset(-4, -1, -4), arrival.offset(4, 1, 4))) {
+            if (realm.getBlockState(pos).is(ModBlocks.RESONANCE_BEACON.get())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isSafeArrival(ServerLevel realm, BlockPos pos) {
-        return realm.getBlockState(pos).getCollisionShape(realm, pos).isEmpty()
-                && realm.getBlockState(pos.above()).getCollisionShape(realm, pos.above()).isEmpty()
+        return isSafeArrival(realm, pos, null);
+    }
+
+    private static boolean isSafeArrival(ServerLevel realm, BlockPos pos, @Nullable ServerPlayer player) {
+        AABB box;
+        if (player == null) {
+            box = new AABB(pos.getX() + 0.2D, pos.getY(), pos.getZ() + 0.2D,
+                    pos.getX() + 0.8D, pos.getY() + 1.8D, pos.getZ() + 0.8D);
+        } else {
+            Vec3 target = new Vec3(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+            box = player.getBoundingBox().move(target.subtract(player.position()));
+        }
+        return realm.getWorldBorder().isWithinBounds(box)
+                && realm.noCollision(player, box)
                 && Block.canSupportCenter(realm, pos.below(), Direction.UP);
     }
 }

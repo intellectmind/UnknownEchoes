@@ -19,23 +19,19 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * 潮汐感应门 BlockEntity:感应扫描 + 开门保持倒计时(全部服务端)。
- * 关闭态每 10 tick 扫一次身边玩家:持潮汐回响 → 整组开启,保持时长按开门者研究等级
- * (5.3"倒影入口稳定时间":基线 10 秒,研究 3 起 20 秒,ServerConfig 可调);
- * 无权限的玩家贴近时只收到含蓄水纹提示(节流)。倒计时归零 → 整组自动闭合。
- */
+/** 潮汐感应门 BlockEntity:感应扫描 + 开门保持倒计时(全部服务端)。 */
 public class TideSensorDoorBlockEntity extends BlockEntity {
 
     /** 感应半径(格)。 */
     private static final double SENSE_RANGE = 3.0D;
-    /** 无权限提示半径与节流间隔。 */
+    /** 无权限提示半径(格)。 */
     private static final double HINT_RANGE = 2.5D;
     private static final int HINT_INTERVAL_TICKS = 80;
 
@@ -61,21 +57,24 @@ public class TideSensorDoorBlockEntity extends BlockEntity {
             }
             return;
         }
-        if (!(level instanceof ServerLevel serverLevel)
-                || Math.floorMod(level.getGameTime() + pos.asLong(), 10L) != 0L) {
+        if (!(level instanceof ServerLevel serverLevel)) {
             return;
         }
+        long now = level.getGameTime();
+        if (phase(now, pos.asLong(), 10L) != 0L) {
+            return;
+        }
+        Vec3 center = Vec3.atCenterOf(pos);
         AABB area = new AABB(pos).inflate(SENSE_RANGE);
-        for (ServerPlayer player : serverLevel.players()) {
-            if (player.isSpectator() || !player.getBoundingBox().intersects(area)) {
-                continue;
-            }
+        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class, area,
+                candidate -> !candidate.isSpectator()
+                        && candidate.distanceToSqr(center) <= SENSE_RANGE * SENSE_RANGE)) {
             if (EchoPermission.canUseTideMechanism(player)) {
                 openGroup(level, pos, player);
                 return;
             }
-            // 无权限:贴近才给含蓄提示,且按时间节流,避免刷屏(红线 #7)
-            if (Math.floorMod(level.getGameTime() + pos.asLong(), HINT_INTERVAL_TICKS) == 0L
+
+            if (phase(now, pos.asLong(), HINT_INTERVAL_TICKS) == 0L
                     && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)
                             <= HINT_RANGE * HINT_RANGE) {
                 serverLevel.sendParticles(ParticleTypes.UNDERWATER,
@@ -86,6 +85,11 @@ public class TideSensorDoorBlockEntity extends BlockEntity {
                         player, EchoAbilityType.TIDE_ECHO, "door_locked");
             }
         }
+    }
+
+    private static long phase(long gameTime, long salt, long interval) {
+        return Math.floorMod(Math.floorMod(gameTime, interval)
+                + Math.floorMod(salt, interval), interval);
     }
 
     /** 整组开启:洪泛相邻感应门,保持时长按开门者潮汐研究等级。 */
@@ -102,8 +106,6 @@ public class TideSensorDoorBlockEntity extends BlockEntity {
                         origin.getX() + 0.5, origin.getY() + 1.0, origin.getZ() + 0.5,
                         16, 0.5, 0.6, 0.5, 0.08);
             }
-            opener.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.tide_door.opened"), true);
         }
     }
 
@@ -139,6 +141,7 @@ public class TideSensorDoorBlockEntity extends BlockEntity {
                 BlockPos next = pos.relative(direction);
                 if (visited.size() < TideSensorDoorBlock.MAX_CONNECTED
                         && !visited.contains(next)
+                        && level.hasChunkAt(next)
                         && level.getBlockState(next).getBlock() instanceof TideSensorDoorBlock) {
                     visited.add(next);
                     queue.add(next);

@@ -7,9 +7,6 @@ import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
-/**
- * 梦游鹿 GeckoLib 渲染器。
- */
 public class DreamingDeerRenderer extends GeoEntityRenderer<DreamingDeer> {
 
     public DreamingDeerRenderer(EntityRendererProvider.Context context) {

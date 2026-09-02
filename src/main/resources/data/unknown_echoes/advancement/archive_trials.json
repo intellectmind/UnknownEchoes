@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:grand_archive",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_index"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.archive_trials.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.archive_trials.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

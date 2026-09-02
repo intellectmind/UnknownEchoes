@@ -1,0 +1,644 @@
+{
+  "ambientocclusion": false,
+  "gui_light": "front",
+  "textures": {
+    "particle": "unknown_echoes:block/world_resonance_altar_alloy",
+    "alloy": "unknown_echoes:block/world_resonance_altar_alloy",
+    "rune": "unknown_echoes:block/world_resonance_altar_rune",
+    "core": "unknown_echoes:block/world_resonance_core",
+    "wind": "unknown_echoes:block/world_resonance_wind",
+    "tide": "unknown_echoes:block/world_resonance_tide",
+    "true_sight": "unknown_echoes:block/world_resonance_true_sight",
+    "gravity": "unknown_echoes:block/world_resonance_gravity",
+    "void": "unknown_echoes:block/world_resonance_void"
+  },
+  "elements": [
+    {
+      "name": "kinetic_void_spine",
+      "from": [
+        -4.55,
+        10.85,
+        4.45
+      ],
+      "to": [
+        -3.45,
+        19.4,
+        5.55
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      }
+    },
+    {
+      "name": "kinetic_void_prong_w",
+      "from": [
+        -8.0,
+        11.75,
+        4.35
+      ],
+      "to": [
+        -6.65,
+        18.7,
+        5.65
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          -4,
+          11.75,
+          5
+        ]
+      }
+    },
+    {
+      "name": "kinetic_void_prong_e",
+      "from": [
+        -1.35,
+        11.75,
+        4.35
+      ],
+      "to": [
+        0.0,
+        18.7,
+        5.65
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 10,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          -4,
+          11.75,
+          5
+        ]
+      }
+    },
+    {
+      "name": "kinetic_void_shard_n",
+      "from": [
+        -4.6,
+        12.2,
+        1
+      ],
+      "to": [
+        -3.4,
+        17.8,
+        3.6
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 11,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          -4,
+          12.2,
+          5
+        ]
+      }
+    },
+    {
+      "name": "kinetic_void_shard_s",
+      "from": [
+        -4.6,
+        12.2,
+        6.4
+      ],
+      "to": [
+        -3.4,
+        17.8,
+        9
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 11,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          -4,
+          12.2,
+          5
+        ]
+      }
+    },
+    {
+      "name": "kinetic_void_rift_w",
+      "from": [
+        -8.1,
+        18.3,
+        4.4
+      ],
+      "to": [
+        -4.8,
+        19.1,
+        5.6
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          -4,
+          18,
+          5
+        ]
+      }
+    },
+    {
+      "name": "kinetic_void_rift_e",
+      "from": [
+        -3.2,
+        18.3,
+        4.4
+      ],
+      "to": [
+        0.1,
+        19.1,
+        5.6
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          -4,
+          18,
+          5
+        ]
+      }
+    },
+    {
+      "name": "kinetic_void_crown",
+      "from": [
+        -5.0,
+        19,
+        3.95
+      ],
+      "to": [
+        -3.0,
+        22.2,
+        6.05
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#void"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 15,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          -4,
+          20.6,
+          5
+        ]
+      }
+    }
+  ]
+}

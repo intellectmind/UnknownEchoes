@@ -15,6 +15,7 @@
     }
   },
   "result": {
-    "id": "unknown_echoes:echo_metal_ingot"
+    "id": "unknown_echoes:echo_metal_ingot",
+    "count": 2
   }
 }

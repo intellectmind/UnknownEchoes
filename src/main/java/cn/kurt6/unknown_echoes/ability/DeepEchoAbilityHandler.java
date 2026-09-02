@@ -24,10 +24,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -78,8 +78,8 @@ public final class DeepEchoAbilityHandler {
                         7, 0.35D, 0.55D, 0.35D, 0.03D);
             }
         }
-        if (state.gravityEnd <= now && state.gravityCooldownEnd <= now
-                && state.voidWardEnd <= now && state.voidCooldownEnd <= now) {
+
+        if (state.gravityEnd <= now && state.voidWardEnd <= now) {
             STATES.remove(player.getUUID());
         }
     }
@@ -111,10 +111,14 @@ public final class DeepEchoAbilityHandler {
 
     public static void syncCooldowns(ServerPlayer player) {
         long now = globalGameTime(player);
-        long gravityEnd = cooldownEnd(player, GRAVITY_COOLDOWN_KEY, now);
-        long voidEnd = cooldownEnd(player, VOID_COOLDOWN_KEY, now);
-        int gravityDuration = cooldownDuration(player, GRAVITY_COOLDOWN_DURATION_KEY, gravityEnd, now);
-        int voidDuration = cooldownDuration(player, VOID_COOLDOWN_DURATION_KEY, voidEnd, now);
+        int maxGravityCooldown = maxCooldown(ServerConfig.GRAVITY_ACTIVE_COOLDOWN_TICKS.get());
+        int maxVoidCooldown = maxCooldown(ServerConfig.VOID_STEP_COOLDOWN_TICKS.get());
+        long gravityEnd = cooldownEnd(player, GRAVITY_COOLDOWN_KEY, now, maxGravityCooldown);
+        long voidEnd = cooldownEnd(player, VOID_COOLDOWN_KEY, now, maxVoidCooldown);
+        int gravityDuration = cooldownDuration(player, GRAVITY_COOLDOWN_DURATION_KEY,
+                gravityEnd, now, maxGravityCooldown);
+        int voidDuration = cooldownDuration(player, VOID_COOLDOWN_DURATION_KEY,
+                voidEnd, now, maxVoidCooldown);
         PacketDistributor.sendToPlayer(player, new AbilityCooldownSyncPayload(
                 gravityEnd, gravityDuration, voidEnd, voidDuration, now));
     }
@@ -127,7 +131,8 @@ public final class DeepEchoAbilityHandler {
         }
         State state = state(player);
         long now = globalGameTime(player);
-        long gravityCooldownEnd = cooldownEnd(player, GRAVITY_COOLDOWN_KEY, now);
+        long gravityCooldownEnd = cooldownEnd(player, GRAVITY_COOLDOWN_KEY, now,
+                maxCooldown(ServerConfig.GRAVITY_ACTIVE_COOLDOWN_TICKS.get()));
         if (gravityCooldownEnd > now) {
             reject(player, EchoAbilityType.GRAVITY_ECHO, "cooldown",
                     "message.unknown_echoes.gravity_active.cooldown");
@@ -139,17 +144,23 @@ public final class DeepEchoAbilityHandler {
             return;
         }
         int research = JournalManager.getResearchLevel(player, EchoAbilityType.GRAVITY_ECHO);
-        int duration = gravityDuration(research);
+        int duration = gravityDurationTicks(ServerConfig.GRAVITY_ACTIVE_DURATION_TICKS.get(), research);
         if (EchoArmorSets.abyssWalkerPieces(player) >= 4) {
             duration = duration * 5 / 4;
         }
-        double radius = gravityRadius(research);
-        state.gravityEnd = now + duration;
+        if (EchoArmorSets.hasResonatorAbilityBonus(player)) {
+            duration = duration * 11 / 10;
+        }
+        double radius = gravityRadius(ServerConfig.GRAVITY_ACTIVE_RADIUS.get(), research);
+        state.gravityEnd = safeDeadline(now, duration);
         state.gravityRadius = radius;
         int cooldownDuration = (int) scaledCooldown(
                 ServerConfig.GRAVITY_ACTIVE_COOLDOWN_TICKS.get(), research);
-        state.gravityCooldownEnd = now + cooldownDuration;
-        player.getPersistentData().putLong(GRAVITY_COOLDOWN_KEY, state.gravityCooldownEnd);
+        if (EchoArmorSets.hasResonatorAbilityBonus(player)) {
+            cooldownDuration = cooldownDuration * 9 / 10;
+        }
+        gravityCooldownEnd = safeDeadline(now, cooldownDuration);
+        player.getPersistentData().putLong(GRAVITY_COOLDOWN_KEY, gravityCooldownEnd);
         player.getPersistentData().putInt(GRAVITY_COOLDOWN_DURATION_KEY, cooldownDuration);
         syncCooldowns(player);
         if (player.level() instanceof ServerLevel level) {
@@ -157,10 +168,6 @@ public final class DeepEchoAbilityHandler {
             level.playSound(null, player.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
                     SoundSource.PLAYERS, 0.9F, 0.75F);
         }
-        player.displayClientMessage(Component.translatable(
-                "message.unknown_echoes.gravity_active.started",
-                String.format(Locale.ROOT, "%.1f", radius),
-                String.format(Locale.ROOT, "%.1f", duration / 20.0D)), true);
     }
 
     private static void useVoidStep(ServerPlayer player) {
@@ -171,7 +178,8 @@ public final class DeepEchoAbilityHandler {
         }
         State state = state(player);
         long now = globalGameTime(player);
-        long voidCooldownEnd = cooldownEnd(player, VOID_COOLDOWN_KEY, now);
+        long voidCooldownEnd = cooldownEnd(player, VOID_COOLDOWN_KEY, now,
+                maxCooldown(ServerConfig.VOID_STEP_COOLDOWN_TICKS.get()));
         if (voidCooldownEnd > now) {
             reject(player, EchoAbilityType.VOID_ECHO, "cooldown",
                     "message.unknown_echoes.void_step.cooldown");
@@ -205,11 +213,17 @@ public final class DeepEchoAbilityHandler {
         if (EchoArmorSets.abyssWalkerPieces(player) >= 4) {
             wardDuration = wardDuration * 3 / 2;
         }
-        state.voidWardEnd = now + wardDuration;
+        if (EchoArmorSets.hasResonatorAbilityBonus(player)) {
+            wardDuration = wardDuration * 6 / 5;
+        }
+        state.voidWardEnd = safeDeadline(now, wardDuration);
         int cooldownDuration = (int) scaledCooldown(
                 ServerConfig.VOID_STEP_COOLDOWN_TICKS.get(), research);
-        state.voidCooldownEnd = now + cooldownDuration;
-        player.getPersistentData().putLong(VOID_COOLDOWN_KEY, state.voidCooldownEnd);
+        if (EchoArmorSets.hasResonatorAbilityBonus(player)) {
+            cooldownDuration = cooldownDuration * 9 / 10;
+        }
+        voidCooldownEnd = safeDeadline(now, cooldownDuration);
+        player.getPersistentData().putLong(VOID_COOLDOWN_KEY, voidCooldownEnd);
         player.getPersistentData().putInt(VOID_COOLDOWN_DURATION_KEY, cooldownDuration);
         syncCooldowns(player);
         level.sendParticles(ParticleTypes.END_ROD,
@@ -218,10 +232,6 @@ public final class DeepEchoAbilityHandler {
         sendCalibrationBurst(level, destination, 18, 0.55D);
         level.playSound(null, BlockPos.containing(destination), SoundEvents.ENDERMAN_TELEPORT,
                 SoundSource.PLAYERS, 0.9F, 1.25F);
-        player.displayClientMessage(Component.translatable(
-                "message.unknown_echoes.void_step.started",
-                String.format(Locale.ROOT, "%.1f", origin.distanceTo(destination)),
-                String.format(Locale.ROOT, "%.1f", wardDuration / 20.0D)), true);
     }
 
     private static Vec3 findSafeVoidStep(ServerLevel level, ServerPlayer player, double range) {
@@ -244,8 +254,8 @@ public final class DeepEchoAbilityHandler {
                 BlockPos feet = BlockPos.containing(x, player.getY() + dy, z);
                 Vec3 target = new Vec3(feet.getX() + 0.5D, feet.getY(), feet.getZ() + 0.5D);
                 AABB moved = original.move(target.subtract(player.position()));
-                if (!level.getWorldBorder().isWithinBounds(feet)
-                        || !level.hasChunkAt(feet)
+                if (!level.getWorldBorder().isWithinBounds(moved)
+                        || !level.hasChunk(feet.getX() >> 4, feet.getZ() >> 4)
                         || !level.noCollision(player, moved)
                         || !Block.canSupportCenter(level, feet.below(), Direction.UP)) {
                     continue;
@@ -270,7 +280,8 @@ public final class DeepEchoAbilityHandler {
         for (LivingEntity entity : player.level().getEntitiesOfClass(LivingEntity.class, area,
                 candidate -> candidate.isAlive() && candidate != player
                         && !(candidate instanceof Player)
-                        && !candidate.getType().is(ModEntityTags.ECHO_BOSSES))) {
+                        && !candidate.getType().is(ModEntityTags.ECHO_BOSSES)
+                        && !candidate.getType().is(Tags.EntityTypes.BOSSES))) {
             entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 12, 2,
                     true, false, true));
             Vec3 motion = entity.getDeltaMovement();
@@ -322,12 +333,12 @@ public final class DeepEchoAbilityHandler {
                 spread, spread * 0.7D, spread, 0.04D);
     }
 
-    private static int gravityDuration(int research) {
-        return Math.min(1200, ServerConfig.GRAVITY_ACTIVE_DURATION_TICKS.get() + research * 12);
+    public static int gravityDurationTicks(int baseTicks, int research) {
+        return Math.min(1200, Math.max(20, baseTicks) + Math.max(0, research) * 12);
     }
 
-    private static double gravityRadius(int research) {
-        return Math.min(32.0D, ServerConfig.GRAVITY_ACTIVE_RADIUS.get() + research * 1.5D);
+    public static double gravityRadius(double baseRadius, int research) {
+        return Math.min(32.0D, Math.max(1.0D, baseRadius) + Math.max(0, research) * 1.5D);
     }
 
     private static double voidDistance(int research) {
@@ -351,22 +362,43 @@ public final class DeepEchoAbilityHandler {
         return player.server.overworld().getGameTime();
     }
 
-    private static long cooldownEnd(ServerPlayer player, String key, long now) {
+    private static int maxCooldown(int configuredTicks) {
+        return Math.max(1, configuredTicks);
+    }
+
+    private static long safeDeadline(long now, long duration) {
+        long boundedDuration = Math.max(0L, duration);
+        return now > Long.MAX_VALUE - boundedDuration
+                ? Long.MAX_VALUE : now + boundedDuration;
+    }
+
+    private static long cooldownEnd(ServerPlayer player, String key, long now, int maxDuration) {
         long end = player.getPersistentData().getLong(key);
         if (end <= now) {
             player.getPersistentData().remove(key);
             return 0L;
         }
+        long latestValidEnd = safeDeadline(now, maxDuration);
+        if (end > latestValidEnd) {
+            player.getPersistentData().putLong(key, latestValidEnd);
+            return latestValidEnd;
+        }
         return end;
     }
 
-    private static int cooldownDuration(ServerPlayer player, String key, long end, long now) {
+    private static int cooldownDuration(ServerPlayer player, String key, long end, long now,
+                                        int maxDuration) {
         if (end <= now) {
             player.getPersistentData().remove(key);
             return 0;
         }
+        int remaining = (int) Math.min(maxDuration, end - now);
         int stored = player.getPersistentData().getInt(key);
-        return stored > 0 ? stored : (int) Math.min(Integer.MAX_VALUE, end - now);
+        int normalized = Math.max(remaining, Math.min(maxDuration, Math.max(1, stored)));
+        if (stored != normalized) {
+            player.getPersistentData().putInt(key, normalized);
+        }
+        return normalized;
     }
 
     private static void copyCooldown(Player source, Player target, String key) {
@@ -389,9 +421,7 @@ public final class DeepEchoAbilityHandler {
 
     private static final class State {
         private long gravityEnd;
-        private long gravityCooldownEnd;
         private double gravityRadius;
         private long voidWardEnd;
-        private long voidCooldownEnd;
     }
 }

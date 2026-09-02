@@ -16,7 +16,7 @@
     "hidden": false
   },
   "criteria": {
-    "entered": {
+    "granted": {
       "trigger": "minecraft:impossible"
     }
   }

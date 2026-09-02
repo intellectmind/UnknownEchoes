@@ -8,6 +8,9 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:tidewood_planks"
         }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

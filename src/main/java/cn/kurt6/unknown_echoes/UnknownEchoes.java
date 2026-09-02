@@ -10,6 +10,7 @@ import cn.kurt6.unknown_echoes.registry.ModCreativeTabs;
 import cn.kurt6.unknown_echoes.registry.ModDataComponents;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModItems;
+import cn.kurt6.unknown_echoes.registry.ModRecipeSerializers;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
 import com.mojang.logging.LogUtils;
@@ -36,13 +37,14 @@ public class UnknownEchoes {
         ModStructures.STRUCTURE_TYPES.register(modEventBus);
         ModStructures.STRUCTURE_PIECE_TYPES.register(modEventBus);
         ModDataComponents.DATA_COMPONENT_TYPES.register(modEventBus);
+        ModRecipeSerializers.RECIPE_SERIALIZERS.register(modEventBus);
         cn.kurt6.unknown_echoes.registry.ModArmorMaterials.ARMOR_MATERIALS.register(modEventBus);
 
         modContainer.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
         modContainer.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
 
-        LOGGER.info("Unknown Echoes loaded. 走出去，聆听大地的回响。");
+        LOGGER.info("Unknown Echoes loaded.");
     }
 
     public static ResourceLocation id(String path) {

@@ -6,1305 +6,4069 @@
     32
   ],
   "textures": {
-    "0": "unknown_echoes:block/echo_cliff_stone",
-    "1": "unknown_echoes:block/crystal_song_cluster",
-    "2": "unknown_echoes:block/crystal_flux",
-    "particle": "unknown_echoes:block/echo_cliff_stone"
+    "geode": "unknown_echoes:block/crystal_song_geode",
+    "prism": "unknown_echoes:block/crystal_song_cluster",
+    "flux": "unknown_echoes:block/crystal_flux",
+    "crown": "unknown_echoes:block/crystal_song_crown",
+    "overtone": "unknown_echoes:block/crystal_song_overtone",
+    "socket": "unknown_echoes:block/crystal_song_socket",
+    "particle": "unknown_echoes:block/crystal_song_geode"
   },
   "elements": [
     {
-      "name": "rock_nw",
+      "name": "art_crystal_choir_bed_nw",
       "from": [
-        2,
-        0,
-        3
+        1.0,
+        -0.2,
+        1.7
       ],
       "to": [
-        7,
-        2.5,
-        8
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.25
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.25
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.25
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.25
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "rock_ne",
-      "from": [
-        8,
-        0,
-        2
-      ],
-      "to": [
-        14,
-        2,
-        7
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            2.5
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "rock_sw",
-      "from": [
-        3,
-        0,
-        9
-      ],
-      "to": [
-        8,
-        2,
-        14
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "rock_se",
-      "from": [
-        9,
-        0,
-        8
-      ],
-      "to": [
-        14,
-        2.5,
-        13
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.25
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.25
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.25
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1.25
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "rock_center",
-      "from": [
-        5,
-        1,
-        5
-      ],
-      "to": [
-        11,
-        3,
-        11
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            1
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "crystal_crown",
-      "from": [
-        6.25,
-        2,
-        6.25
-      ],
-      "to": [
-        9.75,
-        15,
-        9.75
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1.75,
-            6.5
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            1.75,
-            6.5
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1.75,
-            6.5
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            1.75,
-            6.5
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1.75,
-            1.75
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1.75,
-            1.75
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "crystal_nw",
-      "from": [
-        3.5,
+        7.4,
         1.5,
-        4
+        7.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.8,
+            6.0,
+            11.2,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "east": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "south": {
+          "uv": [
+            4.8,
+            6.0,
+            11.2,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "west": {
+          "uv": [
+            5.0,
+            6.0,
+            11.0,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "up": {
+          "uv": [
+            4.8,
+            5.0,
+            11.2,
+            11.0
+          ],
+          "texture": "#geode"
+        },
+        "down": {
+          "uv": [
+            4.8,
+            5.0,
+            11.2,
+            11.0
+          ],
+          "texture": "#geode",
+          "cullface": "down"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "y",
+        "origin": [
+          4.2,
+          0.6,
+          4.7
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_bed_ne",
+      "from": [
+        8.0,
+        -0.1,
+        1.0
+      ],
+      "to": [
+        15.2,
+        1.4,
+        7.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "east": {
+          "uv": [
+            4.9,
+            6.0,
+            11.1,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "south": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "west": {
+          "uv": [
+            4.9,
+            6.0,
+            11.1,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "up": {
+          "uv": [
+            4.4,
+            4.9,
+            11.6,
+            11.1
+          ],
+          "texture": "#geode"
+        },
+        "down": {
+          "uv": [
+            4.4,
+            4.9,
+            11.6,
+            11.1
+          ],
+          "texture": "#geode",
+          "cullface": "down"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "y",
+        "origin": [
+          11.6,
+          0.6,
+          4.1
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_bed_sw",
+      "from": [
+        1.5,
+        -0.1,
+        8.0
+      ],
+      "to": [
+        7.7,
+        1.7,
+        15.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.9,
+            6.0,
+            11.1,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "east": {
+          "uv": [
+            4.35,
+            6.0,
+            11.65,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "south": {
+          "uv": [
+            4.9,
+            6.0,
+            11.1,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "west": {
+          "uv": [
+            4.35,
+            6.0,
+            11.65,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "up": {
+          "uv": [
+            4.9,
+            4.35,
+            11.1,
+            11.65
+          ],
+          "texture": "#geode"
+        },
+        "down": {
+          "uv": [
+            4.9,
+            4.35,
+            11.1,
+            11.65
+          ],
+          "texture": "#geode",
+          "cullface": "down"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "y",
+        "origin": [
+          4.6,
+          0.7,
+          11.6
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_bed_se",
+      "from": [
+        8.3,
+        -0.2,
+        8.2
+      ],
+      "to": [
+        15.0,
+        1.5,
+        14.9
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.65,
+            6.0,
+            11.35,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "east": {
+          "uv": [
+            4.65,
+            6.0,
+            11.35,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "south": {
+          "uv": [
+            4.65,
+            6.0,
+            11.35,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "west": {
+          "uv": [
+            4.65,
+            6.0,
+            11.35,
+            10.0
+          ],
+          "texture": "#geode"
+        },
+        "up": {
+          "uv": [
+            4.65,
+            4.65,
+            11.35,
+            11.35
+          ],
+          "texture": "#geode"
+        },
+        "down": {
+          "uv": [
+            4.65,
+            4.65,
+            11.35,
+            11.35
+          ],
+          "texture": "#geode",
+          "cullface": "down"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "y",
+        "origin": [
+          11.6,
+          0.6,
+          11.5
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_socket",
+      "from": [
+        4.8,
+        0.8,
+        4.8
+      ],
+      "to": [
+        11.2,
+        2.4,
+        11.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.8,
+            6.0,
+            11.2,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "east": {
+          "uv": [
+            4.8,
+            6.0,
+            11.2,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "south": {
+          "uv": [
+            4.8,
+            6.0,
+            11.2,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "west": {
+          "uv": [
+            4.8,
+            6.0,
+            11.2,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "up": {
+          "uv": [
+            4.8,
+            4.8,
+            11.2,
+            11.2
+          ],
+          "texture": "#socket"
+        },
+        "down": {
+          "uv": [
+            4.8,
+            4.8,
+            11.2,
+            11.2
+          ],
+          "texture": "#socket"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          1.6,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_lower",
+      "from": [
+        6.15,
+        1.8,
+        6.15
+      ],
+      "to": [
+        9.85,
+        8.1,
+        9.85
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            4.85,
+            10.0,
+            11.15
+          ],
+          "texture": "#prism"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            4.85,
+            10.0,
+            11.15
+          ],
+          "texture": "#prism"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            4.85,
+            10.0,
+            11.15
+          ],
+          "texture": "#prism"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            4.85,
+            10.0,
+            11.15
+          ],
+          "texture": "#prism"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#prism"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        }
+      },
+      "light_emission": 6,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          4.9,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_mid",
+      "from": [
+        6.9,
+        6.8,
+        6.9
+      ],
+      "to": [
+        9.1,
+        12.3,
+        9.1
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          9.6,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_facet_n",
+      "from": [
+        7.0,
+        8.2,
+        5.8
+      ],
+      "to": [
+        9.0,
+        11.4,
+        7.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#prism"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          9.7,
+          7.4
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_facet_s",
+      "from": [
+        7.0,
+        8.6,
+        8.3
+      ],
+      "to": [
+        9.0,
+        11.9,
+        10.2
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 9,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          10.1,
+          8.6
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_facet_w",
+      "from": [
+        5.8,
+        8.1,
+        7.0
+      ],
+      "to": [
+        7.7,
+        11.5,
+        9.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#overtone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          7.4,
+          9.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_facet_e",
+      "from": [
+        8.3,
+        8.0,
+        7.0
+      ],
+      "to": [
+        10.2,
+        11.3,
+        9.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#prism"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          8.6,
+          9.7,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_shoulder",
+      "from": [
+        6.15,
+        11.3,
+        6.85
+      ],
+      "to": [
+        7.8,
+        15.9,
+        8.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.7,
+            10.0,
+            10.3
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          7.9,
+          11.6,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_countertone",
+      "from": [
+        8.2,
+        11.1,
+        7.25
+      ],
+      "to": [
+        10.0,
+        15.4,
+        9.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.85,
+            10.0,
+            10.15
+          ],
+          "texture": "#overtone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.85,
+            10.0,
+            10.15
+          ],
+          "texture": "#overtone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.85,
+            10.0,
+            10.15
+          ],
+          "texture": "#overtone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.85,
+            10.0,
+            10.15
+          ],
+          "texture": "#overtone"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#overtone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          8.1,
+          11.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_heart_note",
+      "from": [
+        7.45,
+        14.8,
+        7.45
+      ],
+      "to": [
+        8.55,
+        19.0,
+        8.55
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          16.9,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_nw_socket",
+      "from": [
+        2.75,
+        0.7,
+        2.85
+      ],
+      "to": [
+        5.65,
+        2.0,
+        5.75
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          4.2,
+          1.4,
+          4.300000000000001
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_nw_body",
+      "from": [
+        3.1,
+        1.4,
+        3.2
+      ],
+      "to": [
+        5.300000000000001,
+        8.236,
+        5.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            4.582,
+            10.0,
+            11.418
+          ],
+          "texture": "#prism"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            4.582,
+            10.0,
+            11.418
+          ],
+          "texture": "#prism"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            4.582,
+            10.0,
+            11.418
+          ],
+          "texture": "#prism"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            4.582,
+            10.0,
+            11.418
+          ],
+          "texture": "#prism"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#prism"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          4.2,
+          1.4,
+          4.3
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_nw_cap",
+      "from": [
+        3.386,
+        7.264,
+        3.486
+      ],
+      "to": [
+        5.014,
+        10.396,
+        5.114000000000001
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          4.2,
+          1.4,
+          4.3
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_nw_tip",
+      "from": [
+        3.8480000000000003,
+        9.748000000000001,
+        3.9480000000000004
+      ],
+      "to": [
+        4.5520000000000005,
+        11.8,
+        4.652
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          4.2,
+          1.4,
+          4.3
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_ne_socket",
+      "from": [
+        10.450000000000001,
+        0.7,
+        2.75
+      ],
+      "to": [
+        13.15,
+        2.0,
+        5.449999999999999
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          11.8,
+          1.4,
+          4.1
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_ne_body",
+      "from": [
+        10.8,
+        1.4,
+        3.1
+      ],
+      "to": [
+        12.8,
+        7.365,
+        5.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.0175,
+            10.0,
+            10.9825
+          ],
+          "texture": "#overtone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.0175,
+            10.0,
+            10.9825
+          ],
+          "texture": "#overtone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.0175,
+            10.0,
+            10.9825
+          ],
+          "texture": "#overtone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.0175,
+            10.0,
+            10.9825
+          ],
+          "texture": "#overtone"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#overtone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          11.8,
+          1.4,
+          4.1
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_ne_cap",
+      "from": [
+        11.06,
+        6.51,
+        3.3600000000000003
+      ],
+      "to": [
+        12.540000000000001,
+        9.265,
+        4.84
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          11.8,
+          1.4,
+          4.1
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_ne_tip",
+      "from": [
+        11.48,
+        8.695,
+        3.7800000000000002
+      ],
+      "to": [
+        12.120000000000001,
+        10.5,
+        4.42
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          11.8,
+          1.4,
+          4.1
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_sw_socket",
+      "from": [
+        2.9499999999999997,
+        0.6000000000000001,
+        10.450000000000001
       ],
       "to": [
         5.75,
-        10.5,
-        6.25
+        1.9,
+        13.25
       ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "z",
-        "origin": [
-          4.5,
-          2,
-          5
-        ]
-      },
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            1.125,
-            4.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#1"
+          "texture": "#socket"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            1.125,
-            4.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#1"
+          "texture": "#socket"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            1.125,
-            4.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#1"
+          "texture": "#socket"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            1.125,
-            4.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#1"
+          "texture": "#socket"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            1.125,
-            1.125
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#1"
+          "texture": "#socket"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.125,
-            1.125
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#1"
+          "texture": "#socket"
         }
-      }
-    },
-    {
-      "name": "crystal_ne",
-      "from": [
-        10.25,
-        1.5,
-        4
-      ],
-      "to": [
-        12.5,
-        9.5,
-        6.25
-      ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "z",
-        "origin": [
-          11.5,
-          2,
-          5
-        ]
       },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            4
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            4
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            4
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            4
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            1.125
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            1.125
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "crystal_sw",
-      "from": [
-        4,
-        1.5,
-        10
-      ],
-      "to": [
-        6.25,
-        8.5,
-        12.25
-      ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "x",
-        "origin": [
-          5,
-          2,
-          11
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            1.125
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            1.125
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "crystal_se",
-      "from": [
-        10,
-        1.5,
-        9.75
-      ],
-      "to": [
-        12.25,
-        11,
-        12
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "x",
-        "origin": [
-          11,
-          2,
-          11
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            4.75
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            4.75
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            4.75
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            4.75
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            1.125
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1.125,
-            1.125
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "crystal_west",
-      "from": [
-        2.75,
-        1,
-        7
-      ],
-      "to": [
-        4.25,
-        6.5,
-        8.5
-      ],
-      "rotation": {
-        "angle": -45,
-        "axis": "z",
-        "origin": [
-          3.5,
-          1.5,
-          7.75
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            2.75
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            2.75
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            2.75
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            2.75
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            0.75
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "crystal_east",
-      "from": [
-        12,
-        1,
-        7.5
-      ],
-      "to": [
-        13.5,
-        7,
-        9
-      ],
       "rotation": {
         "angle": 45,
-        "axis": "z",
+        "axis": "y",
         "origin": [
-          12.75,
-          1.5,
-          8.25
+          4.35,
+          1.3,
+          11.850000000000001
         ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_sw_body",
+      "from": [
+        3.3,
+        1.3,
+        10.8
+      ],
+      "to": [
+        5.4,
+        6.729,
+        12.9
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.2855,
+            10.0,
+            10.7145
+          ],
+          "texture": "#overtone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.2855,
+            10.0,
+            10.7145
+          ],
+          "texture": "#overtone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.2855,
+            10.0,
+            10.7145
+          ],
+          "texture": "#overtone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.2855,
+            10.0,
+            10.7145
+          ],
+          "texture": "#overtone"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#overtone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        }
       },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            3
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            3
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            3
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            3
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            0.75
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "singing_heart",
-      "from": [
-        7,
-        4,
-        7
-      ],
-      "to": [
-        9,
-        13.5,
-        9
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1,
-            4.75
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            1,
-            4.75
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1,
-            4.75
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            1,
-            4.75
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1,
-            1
-          ],
-          "texture": "#2"
-        }
-      }
-    },
-    {
-      "name": "chime_north",
-      "from": [
-        6.75,
-        3,
-        4.75
-      ],
-      "to": [
-        8.25,
-        8,
-        6.25
-      ],
+      "light_emission": 7,
       "rotation": {
         "angle": 22.5,
         "axis": "x",
         "origin": [
-          7.5,
-          3,
-          5.5
+          4.35,
+          1.3,
+          11.85
         ]
-      },
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_sw_cap",
+      "from": [
+        3.573,
+        5.946,
+        11.073
+      ],
+      "to": [
+        5.127,
+        8.469,
+        12.627
+      ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "up": {
           "uv": [
             0,
             0,
-            0.75,
-            0.75
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            0.75,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          4.35,
+          1.3,
+          11.85
+        ]
       }
     },
     {
-      "name": "chime_south",
+      "name": "art_crystal_choir_voice_sw_tip",
       "from": [
-        7.75,
-        2.5,
-        10
+        4.014,
+        7.947,
+        11.514000000000001
+      ],
+      "to": [
+        4.686,
+        9.6,
+        12.186
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          4.35,
+          1.3,
+          11.85
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_se_socket",
+      "from": [
+        10.25,
+        0.7,
+        10.15
+      ],
+      "to": [
+        13.249999999999998,
+        2.0,
+        13.15
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          11.75,
+          1.4,
+          11.65
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_se_body",
+      "from": [
+        10.6,
+        1.4,
+        10.5
+      ],
+      "to": [
+        12.899999999999999,
+        8.504,
+        12.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            4.448,
+            10.0,
+            11.552
+          ],
+          "texture": "#prism"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            4.448,
+            10.0,
+            11.552
+          ],
+          "texture": "#prism"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            4.448,
+            10.0,
+            11.552
+          ],
+          "texture": "#prism"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            4.448,
+            10.0,
+            11.552
+          ],
+          "texture": "#prism"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#prism"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          11.75,
+          1.4,
+          11.65
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_se_cap",
+      "from": [
+        10.899,
+        7.4959999999999996,
+        10.799
+      ],
+      "to": [
+        12.600999999999999,
+        10.744,
+        12.501
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          11.75,
+          1.4,
+          11.65
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_se_tip",
+      "from": [
+        11.382,
+        10.072,
+        11.282
+      ],
+      "to": [
+        12.118,
+        12.2,
+        12.018
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          11.75,
+          1.4,
+          11.65
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_w_socket",
+      "from": [
+        -0.14999999999999997,
+        0.3,
+        6.65
+      ],
+      "to": [
+        2.25,
+        1.6,
+        9.049999999999999
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          1.05,
+          1.0,
+          7.85
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_w_body",
+      "from": [
+        0.2,
+        1.0,
+        7.0
+      ],
+      "to": [
+        1.9,
+        5.826,
+        8.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.587,
+            10.0,
+            10.413
+          ],
+          "texture": "#overtone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.587,
+            10.0,
+            10.413
+          ],
+          "texture": "#overtone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.587,
+            10.0,
+            10.413
+          ],
+          "texture": "#overtone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.587,
+            10.0,
+            10.413
+          ],
+          "texture": "#overtone"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#overtone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          1.05,
+          1.0,
+          7.85
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_w_cap",
+      "from": [
+        0.42100000000000004,
+        5.124,
+        7.221
+      ],
+      "to": [
+        1.6789999999999998,
+        7.385999999999999,
+        8.479
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          1.05,
+          1.0,
+          7.85
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_w_tip",
+      "from": [
+        0.778,
+        6.918,
+        7.578
+      ],
+      "to": [
+        1.322,
+        8.4,
+        8.122
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          1.05,
+          1.0,
+          7.85
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_e_socket",
+      "from": [
+        13.65,
+        0.39999999999999997,
+        6.8500000000000005
+      ],
+      "to": [
+        16.05,
+        1.7,
+        9.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          14.85,
+          1.1,
+          8.05
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_e_body",
+      "from": [
+        14.0,
+        1.1,
+        7.2
+      ],
+      "to": [
+        15.7,
+        6.3950000000000005,
+        8.9
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.3525,
+            10.0,
+            10.6475
+          ],
+          "texture": "#prism"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.3525,
+            10.0,
+            10.6475
+          ],
+          "texture": "#prism"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.3525,
+            10.0,
+            10.6475
+          ],
+          "texture": "#prism"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.3525,
+            10.0,
+            10.6475
+          ],
+          "texture": "#prism"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#prism"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          14.85,
+          1.1,
+          8.05
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_e_cap",
+      "from": [
+        14.221,
+        5.63,
+        7.421
+      ],
+      "to": [
+        15.479,
+        8.094999999999999,
+        8.679
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          14.85,
+          1.1,
+          8.05
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_e_tip",
+      "from": [
+        14.578,
+        7.585000000000001,
+        7.7780000000000005
+      ],
+      "to": [
+        15.122,
+        9.2,
+        8.322000000000001
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          14.85,
+          1.1,
+          8.05
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_n_socket",
+      "from": [
+        6.65,
+        0.3,
+        -0.44999999999999996
       ],
       "to": [
         9.25,
-        7.5,
-        11.5
+        1.6,
+        2.15
       ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          7.95,
+          1.0,
+          0.85
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_n_body",
+      "from": [
+        7.0,
+        1.0,
+        -0.1
+      ],
+      "to": [
+        8.9,
+        6.63,
+        1.7999999999999998
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.185,
+            10.0,
+            10.815
+          ],
+          "texture": "#prism"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.185,
+            10.0,
+            10.815
+          ],
+          "texture": "#prism"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.185,
+            10.0,
+            10.815
+          ],
+          "texture": "#prism"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.185,
+            10.0,
+            10.815
+          ],
+          "texture": "#prism"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#prism"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#prism"
+        }
+      },
+      "light_emission": 7,
       "rotation": {
         "angle": -22.5,
         "axis": "x",
         "origin": [
-          8.5,
-          3,
-          10.75
+          7.95,
+          1.0,
+          0.85
         ]
-      },
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_n_cap",
+      "from": [
+        7.247,
+        5.819999999999999,
+        0.147
+      ],
+      "to": [
+        8.653,
+        8.43,
+        1.553
+      ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2.5
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "up": {
           "uv": [
             0,
             0,
-            0.75,
-            0.75
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#crown"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            0.75,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#crown"
         }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          7.95,
+          1.0,
+          0.85
+        ]
       }
     },
     {
-      "name": "chime_west",
+      "name": "art_crystal_choir_voice_n_tip",
       "from": [
-        4.75,
-        2.5,
-        7.5
+        7.646,
+        7.890000000000001,
+        0.546
       ],
       "to": [
-        6.25,
-        7,
-        9
+        8.254,
+        9.6,
+        1.154
       ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          7.95,
+          1.0,
+          0.85
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_s_socket",
+      "from": [
+        6.8500000000000005,
+        0.3,
+        13.85
+      ],
+      "to": [
+        9.45,
+        1.6,
+        16.45
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#socket"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8.15,
+          1.0,
+          15.149999999999999
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_s_body",
+      "from": [
+        7.2,
+        1.0,
+        14.2
+      ],
+      "to": [
+        9.1,
+        5.691999999999999,
+        16.099999999999998
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.654,
+            10.0,
+            10.346
+          ],
+          "texture": "#overtone"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.654,
+            10.0,
+            10.346
+          ],
+          "texture": "#overtone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.654,
+            10.0,
+            10.346
+          ],
+          "texture": "#overtone"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.654,
+            10.0,
+            10.346
+          ],
+          "texture": "#overtone"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#overtone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#overtone"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8.15,
+          1.0,
+          15.15
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_s_cap",
+      "from": [
+        7.447,
+        5.007999999999999,
+        14.447
+      ],
+      "to": [
+        8.853,
+        7.212,
+        15.853
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8.15,
+          1.0,
+          15.15
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_voice_s_tip",
+      "from": [
+        7.846,
+        6.755999999999999,
+        14.846
+      ],
+      "to": [
+        8.454,
+        8.2,
+        15.453999999999999
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crown"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#crown"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8.15,
+          1.0,
+          15.15
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_chime_n",
+      "from": [
+        6.6,
+        3.1,
+        4.5
+      ],
+      "to": [
+        7.35,
+        8.4,
+        5.25
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          7,
+          3.1,
+          5
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_chime_s",
+      "from": [
+        8.65,
+        2.8,
+        10.7
+      ],
+      "to": [
+        9.4,
+        7.3,
+        11.45
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          9,
+          2.8,
+          11
+        ]
+      }
+    },
+    {
+      "name": "art_crystal_choir_chime_w",
+      "from": [
+        4.4,
+        2.7,
+        8.6
+      ],
+      "to": [
+        5.15,
+        7.7,
+        9.35
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 13,
       "rotation": {
         "angle": -22.5,
         "axis": "z",
         "origin": [
-          5.5,
-          3,
-          8.25
+          4.8,
+          2.7,
+          9
         ]
-      },
+      }
+    },
+    {
+      "name": "art_crystal_choir_chime_e",
+      "from": [
+        10.8,
+        3.2,
+        6.6
+      ],
+      "to": [
+        11.55,
+        8.7,
+        7.35
+      ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
             0,
             0,
-            0.75,
-            2.25
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#flux"
         },
         "east": {
           "uv": [
             0,
             0,
-            0.75,
-            2.25
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#flux"
         },
         "south": {
           "uv": [
             0,
             0,
-            0.75,
-            2.25
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#flux"
         },
         "west": {
           "uv": [
             0,
             0,
-            0.75,
-            2.25
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#flux"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            0.75,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#flux"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            0.75,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#flux"
         }
-      }
-    },
-    {
-      "name": "chime_east",
-      "from": [
-        9.75,
-        2.5,
-        7
-      ],
-      "to": [
-        11.25,
-        8,
-        8.5
-      ],
+      },
+      "light_emission": 13,
       "rotation": {
         "angle": 22.5,
         "axis": "z",
         "origin": [
-          10.5,
-          3,
-          7.75
+          11.2,
+          3.2,
+          7
         ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            2.75
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            2.75
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            2.75
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            2.75
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            0.75
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            0.75,
-            0.75
-          ],
-          "texture": "#2"
-        }
       }
     }
   ],
   "groups": [
     {
-      "name": "root",
+      "name": "art_crystal_choir",
       "origin": [
         8,
-        8,
+        0,
         8
       ],
       "scope": 0,
-      "color": 0,
-      "shade": false,
-      "children": []
-    },
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16
+      "color": 3,
+      "children": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49
+      ]
+    }
   ]
 }

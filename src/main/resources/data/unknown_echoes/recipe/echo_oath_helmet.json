@@ -1,10 +1,10 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "unknown_echoes:component_preserving_shapeless",
   "category": "equipment",
+  "base": {
+    "tag": "unknown_echoes:region_armor_helmets"
+  },
   "ingredients": [
-    {
-      "tag": "unknown_echoes:region_armor_helmets"
-    },
     {
       "item": "unknown_echoes:oathbound_alloy"
     }

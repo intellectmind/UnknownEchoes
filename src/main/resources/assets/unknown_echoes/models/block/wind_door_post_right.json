@@ -1,59 +1,598 @@
 {
   "textures": {
-    "0": "unknown_echoes:block/wind_chiseled_stone",
-    "1": "unknown_echoes:block/wind_door",
-    "2": "unknown_echoes:block/wind_flux",
-    "particle": "unknown_echoes:block/wind_chiseled_stone"
+    "stone": "unknown_echoes:block/wind_door_aerolith",
+    "silver": "unknown_echoes:block/wind_door_old_silver",
+    "feather": "unknown_echoes:block/wind_door_feather",
+    "air": "unknown_echoes:block/wind_door_air_lens",
+    "particle": "unknown_echoes:block/wind_door_aerolith"
   },
   "elements": [
     {
-      "name": "foot",
-      "from": [12, 0, 5],
-      "to": [16, 2, 11],
+      "name": "art_wind_aerolith_gate_right_foot",
+      "from": [
+        11.5,
+        0,
+        3.0
+      ],
+      "to": [
+        16.8,
+        1.4,
+        13.0
+      ],
+      "shade": true,
       "faces": {
-        "north": { "texture": "#0" }, "south": { "texture": "#0" },
-        "east": { "texture": "#0" }, "west": { "texture": "#0" },
-        "up": { "texture": "#0" }, "down": { "texture": "#0" }
+        "north": {
+          "uv": [
+            5.35,
+            6.0,
+            10.65,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            5.35,
+            6.0,
+            10.65,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            5.35,
+            3.0,
+            10.65,
+            13.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            5.35,
+            3.0,
+            10.65,
+            13.0
+          ],
+          "texture": "#stone",
+          "cullface": "down"
+        }
       }
     },
     {
-      "name": "outer_post",
-      "from": [13.5, 2, 5],
-      "to": [16, 16, 11],
+      "name": "art_wind_aerolith_gate_right_post_low",
+      "from": [
+        12.5,
+        0.8,
+        3.7
+      ],
+      "to": [
+        16.0,
+        5.5,
+        12.3
+      ],
+      "shade": true,
       "faces": {
-        "north": { "texture": "#0" }, "south": { "texture": "#0" },
-        "east": { "texture": "#0" }, "west": { "texture": "#0" },
-        "up": { "texture": "#0" }, "down": { "texture": "#0" }
+        "north": {
+          "uv": [
+            6.0,
+            5.65,
+            10.0,
+            10.35
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            3.7,
+            5.65,
+            12.3,
+            10.35
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.65,
+            10.0,
+            10.35
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            3.7,
+            5.65,
+            12.3,
+            10.35
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            3.7,
+            10.0,
+            12.3
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.7,
+            10.0,
+            12.3
+          ],
+          "texture": "#stone"
+        }
       }
     },
     {
-      "name": "inner_trim",
-      "from": [12.5, 2, 6],
-      "to": [13.5, 16, 10],
+      "name": "art_wind_aerolith_gate_right_post_mid",
+      "from": [
+        13.0,
+        5.0,
+        4.0
+      ],
+      "to": [
+        15.55,
+        10.8,
+        12.0
+      ],
+      "shade": true,
       "faces": {
-        "north": { "texture": "#1" }, "south": { "texture": "#1" },
-        "east": { "texture": "#1" }, "west": { "texture": "#1" },
-        "up": { "texture": "#1" }, "down": { "texture": "#1" }
+        "north": {
+          "uv": [
+            6.0,
+            5.1,
+            10.0,
+            10.9
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            4.0,
+            5.1,
+            12.0,
+            10.9
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.1,
+            10.0,
+            10.9
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            4.0,
+            5.1,
+            12.0,
+            10.9
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#stone"
+        }
       }
     },
     {
-      "name": "sensor",
-      "from": [13, 5.5, 4],
-      "to": [15, 10.5, 5.5],
+      "name": "art_wind_aerolith_gate_right_post_high",
+      "from": [
+        12.6,
+        10.2,
+        3.7
+      ],
+      "to": [
+        15.9,
+        14.4,
+        12.3
+      ],
+      "shade": true,
       "faces": {
-        "north": { "texture": "#1" }, "south": { "texture": "#1" },
-        "east": { "texture": "#1" }, "west": { "texture": "#1" },
-        "up": { "texture": "#1" }, "down": { "texture": "#1" }
+        "north": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            3.7,
+            5.9,
+            12.3,
+            10.1
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            3.7,
+            5.9,
+            12.3,
+            10.1
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            3.7,
+            10.0,
+            12.3
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.7,
+            10.0,
+            12.3
+          ],
+          "texture": "#stone"
+        }
       }
     },
     {
-      "name": "sensor_core",
-      "from": [13.25, 7, 3.75],
-      "to": [14.75, 9, 5],
+      "name": "art_wind_aerolith_gate_right_post_inner",
+      "from": [
+        11.7,
+        1.6,
+        4.2
+      ],
+      "to": [
+        13.25,
+        13.8,
+        11.8
+      ],
+      "shade": true,
       "faces": {
-        "north": { "texture": "#2" }, "south": { "texture": "#2" },
-        "east": { "texture": "#2" }, "west": { "texture": "#2" },
-        "up": { "texture": "#2" }, "down": { "texture": "#2" }
+        "north": {
+          "uv": [
+            6.0,
+            1.9,
+            10.0,
+            14.1
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            4.2,
+            1.9,
+            11.8,
+            14.1
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            1.9,
+            10.0,
+            14.1
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            4.2,
+            1.9,
+            11.8,
+            14.1
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.2,
+            10.0,
+            11.8
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.2,
+            10.0,
+            11.8
+          ],
+          "texture": "#silver"
+        }
+      }
+    },
+    {
+      "name": "art_wind_aerolith_gate_right_post_spur_low",
+      "from": [
+        13.9,
+        2.2,
+        4.0
+      ],
+      "to": [
+        16.7,
+        4.0,
+        12.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#stone"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          15.0,
+          3.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_wind_aerolith_gate_right_post_spur_high",
+      "from": [
+        13.6,
+        10.5,
+        4.0
+      ],
+      "to": [
+        16.3,
+        12.2,
+        12.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "east": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "west": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#stone"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#stone"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#stone"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          14.8,
+          11.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_wind_aerolith_gate_right_post_medallion",
+      "from": [
+        12.35,
+        6.8,
+        2.95
+      ],
+      "to": [
+        14.3,
+        9.2,
+        3.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#silver"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          13.3,
+          8,
+          3.2
+        ]
       }
     }
   ]

@@ -1,0 +1,19 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:echo_shard",
+    "unknown_echoes:attuned_echo_gem",
+    "unknown_echoes:sky_quartz",
+    "unknown_echoes:echo_amber",
+    "unknown_echoes:mirror_lake_shard",
+    "unknown_echoes:crystal_song_shard",
+    "unknown_echoes:mute_crystal",
+    "unknown_echoes:resonant_cliff_crystal",
+    "unknown_echoes:suspended_crystal",
+    "unknown_echoes:void_rift_shard",
+    "unknown_echoes:space_anchor_shard",
+    "unknown_echoes:watcher_eye_shard",
+    "unknown_echoes:wind_rune_shard",
+    "unknown_echoes:decoy_shard"
+  ]
+}

@@ -43,9 +43,22 @@
         "weight": 22,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:ashveil_stalker",
+        "weight": 30,
+        "minCount": 1,
+        "maxCount": 2
       }
     ],
-    "creature": [], "ambient": [], "axolotls": [],
+    "creature": [
+      {
+        "type": "unknown_echoes:hushlight_jelly",
+        "weight": 22,
+        "minCount": 1,
+        "maxCount": 3
+      }
+    ], "ambient": [], "axolotls": [],
     "underground_water_creature": [], "water_creature": [], "water_ambient": [], "misc": []
   },
   "spawn_costs": {}

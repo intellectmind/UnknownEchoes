@@ -7,10 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
-/**
- * 镜尾鱼 GeckoLib 渲染器(鱼类不做头部跟随)。
- * 发光层:mirror_tail_fish_glowing.png(镜面尾鳍反光)。
- */
+/** 镜尾鱼 GeckoLib 渲染器(鱼类不做头部跟随)。 */
 public class MirrorTailFishRenderer extends GeoEntityRenderer<MirrorTailFish> {
 
     public MirrorTailFishRenderer(EntityRendererProvider.Context context) {

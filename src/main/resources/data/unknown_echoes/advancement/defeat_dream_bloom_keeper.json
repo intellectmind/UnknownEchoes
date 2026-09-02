@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:first_guardian",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:dream_bloom_keeper_spawn_egg"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.defeat_dream_bloom_keeper.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.defeat_dream_bloom_keeper.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

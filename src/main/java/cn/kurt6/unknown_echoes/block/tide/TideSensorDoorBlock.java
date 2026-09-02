@@ -3,17 +3,22 @@ package cn.kurt6.unknown_echoes.block.tide;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -21,6 +26,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -28,26 +34,34 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nullable;
 
-/**
- * 潮汐感应门(V0.6E,5.3"进入镜湖倒影层"权限落地):倒影回廊深层内室的自动门。
- * 复用风门模式(服务端校验能力数据,飞行/传送/水下呼吸 Mod 绕不过):
- * 持潮汐回响的玩家靠近(或右键)时整组联动开启;无权限只看到模糊水纹。
- * "倒影入口稳定时间" = 开启保持时长(ServerConfig,潮汐研究 3 延长)——到时自动闭合。
- * 关闭态为整块实体(水下密封),开启态无碰撞。
- */
 public class TideSensorDoorBlock extends BaseEntityBlock {
     public static final MapCodec<TideSensorDoorBlock> CODEC = simpleCodec(TideSensorDoorBlock::new);
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final BooleanProperty CONN_NORTH = BooleanProperty.create("north");
+    public static final BooleanProperty CONN_SOUTH = BooleanProperty.create("south");
+    public static final BooleanProperty CONN_WEST = BooleanProperty.create("west");
+    public static final BooleanProperty CONN_EAST = BooleanProperty.create("east");
+    public static final BooleanProperty CONN_UP = BooleanProperty.create("up");
 
     /** 联动开关的最大方块数(同风门,防异常超大区域)。 */
     static final int MAX_CONNECTED = 32;
 
-    /** 开启态保留顶部门楣,既是视觉残留也保证方块可被指向。 */
-    private static final VoxelShape OPEN_SHAPE = Block.box(0, 14, 0, 16, 16, 16);
+    private static final VoxelShape TOP_NS = Block.box(0, 14, 3, 16, 16, 13);
+    private static final VoxelShape TOP_EW = Block.box(3, 14, 0, 13, 16, 16);
+    private static final VoxelShape POST_W = Block.box(0, 0, 3, 3, 16, 13);
+    private static final VoxelShape POST_E = Block.box(13, 0, 3, 16, 16, 13);
+    private static final VoxelShape POST_N = Block.box(3, 0, 0, 13, 16, 3);
+    private static final VoxelShape POST_S = Block.box(3, 0, 13, 13, 16, 16);
 
     public TideSensorDoorBlock(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(OPEN, Boolean.FALSE));
+        this.registerDefaultState(this.stateDefinition.any()
+                .setValue(OPEN, Boolean.FALSE)
+                .setValue(FACING, Direction.NORTH)
+                .setValue(CONN_NORTH, Boolean.FALSE).setValue(CONN_SOUTH, Boolean.FALSE)
+                .setValue(CONN_WEST, Boolean.FALSE).setValue(CONN_EAST, Boolean.FALSE)
+                .setValue(CONN_UP, Boolean.FALSE));
     }
 
     @Override
@@ -57,7 +71,53 @@ public class TideSensorDoorBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(OPEN);
+        builder.add(OPEN, FACING, CONN_NORTH, CONN_SOUTH, CONN_WEST, CONN_EAST, CONN_UP);
+    }
+
+    private static BooleanProperty connProperty(Direction direction) {
+        return switch (direction) {
+            case NORTH -> CONN_NORTH;
+            case SOUTH -> CONN_SOUTH;
+            case WEST -> CONN_WEST;
+            case EAST -> CONN_EAST;
+            case UP -> CONN_UP;
+            default -> null;
+        };
+    }
+
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        BlockState state = this.defaultBlockState()
+                .setValue(FACING, context.getHorizontalDirection().getOpposite());
+        for (Direction direction : Direction.values()) {
+            BooleanProperty property = connProperty(direction);
+            if (property != null) {
+                state = state.setValue(property, context.getLevel()
+                        .getBlockState(context.getClickedPos().relative(direction)).is(this));
+            }
+        }
+        return state;
+    }
+
+    @Override
+    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
+                                     LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+        BooleanProperty property = connProperty(direction);
+        return property == null ? state : state.setValue(property, neighborState.is(this));
+    }
+
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    private static boolean isNorthSouth(BlockState state) {
+        return state.getValue(FACING).getAxis() == Direction.Axis.Z;
     }
 
     @Override
@@ -67,7 +127,29 @@ public class TideSensorDoorBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return state.getValue(OPEN) ? OPEN_SHAPE : Shapes.block();
+        if (!state.getValue(OPEN)) {
+            return Shapes.block();
+        }
+        VoxelShape shape = Shapes.empty();
+        if (!state.getValue(CONN_UP)) {
+            shape = Shapes.or(shape, isNorthSouth(state) ? TOP_NS : TOP_EW);
+        }
+        if (isNorthSouth(state)) {
+            if (!state.getValue(CONN_WEST)) {
+                shape = Shapes.or(shape, POST_W);
+            }
+            if (!state.getValue(CONN_EAST)) {
+                shape = Shapes.or(shape, POST_E);
+            }
+        } else {
+            if (!state.getValue(CONN_NORTH)) {
+                shape = Shapes.or(shape, POST_N);
+            }
+            if (!state.getValue(CONN_SOUTH)) {
+                shape = Shapes.or(shape, POST_S);
+            }
+        }
+        return shape;
     }
 
     @Override

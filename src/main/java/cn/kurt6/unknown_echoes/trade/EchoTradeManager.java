@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.trade;
 
+import cn.kurt6.unknown_echoes.item.InventoryPayment;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.entity.mob.LostTraveler;
@@ -29,16 +30,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * 迷途旅者交易框架(V0.6D):交易表数据驱动(data/unknown_echoes/echo_trades/*.json,
- * 数据包可覆盖),成交校验全在服务端;客户端只收展示行,购买只发请求(5.8 边界)。
- * 库存(max_uses)按旅者实例在内存中记账:营地本就随时间更换,旧库存随旅者离开作废。
- */
+/** 迷途旅者交易框架；交易表由数据包驱动，成交校验在服务端完成，客户端只展示并发送购买请求。 */
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
 public class EchoTradeManager extends SimpleJsonResourceReloadListener {
 
     private static final Gson GSON = new Gson();
-    /** 迷途旅者使用的交易表 id。 */
     public static final ResourceLocation LOST_TRAVELER_TABLE = UnknownEchoes.id("lost_traveler");
     /** 交易有效距离(服务端校验购买请求)。 */
     public static final double TRADE_RANGE = 6.0D;
@@ -47,7 +43,7 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
     /** 旅者实例 → (交易序号 → 已成交次数)。内存记账,随旅者离开/重启作废。 */
     private static final Map<UUID, Map<Integer, Integer>> USES = new HashMap<>();
     /** 玩家 → 上次下发列表的表内索引快照:点击按打开时看到的列表解析,阶段变化/重载不会错位买错行。 */
-    private static final Map<UUID, List<Integer>> SESSION_VIEW = new HashMap<>();
+    private static final Map<UUID, TradeSession> SESSION_VIEW = new HashMap<>();
 
     public EchoTradeManager() {
         super(GSON, "echo_trades");
@@ -83,7 +79,7 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
         UnknownEchoes.LOGGER.info("已加载 {} 张回响交易表", TABLES.size());
     }
 
-    /** 玩家交易阶段 = 已解锁能力数(9.2:库存随能力数缓慢升级)。 */
+    /** 玩家交易阶段，等于已解锁能力数，用于逐步扩展交易库存。 */
     public static int getStage(ServerPlayer player) {
         return EchoAbilityManager.getData(player).getUnlockedAbilities().size();
     }
@@ -110,7 +106,6 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
         return visible;
     }
 
-    /** 下发交易表并让客户端打开总览交易页(旅者右键入口)。 */
     public static void openTrades(ServerPlayer player, LostTraveler traveler) {
         List<IndexedTrade> visible = getVisibleTradeEntries(player);
         List<String> lines = new ArrayList<>();
@@ -124,11 +119,10 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
             lines.add(trade.encodeForClient(usesLeft));
             view.add(indexed.tableIndex());
         }
-        SESSION_VIEW.put(player.getUUID(), List.copyOf(view));
+        SESSION_VIEW.put(player.getUUID(), new TradeSession(traveler.getUUID(), List.copyOf(view)));
         PacketDistributor.sendToPlayer(player, new TradeListPayload(traveler.getId(), lines));
     }
 
-    /** 购买请求(C2S):重建可见列表、校验距离/库存/货款后成交。 */
     public static void handleTradeRequest(ServerPlayer player, int entityId, int index) {
         if (!(player.level().getEntity(entityId) instanceof LostTraveler traveler)
                 || !traveler.isAlive()
@@ -137,17 +131,18 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
                     Component.translatable("message.unknown_echoes.trade.too_far"), true);
             return;
         }
-        List<Integer> view = SESSION_VIEW.get(player.getUUID());
+        TradeSession session = SESSION_VIEW.get(player.getUUID());
         List<EchoTrade> all = TABLES.getOrDefault(LOST_TRAVELER_TABLE, List.of());
-        if (view == null || index < 0 || index >= view.size()) {
+        if (session == null || !session.travelerId().equals(traveler.getUUID())
+                || index < 0 || index >= session.view().size()) {
             return;
         }
-        int tableIndex = view.get(index);
+        int tableIndex = session.view().get(index);
         if (tableIndex < 0 || tableIndex >= all.size()) {
             return;
         }
         EchoTrade trade = all.get(tableIndex);
-        // 打开后阶段/能力变化导致的不可见交易:拒绝而不是错位映射
+
         if (!trade.isVisibleTo(player, getStage(player))) {
             return;
         }
@@ -188,7 +183,7 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
         used.merge(tableIndex, 1, Integer::sum);
         traveler.level().playSound(null, traveler.blockPosition(),
                 SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.9F, 1.0F);
-        // 成交后重发列表刷新库存显示
+
         openTrades(player, traveler);
     }
 
@@ -202,12 +197,14 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
         SESSION_VIEW.clear();
     }
 
-    /** 玩家下线清理其列表快照。 */
     public static void clearSessionView(UUID playerId) {
         SESSION_VIEW.remove(playerId);
     }
 
     private record IndexedTrade(int tableIndex, EchoTrade trade) {
+    }
+
+    private record TradeSession(UUID travelerId, List<Integer> view) {
     }
 
     private static void playNo(ServerPlayer player, LostTraveler traveler) {
@@ -300,40 +297,12 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
     }
 
     private static int countItem(ServerPlayer player, Item item) {
-        int count = 0;
-        for (ItemStack stack : player.getInventory().items) {
-            if (stack.is(item)) {
-                count += stack.getCount();
-            }
-        }
-        for (ItemStack stack : player.getInventory().offhand) {
-            if (stack.is(item)) {
-                count += stack.getCount();
-            }
-        }
-        return count;
+        return InventoryPayment.count(player, item);
     }
 
+
     private static void consumeItem(ServerPlayer player, Item item, int amount) {
-        for (ItemStack stack : player.getInventory().items) {
-            if (amount <= 0) {
-                return;
-            }
-            if (stack.is(item)) {
-                int take = Math.min(amount, stack.getCount());
-                stack.shrink(take);
-                amount -= take;
-            }
-        }
-        for (ItemStack stack : player.getInventory().offhand) {
-            if (amount <= 0) {
-                return;
-            }
-            if (stack.is(item)) {
-                int take = Math.min(amount, stack.getCount());
-                stack.shrink(take);
-                amount -= take;
-            }
-        }
+        InventoryPayment.consume(player, item, amount);
     }
+
 }

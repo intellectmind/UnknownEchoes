@@ -1,9 +1,15 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "unknown_echoes:component_preserving_shapeless",
   "category": "equipment",
+  "base": {
+    "item": "minecraft:diamond_sword"
+  },
   "ingredients": [
     {
-      "item": "unknown_echoes:echo_broadsword"
+      "item": "unknown_echoes:echo_weapon_frame"
+    },
+    {
+      "item": "unknown_echoes:echo_core"
     },
     {
       "item": "unknown_echoes:oathbound_alloy"

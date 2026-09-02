@@ -36,6 +36,7 @@
             { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } }
           ]
         },
+        { "type": "minecraft:item", "name": "unknown_echoes:hush_thorn_candy", "weight": 5, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] },
         { "type": "minecraft:item", "name": "unknown_echoes:echo_shard", "weight": 3 },
         { "type": "minecraft:item", "name": "minecraft:ender_pearl", "weight": 2 },
         { "type": "minecraft:item", "name": "minecraft:golden_apple", "weight": 1 }

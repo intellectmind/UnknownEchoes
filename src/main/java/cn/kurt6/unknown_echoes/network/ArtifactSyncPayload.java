@@ -8,11 +8,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 import java.util.List;
 
-/**
- * 服务端 → 客户端:同步神器与回响能量展示数据(12.2)。
- * artifacts 条目格式 "id:level:tuning:serial:cooldownEnd:energyCostTwentieths"(纯展示;判定永远在服务端)。
- * 能量以 1/20 点同步,客户端按 regenHundredthsPerTick + gameTime 戳本地外推显示。
- */
 public record ArtifactSyncPayload(List<String> artifacts, int energyTwentieths,
                                   int maxEnergy, int regenHundredthsPerTick, long gameTime)
         implements CustomPacketPayload {

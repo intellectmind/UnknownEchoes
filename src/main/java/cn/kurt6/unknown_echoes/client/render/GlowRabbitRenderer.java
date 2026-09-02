@@ -7,10 +7,6 @@ import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
-/**
- * 荧光兔 GeckoLib 渲染器。
- * 发光层:glow_rabbit_glowing.png(皮毛荧斑微光)。
- */
 public class GlowRabbitRenderer extends GeoEntityRenderer<GlowRabbit> {
 
     public GlowRabbitRenderer(EntityRendererProvider.Context context) {

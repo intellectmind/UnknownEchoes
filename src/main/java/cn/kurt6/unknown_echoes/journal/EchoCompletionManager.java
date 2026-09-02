@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 第一维度闭环判定与 T7 个人奖励。只读取服务端玩家数据,
- * 一次性奖励记录写入 activatedMechanisms,不依赖可被抢走的掉落物。
+ * 第一维度闭环判定与 T7 个人奖励。
+ * 只读取服务端玩家数据, 一次性奖励记录写入 activatedMechanisms,不依赖可被抢走的掉落物。
  */
 public final class EchoCompletionManager {
     private static final String T7_REWARD_KEY = "completion:echo_realm_t7_reward";
@@ -75,23 +75,21 @@ public final class EchoCompletionManager {
             return false;
         }
         JournalManager.recordStructure(player, ARCHIVE_STRUCTURE, player.blockPosition());
-        boolean hadMainlineRecord = hasMainlineCompletionRecord(player);
         if (refreshMainlineCompletion(player)) {
-            if (!hadMainlineRecord) {
-                player.sendSystemMessage(Component.translatable(
-                        "message.unknown_echoes.completion.mainline_unlocked"));
-            }
-            player.displayClientMessage(Component.translatable(ClueLocator.locateAndAddClue(
-                            player, ABYSS_BEACON_STRUCTURE)
-                            ? "message.unknown_echoes.completion.abyss_clue_added"
-                            : "message.unknown_echoes.completion.abyss_clue_missing"), true);
+            AbyssBeaconClueSearch.RequestResult result =
+                    AbyssBeaconClueSearch.request(player, ABYSS_BEACON_STRUCTURE);
+            String messageKey = switch (result) {
+                case ADDED -> "message.unknown_echoes.completion.abyss_clue_added";
+                case ALREADY_KNOWN -> "message.unknown_echoes.completion.abyss_clue_known";
+                case SEARCHING -> "message.unknown_echoes.completion.abyss_clue_searching";
+                case UNAVAILABLE -> "message.unknown_echoes.completion.abyss_clue_unavailable";
+            };
+            player.displayClientMessage(Component.translatable(messageKey), true);
         }
         return showSummaryAndClaim(player);
     }
 
-    /**
-     * 第一维度主线毕业只检查必经内容，不复用包含可选探索目标的 T7 完满判定。
-     */
+    /** 第一维度主线毕业只检查必经内容，不复用包含可选探索目标的 T7 完满判定。 */
     public static boolean isMainlineComplete(ServerPlayer player) {
         return hasCoreAbilities(player)
                 && hasCoreBosses(player)
@@ -99,10 +97,7 @@ public final class EchoCompletionManager {
                 && hasArchiveTrials(player);
     }
 
-    /**
-     * 为已满足条件的玩家写入稳定主线记录。深渊信标也会调用本方法，
-     * 以兼容在版本更新前已经完成档案馆流程的旧存档。
-     */
+    /** 为已满足条件的玩家写入稳定主线记录。深渊信标也会调用,以兼容已完成档案馆流程的旧存档。 */
     public static boolean refreshMainlineCompletion(ServerPlayer player) {
         if (!isMainlineComplete(player)) {
             return false;
@@ -132,30 +127,20 @@ public final class EchoCompletionManager {
     }
 
     private static boolean showSummaryAndClaim(ServerPlayer player) {
-        List<Component> summary = buildCompletionSummary(player);
-        for (Component line : summary) {
+        boolean claimed = false;
+        if (isComplete(player)) {
+            if (hasClaimedT7Reward(player)) {
+                claimed = claimSupplementalRewards(player);
+                claimIndexExpansionRewards(player);
+            } else if (claimT7Reward(player)) {
+                claimIndexExpansionRewards(player);
+                claimed = true;
+            }
+        }
+        for (Component line : buildCompletionSummary(player)) {
             player.sendSystemMessage(line);
         }
-        if (!isComplete(player)) {
-            player.displayClientMessage(Component.translatable(hasMainlineCompletionRecord(player)
-                    ? "message.unknown_echoes.completion.mainline_ready"
-                    : "message.unknown_echoes.completion.incomplete"), true);
-            return false;
-        }
-        if (hasClaimedT7Reward(player)) {
-            boolean supplementsClaimed = claimSupplementalRewards(player);
-            claimIndexExpansionRewards(player);
-            if (supplementsClaimed) {
-                player.displayClientMessage(Component.translatable(
-                        "message.unknown_echoes.completion.claimed"), true);
-            }
-            return supplementsClaimed;
-        }
-        if (!claimT7Reward(player)) {
-            return false;
-        }
-        claimIndexExpansionRewards(player);
-        return true;
+        return claimed;
     }
 
     public static boolean isComplete(ServerPlayer player) {
@@ -177,16 +162,19 @@ public final class EchoCompletionManager {
         lines.add(thresholdLine("completion.unknown_echoes.biomes",
                 visitedBiomes(player), EchoRealmBiomeCatalog.REQUIRED_COUNT, REQUIRED_BIOMES));
         lines.add(thresholdLine("completion.unknown_echoes.pages",
-                pagesRead(player), JournalManager.KNOWN_PAGES, REQUIRED_PAGES));
+                pagesRead(player), AncientPageCatalog.FIRST_DIMENSION_TOTAL, REQUIRED_PAGES));
         lines.add(thresholdLine("completion.unknown_echoes.mini_bosses",
                 miniBossKills(player), MINI_BOSSES.size(), REQUIRED_MINI_BOSSES));
         lines.add(doneLine("completion.unknown_echoes.archive", hasArchiveTerminal(player)));
         lines.add(doneLine("completion.unknown_echoes.archive_trials", hasArchiveTrials(player)));
         lines.add(countLine("completion.unknown_echoes.score", completionScore(player), REQUIRED_SCORE));
-        lines.add(Component.translatable(hasClaimedT7Reward(player)
-                        ? "completion.unknown_echoes.reward.claimed"
-                        : "completion.unknown_echoes.reward.ready")
-                .withStyle(hasClaimedT7Reward(player) ? ChatFormatting.DARK_GRAY : ChatFormatting.AQUA));
+        if (hasClaimedT7Reward(player)) {
+            lines.add(Component.translatable("completion.unknown_echoes.reward.claimed")
+                    .withStyle(ChatFormatting.DARK_GRAY));
+        } else if (isComplete(player)) {
+            lines.add(Component.translatable("completion.unknown_echoes.reward.ready")
+                    .withStyle(ChatFormatting.AQUA));
+        }
         lines.addAll(buildIndexFeedback(player));
         return lines;
     }
@@ -198,8 +186,8 @@ public final class EchoCompletionManager {
                     completionScore(player), REQUIRED_SCORE).withStyle(ChatFormatting.DARK_GRAY));
             return lines;
         }
-        lines.add(Component.translatable("completion.unknown_echoes.index.unlocked",
-                completionScore(player)).withStyle(ChatFormatting.AQUA));
+        lines.add(Component.translatable("completion.unknown_echoes.index.unlocked")
+                .withStyle(ChatFormatting.AQUA));
         if (!hasIndexExpansionOne(player)) {
             lines.add(Component.translatable(canClaimIndexExpansionOne(player)
                             ? "completion.unknown_echoes.index.expansion1.ready"
@@ -208,11 +196,12 @@ public final class EchoCompletionManager {
                     visitedBiomes(player), REQUIRED_BIOMES).withStyle(ChatFormatting.GRAY));
             return lines;
         }
-        lines.add(Component.translatable("completion.unknown_echoes.index.expansion1.claimed")
-                .withStyle(ChatFormatting.GREEN));
-        lines.add(Component.translatable("completion.unknown_echoes.index.target",
-                Component.translatable("completion.unknown_echoes.index.target." + backfillTarget(player)))
-                .withStyle(ChatFormatting.AQUA));
+        String target = backfillTarget(player);
+        if (!target.equals("ready")) {
+            lines.add(Component.translatable("overview.unknown_echoes.index.target",
+                    Component.translatable("overview.unknown_echoes.index.target." + target))
+                    .withStyle(ChatFormatting.AQUA));
+        }
         if (!hasIndexExpansionTwo(player)) {
             lines.add(Component.translatable(canClaimIndexExpansionTwo(player)
                             ? "completion.unknown_echoes.index.expansion2.ready"
@@ -221,8 +210,6 @@ public final class EchoCompletionManager {
                     completionScore(player), DEEP_INDEX_SCORE).withStyle(ChatFormatting.GRAY));
             return lines;
         }
-        lines.add(Component.translatable("completion.unknown_echoes.index.expansion2.claimed")
-                .withStyle(ChatFormatting.GREEN));
         int beforeDeepChecks = lines.size();
         addDeepCheck(lines, "completion.unknown_echoes.index.deep_abilities",
                 deepAbilityCount(player), DeepEchoesProgressCatalog.ABILITIES.size());
@@ -253,7 +240,7 @@ public final class EchoCompletionManager {
         score += Math.min(journal.getStructures().size() * 2, 40);
         score += puzzleCompletionScore(player);
         score += Math.min(miniBossKills(player) * 6, 48);
-        score += Math.min(pagesRead(player), 80);
+        score += Math.min(pagesRead(player), AncientPageCatalog.FIRST_DIMENSION_TOTAL);
         score += Math.min(abilityEnhancementStages(player) * 5, 45);
         score += Math.min(artifactUnlocks(player) * 4, 12);
         score += Math.min(artifactUpgradeSteps(player) * 3, 18);
@@ -275,6 +262,10 @@ public final class EchoCompletionManager {
     }
 
     private static int pagesRead(ServerPlayer player) {
+        return AncientPageCatalog.countFirstDimensionPages(JournalManager.getData(player).getPages());
+    }
+
+    private static int allPagesRead(ServerPlayer player) {
         return Math.min(AncientPageCatalog.countReleasePages(JournalManager.getData(player).getPages()),
                 JournalManager.KNOWN_PAGES);
     }
@@ -435,7 +426,7 @@ public final class EchoCompletionManager {
 
     private static boolean claimT7Reward(ServerPlayer player) {
         List<ItemStack> rewards = supplementalRewards();
-        if (!canFitAllRewards(player, rewards)) {
+        if (!RewardCapacity.canFitAll(player, rewards)) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.completion.need_space"), true);
             return false;
@@ -451,9 +442,9 @@ public final class EchoCompletionManager {
             player.getInventory().add(reward);
         }
         ModAdvancements.award(player, ModAdvancements.ECHO_REALM_COMPLETE);
+        ModAdvancements.checkIndexAdvancements(player);
         EchoAbilityManager.syncToClient(player);
         JournalManager.syncJournal(player);
-        player.sendSystemMessage(Component.translatable("message.unknown_echoes.completion.reward"));
         player.level().playSound(null, player.blockPosition(),
                 SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 0.9F);
         return true;
@@ -465,16 +456,15 @@ public final class EchoCompletionManager {
             changed |= grantIndexReward(player, INDEX_EXPANSION_ONE_KEY,
                     List.of(new ItemStack(ModItems.ECHO_MARK.get(), 4),
                             new ItemStack(ModItems.RECORD_TRACING_PAPER.get(), 4),
-                            new ItemStack(ModItems.ECHO_CORE.get(), 2)),
-                    "message.unknown_echoes.index.expansion1");
+                            new ItemStack(ModItems.ECHO_CORE.get(), 2)));
         }
         if (canClaimIndexExpansionTwo(player) && !hasIndexExpansionTwo(player)) {
             changed |= grantIndexReward(player, INDEX_EXPANSION_TWO_KEY,
                     List.of(new ItemStack(ModItems.CLUE_MAP.get(), 1),
-                            new ItemStack(ModItems.RECORD_TRACING_PAPER.get(), 6)),
-                    "message.unknown_echoes.index.expansion2");
+                            new ItemStack(ModItems.RECORD_TRACING_PAPER.get(), 6)));
         }
         if (changed) {
+            ModAdvancements.checkIndexAdvancements(player);
             EchoAbilityManager.syncToClient(player);
             JournalManager.syncJournal(player);
         }
@@ -492,17 +482,17 @@ public final class EchoCompletionManager {
                 && completionScore(player) >= DEEP_INDEX_SCORE;
     }
 
-    private static boolean hasIndexExpansionOne(ServerPlayer player) {
+    public static boolean hasIndexExpansionOne(ServerPlayer player) {
         return EchoAbilityManager.hasActivatedMechanism(player, INDEX_EXPANSION_ONE_KEY);
     }
 
-    private static boolean hasIndexExpansionTwo(ServerPlayer player) {
+    public static boolean hasIndexExpansionTwo(ServerPlayer player) {
         return EchoAbilityManager.hasActivatedMechanism(player, INDEX_EXPANSION_TWO_KEY);
     }
 
     private static boolean grantIndexReward(ServerPlayer player, String key,
-                                            List<ItemStack> rewards, String messageKey) {
-        if (!canFitAllRewards(player, rewards)) {
+                                             List<ItemStack> rewards) {
+        if (!RewardCapacity.canFitAll(player, rewards)) {
             player.displayClientMessage(Component.translatable("message.unknown_echoes.index.need_space"), true);
             return false;
         }
@@ -514,14 +504,13 @@ public final class EchoCompletionManager {
         for (ItemStack stack : rewards) {
             player.getInventory().add(stack);
         }
-        player.displayClientMessage(Component.translatable(messageKey), true);
         player.level().playSound(null, player.blockPosition(),
                 SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.7F, 0.8F);
         return true;
     }
 
     private static String backfillTarget(ServerPlayer player) {
-        if (pagesRead(player) < JournalManager.KNOWN_PAGES) {
+        if (allPagesRead(player) < JournalManager.KNOWN_PAGES) {
             return "pages";
         }
         if (miniBossKills(player) < MINI_BOSSES.size()) {
@@ -554,7 +543,7 @@ public final class EchoCompletionManager {
         if (keys.isEmpty()) {
             return true;
         }
-        if (!canFitAllRewards(player, rewards)) {
+        if (!RewardCapacity.canFitAll(player, rewards)) {
             player.displayClientMessage(Component.translatable("message.unknown_echoes.completion.need_space"), true);
             return false;
         }
@@ -576,62 +565,6 @@ public final class EchoCompletionManager {
                 new ItemStack(ModItems.ECHO_REALM_CORE.get(), 1),
                 new ItemStack(ModItems.ECHO_REALM_INGOT.get(), 4),
                 new ItemStack(ModItems.CLUE_MAP.get(), 1));
-    }
-
-    private static boolean canFitAllRewards(ServerPlayer player, List<ItemStack> rewards) {
-        List<ItemStack> slots = new ArrayList<>();
-        List<ItemStack> offhand = new ArrayList<>();
-        for (ItemStack slot : player.getInventory().items) {
-            slots.add(slot.copy());
-        }
-        for (ItemStack slot : player.getInventory().offhand) {
-            offhand.add(slot.copy());
-        }
-        for (ItemStack reward : rewards) {
-            if (!simulateInsert(slots, offhand, reward.copy())) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean simulateInsert(List<ItemStack> slots, List<ItemStack> offhand,
-                                          ItemStack reward) {
-        int remaining = reward.getCount();
-        for (ItemStack slot : slots) {
-            if (remaining <= 0) {
-                return true;
-            }
-            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, reward)) {
-                int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
-                if (move > 0) {
-                    slot.grow(move);
-                    remaining -= move;
-                }
-            }
-        }
-        for (ItemStack slot : offhand) {
-            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, reward)) {
-                int move = Math.min(remaining, slot.getMaxStackSize() - slot.getCount());
-                if (move > 0) {
-                    slot.grow(move);
-                    remaining -= move;
-                }
-            }
-        }
-        for (int i = 0; i < slots.size(); i++) {
-            if (remaining <= 0) {
-                return true;
-            }
-            if (slots.get(i).isEmpty()) {
-                ItemStack placed = reward.copy();
-                int move = Math.min(remaining, placed.getMaxStackSize());
-                placed.setCount(move);
-                slots.set(i, placed);
-                remaining -= move;
-            }
-        }
-        return remaining <= 0;
     }
 
     private static Component doneLine(String key, boolean done) {

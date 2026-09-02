@@ -7,9 +7,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-/**
- * 回声档案终端 BlockEntity:保留终端自身访问痕迹,完成度与奖励仍以玩家数据为准。
- */
+/** 回声档案终端 BlockEntity:保留终端自身访问痕迹,完成度与奖励仍以玩家数据为准。 */
 public class EchoArchiveTerminalBlockEntity extends BlockEntity {
     private int accessCount;
     private long lastAccessGameTime;

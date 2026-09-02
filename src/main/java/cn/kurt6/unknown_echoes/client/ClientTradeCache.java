@@ -13,10 +13,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 客户端交易展示缓存(5.8:客户端只展示,购买只发请求)。
- * 服务端下发 TradeListPayload 时更新并打开总览交易页。
- */
 public class ClientTradeCache {
 
     /** 单条交易展示行。usesLeft=-1 表示不限量。 */

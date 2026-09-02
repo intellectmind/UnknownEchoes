@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:ability_gravity_echo",
+  "parent": "unknown_echoes:space_anchors",
   "display": {
     "icon": {
       "id": "unknown_echoes:rift_warden_spawn_egg"

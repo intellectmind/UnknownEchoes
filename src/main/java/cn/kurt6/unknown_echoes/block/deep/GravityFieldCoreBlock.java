@@ -4,6 +4,7 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.entity.boss.BossFx;
+import cn.kurt6.unknown_echoes.entity.boss.InvertedGatekeeper;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -112,16 +113,17 @@ public class GravityFieldCoreBlock extends BaseEntityBlock {
 
         if (state.getValue(ACTIVE)) {
             core.deactivate();
-            serverPlayer.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.gravity_field.stopped"), true);
+            ServerLevel serverLevel = (ServerLevel) level;
+            for (InvertedGatekeeper boss : serverLevel.getEntitiesOfClass(InvertedGatekeeper.class,
+                    new net.minecraft.world.phys.AABB(pos).inflate(36.0D),
+                    entity -> entity.isAlive())) {
+                boss.onGravityCoreDeactivated(serverLevel, pos);
+            }
         } else {
             core.activate();
             if (emitAnchorGuidance((ServerLevel) level, pos)) {
                 serverPlayer.displayClientMessage(Component.translatable(
                         "message.unknown_echoes.gravity_field.started_with_anchors"), true);
-            } else {
-                serverPlayer.displayClientMessage(Component.translatable(
-                        "message.unknown_echoes.gravity_field.started"), true);
             }
         }
         return InteractionResult.CONSUME;

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:entity",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:void_rift_shard"
+        }
+      ],
+      "conditions": [
+        { "condition": "minecraft:random_chance", "chance": 0.5 }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:entities/rift_glider"
+}

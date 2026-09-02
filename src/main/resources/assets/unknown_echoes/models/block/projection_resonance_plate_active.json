@@ -1,0 +1,7 @@
+{
+  "parent": "unknown_echoes:block/projection_resonance_plate",
+  "textures": {
+    "particle": "unknown_echoes:block/projection_resonance_plate_shell",
+    "emitter": "unknown_echoes:block/projection_resonance_plate_top_active"
+  }
+}

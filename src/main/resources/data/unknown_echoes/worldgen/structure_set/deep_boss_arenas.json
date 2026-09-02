@@ -1,0 +1,19 @@
+{
+  "structures": [
+    {
+      "structure": "unknown_echoes:void_vein_chamber",
+      "weight": 3
+    },
+    {
+      "structure": "unknown_echoes:world_resonance_hall",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 128,
+    "separation": 64,
+    "salt": 2038471193,
+    "frequency": 1.0
+  }
+}

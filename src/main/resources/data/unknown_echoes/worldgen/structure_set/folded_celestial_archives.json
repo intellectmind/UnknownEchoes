@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:folded_celestial_archive", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 128,
+    "separation": 64,
+    "salt": 1038492751,
+    "frequency": 1.0
+  }
+}

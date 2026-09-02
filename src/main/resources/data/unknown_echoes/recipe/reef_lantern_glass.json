@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:glass"
+    },
+    {
+      "item": "unknown_echoes:mirror_lake_shard"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:reef_lantern_glass",
+    "count": 2
+  }
+}

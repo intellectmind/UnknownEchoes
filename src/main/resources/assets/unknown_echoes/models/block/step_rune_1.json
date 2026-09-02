@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/carpet",
+  "textures": {
+    "wool": "unknown_echoes:block/sequence_rune_1"
+  }
+}

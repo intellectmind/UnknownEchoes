@@ -1,0 +1,883 @@
+{
+	"format_version": "1.21.11",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"0": "unknown_echoes:block/gravity_fold_frame",
+		"1": "unknown_echoes:block/gravity_runes",
+		"2": "unknown_echoes:block/gravity_fold_energy",
+		"3": "unknown_echoes:block/gravity_fold_trim",
+		"particle": "unknown_echoes:block/gravity_fold_frame"
+	},
+	"elements": [
+		{
+			"name": "art_gravity_fold_precision_arch_top_left",
+			"from": [
+				2,
+				12.5,
+				5.8
+			],
+			"to": [
+				8.5,
+				15,
+				10.2
+			],
+			"shade": true,
+			"faces": {
+				"north": {
+					"uv": [
+						4.75,
+						6.0,
+						11.25,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						5.8,
+						6.0,
+						10.2,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						4.75,
+						6.0,
+						11.25,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						5.8,
+						6.0,
+						10.2,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						4.75,
+						5.8,
+						11.25,
+						10.2
+					],
+					"texture": "#0"
+				},
+				"down": {
+					"uv": [
+						4.75,
+						5.8,
+						11.25,
+						10.2
+					],
+					"texture": "#0"
+				}
+			},
+			"rotation": {
+				"angle": 22.5,
+				"axis": "z",
+				"origin": [
+					2.5,
+					13,
+					8
+				]
+			}
+		},
+		{
+			"name": "art_gravity_fold_precision_arch_top_right",
+			"from": [
+				7.5,
+				12.5,
+				5.8
+			],
+			"to": [
+				14,
+				15,
+				10.2
+			],
+			"shade": true,
+			"faces": {
+				"north": {
+					"uv": [
+						4.75,
+						6.0,
+						11.25,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						5.8,
+						6.0,
+						10.2,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						4.75,
+						6.0,
+						11.25,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						5.8,
+						6.0,
+						10.2,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						4.75,
+						5.8,
+						11.25,
+						10.2
+					],
+					"texture": "#0"
+				},
+				"down": {
+					"uv": [
+						4.75,
+						5.8,
+						11.25,
+						10.2
+					],
+					"texture": "#0"
+				}
+			},
+			"rotation": {
+				"angle": -22.5,
+				"axis": "z",
+				"origin": [
+					13.5,
+					13,
+					8
+				]
+			}
+		},
+		{
+			"name": "art_gravity_fold_precision_trim_arch_left",
+			"from": [
+				2.8,
+				13.1,
+				5
+			],
+			"to": [
+				8.3,
+				13.95,
+				5.9
+			],
+			"shade": true,
+			"faces": {
+				"north": {
+					"uv": [
+						5.25,
+						6,
+						10.75,
+						10
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						5.25,
+						6,
+						10.75,
+						10
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#3"
+				},
+				"down": {
+					"uv": [
+						5.25,
+						6,
+						10.75,
+						10
+					],
+					"texture": "#0"
+				}
+			},
+			"rotation": {
+				"angle": 22.5,
+				"axis": "z",
+				"origin": [
+					3,
+					13.3,
+					5.45
+				]
+			}
+		},
+		{
+			"name": "art_gravity_fold_precision_trim_arch_right",
+			"from": [
+				7.7,
+				13.1,
+				5
+			],
+			"to": [
+				13.2,
+				13.95,
+				5.9
+			],
+			"shade": true,
+			"faces": {
+				"north": {
+					"uv": [
+						5.25,
+						6,
+						10.75,
+						10
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						5.25,
+						6,
+						10.75,
+						10
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#3"
+				},
+				"down": {
+					"uv": [
+						5.25,
+						6,
+						10.75,
+						10
+					],
+					"texture": "#0"
+				}
+			},
+			"rotation": {
+				"angle": -22.5,
+				"axis": "z",
+				"origin": [
+					13,
+					13.3,
+					5.45
+				]
+			}
+		},
+		{
+			"name": "art_gravity_fold_precision_crown_left",
+			"from": [
+				3.2,
+				14.1,
+				6.1
+			],
+			"to": [
+				6.8,
+				16.9,
+				9.9
+			],
+			"shade": true,
+			"faces": {
+				"north": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"down": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				}
+			},
+			"rotation": {
+				"angle": -22.5,
+				"axis": "z",
+				"origin": [
+					6.4,
+					14.5,
+					8
+				]
+			}
+		},
+		{
+			"name": "art_gravity_fold_precision_crown_right",
+			"from": [
+				9.2,
+				14.1,
+				6.1
+			],
+			"to": [
+				12.8,
+				16.9,
+				9.9
+			],
+			"shade": true,
+			"faces": {
+				"north": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				},
+				"down": {
+					"uv": [
+						6.0,
+						6.0,
+						10.0,
+						10.0
+					],
+					"texture": "#0"
+				}
+			},
+			"rotation": {
+				"angle": 22.5,
+				"axis": "z",
+				"origin": [
+					9.6,
+					14.5,
+					8
+				]
+			}
+		},
+		{
+			"name": "art_gravity_fold_precision_crown_trim_left",
+			"from": [
+				4.1,
+				15.15,
+				5.25
+			],
+			"to": [
+				6.55,
+				16,
+				6.1
+			],
+			"shade": true,
+			"faces": {
+				"north": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#3"
+				},
+				"down": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				}
+			},
+			"rotation": {
+				"angle": -22.5,
+				"axis": "z",
+				"origin": [
+					6.2,
+					15.3,
+					5.7
+				]
+			}
+		},
+		{
+			"name": "art_gravity_fold_precision_crown_trim_right",
+			"from": [
+				9.45,
+				15.15,
+				5.25
+			],
+			"to": [
+				11.9,
+				16,
+				6.1
+			],
+			"shade": true,
+			"faces": {
+				"north": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#3"
+				},
+				"down": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				}
+			},
+			"rotation": {
+				"angle": 22.5,
+				"axis": "z",
+				"origin": [
+					9.8,
+					15.3,
+					5.7
+				]
+			}
+		},
+		{
+			"name": "art_gravity_fold_precision_conduit_top",
+			"from": [
+				4.1,
+				12.35,
+				4.8
+			],
+			"to": [
+				11.9,
+				12.95,
+				5.75
+			],
+			"shade": false,
+			"faces": {
+				"north": {
+					"uv": [
+						4.1,
+						6,
+						11.9,
+						10
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						4.1,
+						6,
+						11.9,
+						10
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#2"
+				},
+				"down": {
+					"uv": [
+						4.1,
+						6,
+						11.9,
+						10
+					],
+					"texture": "#0"
+				}
+			},
+			"light_emission": 13
+		},
+		{
+			"name": "art_gravity_fold_precision_conduit_top_back",
+			"from": [
+				4.1,
+				12.35,
+				10.25
+			],
+			"to": [
+				11.9,
+				12.95,
+				11.2
+			],
+			"shade": false,
+			"faces": {
+				"north": {
+					"uv": [
+						4.1,
+						6,
+						11.9,
+						10
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						4.1,
+						6,
+						11.9,
+						10
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#2"
+				},
+				"down": {
+					"uv": [
+						4.1,
+						6,
+						11.9,
+						10
+					],
+					"texture": "#0"
+				}
+			},
+			"light_emission": 13
+		},
+		{
+			"name": "art_gravity_fold_precision_open_upper_threshold",
+			"from": [
+				4,
+				12.6,
+				6.7
+			],
+			"to": [
+				12,
+				13.25,
+				9.3
+			],
+			"shade": false,
+			"faces": {
+				"north": {
+					"uv": [
+						4,
+						6,
+						12,
+						10
+					],
+					"texture": "#0"
+				},
+				"east": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						4,
+						6,
+						12,
+						10
+					],
+					"texture": "#0"
+				},
+				"west": {
+					"uv": [
+						6,
+						6,
+						10,
+						10
+					],
+					"texture": "#0"
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#2"
+				},
+				"down": {
+					"uv": [
+						4,
+						6,
+						12,
+						10
+					],
+					"texture": "#0"
+				}
+			},
+			"light_emission": 14
+		}
+	],
+	"groups": [
+		{
+			"name": "art_gravity_fold_door_precision",
+			"origin": [
+				8,
+				8,
+				8
+			],
+			"scope": 0,
+			"color": 4,
+			"children": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10
+			]
+		}
+	]
+}

@@ -8,6 +8,9 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:echo_log"
         }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

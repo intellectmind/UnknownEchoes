@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:shattered_codex_vault", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 52,
+    "separation": 18,
+    "salt": 1846329071,
+    "frequency": 0.0
+  }
+}

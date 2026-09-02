@@ -16,6 +16,34 @@
     "minecraft:windswept_forest",
     "minecraft:windswept_gravelly_hills",
     "minecraft:snowy_plains",
-    "minecraft:grove"
+    "minecraft:grove",
+    {
+      "id": "#c:is_forest",
+      "required": false
+    },
+    {
+      "id": "#c:is_plains",
+      "required": false
+    },
+    {
+      "id": "#c:is_taiga",
+      "required": false
+    },
+    {
+      "id": "#c:is_savanna",
+      "required": false
+    },
+    {
+      "id": "#c:is_desert",
+      "required": false
+    },
+    {
+      "id": "#c:is_hill",
+      "required": false
+    },
+    {
+      "id": "#c:is_snowy_plains",
+      "required": false
+    }
   ]
 }

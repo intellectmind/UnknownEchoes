@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:orrery_prism_block" }
+  ],
+  "result": { "id": "unknown_echoes:orrery_prism_core", "count": 9 }
+}

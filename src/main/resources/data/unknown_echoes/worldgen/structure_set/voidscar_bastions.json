@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:voidscar_bastion", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 60,
+    "separation": 22,
+    "salt": 984261307,
+    "frequency": 0.0
+  }
+}

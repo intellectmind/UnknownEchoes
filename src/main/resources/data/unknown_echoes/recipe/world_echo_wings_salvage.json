@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:world_echo_wings" }
+  ],
+  "result": { "id": "unknown_echoes:world_echo_residue", "count": 3 }
+}

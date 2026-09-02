@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/crossbow",
+  "textures": {
+    "layer0": "unknown_echoes:item/ash_script_crossbow_pulling_1"
+  }
+}

@@ -135,6 +135,15 @@
             0,
             2.5,
             -6
+          ]
+        },
+        {
+          "name": "head_anim",
+          "parent": "head",
+          "pivot": [
+            0,
+            2.5,
+            -6
           ],
           "cubes": [
             {

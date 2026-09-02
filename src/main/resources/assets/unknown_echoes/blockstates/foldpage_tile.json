@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "unknown_echoes:block/foldpage_tile"
+    },
+    "lit=true": {
+      "model": "unknown_echoes:block/foldpage_tile_lit"
+    }
+  }
+}

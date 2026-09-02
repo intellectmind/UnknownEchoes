@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:ability_tide_echo",
+  "parent": "unknown_echoes:blueprint_found",
   "display": {
     "icon": {
       "id": "unknown_echoes:tide_crossbow"
@@ -16,7 +16,7 @@
     "hidden": false
   },
   "criteria": {
-    "has_weapon": {
+    "has_item": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [

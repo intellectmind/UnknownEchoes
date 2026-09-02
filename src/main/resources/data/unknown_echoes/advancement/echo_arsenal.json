@@ -16,7 +16,7 @@
     "hidden": false
   },
   "criteria": {
-    "spear": {
+    "full_set": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
@@ -24,26 +24,12 @@
             "items": [
               "unknown_echoes:wind_spear"
             ]
-          }
-        ]
-      }
-    },
-    "crossbow": {
-      "trigger": "minecraft:inventory_changed",
-      "conditions": {
-        "items": [
+          },
           {
             "items": [
               "unknown_echoes:tide_crossbow"
             ]
-          }
-        ]
-      }
-    },
-    "blade": {
-      "trigger": "minecraft:inventory_changed",
-      "conditions": {
-        "items": [
+          },
           {
             "items": [
               "unknown_echoes:true_sight_blade"
@@ -52,16 +38,5 @@
         ]
       }
     }
-  },
-  "requirements": [
-    [
-      "spear"
-    ],
-    [
-      "crossbow"
-    ],
-    [
-      "blade"
-    ]
-  ]
+  }
 }

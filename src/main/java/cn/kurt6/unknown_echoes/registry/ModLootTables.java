@@ -16,7 +16,7 @@ public class ModLootTables {
             chest("common/t4_region_core");
     public static final ResourceKey<LootTable> T5_MINIBOSS_REPEAT =
             chest("common/t5_miniboss_repeat");
-    // T6/T7 仅保留为数据层模板；自然结构公共箱不得引用，正式奖励走参与者个人结算。
+
     public static final ResourceKey<LootTable> T6_MAIN_BOSS =
             chest("common/t6_main_boss");
     public static final ResourceKey<LootTable> T7_ECHO_REALM_ENDGAME =
@@ -55,13 +55,10 @@ public class ModLootTables {
     public static final ResourceKey<LootTable> TIDE_LIGHTHOUSE_REEF_CHEST =
             ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/tide_lighthouse_reef"));
 
-    // ---- V0.6E ----
-
     /** 倒影回廊深层内室(潮汐感应门之后)。 */
     public static final ResourceKey<LootTable> REFLECTION_INNER_VAULT =
             ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/reflection_inner_vault"));
 
-    /** 淹没记录室(镜湖水下残页+研究拓片点)。 */
     public static final ResourceKey<LootTable> SUBMERGED_RECORD_ROOM =
             ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/submerged_record_room"));
 
@@ -69,13 +66,10 @@ public class ModLootTables {
     public static final ResourceKey<LootTable> TRUE_SIGHT_VAULT =
             ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/true_sight_vault"));
 
-    // ---- V0.7 主世界探索点补齐 ----
-
-    /** 主世界失落营地行囊:普通材料+残页+偶见指向最近遗迹的潦草地图。 */
     public static final ResourceKey<LootTable> OVERWORLD_LOST_CAMP_CHEST =
             ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/overworld_lost_camp"));
 
-    /** 空间裂隙静态点:日志线索残页+少量材料(刻意稀薄)。 */
+    /** 空间裂隙静态点:日志线索残页 + 少量材料,产出刻度偏低。 */
     public static final ResourceKey<LootTable> SPATIAL_RIFT_CHEST =
             ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/spatial_rift"));
 
@@ -104,6 +98,71 @@ public class ModLootTables {
             chest("deep/fractured_anchor_station");
     public static final ResourceKey<LootTable> SEVERED_ARCHIVE_VAULT_CHEST =
             chest("deep/severed_archive_vault");
+    public static final ResourceKey<LootTable> RESONANCE_FOUNDRY_CACHE =
+            chest("deep/resonance_foundry_cache");
+    public static final ResourceKey<LootTable> RESONANCE_FOUNDRY_VAULT =
+            chest("deep/resonance_foundry_vault");
+    public static final ResourceKey<LootTable> GRAVITY_CROWN_CACHE =
+            chest("deep/gravity_crown_cache");
+    public static final ResourceKey<LootTable> GRAVITY_CROWN_VAULT =
+            chest("deep/gravity_crown_vault");
+    public static final ResourceKey<LootTable> VOIDSCAR_BASTION_CACHE =
+            chest("deep/voidscar_bastion_cache");
+    public static final ResourceKey<LootTable> VOIDSCAR_BASTION_VAULT =
+            chest("deep/voidscar_bastion_vault");
+    public static final ResourceKey<LootTable> SHATTERED_CODEX_CACHE =
+            chest("deep/shattered_codex_cache");
+    public static final ResourceKey<LootTable> SHATTERED_CODEX_VAULT =
+            chest("deep/shattered_codex_vault");
+    public static final ResourceKey<LootTable> WEIGHTLESS_ORRERY_CACHE =
+            chest("deep/weightless_orrery_cache");
+    public static final ResourceKey<LootTable> WEIGHTLESS_ORRERY_VAULT =
+            chest("deep/weightless_orrery_vault");
+    public static final ResourceKey<LootTable> HUSHED_CATHEDRAL_CACHE =
+            chest("deep/hushed_cathedral_cache");
+    public static final ResourceKey<LootTable> HUSHED_CATHEDRAL_VAULT =
+            chest("deep/hushed_cathedral_vault");
+    public static final ResourceKey<LootTable> RIFTGLASS_CITADEL_CACHE =
+            chest("deep/riftglass_citadel_cache");
+    public static final ResourceKey<LootTable> RIFTGLASS_CITADEL_VAULT =
+            chest("deep/riftglass_citadel_vault");
+    public static final ResourceKey<LootTable> FOLDED_CELESTIAL_ARCHIVE_CACHE =
+            chest("deep/folded_celestial_archive_cache");
+    public static final ResourceKey<LootTable> FOLDED_CELESTIAL_ARCHIVE_VAULT =
+            chest("deep/folded_celestial_archive_vault");
+    public static final ResourceKey<LootTable> INVERTED_PENDULUM_PALACE_CACHE =
+            chest("deep/inverted_pendulum_palace_cache");
+    public static final ResourceKey<LootTable> INVERTED_PENDULUM_PALACE_VAULT =
+            chest("deep/inverted_pendulum_palace_vault");
+    public static final ResourceKey<LootTable> RIFTWORN_MEMORIAL_COURT_CACHE =
+            chest("deep/riftworn_memorial_court_cache");
+    public static final ResourceKey<LootTable> RIFTWORN_MEMORIAL_COURT_VAULT =
+            chest("deep/riftworn_memorial_court_vault");
+
+    public static final ResourceKey<LootTable> FAR_ECHO_CARTOGRAPHY_CACHE =
+            chest("landmarks/far_echo_cartography_cache");
+    public static final ResourceKey<LootTable> FAR_ECHO_CARTOGRAPHY_VAULT =
+            chest("landmarks/far_echo_cartography_vault");
+    public static final ResourceKey<LootTable> CHORUS_CONFLUENCE_CACHE =
+            chest("landmarks/chorus_confluence_cache");
+    public static final ResourceKey<LootTable> CHORUS_CONFLUENCE_VAULT =
+            chest("landmarks/chorus_confluence_vault");
+    public static final ResourceKey<LootTable> PALIMPSEST_ECOLOGY_CACHE =
+            chest("landmarks/palimpsest_ecology_cache");
+    public static final ResourceKey<LootTable> PALIMPSEST_ECOLOGY_VAULT =
+            chest("landmarks/palimpsest_ecology_vault");
+    public static final ResourceKey<LootTable> FAR_BELL_WAYFARER_CACHE =
+            chest("landmarks/far_bell_wayfarer_cache");
+    public static final ResourceKey<LootTable> FAR_BELL_WAYFARER_VAULT =
+            chest("landmarks/far_bell_wayfarer_vault");
+    public static final ResourceKey<LootTable> PRISMATIC_CANOPY_CACHE =
+            chest("landmarks/prismatic_canopy_cache");
+    public static final ResourceKey<LootTable> PRISMATIC_CANOPY_VAULT =
+            chest("landmarks/prismatic_canopy_vault");
+    public static final ResourceKey<LootTable> INTERLAYER_EXPEDITION_CACHE =
+            chest("landmarks/interlayer_expedition_cache");
+    public static final ResourceKey<LootTable> INTERLAYER_EXPEDITION_VAULT =
+            chest("landmarks/interlayer_expedition_vault");
 
     private static ResourceKey<LootTable> chest(String path) {
         return ResourceKey.create(Registries.LOOT_TABLE, UnknownEchoes.id("chests/" + path));

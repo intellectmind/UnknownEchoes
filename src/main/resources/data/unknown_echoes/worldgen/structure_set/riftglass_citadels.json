@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:riftglass_citadel", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 62,
+    "separation": 22,
+    "salt": 2076143951,
+    "frequency": 0.0
+  }
+}

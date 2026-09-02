@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:echo_wanderer",
+    "unknown_echoes:silent_walker",
+    "unknown_echoes:echo_remnant",
+    "unknown_echoes:broken_bell_guard",
+    "unknown_echoes:lost_recorder",
+    "unknown_echoes:wind_eroded_sentinel",
+    "unknown_echoes:lost_recorder_chief"
+  ]
+}

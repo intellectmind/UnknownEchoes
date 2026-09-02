@@ -264,7 +264,7 @@
         {
           "type": "minecraft:item",
           "name": "unknown_echoes:true_sight_research_rubbing",
-          "weight": 3
+          "weight": 1
         },
         {
           "type": "minecraft:item",

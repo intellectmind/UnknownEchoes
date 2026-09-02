@@ -5,9 +5,7 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-/**
- * 基础能力研究线。研究只强化玩法表现与数值,不授予 EchoPermission。
- */
+/** 基础能力研究线。研究只强化玩法表现与数值,不授予 EchoPermission。 */
 public enum EchoResearchLine {
     WIND("wind", "wind_echo", EchoAbilityType.WIND_ECHO, Set.of(17, 18, 19, 20, 21, 22, 23, 24), Set.of()),
     TIDE("tide", "tide_echo", EchoAbilityType.TIDE_ECHO, Set.of(42, 43, 44, 45, 46, 47, 48, 49, 50, 51), Set.of()),
@@ -38,7 +36,7 @@ public enum EchoResearchLine {
         return id;
     }
 
-    /** 旧档 research_points 使用能力 id;前三条继续沿用,避免迁移破坏旧数据。 */
+    /** 前三条研究线继续使用能力 id，以兼容既有存档。 */
     public String getStorageKey() {
         return requiredAbility == null ? id : requiredAbility.getId();
     }

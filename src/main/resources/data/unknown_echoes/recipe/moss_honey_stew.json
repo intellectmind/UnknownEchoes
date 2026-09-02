@@ -3,6 +3,9 @@
   "category": "food",
   "ingredients": [
     {
+      "item": "minecraft:bowl"
+    },
+    {
       "item": "unknown_echoes:silence_moss"
     },
     {

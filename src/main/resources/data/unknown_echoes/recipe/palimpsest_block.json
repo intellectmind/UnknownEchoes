@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "PPP",
+    "PPP",
+    "PPP"
+  ],
+  "key": {
+    "P": { "item": "unknown_echoes:palimpsest_leaf" }
+  },
+  "result": { "id": "unknown_echoes:palimpsest_block" }
+}

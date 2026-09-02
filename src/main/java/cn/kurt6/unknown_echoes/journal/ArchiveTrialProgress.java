@@ -1,15 +1,14 @@
 package cn.kurt6.unknown_echoes.journal;
 
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
+import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import cn.kurt6.unknown_echoes.block.archive.EchoArchiveTerminalBlockEntity;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
-/**
- * 回声大档案馆三翼检查。只在档案终端附近记录个人进度,避免通用机关误算为终局机关。
- */
+/** 回声大档案馆三翼检查。只在档案终端附近记录个人进度,避免通用机关误算为终局机关。 */
 public final class ArchiveTrialProgress {
     private static final int TERMINAL_RANGE = 48;
     private static final String PREFIX = "archive_trial:";
@@ -57,6 +56,9 @@ public final class ArchiveTrialProgress {
             return false;
         }
         EchoAbilityManager.syncToClient(player);
+        if (hasCompletedAll(player)) {
+            ModAdvancements.award(player, ModAdvancements.ARCHIVE_TRIALS);
+        }
         return true;
     }
 

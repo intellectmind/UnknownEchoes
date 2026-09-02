@@ -3,7 +3,10 @@ package cn.kurt6.unknown_echoes.registry;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.AquaticBiomePlantBlock;
 import cn.kurt6.unknown_echoes.block.AquaticSeaPickleBlock;
+import cn.kurt6.unknown_echoes.block.CommunalEchoTableBlock;
 import cn.kurt6.unknown_echoes.block.HangingFruitBlock;
+import cn.kurt6.unknown_echoes.block.RealmHabitatChimeBlock;
+import cn.kurt6.unknown_echoes.block.RealmServicePlinthBlock;
 import cn.kurt6.unknown_echoes.block.RewardAltarBlock;
 import cn.kurt6.unknown_echoes.block.RubbleBlock;
 import cn.kurt6.unknown_echoes.block.RuneBricksBlock;
@@ -12,6 +15,7 @@ import cn.kurt6.unknown_echoes.block.beacon.EchoBeaconBlock;
 import cn.kurt6.unknown_echoes.block.beacon.AbyssBeaconBlock;
 import cn.kurt6.unknown_echoes.block.deep.DeepCalibrationNodeBlock;
 import cn.kurt6.unknown_echoes.block.deep.DeepBiomePlantBlock;
+import cn.kurt6.unknown_echoes.block.deep.DeepProvisionBrazierBlock;
 import cn.kurt6.unknown_echoes.block.deep.DeepRouteNodeBlock;
 import cn.kurt6.unknown_echoes.block.deep.EndingRecordTableBlock;
 import cn.kurt6.unknown_echoes.block.deep.GravityCoreAltarBlock;
@@ -25,6 +29,8 @@ import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlock;
 import cn.kurt6.unknown_echoes.block.boss.ResonanceCandleBlock;
 import cn.kurt6.unknown_echoes.block.puzzle.HiddenRuneBlock;
 import cn.kurt6.unknown_echoes.block.puzzle.MemoryPillarBlock;
+import cn.kurt6.unknown_echoes.block.puzzle.ProjectionResonanceDoorBlock;
+import cn.kurt6.unknown_echoes.block.puzzle.ProjectionResonancePlateBlock;
 import cn.kurt6.unknown_echoes.block.puzzle.PuzzleCoreBlock;
 import cn.kurt6.unknown_echoes.block.puzzle.SequenceRuneBlock;
 import cn.kurt6.unknown_echoes.block.puzzle.WindDoorBlock;
@@ -45,8 +51,11 @@ import net.minecraft.world.level.block.DropExperienceBlock;
 import net.minecraft.world.level.block.FlowerBlock;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
+import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.TallGrassBlock;
+import net.minecraft.world.level.block.WallBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
@@ -153,6 +162,55 @@ public class ModBlocks {
                             .sound(SoundType.AMETHYST).lightLevel(state -> 11)
                             .noLootTable().noOcclusion()));
 
+    public static final DeferredBlock<DeepProvisionBrazierBlock> DEEP_PROVISION_BRAZIER =
+            BLOCKS.register("deep_provision_brazier",
+                    () -> new DeepProvisionBrazierBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_GRAY).strength(3.5F, 8.0F)
+                            .requiresCorrectToolForDrops().sound(SoundType.LANTERN)
+                            .lightLevel(state -> state.getValue(DeepProvisionBrazierBlock.MODE)
+                                    == DeepProvisionBrazierBlock.Mode.IDLE ? 3 : 10)
+                            .noOcclusion()));
+
+    public static final DeferredBlock<CommunalEchoTableBlock> COMMUNAL_ECHO_TABLE =
+            BLOCKS.register("communal_echo_table",
+                    () -> new CommunalEchoTableBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_CYAN).strength(3.0F, 8.0F)
+                            .requiresCorrectToolForDrops().sound(SoundType.WOOD)
+                            .lightLevel(state -> state.getValue(CommunalEchoTableBlock.MODE)
+                                    == CommunalEchoTableBlock.Mode.IDLE ? 2 : 9)
+                            .noOcclusion()));
+
+    public static final DeferredBlock<RealmServicePlinthBlock> REALM_SERVICE_PLINTH =
+            BLOCKS.register("realm_service_plinth",
+                    () -> new RealmServicePlinthBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_CYAN).strength(3.2F, 8.0F)
+                            .requiresCorrectToolForDrops().sound(SoundType.COPPER)
+                            .lightLevel(state -> 7).noOcclusion()));
+
+    public static final DeferredBlock<RealmHabitatChimeBlock> REALM_HABITAT_CHIME =
+            BLOCKS.register("realm_habitat_chime",
+                    () -> new RealmHabitatChimeBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_CYAN).strength(3.0F, 8.0F)
+                            .requiresCorrectToolForDrops().sound(SoundType.COPPER)
+                            .lightLevel(state -> state.getValue(RealmHabitatChimeBlock.ACTIVE) ? 11 : 4)
+                            .noOcclusion()));
+
+    public static final DeferredBlock<ProjectionResonancePlateBlock> PROJECTION_RESONANCE_PLATE =
+            BLOCKS.register("projection_resonance_plate",
+                    () -> new ProjectionResonancePlateBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_CYAN).strength(2.8F, 7.0F)
+                            .requiresCorrectToolForDrops().sound(SoundType.METAL)
+                            .lightLevel(state -> state.getValue(ProjectionResonancePlateBlock.ACTIVE)
+                                    ? 9 : 2)
+                            .noOcclusion()));
+
+    public static final DeferredBlock<ProjectionResonanceDoorBlock> PROJECTION_RESONANCE_DOOR =
+            BLOCKS.register("projection_resonance_door",
+                    () -> new ProjectionResonanceDoorBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_CYAN).strength(-1.0F, 3600000.0F)
+                            // 开启态 shape 为空,必须 noOcclusion,否则遮挡缓存会为不渲染的方块建面。
+                            .sound(SoundType.AMETHYST).noLootTable().noOcclusion()));
+
     public static final DeferredBlock<WindDoorBlock> WIND_DOOR = BLOCKS.register("wind_door",
             () -> new WindDoorBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
                     .strength(-1.0F, 3600000.0F).sound(SoundType.AMETHYST).lightLevel(state -> 4)
@@ -182,6 +240,39 @@ public class ModBlocks {
                     .strength(-1.0F, 3600000.0F)
                     .lightLevel(state -> state.getValue(PuzzleCoreBlock.ACTIVE) ? 13 : 5)
                     .noLootTable().noOcclusion()));
+
+    public static final DeferredBlock<cn.kurt6.unknown_echoes.block.puzzle.ChimeEchoCoreBlock> CHIME_ECHO_CORE =
+            BLOCKS.register("chime_echo_core",
+                    () -> new cn.kurt6.unknown_echoes.block.puzzle.ChimeEchoCoreBlock(
+                            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
+                                    .strength(-1.0F, 3600000.0F).sound(SoundType.AMETHYST)
+                                    .lightLevel(state -> state.getValue(PuzzleCoreBlock.ACTIVE) ? 13 : 6)
+                                    .noLootTable().noOcclusion()));
+
+    public static final DeferredBlock<cn.kurt6.unknown_echoes.block.puzzle.FoldpagePairCoreBlock> FOLDPAGE_PAIR_CORE =
+            BLOCKS.register("foldpage_pair_core",
+                    () -> new cn.kurt6.unknown_echoes.block.puzzle.FoldpagePairCoreBlock(
+                            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
+                                    .strength(-1.0F, 3600000.0F)
+                                    .lightLevel(state -> state.getValue(PuzzleCoreBlock.ACTIVE) ? 13 : 5)
+                                    .noLootTable().noOcclusion()));
+
+    public static final DeferredBlock<cn.kurt6.unknown_echoes.block.puzzle.FoldpageTileBlock> FOLDPAGE_TILE =
+            BLOCKS.register("foldpage_tile",
+                    () -> new cn.kurt6.unknown_echoes.block.puzzle.FoldpageTileBlock(
+                            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
+                                    .strength(-1.0F, 3600000.0F).sound(SoundType.WOOD)
+                                    .lightLevel(state -> state.getValue(
+                                            cn.kurt6.unknown_echoes.block.puzzle.FoldpageTileBlock.LIT) ? 9 : 2)
+                                    .noLootTable()));
+
+    public static final DeferredBlock<cn.kurt6.unknown_echoes.block.puzzle.StepRuneBlock> STEP_RUNE =
+            BLOCKS.register("step_rune",
+                    () -> new cn.kurt6.unknown_echoes.block.puzzle.StepRuneBlock(
+                            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
+                                    .strength(-1.0F, 3600000.0F).sound(SoundType.AMETHYST)
+                                    .lightLevel(state -> state.getValue(SequenceRuneBlock.LIT) ? 11 : 3)
+                                    .noLootTable().noOcclusion()));
 
     public static final DeferredBlock<Block> SEALED_STONE = BLOCKS.register("sealed_stone",
             () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY)
@@ -236,15 +327,21 @@ public class ModBlocks {
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY)
                     .strength(2.5F, 6.0F).requiresCorrectToolForDrops().sound(SoundType.CALCITE));
 
+    /** 风主题结构必须用它收边：借回响石砖（青色）给风蚀岩（浅灰）收边会明显撞色。 */
+    public static final DeferredBlock<Block> WIND_ETCHED_BRICKS = BLOCKS.registerSimpleBlock("wind_etched_bricks",
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY)
+                    .strength(2.5F, 6.0F).requiresCorrectToolForDrops().sound(SoundType.CALCITE));
+
     public static final DeferredBlock<Block> SKY_QUARTZ_ORE = BLOCKS.register("sky_quartz_ore",
             () -> new DropExperienceBlock(UniformInt.of(1, 3),
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
                             .strength(2.4F, 5.0F).requiresCorrectToolForDrops().sound(SoundType.CALCITE)));
 
     public static final DeferredBlock<Block> CRYSTAL_SONG_CLUSTER = BLOCKS.register("crystal_song_cluster",
-            () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
-                    .strength(1.2F, 3.0F).sound(SoundType.AMETHYST).lightLevel(state -> 10)
-                    .requiresCorrectToolForDrops().noOcclusion()));
+            () -> new DropExperienceBlock(UniformInt.of(1, 3),
+                    BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
+                            .strength(1.2F, 3.0F).sound(SoundType.AMETHYST).lightLevel(state -> 10)
+                            .requiresCorrectToolForDrops().noOcclusion()));
 
     public static final DeferredBlock<FlowerBlock> RESONANT_MUSHROOM = BLOCKS.register("resonant_mushroom",
             () -> new FlowerBlock(MobEffects.GLOWING, 6.0F,
@@ -311,8 +408,6 @@ public class ModBlocks {
                                             cn.kurt6.unknown_echoes.block.wind.WindCurrentPlatformBlock.ACTIVE) ? 10 : 4)
                                     .noLootTable().noOcclusion()));
 
-    // ---- 回响森林植被 ----
-
     public static final DeferredBlock<RotatedPillarBlock> ECHO_LOG = BLOCKS.register("echo_log",
             () -> new RotatedPillarBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .strength(2.0F).sound(SoundType.WOOD).lightLevel(state -> 6).ignitedByLava()));
@@ -351,6 +446,16 @@ public class ModBlocks {
     public static final DeferredBlock<Block> WHISPERING_PLANKS = BLOCKS.registerSimpleBlock("whispering_planks",
             BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
                     .strength(2.0F, 3.0F).sound(SoundType.WOOD).ignitedByLava());
+
+    public static final DeferredBlock<Block> WHISPERING_LATTICE = BLOCKS.registerSimpleBlock("whispering_lattice",
+            BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
+                    .strength(2.0F, 3.0F).sound(SoundType.WOOD).ignitedByLava());
+
+    /** 木质而非砖石：可燃、不要求工具、走 mineable/axe，构件不能复用砖石族属性。 */
+    public static final DeferredBlock<Block> WHISPERING_TIMBER_FRAME =
+            BLOCKS.registerSimpleBlock("whispering_timber_frame",
+                    BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
+                            .strength(2.0F, 3.0F).sound(SoundType.WOOD).ignitedByLava());
 
     public static final DeferredBlock<LeavesBlock> WHISPERING_LEAVES = BLOCKS.register("whispering_leaves",
             () -> new LeavesBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
@@ -404,7 +509,7 @@ public class ModBlocks {
     public static final DeferredBlock<ResonanceCandleBlock> RESONANCE_CANDLE = BLOCKS.register("resonance_candle",
             () -> new ResonanceCandleBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
                     .strength(0.4F).sound(SoundType.CANDLE).lightLevel(state -> 10)
-                    .noLootTable().noOcclusion()));
+                    .noOcclusion()));
 
     public static final DeferredBlock<TideBuoyBlock> TIDE_BUOY = BLOCKS.register("tide_buoy",
             () -> new TideBuoyBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
@@ -504,28 +609,26 @@ public class ModBlocks {
                     .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 5)
                     .pushReaction(PushReaction.DESTROY)));
 
-    public static final DeferredBlock<FlowerBlock> FOLDED_SPOREBLOOM = BLOCKS.register("folded_sporebloom",
-            () -> new FlowerBlock(MobEffects.GLOWING, 5.0F,
+    public static final DeferredBlock<DeepBiomePlantBlock> FOLDED_SPOREBLOOM = BLOCKS.register("folded_sporebloom",
+            () -> new DeepBiomePlantBlock(MobEffects.GLOWING, 5.0F,
                     BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
                             .noCollission().instabreak().sound(SoundType.FUNGUS).noOcclusion()
                             .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 7)
-                            .pushReaction(PushReaction.DESTROY)));
+                            .pushReaction(PushReaction.DESTROY), () -> ModBlocks.FOLDED_SLATE.get()));
 
-    public static final DeferredBlock<FlowerBlock> GRAVITY_BELL = BLOCKS.register("gravity_bell",
-            () -> new FlowerBlock(MobEffects.SLOW_FALLING, 6.0F,
+    public static final DeferredBlock<DeepBiomePlantBlock> GRAVITY_BELL = BLOCKS.register("gravity_bell",
+            () -> new DeepBiomePlantBlock(MobEffects.SLOW_FALLING, 6.0F,
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
                             .noCollission().instabreak().sound(SoundType.AMETHYST).noOcclusion()
                             .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 8)
-                            .pushReaction(PushReaction.DESTROY)));
+                            .pushReaction(PushReaction.DESTROY), () -> ModBlocks.GRAVITY_SHALE.get()));
 
-    public static final DeferredBlock<FlowerBlock> HUSH_THORN = BLOCKS.register("hush_thorn",
-            () -> new FlowerBlock(MobEffects.DARKNESS, 4.0F,
+    public static final DeferredBlock<DeepBiomePlantBlock> HUSH_THORN = BLOCKS.register("hush_thorn",
+            () -> new DeepBiomePlantBlock(MobEffects.DARKNESS, 4.0F,
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK)
                             .noCollission().instabreak().sound(SoundType.SCULK).noOcclusion()
                             .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 4)
-                            .pushReaction(PushReaction.DESTROY)));
-
-    // ---- Echo Realm biome palette ----
+                            .pushReaction(PushReaction.DESTROY), () -> ModBlocks.ABYSSAL_STONE.get()));
 
     public static final DeferredBlock<Block> MIRROR_DUST_STONE = BLOCKS.registerSimpleBlock("mirror_dust_stone",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY)
@@ -562,6 +665,9 @@ public class ModBlocks {
     public static final DeferredBlock<Block> CHISELED_ECHO_STRATA = BLOCKS.registerSimpleBlock("chiseled_echo_strata",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY)
                     .strength(3.1F, 8.0F).requiresCorrectToolForDrops().sound(SoundType.DEEPSLATE));
+    public static final DeferredBlock<Block> ARCHIVE_MOSAIC = BLOCKS.registerSimpleBlock("archive_mosaic",
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY)
+                    .strength(3.1F, 8.0F).requiresCorrectToolForDrops().sound(SoundType.DEEPSLATE));
     public static final DeferredBlock<Block> RESONANT_CLIFF_CRYSTAL = BLOCKS.registerSimpleBlock("resonant_cliff_crystal",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .strength(3.2F, 8.0F).requiresCorrectToolForDrops().sound(SoundType.AMETHYST)
@@ -587,6 +693,13 @@ public class ModBlocks {
                     .strength(2.9F, 7.0F).requiresCorrectToolForDrops().sound(SoundType.CALCITE));
     public static final DeferredBlock<Block> CHISELED_SONGSTONE = BLOCKS.registerSimpleBlock("chiseled_songstone",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
+                    .strength(2.9F, 7.0F).requiresCorrectToolForDrops().sound(SoundType.CALCITE));
+    public static final DeferredBlock<Block> SONGSTONE_TILES = BLOCKS.registerSimpleBlock("songstone_tiles",
+            BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
+                    .strength(2.9F, 7.0F).requiresCorrectToolForDrops().sound(SoundType.CALCITE));
+    public static final DeferredBlock<Block> CRACKED_SONGSTONE_BRICKS = BLOCKS.registerSimpleBlock(
+            "cracked_songstone_bricks",
+            BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
                     .strength(2.9F, 7.0F).requiresCorrectToolForDrops().sound(SoundType.CALCITE));
     public static final DeferredBlock<Block> RESONANT_GEODE = BLOCKS.registerSimpleBlock("resonant_geode",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
@@ -679,8 +792,6 @@ public class ModBlocks {
                             .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 8)
                             .pushReaction(PushReaction.DESTROY), SILENT_MUDSTONE));
 
-    // ---- Deep Echoes biome palette ----
-
     public static final DeferredBlock<Block> FOLDED_SLATE = BLOCKS.registerSimpleBlock("folded_slate",
             BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_CYAN)
                     .strength(3.2F, 8.0F).requiresCorrectToolForDrops().sound(SoundType.DEEPSLATE));
@@ -746,6 +857,21 @@ public class ModBlocks {
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .strength(3.6F, 9.0F).requiresCorrectToolForDrops().sound(SoundType.SCULK)
                     .lightLevel(state -> 6));
+    public static final DeferredBlock<Block> RESONANCE_ALLOY_BLOCK = BLOCKS.registerSimpleBlock(
+            "resonance_alloy_block",
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
+                    .strength(5.0F, 12.0F).requiresCorrectToolForDrops().sound(SoundType.METAL)
+                    .lightLevel(state -> 5));
+    public static final DeferredBlock<Block> PALIMPSEST_BLOCK = BLOCKS.registerSimpleBlock(
+            "palimpsest_block",
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_YELLOW)
+                    .strength(4.5F, 10.0F).requiresCorrectToolForDrops().sound(SoundType.METAL)
+                    .lightLevel(state -> 3));
+    public static final DeferredBlock<Block> ORRERY_PRISM_BLOCK = BLOCKS.registerSimpleBlock(
+            "orrery_prism_block",
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
+                    .strength(4.2F, 10.0F).requiresCorrectToolForDrops().sound(SoundType.AMETHYST)
+                    .lightLevel(state -> 8));
     public static final DeferredBlock<DeepBiomePlantBlock> HUSH_GRASS = BLOCKS.register("hush_grass",
             () -> new DeepBiomePlantBlock(MobEffects.MOVEMENT_SLOWDOWN, 3.0F,
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK)
@@ -767,9 +893,33 @@ public class ModBlocks {
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY)
                     .strength(2.4F, 6.0F).requiresCorrectToolForDrops().sound(SoundType.CALCITE).lightLevel(state -> 2));
 
+    /** 光照必须是 15：原版 isValidSpawn 只拦 getLightEmission() < 14,低于 14 吊灯网格会变成刷怪面。 */
     public static final DeferredBlock<Block> SKY_LAMP_GLASS = BLOCKS.registerSimpleBlock("sky_lamp_glass",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
-                    .strength(0.6F, 1.0F).sound(SoundType.GLASS).lightLevel(state -> 9).noOcclusion());
+                    .strength(0.6F, 1.0F).sound(SoundType.GLASS).lightLevel(state -> 15).noOcclusion());
+
+    /**
+     * 批量照明的硬约束：纯装饰、不进 resource_blocks、无逆向配方、光照 15。
+     * 进 resource_blocks 就是成片免费资源,光照低于 14 则吊灯网格变成刷怪面。
+     */
+    private static BlockBehaviour.Properties lanternGlassProperties(MapColor mapColor) {
+        return BlockBehaviour.Properties.of().mapColor(mapColor)
+                .strength(0.6F, 1.0F).sound(SoundType.GLASS)
+                .lightLevel(state -> 15).noOcclusion();
+    }
+
+    public static final DeferredBlock<Block> REEF_LANTERN_GLASS = BLOCKS.registerSimpleBlock(
+            "reef_lantern_glass", lanternGlassProperties(MapColor.COLOR_CYAN));
+    public static final DeferredBlock<Block> BELL_LANTERN_GLASS = BLOCKS.registerSimpleBlock(
+            "bell_lantern_glass", lanternGlassProperties(MapColor.TERRACOTTA_ORANGE));
+    public static final DeferredBlock<Block> HUSH_LANTERN_GLASS = BLOCKS.registerSimpleBlock(
+            "hush_lantern_glass", lanternGlassProperties(MapColor.COLOR_LIGHT_GRAY));
+    public static final DeferredBlock<Block> FOLD_LANTERN_GLASS = BLOCKS.registerSimpleBlock(
+            "fold_lantern_glass", lanternGlassProperties(MapColor.COLOR_PURPLE));
+    public static final DeferredBlock<Block> SONG_LANTERN_GLASS = BLOCKS.registerSimpleBlock(
+            "song_lantern_glass", lanternGlassProperties(MapColor.COLOR_GREEN));
+    public static final DeferredBlock<Block> ARCHIVE_LANTERN_GLASS = BLOCKS.registerSimpleBlock(
+            "archive_lantern_glass", lanternGlassProperties(MapColor.TERRACOTTA_WHITE));
 
     public static final DeferredBlock<Block> TIDE_SMOOTH_STONE = BLOCKS.registerSimpleBlock("tide_smooth_stone",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
@@ -782,4 +932,185 @@ public class ModBlocks {
     public static final DeferredBlock<Block> PEARL_CORAL_BLOCK = BLOCKS.registerSimpleBlock("pearl_coral_block",
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
                     .strength(1.5F, 3.0F).sound(SoundType.CORAL_BLOCK).lightLevel(state -> 5));
+
+    /** 复制母方块的强度、音效与工具要求，保证细部构件与母墙体手感一致。 */
+    private static BlockBehaviour.Properties masonryPartProperties(
+            MapColor mapColor, float destroyTime, float explosionResistance, SoundType sound) {
+        return BlockBehaviour.Properties.of().mapColor(mapColor)
+                .strength(destroyTime, explosionResistance)
+                .requiresCorrectToolForDrops().sound(sound);
+    }
+
+    public static final DeferredBlock<StairBlock> ECHO_STONE_BRICK_STAIRS =
+            BLOCKS.register("echo_stone_brick_stairs",
+                    () -> new StairBlock(ECHO_STONE_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.COLOR_CYAN, 2.0F, 6.0F, SoundType.STONE)));
+    public static final DeferredBlock<SlabBlock> ECHO_STONE_BRICK_SLAB =
+            BLOCKS.register("echo_stone_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.COLOR_CYAN, 2.0F, 6.0F, SoundType.STONE)));
+    public static final DeferredBlock<WallBlock> ECHO_STONE_BRICK_WALL =
+            BLOCKS.register("echo_stone_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.COLOR_CYAN, 2.0F, 6.0F, SoundType.STONE)));
+
+    public static final DeferredBlock<StairBlock> ECHO_STRATA_BRICK_STAIRS =
+            BLOCKS.register("echo_strata_brick_stairs",
+                    () -> new StairBlock(ECHO_STRATA_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.COLOR_GRAY, 3.1F, 8.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<SlabBlock> ECHO_STRATA_BRICK_SLAB =
+            BLOCKS.register("echo_strata_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.COLOR_GRAY, 3.1F, 8.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<WallBlock> ECHO_STRATA_BRICK_WALL =
+            BLOCKS.register("echo_strata_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.COLOR_GRAY, 3.1F, 8.0F, SoundType.DEEPSLATE)));
+
+    public static final DeferredBlock<StairBlock> SONGSTONE_BRICK_STAIRS =
+            BLOCKS.register("songstone_brick_stairs",
+                    () -> new StairBlock(SONGSTONE_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.TERRACOTTA_GREEN, 2.9F, 7.0F, SoundType.CALCITE)));
+    public static final DeferredBlock<SlabBlock> SONGSTONE_BRICK_SLAB =
+            BLOCKS.register("songstone_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.TERRACOTTA_GREEN, 2.9F, 7.0F, SoundType.CALCITE)));
+    public static final DeferredBlock<WallBlock> SONGSTONE_BRICK_WALL =
+            BLOCKS.register("songstone_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.TERRACOTTA_GREEN, 2.9F, 7.0F, SoundType.CALCITE)));
+
+    public static final DeferredBlock<StairBlock> ASHEN_BELLSTONE_BRICK_STAIRS =
+            BLOCKS.register("ashen_bellstone_brick_stairs",
+                    () -> new StairBlock(ASHEN_BELLSTONE_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.COLOR_GRAY, 3.5F, 9.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<SlabBlock> ASHEN_BELLSTONE_BRICK_SLAB =
+            BLOCKS.register("ashen_bellstone_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.COLOR_GRAY, 3.5F, 9.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<WallBlock> ASHEN_BELLSTONE_BRICK_WALL =
+            BLOCKS.register("ashen_bellstone_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.COLOR_GRAY, 3.5F, 9.0F, SoundType.DEEPSLATE)));
+
+    public static final DeferredBlock<StairBlock> REEF_LIMESTONE_BRICK_STAIRS =
+            BLOCKS.register("reef_limestone_brick_stairs",
+                    () -> new StairBlock(REEF_LIMESTONE_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.COLOR_LIGHT_BLUE, 2.8F, 7.0F, SoundType.CALCITE)));
+    public static final DeferredBlock<SlabBlock> REEF_LIMESTONE_BRICK_SLAB =
+            BLOCKS.register("reef_limestone_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.COLOR_LIGHT_BLUE, 2.8F, 7.0F, SoundType.CALCITE)));
+    public static final DeferredBlock<WallBlock> REEF_LIMESTONE_BRICK_WALL =
+            BLOCKS.register("reef_limestone_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.COLOR_LIGHT_BLUE, 2.8F, 7.0F, SoundType.CALCITE)));
+
+    public static final DeferredBlock<StairBlock> SILENT_MUDSTONE_BRICK_STAIRS =
+            BLOCKS.register("silent_mudstone_brick_stairs",
+                    () -> new StairBlock(SILENT_MUDSTONE_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.TERRACOTTA_GREEN, 3.0F, 7.5F, SoundType.TUFF)));
+    public static final DeferredBlock<SlabBlock> SILENT_MUDSTONE_BRICK_SLAB =
+            BLOCKS.register("silent_mudstone_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.TERRACOTTA_GREEN, 3.0F, 7.5F, SoundType.TUFF)));
+    public static final DeferredBlock<WallBlock> SILENT_MUDSTONE_BRICK_WALL =
+            BLOCKS.register("silent_mudstone_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.TERRACOTTA_GREEN, 3.0F, 7.5F, SoundType.TUFF)));
+
+    public static final DeferredBlock<StairBlock> MIRROR_STONE_BRICK_STAIRS =
+            BLOCKS.register("mirror_stone_brick_stairs",
+                    () -> new StairBlock(MIRROR_STONE_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.COLOR_LIGHT_BLUE, 2.5F, 6.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<SlabBlock> MIRROR_STONE_BRICK_SLAB =
+            BLOCKS.register("mirror_stone_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.COLOR_LIGHT_BLUE, 2.5F, 6.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<WallBlock> MIRROR_STONE_BRICK_WALL =
+            BLOCKS.register("mirror_stone_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.COLOR_LIGHT_BLUE, 2.5F, 6.0F, SoundType.DEEPSLATE)));
+
+    public static final DeferredBlock<StairBlock> MIRROR_DUST_BRICK_STAIRS =
+            BLOCKS.register("mirror_dust_brick_stairs",
+                    () -> new StairBlock(MIRROR_DUST_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.COLOR_LIGHT_GRAY, 2.8F, 7.0F, SoundType.CALCITE)));
+    public static final DeferredBlock<SlabBlock> MIRROR_DUST_BRICK_SLAB =
+            BLOCKS.register("mirror_dust_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.COLOR_LIGHT_GRAY, 2.8F, 7.0F, SoundType.CALCITE)));
+    public static final DeferredBlock<WallBlock> MIRROR_DUST_BRICK_WALL =
+            BLOCKS.register("mirror_dust_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.COLOR_LIGHT_GRAY, 2.8F, 7.0F, SoundType.CALCITE)));
+
+    public static final DeferredBlock<StairBlock> FOLDED_SLATE_BRICK_STAIRS =
+            BLOCKS.register("folded_slate_brick_stairs",
+                    () -> new StairBlock(FOLDED_SLATE_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.TERRACOTTA_CYAN, 3.2F, 8.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<SlabBlock> FOLDED_SLATE_BRICK_SLAB =
+            BLOCKS.register("folded_slate_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.TERRACOTTA_CYAN, 3.2F, 8.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<WallBlock> FOLDED_SLATE_BRICK_WALL =
+            BLOCKS.register("folded_slate_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.TERRACOTTA_CYAN, 3.2F, 8.0F, SoundType.DEEPSLATE)));
+
+    public static final DeferredBlock<StairBlock> GRAVITY_SHALE_BRICK_STAIRS =
+            BLOCKS.register("gravity_shale_brick_stairs",
+                    () -> new StairBlock(GRAVITY_SHALE_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.COLOR_PURPLE, 3.4F, 8.5F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<SlabBlock> GRAVITY_SHALE_BRICK_SLAB =
+            BLOCKS.register("gravity_shale_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.COLOR_PURPLE, 3.4F, 8.5F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<WallBlock> GRAVITY_SHALE_BRICK_WALL =
+            BLOCKS.register("gravity_shale_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.COLOR_PURPLE, 3.4F, 8.5F, SoundType.DEEPSLATE)));
+
+    public static final DeferredBlock<StairBlock> ABYSSAL_STONE_BRICK_STAIRS =
+            BLOCKS.register("abyssal_stone_brick_stairs",
+                    () -> new StairBlock(ABYSSAL_STONE_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.COLOR_BLACK, 3.8F, 10.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<SlabBlock> ABYSSAL_STONE_BRICK_SLAB =
+            BLOCKS.register("abyssal_stone_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.COLOR_BLACK, 3.8F, 10.0F, SoundType.DEEPSLATE)));
+    public static final DeferredBlock<WallBlock> ABYSSAL_STONE_BRICK_WALL =
+            BLOCKS.register("abyssal_stone_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.COLOR_BLACK, 3.8F, 10.0F, SoundType.DEEPSLATE)));
+
+    public static final DeferredBlock<StairBlock> WIND_ETCHED_BRICK_STAIRS =
+            BLOCKS.register("wind_etched_brick_stairs",
+                    () -> new StairBlock(WIND_ETCHED_BRICKS.get().defaultBlockState(),
+                            masonryPartProperties(MapColor.COLOR_LIGHT_GRAY, 2.5F, 6.0F, SoundType.CALCITE)));
+    public static final DeferredBlock<SlabBlock> WIND_ETCHED_BRICK_SLAB =
+            BLOCKS.register("wind_etched_brick_slab",
+                    () -> new SlabBlock(masonryPartProperties(
+                            MapColor.COLOR_LIGHT_GRAY, 2.5F, 6.0F, SoundType.CALCITE)));
+    public static final DeferredBlock<WallBlock> WIND_ETCHED_BRICK_WALL =
+            BLOCKS.register("wind_etched_brick_wall",
+                    () -> new WallBlock(masonryPartProperties(
+                            MapColor.COLOR_LIGHT_GRAY, 2.5F, 6.0F, SoundType.CALCITE)));
+
+    /** 木构构件：可燃、不要求工具，因此不能复用 masonryPartProperties（那个带 requiresCorrectToolForDrops）。 */
+    private static BlockBehaviour.Properties timberPartProperties() {
+        return BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
+                .strength(2.0F, 3.0F).sound(SoundType.WOOD).ignitedByLava();
+    }
+
+    public static final DeferredBlock<StairBlock> WHISPERING_TIMBER_STAIRS =
+            BLOCKS.register("whispering_timber_stairs",
+                    () -> new StairBlock(WHISPERING_TIMBER_FRAME.get().defaultBlockState(),
+                            timberPartProperties()));
+    public static final DeferredBlock<SlabBlock> WHISPERING_TIMBER_SLAB =
+            BLOCKS.register("whispering_timber_slab",
+                    () -> new SlabBlock(timberPartProperties()));
+    public static final DeferredBlock<WallBlock> WHISPERING_TIMBER_WALL =
+            BLOCKS.register("whispering_timber_wall",
+                    () -> new WallBlock(timberPartProperties()));
 }

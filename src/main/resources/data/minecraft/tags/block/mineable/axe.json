@@ -4,7 +4,12 @@
     "unknown_echoes:echo_planks",
     "unknown_echoes:whispering_log",
     "unknown_echoes:whispering_planks",
+    "unknown_echoes:whispering_lattice",
     "unknown_echoes:tidewood_log",
-    "unknown_echoes:tidewood_planks"
+    "unknown_echoes:tidewood_planks",
+    "unknown_echoes:whispering_timber_frame",
+    "unknown_echoes:whispering_timber_stairs",
+    "unknown_echoes:whispering_timber_slab",
+    "unknown_echoes:whispering_timber_wall"
   ]
 }

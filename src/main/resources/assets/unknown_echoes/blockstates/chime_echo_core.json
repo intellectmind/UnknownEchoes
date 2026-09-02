@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "unknown_echoes:block/chime_echo_core"
+    },
+    "active=true": {
+      "model": "unknown_echoes:block/chime_echo_core_active"
+    }
+  }
+}

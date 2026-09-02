@@ -4,6 +4,7 @@
     "type": "minecraft:random_spread",
     "spacing": 48,
     "separation": 16,
-    "salt": 2049103271
+    "salt": 2049103271,
+    "frequency": 0.0
   }
 }

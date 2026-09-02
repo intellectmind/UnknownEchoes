@@ -16,7 +16,7 @@
     "hidden": false
   },
   "criteria": {
-    "has_weapon": {
+    "has_item": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [

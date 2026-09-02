@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:far_echo_cartography_court",
+  "biomes": "#unknown_echoes:has_far_echo_cartography_court",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

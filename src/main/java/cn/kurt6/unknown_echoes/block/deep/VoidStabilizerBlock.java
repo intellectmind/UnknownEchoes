@@ -5,6 +5,8 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.block.beacon.DeepEchoTeleporter;
 import cn.kurt6.unknown_echoes.entity.boss.BossFx;
+import cn.kurt6.unknown_echoes.entity.boss.AshScribe;
+import cn.kurt6.unknown_echoes.entity.boss.RiftWarden;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -20,6 +22,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -66,6 +69,19 @@ public class VoidStabilizerBlock extends Block {
             EchoAbilityManager.recordFailure(serverPlayer, EchoAbilityType.VOID_ECHO, "locked");
             return InteractionResult.CONSUME;
         }
+        // 灰烬抄录员的净化机关复用稳定器，但不要求已拥有重力回响。
+        for (AshScribe boss : serverLevel.getEntitiesOfClass(AshScribe.class,
+                new AABB(pos).inflate(36.0D), entity -> entity.isAlive()
+                        && entity.isAwaitingExtinguishingMechanism())) {
+            if (!EchoPermission.canUseEchoMechanism(serverPlayer, EchoAbilityType.VOID_ECHO)) {
+                reject(serverPlayer, level, pos, "message.unknown_echoes.void_stabilizer.need_void");
+                return InteractionResult.CONSUME;
+            }
+            boss.onExtinguishingMechanismActivated(serverLevel, pos);
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.ash_scribe.mechanism"), true);
+            return InteractionResult.CONSUME;
+        }
         if (!EchoPermission.canUseGravityMechanism(serverPlayer)) {
             reject(serverPlayer, level, pos, "message.unknown_echoes.void_stabilizer.need_gravity");
             EchoAbilityManager.recordFailure(serverPlayer, EchoAbilityType.VOID_ECHO,
@@ -87,6 +103,7 @@ public class VoidStabilizerBlock extends Block {
 
         String key = mechanismKey(level, pos);
         if (EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)) {
+            notifyActiveBosses(serverLevel, pos);
             int activated = countActivatedNearby(serverPlayer, level, pos);
             playGuidance(serverLevel, pos, corePos, activated >= REQUIRED_STABILIZERS);
             serverPlayer.displayClientMessage(Component.translatable(
@@ -110,12 +127,25 @@ public class VoidStabilizerBlock extends Block {
                         : SoundEvents.RESPAWN_ANCHOR_CHARGE,
                 SoundSource.BLOCKS, completed ? 1.25F : 0.9F, completed ? 1.1F : 0.7F);
         playGuidance(serverLevel, pos, corePos, completed);
+        notifyActiveBosses(serverLevel, pos);
         serverPlayer.displayClientMessage(completed
                         ? Component.translatable("message.unknown_echoes.void_stabilizer.completed")
                         : Component.translatable("message.unknown_echoes.void_stabilizer.activated",
                                 activated, REQUIRED_STABILIZERS),
                 true);
         return InteractionResult.CONSUME;
+    }
+
+    private static void notifyActiveBosses(ServerLevel level, BlockPos stabilizerPos) {
+        AABB bounds = new AABB(stabilizerPos).inflate(36.0D);
+        for (RiftWarden boss : level.getEntitiesOfClass(RiftWarden.class, bounds,
+                entity -> entity.isAlive())) {
+            boss.onStabilizerActivated(level, stabilizerPos);
+        }
+        for (AshScribe boss : level.getEntitiesOfClass(AshScribe.class, bounds,
+                entity -> entity.isAlive())) {
+            boss.onExtinguishingMechanismActivated(level, stabilizerPos);
+        }
     }
 
     private static void playGuidance(ServerLevel level, BlockPos pos, BlockPos corePos,

@@ -2,7 +2,7 @@
   "type": "unknown_echoes:echo_realm",
   "generator": {
     "type": "minecraft:noise",
-    "settings": "minecraft:overworld",
+    "settings": "unknown_echoes:deep_water",
     "biome_source": {
       "type": "minecraft:multi_noise",
       "biomes": [
@@ -10,23 +10,23 @@
           "biome": "unknown_echoes:tide_lighthouse_reef",
           "parameters": {
             "temperature": [
-              0.35,
+              -1.0,
               1.0
             ],
             "humidity": [
-              0.2,
+              -1.0,
               1.0
             ],
             "continentalness": [
               -1.2,
-              -0.45
+              -0.0367
             ],
             "erosion": [
               -1.0,
-              -0.2
+              1.0
             ],
             "weirdness": [
-              0.15,
+              0.2686,
               1.0
             ],
             "depth": [
@@ -49,7 +49,7 @@
             ],
             "continentalness": [
               -1.2,
-              -0.19
+              -0.0367
             ],
             "erosion": [
               -1.0,
@@ -57,7 +57,7 @@
             ],
             "weirdness": [
               -1.0,
-              1.0
+              0.2686
             ],
             "depth": [
               -1.0,
@@ -78,12 +78,12 @@
               1.0
             ],
             "continentalness": [
-              -0.19,
+              -0.0367,
               1.0
             ],
             "erosion": [
               -1.0,
-              -0.86
+              -0.3740
             ],
             "weirdness": [
               -1.0,
@@ -101,19 +101,19 @@
           "parameters": {
             "temperature": [
               -1.0,
-              0.25
+              0.0004
             ],
             "humidity": [
               -1.0,
-              0.6
+              1.0
             ],
             "continentalness": [
-              0.25,
+              -0.0367,
               1.0
             ],
             "erosion": [
-              -0.86,
-              -0.78
+              -0.3740,
+              -0.0837
             ],
             "weirdness": [
               -1.0,
@@ -130,20 +130,20 @@
           "biome": "unknown_echoes:crystal_song_grove",
           "parameters": {
             "temperature": [
-              0.25,
+              0.0004,
               1.0
             ],
             "humidity": [
               -1.0,
-              0.6
+              1.0
             ],
             "continentalness": [
-              0.25,
+              -0.0367,
               1.0
             ],
             "erosion": [
-              -0.86,
-              -0.78
+              -0.3740,
+              -0.0837
             ],
             "weirdness": [
               -1.0,
@@ -164,15 +164,15 @@
               1.0
             ],
             "humidity": [
-              0.4,
+              0.0769,
               1.0
             ],
             "continentalness": [
-              -0.19,
-              0.1
+              -0.0367,
+              0.1902
             ],
             "erosion": [
-              -0.78,
+              -0.0837,
               1.0
             ],
             "weirdness": [
@@ -191,18 +191,18 @@
           "parameters": {
             "temperature": [
               -1.0,
-              0.55
+              -0.0984
             ],
             "humidity": [
               -1.0,
-              0.4
+              0.0769
             ],
             "continentalness": [
-              -0.19,
+              -0.0367,
               1.0
             ],
             "erosion": [
-              -0.78,
+              -0.0837,
               1.0
             ],
             "weirdness": [
@@ -220,24 +220,24 @@
           "biome": "unknown_echoes:dreaming_meadow",
           "parameters": {
             "temperature": [
-              0.55,
+              -0.0984,
               1.0
             ],
             "humidity": [
               -1.0,
-              0.4
+              0.0769
             ],
             "continentalness": [
-              -0.19,
+              -0.0367,
               1.0
             ],
             "erosion": [
-              -0.78,
+              -0.0837,
               1.0
             ],
             "weirdness": [
               -1.0,
-              0.15
+              0.0021
             ],
             "depth": [
               -1.0,
@@ -250,23 +250,23 @@
           "biome": "unknown_echoes:broken_bell_wastes",
           "parameters": {
             "temperature": [
-              0.55,
+              -0.0984,
               1.0
             ],
             "humidity": [
               -1.0,
-              0.4
+              0.0769
             ],
             "continentalness": [
-              -0.19,
+              -0.0367,
               1.0
             ],
             "erosion": [
-              -0.78,
+              -0.0837,
               1.0
             ],
             "weirdness": [
-              0.15,
+              0.0021,
               1.0
             ],
             "depth": [
@@ -284,15 +284,15 @@
               1.0
             ],
             "humidity": [
-              0.4,
+              0.0769,
               1.0
             ],
             "continentalness": [
-              0.1,
+              0.1902,
               1.0
             ],
             "erosion": [
-              -0.78,
+              -0.0837,
               1.0
             ],
             "weirdness": [

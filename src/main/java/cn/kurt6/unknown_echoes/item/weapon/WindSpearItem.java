@@ -1,12 +1,13 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.stats.Stats;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -24,14 +25,6 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 
-/**
- * 风纹长矛(V0.6B 三件武器之一,V0.6C 强化):数值以 ModItems 注册值为准(当前 12/1.4,冷却 7 秒)。
- * 右键或战技键"风驰突刺":服务端写入一段朝视线方向的冲量;
- * V0.6C 起突刺化作风刃——路径上的敌人受 1.2×面板伤害并被风压掀开(突刺不再只是位移)。
- * 位移采用速度冲量而非传送:落点由物理碰撞决定,天然不能穿过风门、
- * 屏障与任何机关封锁方块——这正是"位移落点服务端校验"的实现方式(红线 #1 检查清单)。
- * 风刃伤害走常规 hurt 入口,Boss 未破防双保险照常钳制(红线 #4)。
- */
 public class WindSpearItem extends SwordItem implements WeaponSkill {
 
     private final int dashCooldownTicks;
@@ -40,11 +33,7 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
     /** 风刃判定:沿突刺路径的扫掠长度与半径。 */
     private static final double BLADE_LENGTH = 6.0;
     private static final double BLADE_RADIUS = 1.4;
-    /** 风刃伤害 = 面板伤害 × 系数。 */
-    public WindSpearItem(Properties properties) {
-        this(8.0, 1.35, 160, 1.5, 8.0F * 0.9F, properties);
-    }
-
+    private static final int SECONDARY_COOLDOWN_TICKS = 280;
     public WindSpearItem(double damage, double speed, int cooldownTicks, double dashStrength,
                          float bladeDamage, Properties properties) {
         super(EchoMetalTier.INSTANCE, properties.attributes(WeaponAttributes.melee(damage, speed)));
@@ -54,14 +43,21 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
     }
 
     @Override
+    public boolean isValidRepairItem(ItemStack stack, ItemStack repairCandidate) {
+        return repairCandidate.is(ModItems.WINDWOVEN_THREAD.get())
+                || repairCandidate.is(ModItems.COLOSSUS_MEMORY_CORE.get())
+                || super.isValidRepairItem(stack, repairCandidate);
+    }
+
+    @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.wind_spear.skill")
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.wind_spear.skill",
+                        Component.keybind("key.unknown_echoes.weapon_skill"))
                 .withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.wind_spear.detail")
-                .withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.wind_spear.lore")
-                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.wind_spear.secondary",
+                        Component.keybind("key.unknown_echoes.weapon_secondary_skill"))
+                .withStyle(ChatFormatting.AQUA));
     }
 
     @Override
@@ -77,28 +73,64 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
     @Override
     public boolean activateSkill(ServerLevel level, net.minecraft.server.level.ServerPlayer player,
                                  ItemStack stack, InteractionHand hand) {
-        if (player.getCooldowns().isOnCooldown(this)) {
+        if (!WeaponSkillSupport.begin(player,
+                "ue_weapon_skill_wind_spear_primary_until", dashCooldownTicks, 0)) {
             return false;
         }
         Vec3 look = player.getLookAngle();
-        // 垂直分量收紧:突刺是水平机动,不做飞天工具(能力/机关进度不靠它,纯手感)
+
         Vec3 dash = new Vec3(look.x, Mth.clamp(look.y * 0.5 + 0.1, -0.1, 0.45), look.z)
                 .normalize().scale(dashStrength);
         this.sweepWindBlade(level, player, dash.normalize());
         player.setDeltaMovement(dash);
-        player.hurtMarked = true;   // 服务端写运动后立即同步客户端
-        player.getCooldowns().addCooldown(this, dashCooldownTicks);
+        player.hurtMarked = true;
         level.playSound(null, player.blockPosition(),
                 SoundEvents.TRIDENT_RIPTIDE_2.value(), SoundSource.PLAYERS, 1.0F, 1.3F);
-        player.awardStat(Stats.ITEM_USED.get(this));
+        WeaponSkillSupport.finish(player, stack, hand, 2);
         return true;
     }
 
-    /**
-     * 风刃扫掠(V0.6C 强化):突刺瞬间沿冲刺方向切出一道风刃——
-     * 路径上的敌对生物受 1.2×面板伤害并被横向风压掀开;全程风迹粒子 + 风裂演出。
-     */
-    private void sweepWindBlade(ServerLevel level, Player player, Vec3 dir) {
+    @Override
+    public boolean hasSecondarySkill() {
+        return true;
+    }
+
+    @Override
+    public boolean activateSecondarySkill(ServerLevel level, ServerPlayer player,
+                                          ItemStack stack, InteractionHand hand) {
+        if (!WeaponSkillSupport.begin(player,
+                "ue_weapon_skill_wind_spear_secondary_until", SECONDARY_COOLDOWN_TICKS, 0)) {
+            return false;
+        }
+        int affected = 0;
+        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 6.0D, 8)) {
+            if (!WeaponSkillSupport.hurt(player, target, 11.0F)) {
+                continue;
+            }
+            WeaponFx.hitMark(level, target, WeaponFxTheme.WIND_SPEAR);
+            if (!EchoMeleeWeaponItem.isBoss(target)) {
+                Vec3 push = target.position().subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
+                if (push.lengthSqr() > 1.0E-4D) {
+                    target.setDeltaMovement(target.getDeltaMovement().add(push.normalize().scale(0.9D))
+                            .add(0.0D, 0.35D, 0.0D));
+                    target.hurtMarked = true;
+                }
+            }
+            affected++;
+        }
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.SLOW_FALLING, 160, 0, true, false, true));
+        WeaponFx.groundRing(level, player, WeaponFxTheme.WIND_SPEAR, 6.0D);
+        level.sendParticles(ParticleTypes.GUST, player.getX(), player.getY() + 0.6D, player.getZ(),
+                Math.max(4, affected), 2.2D, 0.6D, 2.2D, 0.02D);
+        level.playSound(null, player.blockPosition(), SoundEvents.TRIDENT_RIPTIDE_3.value(),
+                SoundSource.PLAYERS, 1.1F, 1.0F);
+        WeaponSkillSupport.finish(player, stack, hand, 3);
+        return true;
+    }
+
+    /** 风刃扫掠：突刺时沿冲刺方向切出风刃，击退路径上的敌对生物。 */
+    private void sweepWindBlade(ServerLevel level, ServerPlayer player, Vec3 dir) {
         Vec3 start = player.position().add(0, player.getBbHeight() * 0.5, 0);
         Vec3 requestedEnd = start.add(dir.scale(BLADE_LENGTH));
         BlockHitResult block = level.clip(new ClipContext(start, requestedEnd,
@@ -109,14 +141,8 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
             return;
         }
         Vec3 end = start.add(dir.scale(bladeLength));
-        // 风迹:沿路径铺云迹与电火花,突刺看起来像一道撕开的风
-        for (double d = 0.5; d <= bladeLength; d += 0.5) {
-            Vec3 p = start.add(dir.scale(d));
-            level.sendParticles(ParticleTypes.CLOUD, p.x, p.y, p.z, 2, 0.25, 0.25, 0.25, 0.01);
-            if (d % 1.5 < 0.5) {
-                level.sendParticles(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
-            }
-        }
+
+        WeaponFx.pierceBeam(level, player, WeaponFxTheme.WIND_SPEAR, start, dir, bladeLength);
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class,
                 new net.minecraft.world.phys.AABB(start, end).inflate(BLADE_RADIUS),
                 e -> e != player && e.isAlive() && !e.isSpectator() && e instanceof Enemy
@@ -129,19 +155,23 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
             if (toVictim.subtract(dir.scale(along)).length() > BLADE_RADIUS) {
                 continue;
             }
-            if (victim.hurt(player.damageSources().playerAttack(player), bladeDamage)) {
-                // 风压掀开:垂直于突刺方向把目标推离路径,玩家穿阵而过
+            boolean[] hurt = {false};
+            WeaponEffectGuard.run(player, () -> hurt[0] = victim.hurt(
+                    player.damageSources().playerAttack(player), bladeDamage));
+            if (!hurt[0]) {
+                continue;
+            }
+            if (!EchoMeleeWeaponItem.isBoss(victim)) {
+
                 Vec3 side = toVictim.subtract(dir.scale(along));
                 Vec3 push = (side.lengthSqr() > 1.0E-4 ? side.normalize() : new Vec3(-dir.z, 0, dir.x))
                         .scale(0.6).add(0, 0.35, 0);
                 victim.setDeltaMovement(victim.getDeltaMovement().add(push));
                 victim.hurtMarked = true;
-                level.sendParticles(ParticleTypes.SWEEP_ATTACK,
-                        victim.getX(), victim.getY() + victim.getBbHeight() * 0.5, victim.getZ(),
-                        1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.GUST,
-                        victim.getX(), victim.getY() + 0.3, victim.getZ(), 1, 0, 0, 0, 0);
             }
+            WeaponFx.hitMark(level, victim, WeaponFxTheme.WIND_SPEAR);
+            level.sendParticles(ParticleTypes.GUST,
+                    victim.getX(), victim.getY() + 0.3, victim.getZ(), 1, 0, 0, 0, 0);
         }
     }
 }

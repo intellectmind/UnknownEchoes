@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:gravity_hammer" }
+  ],
+  "result": { "id": "unknown_echoes:deep_alloy_ingot" }
+}

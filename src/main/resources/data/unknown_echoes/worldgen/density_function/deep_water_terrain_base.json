@@ -1,0 +1,45 @@
+{
+  "_comment": "Echo Realm raw terrain shape, BEFORE cell interpolation. Consumed by deep_water_terrain, which wraps it in interpolated+squeeze the way vanilla overworld/final_density does. The lake basin is a smooth cubic_spline on continents, never a range_choice: a step there would put a one-block cliff exactly on the ocean/land biome border (-0.0367).",
+  "type": "minecraft:range_choice",
+  "input": "minecraft:y",
+  "min_inclusive": -64.0,
+  "max_exclusive": 9.0,
+  "when_in_range": 1.0,
+  "when_out_of_range": {
+    "type": "minecraft:add",
+    "argument1": "minecraft:overworld/sloped_cheese",
+    "argument2": {
+      "type": "minecraft:spline",
+      "spline": {
+        "coordinate": "minecraft:overworld/continents",
+        "points": [
+          {
+            "location": -1.2,
+            "value": -0.42,
+            "derivative": 0.0
+          },
+          {
+            "location": -0.1,
+            "value": -0.42,
+            "derivative": 0.0
+          },
+          {
+            "location": -0.0367,
+            "value": -0.21,
+            "derivative": 0.0
+          },
+          {
+            "location": 0.03,
+            "value": 0.0,
+            "derivative": 0.0
+          },
+          {
+            "location": 1.0,
+            "value": 0.0,
+            "derivative": 0.0
+          }
+        ]
+      }
+    }
+  }
+}

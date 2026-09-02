@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:resonant_folded_slate"
+    },
+    {
+      "item": "unknown_echoes:resonant_folded_slate"
+    },
+    {
+      "item": "unknown_echoes:resonant_folded_slate"
+    },
+    {
+      "item": "unknown_echoes:resonant_folded_slate"
+    },
+    {
+      "item": "minecraft:paper"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:record_tracing_paper",
+    "count": 2
+  }
+}

@@ -1,7 +1,10 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
+import cn.kurt6.unknown_echoes.entity.ai.FlankTargetGoal;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
@@ -31,10 +34,7 @@ import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * 镜尘假像:镜湖/镜尘回廊外围的普通幻象敌怪。
- * 它只提供真视路线普通材料,不同步隐藏答案,不发放关键奖励。
- */
+/** 镜尘假像:镜湖/镜尘回廊外围的普通幻象敌怪。 */
 public class MirrorDustDecoy extends Monster implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.mirror_dust_decoy.idle");
@@ -59,15 +59,21 @@ public class MirrorDustDecoy extends Monster implements GeoEntity {
                 .add(Attributes.FOLLOW_RANGE, 22.0D);
     }
 
+    /**
+     * 战术 Goal 必须排在近战之前:MOVE 只能被更小的优先级数抢走,排在后面等于永不触发。
+     * 1 点血的幻象不加残血脱离——它没有"残血"这一档,任何一击都是致死。
+     */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.18D, true));
+        this.goalSelector.addGoal(1, new FlankTargetGoal(this, 1.2D));
+        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.18D, true));
         this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.9D));
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 9.0F));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(3, new AlertPackGoal(this, 12.0D));
     }
 
     @Override
@@ -97,6 +103,11 @@ public class MirrorDustDecoy extends Monster implements GeoEntity {
 
     @Override
     public void die(DamageSource source) {
+        boolean wasDead = this.dead;
+        super.die(source);
+        if (wasDead || !this.dead) {
+            return;
+        }
         if (!this.level().isClientSide) {
             this.triggerAnim("shatter_controller", "shatter");
             ((ServerLevel) this.level()).sendParticles(ParticleTypes.WHITE_ASH,
@@ -105,22 +116,21 @@ public class MirrorDustDecoy extends Monster implements GeoEntity {
             this.playSound(SoundEvents.GLASS_BREAK, 0.8F,
                     1.25F + this.getRandom().nextFloat() * 0.2F);
         }
-        super.die(source);
     }
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.AMETHYST_BLOCK_CHIME;
+        return ModSounds.MIRROR_DUST_DECOY_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.AMETHYST_CLUSTER_HIT;
+        return ModSounds.MIRROR_DUST_DECOY_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.GLASS_BREAK;
+        return ModSounds.MIRROR_DUST_DECOY_DEATH.get();
     }
 
     @Override

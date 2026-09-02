@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "ARA",
+    "EDE",
+    "ARA"
+  ],
+  "key": {
+    "A": { "item": "minecraft:amethyst_shard" },
+    "R": { "item": "minecraft:redstone" },
+    "E": { "item": "unknown_echoes:echo_metal_ingot" },
+    "D": { "item": "unknown_echoes:echo_dust" }
+  },
+  "result": {
+    "id": "unknown_echoes:projection_resonance_plate"
+  }
+}

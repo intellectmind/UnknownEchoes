@@ -1,0 +1,21 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:echo_broadsword",
+    "unknown_echoes:echo_battleaxe",
+    "unknown_echoes:wind_spear",
+    "unknown_echoes:true_sight_blade",
+    "unknown_echoes:silence_scythe",
+    "unknown_echoes:crystal_song_staff",
+    "unknown_echoes:broken_bell_hammer",
+    "unknown_echoes:echo_oathblade",
+    "unknown_echoes:gravity_hammer",
+    "unknown_echoes:rift_dagger",
+    "unknown_echoes:anchor_blade",
+    "unknown_echoes:folded_glaive",
+    "unknown_echoes:palimpsest_saber",
+    "unknown_echoes:orrery_lance",
+    "unknown_echoes:world_rift_greatsword",
+    "unknown_echoes:fivefold_star_spear"
+  ]
+}

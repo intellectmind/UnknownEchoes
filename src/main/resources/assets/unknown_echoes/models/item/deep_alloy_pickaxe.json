@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "unknown_echoes:item/deep_alloy_pickaxe"
+  },
+  "display": {
+    "gui": {
+      "scale": [
+        0.93,
+        0.93,
+        0.93
+      ]
+    }
+  }
+}

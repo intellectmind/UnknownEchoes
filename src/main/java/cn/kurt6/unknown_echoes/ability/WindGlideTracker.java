@@ -15,13 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * 风之空中状态服务端追踪(V0.6E,5.2 缺口):
- * 旧版 DoubleJumpPayload 只校验能力持有,伪造滑翔包可无限重置摔落距离。
- * 现在服务端逐 tick 追踪离地/二段跳/滑翔状态——未离地或未二段跳的滑翔包直接忽略;
- * 滑翔开始消耗回响能量并受落地冷却限制(数值走 ServerConfig),拒绝时通知客户端取消滑翔。
- * 全部状态为瞬态体验数据,不入存档;客户端的滑翔手感预测照旧,服务端只是权威闸门。
- */
+/** 服务端追踪风之能力的空中状态，防止伪造请求绕过冷却与摔落保护。 */
 public class WindGlideTracker {
 
     /** 服务端 onGround 标记滞后时,用明显上升速度识别真实起飞。 */
@@ -65,8 +59,7 @@ public class WindGlideTracker {
         if (grounded) {
             s.groundedTicks = Math.min(s.groundedTicks + 1, 100);
             if (s.gliding) {
-                // 滑翔落地 → 进入冷却(5.2:落地后冷却,数值走 ServerConfig)
-                // 聆听者 4 件:能力冷却小幅降低(11.3,×0.7)
+
                 s.gliding = false;
                 int cooldown = ServerConfig.WIND_GLIDE_LANDING_COOLDOWN_TICKS.get();
                 if (EchoArmorSets.hasListenerAbilityBonus(player)) {
@@ -74,6 +67,9 @@ public class WindGlideTracker {
                 }
                 if (hasWindWalkerAbilityBonus(player)) {
                     cooldown = cooldown * 4 / 5;
+                }
+                if (EchoArmorSets.hasResonatorAbilityBonus(player)) {
+                    cooldown = cooldown * 9 / 10;
                 }
                 s.landingCooldown = cooldown;
             }
@@ -98,8 +94,7 @@ public class WindGlideTracker {
         State s = state(player);
         switch (mode) {
             case DoubleJumpPayload.MODE_JUMP -> {
-                // 未离地或本段空中已二段跳:忽略——不重置摔落,不播音效。
-                // 同时检查玩家当前状态,避免 tracker tick/网络顺序滞后时把真实起飞误判为在地面。
+
                 if (!isAirborneForWindAction(player) || s.doubleJumped) {
                     return;
                 }
@@ -117,7 +112,7 @@ public class WindGlideTracker {
                 if (s.gliding) {
                     return;
                 }
-                // 状态校验:必须已二段跳且仍在空中;当前 onGround 滞后时用上升速度识别真实起飞。
+
                 if (!s.doubleJumped || !isAirborneForWindAction(player)) {
                     deny(player, "state");
                     return;
@@ -128,31 +123,35 @@ public class WindGlideTracker {
                     return;
                 }
                 int cost = windGlideEnergyCost(player);
-                if (cost > 0 && ArtifactManager.getEnergy(player) < cost) {
+
+                if (cost > 0 && !ArtifactManager.hasEnoughEnergy(player, cost)) {
                     deny(player, "energy");
                     EchoAbilityManager.recordFailure(player, EchoAbilityType.WIND_ECHO, "glide_energy");
                     return;
                 }
-                if (cost > 0) {
-                    ArtifactManager.spendEnergy(player, cost);
+                if (cost > 0 && !ArtifactManager.spendEnergy(player, cost)) {
+                    deny(player, "energy");
+                    EchoAbilityManager.recordFailure(player, EchoAbilityType.WIND_ECHO, "glide_energy");
+                    return;
                 }
                 s.gliding = true;
                 s.lastGlideHoldSoundTick = player.level().getGameTime();
-                // 聆听者 4 件:能力持续时间小幅延长(11.3,+20 tick);客户端公式同步加成
+
                 s.glideTicksRemaining = windGlideDuration(player)
                         + (EchoArmorSets.hasListenerAbilityBonus(player) ? 20 : 0)
+                        + (EchoArmorSets.hasResonatorAbilityBonus(player) ? 10 : 0)
                         + GLIDE_DURATION_TOLERANCE;
                 player.fallDistance = 0.0F;
                 player.level().playSound(null, player.blockPosition(),
                         ModSounds.WIND_GLIDE.get(), SoundSource.PLAYERS, 0.9F, 1.0F);
             }
             case DoubleJumpPayload.MODE_GLIDE_HOLD -> {
-                // 只有服务端确认的滑翔才持续重置摔落;伪造保持包在这里被掐断
+
                 if (!s.gliding) {
                     return;
                 }
                 player.fallDistance = 0.0F;
-                // 滑翔保持包每 10 tick 一次,低音量风声变体连成持续气流感
+
                 long now = player.level().getGameTime();
                 if (s.lastGlideHoldSoundTick > now || now - s.lastGlideHoldSoundTick >= 10L) {
                     s.lastGlideHoldSoundTick = now;

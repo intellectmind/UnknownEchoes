@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.world.structure;
 
 import cn.kurt6.unknown_echoes.block.puzzle.SequenceRuneBlock;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModLootTables;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
 import com.mojang.serialization.MapCodec;
@@ -21,20 +22,16 @@ import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 
 /**
- * 符文谜题房(V0.2 第一个谜题房,主世界生成):
- * 前厅八根顺序符文柱(点数乱序分布)+ 北墙高处六块提示柱(= 激活顺序)
- * + 封印石隔墙(嵌谜题核心)+ 内室宝箱。
- * 八根柱里有两根从不出现在提示行上(干扰柱,点错全部重置)。
- * V0.6B 难度与奖励同步上调:六柱五步+1 干扰 → 八柱六步+2 干扰(旧档已生成的房间
- * 序列存在核心 BlockEntity 里,保持原难度不受影响)。
- * 序列只存核心 BlockEntity(服务端),封印石不可破坏,飞行/传送/挖掘都进不了内室。
+ * 符文谜题房:主世界生成的第一个谜题房。
+ * 前厅八根顺序符文柱(点数乱序分布)、北墙高处六块提示柱(给出激活顺序)、
+ * 嵌谜题核心的封印石隔墙,内室放宝箱。
  */
 public class RunePuzzleRoomStructure extends SinglePieceStructure {
     public static final MapCodec<RunePuzzleRoomStructure> CODEC = simpleCodec(RunePuzzleRoomStructure::new);
 
-    private static final int WIDTH = 11;
-    private static final int DEPTH = 14;
-    private static final int HEIGHT = 8;
+    private static final int WIDTH = 25;
+    private static final int DEPTH = 31;
+    private static final int HEIGHT = 15;
 
     public RunePuzzleRoomStructure(StructureSettings settings) {
         super(Piece::new, WIDTH, DEPTH, settings);
@@ -71,105 +68,129 @@ public class RunePuzzleRoomStructure extends SinglePieceStructure {
             BlockState anchored = ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState();
             BlockState core = ModBlocks.PUZZLE_CORE.get().defaultBlockState();
             BlockState air = Blocks.AIR.defaultBlockState();
+            int centerX = WIDTH / 2;
+            int centerZ = DEPTH / 2;
+            int roomMinX = 4;
+            int roomMaxX = WIDTH - 5;
+            int frontZ = 6;
+            int barrierZ = 18;
+            int backZ = 26;
+            int roofY = 10;
 
-            // 内室永久外壳用锚定封印石；入口隔墙仍用会随解谜消散的普通封印石。
-            for (int x = 0; x < WIDTH; x++) {
-                for (int z = 0; z < DEPTH; z++) {
-                    BlockState floor = z >= 8 ? anchored : random.nextFloat() < 0.2F ? cracked : bricks;
-                    this.placeBlock(level, floor, x, 0, z, box);
-                    this.placeBlock(level, bricks, x, HEIGHT - 1, z, box);
+            this.generateBox(level, box, 0, 1, 0, WIDTH - 1, HEIGHT - 1, DEPTH - 1,
+                    air, air, false);
+            buildSteppedDisk(level, box, centerX, 0, centerZ, 12, 2,
+                    ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState(), bricks);
+
+            for (int x = roomMinX; x <= roomMaxX; x++) {
+                for (int z = frontZ; z <= backZ; z++) {
+                    BlockState floor = z >= barrierZ ? anchored
+                            : random.nextFloat() < 0.22F ? cracked : bricks;
+                    this.placeBlock(level, floor, x, 1, z, box);
+                    this.placeBlock(level, z >= barrierZ ? anchored : bricks, x, roofY, z, box);
                 }
             }
-            // 内室底部额外下探两层封印石,封住从洞穴/地下侧向挖入的短路径。
-            for (int y = -2; y < 0; y++) {
-                for (int x = 0; x < WIDTH; x++) {
-                    for (int z = 8; z < DEPTH; z++) {
+            for (int y = 2; y < roofY; y++) {
+                for (int x = roomMinX; x <= roomMaxX; x++) {
+                    this.placeBlock(level, bricks, x, y, frontZ, box);
+                    this.placeBlock(level, anchored, x, y, backZ, box);
+                }
+                for (int z = frontZ; z <= backZ; z++) {
+                    BlockState side = z >= barrierZ ? anchored : bricks;
+                    this.placeBlock(level, side, roomMinX, y, z, box);
+                    this.placeBlock(level, side, roomMaxX, y, z, box);
+                }
+            }
+            for (int y = -2; y <= 0; y++) {
+                for (int x = roomMinX; x <= roomMaxX; x++) {
+                    for (int z = barrierZ; z <= backZ; z++) {
                         this.placeBlock(level, anchored, x, y, z, box);
                     }
                 }
             }
-            // 外墙(前厅部分普通砖)
-            for (int y = 1; y < HEIGHT - 1; y++) {
-                for (int x = 0; x < WIDTH; x++) {
-                    this.placeBlock(level, bricks, x, y, 0, box);
-                }
-                for (int z = 0; z < 8; z++) {
-                    this.placeBlock(level, bricks, 0, y, z, box);
-                    this.placeBlock(level, bricks, WIDTH - 1, y, z, box);
-                }
-            }
-            // 内室壳(z>=8)整体用封印石:墙、顶,防止挖掘绕过
-            for (int y = 1; y < HEIGHT - 1; y++) {
-                for (int z = 8; z < DEPTH; z++) {
-                    this.placeBlock(level, anchored, 0, y, z, box);
-                    this.placeBlock(level, anchored, WIDTH - 1, y, z, box);
-                }
-                for (int x = 0; x < WIDTH; x++) {
-                    this.placeBlock(level, anchored, x, y, DEPTH - 1, box);
-                }
-            }
-            for (int x = 0; x < WIDTH; x++) {
-                for (int z = 8; z < DEPTH; z++) {
-                    this.placeBlock(level, anchored, x, HEIGHT - 2, z, box);
-                }
-            }
-            // 内部清空(前厅 + 内室)
-            this.generateBox(level, box, 1, 1, 1, WIDTH - 2, HEIGHT - 3, 7, air, air, false);
-            this.generateBox(level, box, 1, 1, 9, WIDTH - 2, HEIGHT - 3, DEPTH - 2, air, air, false);
+            this.generateBox(level, box, roomMinX + 1, 2, frontZ + 1,
+                    roomMaxX - 1, roofY - 1, barrierZ - 1, air, air, false);
+            this.generateBox(level, box, roomMinX + 1, 2, barrierZ + 1,
+                    roomMaxX - 1, roofY - 1, backZ - 1, air, air, false);
 
-            // 入口(南墙正中,两格高门洞)
-            this.placeBlock(level, air, WIDTH / 2, 1, 0, box);
-            this.placeBlock(level, air, WIDTH / 2, 2, 0, box);
-            this.placeBlock(level, rune, WIDTH / 2 - 1, 2, 0, box);
-            this.placeBlock(level, rune, WIDTH / 2 + 1, 2, 0, box);
+            this.placeBlock(level, air, centerX, 2, frontZ, box);
+            this.placeBlock(level, air, centerX, 3, frontZ, box);
+            this.placeBlock(level, air, centerX, 4, frontZ, box);
+            this.placeBlock(level, rune, centerX - 2, 4, frontZ, box);
+            this.placeBlock(level, rune, centerX + 2, 4, frontZ, box);
 
-            // 真视测试:前厅两侧墙各藏一块隐纹石砖(外观与回响石砖一致,真视回响可显形)
+            BlockState lamp = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
+            int frontCenterZ = (frontZ + barrierZ) / 2;
+            int sealCenterZ = (barrierZ + backZ) / 2;
+            illuminateInterior(level, box, centerX, frontCenterZ, roofY - 1,
+                    (roomMaxX - roomMinX) / 2 - 1, (barrierZ - frontZ) / 2 - 1, 4, lamp);
+            illuminateInterior(level, box, centerX, sealCenterZ, roofY - 1,
+                    (roomMaxX - roomMinX) / 2 - 1, (backZ - barrierZ) / 2 - 1, 3, lamp);
+
             BlockState hiddenRune = ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState();
-            this.placeBlock(level, hiddenRune, 0, 2, 4, box);
-            this.placeBlock(level, hiddenRune, WIDTH - 1, 3, 6, box);
+            this.placeBlock(level, hiddenRune, roomMinX, 4, centerZ - 3, box);
+            this.placeBlock(level, hiddenRune, roomMaxX, 5, centerZ + 1, box);
 
-            // 封印石隔墙(z=8),中央嵌谜题核心
-            for (int y = 1; y < HEIGHT - 1; y++) {
-                for (int x = 1; x < WIDTH - 1; x++) {
-                    this.placeBlock(level, sealed, x, y, 8, box);
+            for (int y = 2; y < roofY; y++) {
+                for (int x = roomMinX + 1; x < roomMaxX; x++) {
+                    this.placeBlock(level, sealed, x, y, barrierZ, box);
                 }
             }
-            this.placeBlock(level, core, WIDTH / 2, 2, 8, box);
+            this.placeBlock(level, core, centerX, 3, barrierZ, box);
 
-            // 谜题布局必须跨区块一致:用包围盒坐标派生确定性随机
             RandomSource puzzleRandom = RandomSource.create(
                     this.boundingBox.minX() * 341873128712L ^ this.boundingBox.minZ() * 132897987541L);
 
-            // 八根顺序符文柱:前厅两侧、中部与隔墙前,点数(ORDER 0~7)随机分配到位置
-            // (中线 x=WIDTH/2 留空,门口到核心的走道不被柱子挡住)
             int[] orders = shuffled(puzzleRandom, 8);
-            int[][] pillarSpots = {{2, 2}, {8, 2}, {2, 5}, {8, 5}, {3, 7}, {7, 7}, {4, 4}, {6, 4}};
+            int[][] pillarSpots = {
+                    {centerX - 6, frontZ + 3}, {centerX + 6, frontZ + 3},
+                    {centerX - 6, frontZ + 7}, {centerX + 6, frontZ + 7},
+                    {centerX - 4, barrierZ - 2}, {centerX + 4, barrierZ - 2},
+                    {centerX - 2, frontZ + 5}, {centerX + 2, frontZ + 5}
+            };
             for (int i = 0; i < pillarSpots.length; i++) {
                 placeRunePillar(level, box, pillarSpots[i][0], pillarSpots[i][1], orders[i], bricks);
             }
 
-            // 激活序列:八个点数乱序后取前六个;落选的两个是干扰柱
             int[] sequence = java.util.Arrays.copyOf(shuffled(puzzleRandom, 8), 6);
-            BlockPos corePos = new BlockPos(this.getWorldX(WIDTH / 2, 8),
-                    this.getWorldY(2), this.getWorldZ(WIDTH / 2, 8));
-            if (level.getBlockEntity(corePos) instanceof cn.kurt6.unknown_echoes.block.puzzle.PuzzleCoreBlockEntity coreEntity) {
+            BlockPos corePos = new BlockPos(this.getWorldX(centerX, barrierZ),
+                    this.getWorldY(3), this.getWorldZ(centerX, barrierZ));
+            if (box.isInside(corePos) && level.getBlockEntity(corePos)
+                    instanceof cn.kurt6.unknown_echoes.block.puzzle.PuzzleCoreBlockEntity coreEntity) {
                 coreEntity.setSequence(sequence);
             }
 
-            // 顺序提示行:北侧隔墙上方 y=5,从左到右 = 激活顺序,常亮(不参与判定,重置不影响)
             for (int i = 0; i < sequence.length; i++) {
                 BlockState hint = ModBlocks.SEQUENCE_RUNE.get().defaultBlockState()
                         .setValue(SequenceRuneBlock.ORDER, sequence[i])
                         .setValue(SequenceRuneBlock.LIT, Boolean.TRUE);
-                this.placeBlock(level, hint, WIDTH / 2 - 3 + i, 5, 8, box);
+                this.placeBlock(level, hint, centerX - 3 + i, 7, barrierZ, box);
             }
 
-            // 内室奖励(发光草垫苔藓,植物不能立在石砖上)
-            buildAccessibleChest(level, random, box, WIDTH / 2, 1, DEPTH - 3, ModLootTables.WIND_VAULT_CHEST);
-            this.placeBlock(level, Blocks.MOSS_BLOCK.defaultBlockState(), WIDTH / 2 - 2, 1, DEPTH - 3, box);
-            this.placeBlock(level, Blocks.MOSS_BLOCK.defaultBlockState(), WIDTH / 2 + 2, 1, DEPTH - 3, box);
-            this.placeBlock(level, ModBlocks.GLOW_GRASS.get().defaultBlockState(), WIDTH / 2 - 2, 2, DEPTH - 3, box);
-            this.placeBlock(level, ModBlocks.GLOW_GRASS.get().defaultBlockState(), WIDTH / 2 + 2, 2, DEPTH - 3, box);
+            buildAccessibleChest(level, random, box, centerX, 2, backZ - 3,
+                    ModLootTables.WIND_VAULT_CHEST);
+            this.placeBlock(level, Blocks.MOSS_BLOCK.defaultBlockState(), centerX - 3, 1, backZ - 3, box);
+            this.placeBlock(level, Blocks.MOSS_BLOCK.defaultBlockState(), centerX + 3, 1, backZ - 3, box);
+            this.placeBlock(level, ModBlocks.GLOW_GRASS.get().defaultBlockState(), centerX - 3, 2, backZ - 3, box);
+            this.placeBlock(level, ModBlocks.GLOW_GRASS.get().defaultBlockState(), centerX + 3, 2, backZ - 3, box);
+
+            architecturalRing(level, box, centerX, 2, centerZ, 11, cracked);
+            buildStairCornice(level, box, centerX, 1, centerZ, Footprint.square(11), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_SLAB.get().defaultBlockState(), false);
+            buildParapet(level, box, centerX, 2, centerZ, Footprint.square(12), 5, ModBlocks.ECHO_STONE_BRICK_WALL.get().defaultBlockState(), cracked);
+            buildCircularColonnade(level, box, centerX, 2, centerZ, 10, 12, 8,
+                    bricks, rune, cracked);
+
+            buildTwinTowerFacade(level, box, centerX, 1, frontZ - 1,
+                    7, 2, 9, bricks, rune, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState());
+            buildCardinalGateway(level, box, centerX, 2, centerZ, 11, Direction.NORTH,
+                    3, 7, bricks, rune);
+            buildRuneCauseway(level, box, centerX, 1, centerZ, Direction.NORTH,
+                    8, 14, 2, bricks, ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState(), rune);
+            buildTrueSightVaultNiche(level, random, box,
+                    centerX + 9, 2, centerZ + 8, Direction.WEST);
+
+            placeStructureSpawner(level, random, box, centerX - 9, 2, centerZ - 9,
+                    ModEntities.ECHO_REMNANT.get(), bricks, rune);
         }
 
         private void placeRunePillar(WorldGenLevel level, BoundingBox box, int x, int z,
@@ -180,7 +201,6 @@ public class RunePuzzleRoomStructure extends SinglePieceStructure {
             this.placeBlock(level, runeState, x, 2, z, box);
         }
 
-        /** 0..size-1 的乱序排列(Fisher-Yates)。 */
         private static int[] shuffled(RandomSource random, int size) {
             int[] arr = new int[size];
             for (int i = 0; i < size; i++) {

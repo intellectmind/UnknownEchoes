@@ -1,7 +1,7 @@
 {
   "parent": "unknown_echoes:block/memory_pillar",
   "textures": {
-    "1": "unknown_echoes:block/memory_pillar_active",
-    "particle": "unknown_echoes:block/memory_pillar_active"
+    "3": "unknown_echoes:block/memory_pillar_flux_active",
+    "particle": "unknown_echoes:block/memory_pillar_flux_active"
   }
 }

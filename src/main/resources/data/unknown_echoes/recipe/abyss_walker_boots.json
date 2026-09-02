@@ -1,8 +1,8 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "unknown_echoes:component_preserving_shapeless",
   "category": "equipment",
+  "base": { "item": "unknown_echoes:echo_traveler_boots" },
   "ingredients": [
-    { "item": "unknown_echoes:echo_traveler_boots" },
     { "item": "unknown_echoes:deep_alloy_ingot" },
     { "item": "unknown_echoes:space_anchor_shard" },
     { "item": "unknown_echoes:folded_carapace" }

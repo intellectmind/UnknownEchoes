@@ -4,6 +4,8 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.journal.ArchiveTrialProgress;
+import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
+import cn.kurt6.unknown_echoes.world.MainBossRechallengeData;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -11,7 +13,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -24,14 +29,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 潮汐核心祭坛:潮汐回响的发放入口(设计红线 #2:能力只写玩家数据,不掉落)。
- * 服务端判定,双条件(设计文档 5.3:击败深渊观测者 + 完成圣殿核心机关):
- *  1. 已击败深渊观测者(个人进度);
- *  2. 已亲自激活本圣殿全部潮汐符柱(个人进度,见 TidePillarBlock)。
- * 散件摆放(周围无符柱)时只查 Boss 击败,保证管理员/数据包布景可用。
- * 传送/飞行/水下呼吸 Mod 进场也绕不过——查的是玩家数据,不是位置。
- */
+/** 潮汐核心祭坛：潮汐回响的发放入口，能力只写入玩家数据。 */
 public class TideCoreAltarBlock extends Block {
     public static final MapCodec<TideCoreAltarBlock> CODEC = simpleCodec(TideCoreAltarBlock::new);
 
@@ -61,6 +59,19 @@ public class TideCoreAltarBlock extends Block {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                Player player, BlockHitResult hitResult) {
+        return interact(state, level, pos, player, hitResult);
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level,
+                                              BlockPos pos, Player player, InteractionHand hand,
+                                              BlockHitResult hitResult) {
+        interact(state, level, pos, player, hitResult);
+        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    private InteractionResult interact(BlockState state, Level level, BlockPos pos,
+                                       Player player, BlockHitResult hitResult) {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
@@ -70,17 +81,28 @@ public class TideCoreAltarBlock extends Block {
 
         if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.TIDE_ECHO)) {
             ArchiveTrialProgress.recordTide(serverPlayer, level, pos);
-            serverPlayer.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.altar.claimed"), true);
+            MainBossRechallengeData.trySummon(serverPlayer, pos,
+                    MainBossRechallengeData.BossKind.ABYSS_WATCHER);
             return InteractionResult.CONSUME;
         }
 
         boolean bossDefeated = EchoAbilityManager.hasDefeatedBoss(serverPlayer, EchoPermission.ABYSS_WATCHER_ID);
+        if (!bossDefeated) {
+            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
+            serverPlayer.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.tide_altar.locked"), true);
+            return InteractionResult.CONSUME;
+        }
+        if (!isPillarRangeLoaded(level, pos)) {
+            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
+            serverPlayer.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.altar.area_loading"), true);
+            return InteractionResult.CONSUME;
+        }
         List<BlockPos> pillars = findNearbyPillars(level, pos);
         boolean mechanismDone = pillars.isEmpty() || allPillarsAwakened(serverPlayer, level, pillars);
-        if (bossDefeated && mechanismDone) {
-            // 共鸣信物仪式(V0.6E,5.1.1):双记录齐全后还需持信物领取(消耗 + 吸收演出);
-            // 散件摆放(无符柱)保持直接发放,兼容管理员/数据包布景
+        if (mechanismDone) {
+
             if (!pillars.isEmpty()) {
                 if (!cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.hasValidToken(
                         serverPlayer, EchoAbilityType.TIDE_ECHO)) {
@@ -98,9 +120,8 @@ public class TideCoreAltarBlock extends Block {
         }
 
         level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
-        serverPlayer.displayClientMessage(Component.translatable(
-                bossDefeated ? "message.unknown_echoes.tide_altar.need_pillars"
-                             : "message.unknown_echoes.tide_altar.locked"), true);
+        serverPlayer.displayClientMessage(
+                Component.translatable("message.unknown_echoes.tide_altar.need_pillars"), true);
         return InteractionResult.CONSUME;
     }
 
@@ -124,5 +145,9 @@ public class TideCoreAltarBlock extends Block {
             }
         }
         return result;
+    }
+
+    private static boolean isPillarRangeLoaded(Level level, BlockPos center) {
+        return LoadedAreaCheck.horizontalRadiusLoaded(level, center, PILLAR_RANGE_H);
     }
 }

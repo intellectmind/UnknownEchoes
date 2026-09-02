@@ -37,6 +37,12 @@
         "weight": 6,
         "minCount": 1,
         "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:gravity_ram",
+        "weight": 16,
+        "minCount": 1,
+        "maxCount": 2
       }
     ],
     "creature": [
@@ -45,6 +51,12 @@
         "weight": 28,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:rift_glider",
+        "weight": 36,
+        "minCount": 2,
+        "maxCount": 4
       }
     ],
     "ambient": [], "axolotls": [],

@@ -5,6 +5,7 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.block.beacon.DeepEchoTeleporter;
 import cn.kurt6.unknown_echoes.entity.boss.BossFx;
+import cn.kurt6.unknown_echoes.entity.boss.VoidProphet;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -23,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -99,6 +101,7 @@ public class DeepCalibrationNodeBlock extends Block {
 
         String key = mechanismKey(level, pos, calibration);
         if (EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)) {
+            notifyActiveProphets((ServerLevel) level, pos);
             drawGuidance((ServerLevel) level, pos, corePos, calibration);
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.deep_calibration.already_"
@@ -113,10 +116,17 @@ public class DeepCalibrationNodeBlock extends Block {
         }
         EchoAbilityManager.syncToClient(serverPlayer);
         playFeedback((ServerLevel) level, pos, corePos, calibration, serverPlayer);
-        serverPlayer.displayClientMessage(Component.translatable(
-                "message.unknown_echoes.deep_calibration.completed_"
-                        + calibration.getSerializedName()), true);
+        notifyActiveProphets((ServerLevel) level, pos);
         return InteractionResult.CONSUME;
+    }
+
+    private static void notifyActiveProphets(ServerLevel level, BlockPos nodePos) {
+        AABB bounds = new AABB(nodePos).inflate(32.0D);
+        for (VoidProphet prophet : level.getEntitiesOfClass(VoidProphet.class, bounds,
+                boss -> boss.isAlive() && boss.deepRechallengeAltar() != null
+                        && boss.deepRechallengeAltar().distManhattan(nodePos) <= 48)) {
+            prophet.onCalibrationNodeActivated(level, nodePos);
+        }
     }
 
     public static boolean isActivated(ServerPlayer player, Level level, BlockPos pos,

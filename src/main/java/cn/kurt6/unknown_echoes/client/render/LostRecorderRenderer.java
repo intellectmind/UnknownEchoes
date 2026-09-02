@@ -7,9 +7,6 @@ import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
-/**
- * 迷失记录者 GeckoLib 渲染器。
- */
 public class LostRecorderRenderer extends GeoEntityRenderer<LostRecorder> {
 
     public LostRecorderRenderer(EntityRendererProvider.Context context) {

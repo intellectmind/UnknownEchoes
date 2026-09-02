@@ -2,7 +2,6 @@ package cn.kurt6.unknown_echoes.entity.boss;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
@@ -41,18 +40,6 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 迷失记录者首席:破损档案室 Mini Boss(回声峭壁,T7 前区域首席)。
- *
- * 机制(残页召回 + 审阅,设计红线 #4 用机制做门槛):
- * - 残页审阅:周期性展开账册(pagestorm)散落 3 张残页并进入"审阅"——审阅期间受护(未破防)。
- *   玩家走近归还全部残页即可打断审阅,首席进入 9 秒暴露窗口(可全额输出);若放任不管,审阅在
- *   读条结束时自行完成并轰出一次墨爆,随后仅短暂暴露——拖延有代价,归页更划算。
- * - 墨迹弹(inkbolt):沿锁定方向喷出一道墨线,命中致盲 + 低伤。
- * - 墨爆(pulse):贴身墨花爆发,击退 + 虚弱。
- * - 笔锋横扫(swipe):近战命中附带致盲 + 虚弱。
- * 结算沿用 MiniBossEntity 个人首杀/重复发放(MiniBossRewardTable)。
- */
 public class LostRecorderChief extends MiniBossEntity {
     public static final ResourceLocation MINIBOSS_ID = UnknownEchoes.id("lost_recorder_chief");
 
@@ -72,15 +59,21 @@ public class LostRecorderChief extends MiniBossEntity {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
     private static final int ARENA_RADIUS = 14;
-    private static final int EXPOSED_WINDOW = 180;   // 打断审阅后的暴露窗口 9s
-    private static final int READ_TIMEOUT = 500;     // 审阅读条上限(放任不管自行完成)
+    private static final int EXPOSED_WINDOW = 180;
+    private static final int READ_TIMEOUT = 500;
     private static final int PAGE_COUNT = 3;
     private static final double INK_RANGE = 16.0;
+    /** 玩家站进这个半径即收回残页。演出环画在这个值上，两处必须同一个常量。 */
+    private static final double PAGE_PICKUP_RADIUS = 2.19D;
+    /** 墨爆的水平结算半径。 */
+    private static final double PULSE_RADIUS = 4.0D;
+    /** 墨弹的束半径，与结算侧的 hitRadius 基数一致。 */
+    private static final double INK_BEAM_RADIUS = 1.1D;
 
     /** 散落的残页位置;非空 = 正在审阅且受护。 */
     private final List<Vec3> scatteredPages = new ArrayList<>();
-    private int readTicks = 0;       // 审阅已持续 tick
-    private int exposedTicks = 0;    // 暴露窗口剩余 tick
+    private int readTicks = 0;
+    private int exposedTicks = 0;
 
     private int pagestormCooldown = 120;
     private int inkboltCooldown = 70;
@@ -123,7 +116,7 @@ public class LostRecorderChief extends MiniBossEntity {
 
     @Override
     protected boolean isDamageGuarded() {
-        // 审阅期间受护;残页全部归还(或读条结束)后进入暴露窗口可全额输出
+
         return !this.scatteredPages.isEmpty();
     }
 
@@ -135,23 +128,25 @@ public class LostRecorderChief extends MiniBossEntity {
     @Override
     protected void tickMechanicGuidance(ServerLevel level) {
         Vec3 core = this.position().add(0, 1.4, 0);
+        long age = level.getGameTime();
         for (Vec3 page : this.scatteredPages) {
             Vec3 marker = page.add(0, 0.7, 0);
-            BossFx.guidanceMarker(level, marker, ParticleTypes.ENCHANT);
-            BossFx.guidanceLink(level, marker, core, ParticleTypes.SCRAPE);
+            MiniBossFx.objectiveMarker(level, marker, this.fxTheme(), age);
+            MiniBossFx.objectiveLink(level, marker, core, this.fxTheme(), age);
         }
     }
 
     @Override
-    protected void grantSettlement(ServerPlayer player, boolean firstKill) {
-        MiniBossRewardTable.grantLostRecorderChief(this, player, firstKill);
+    protected void grantSettlement(boolean firstKill) {
+        MiniBossRewardTable.grantLostRecorderChief(this, firstKill);
     }
-
-    // ---- 主循环 ----
 
     @Override
     public void aiStep() {
         super.aiStep();
+        if (this.isSpawnerBindingPaused()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -162,8 +157,8 @@ public class LostRecorderChief extends MiniBossEntity {
         if (this.exposedTicks > 0) {
             this.exposedTicks--;
             if (this.tickCount % 6 == 0) {
-                serverLevel.sendParticles(ParticleTypes.SQUID_INK,
-                        this.getX(), this.getY() + 1.6, this.getZ(), 3, 0.5, 0.6, 0.5, 0.0);
+                MiniBossFx.breachAura(serverLevel, this, this.fxTheme(),
+                        serverLevel.getGameTime());
             }
         } else if (!this.scatteredPages.isEmpty()) {
             this.tickReview(serverLevel);
@@ -174,23 +169,28 @@ public class LostRecorderChief extends MiniBossEntity {
         this.tickSpecialAttacks(serverLevel);
     }
 
-    /** 审阅:维持护盾 + 残页演出;玩家归还残页或读条超时则结束审阅进入暴露。 */
     private void tickReview(ServerLevel serverLevel) {
         this.readTicks++;
         for (Vec3 page : this.scatteredPages) {
             if (this.tickCount % 5 == 0) {
-                serverLevel.sendParticles(ParticleTypes.ENCHANT,
-                        page.x, page.y + 1.0, page.z, 3, 0.3, 0.6, 0.3, 0.0);
+                // 环画在"走进去就收回"的那个半径上，玩家能读出要站到哪里。
+                MiniBossFx.groundRing(serverLevel, page, this.fxTheme(), PAGE_PICKUP_RADIUS);
             }
         }
-        // 归还:玩家靠近(2.2 格内)残页即归位
-        this.scatteredPages.removeIf(page -> hasNearbyAlivePlayer(serverLevel, page, 4.8D));
+
+        int before = this.scatteredPages.size();
+        this.scatteredPages.removeIf(page -> hasNearbyAlivePlayer(serverLevel, page,
+                PAGE_PICKUP_RADIUS * PAGE_PICKUP_RADIUS));
+        if (this.scatteredPages.size() < before) {
+            // 玩家收回一张残页:给出可听的进度反馈,否则整个审阅阶段只有粒子没有声音。
+            this.playSound(ModSounds.LOST_RECORDER_CHIEF_REVIEW.get(), 1.1F, 1.0F);
+        }
 
         if (this.scatteredPages.isEmpty()) {
-            // 被打断:进入暴露窗口
+
             this.enterExposed(serverLevel, "message.unknown_echoes.lost_recorder_chief.exposed");
         } else if (this.readTicks >= READ_TIMEOUT) {
-            // 读条完成:轰出墨爆,清空残页,短暂暴露(拖延的代价)
+
             this.scatteredPages.clear();
             this.castPulse(serverLevel);
             this.enterExposed(serverLevel, null);
@@ -204,15 +204,17 @@ public class LostRecorderChief extends MiniBossEntity {
         this.exposedTicks = EXPOSED_WINDOW;
         this.pagestormCooldown = 400;
         if (hintKey != null) {
-            this.playSound(ModSounds.LOST_RECORDER_CHIEF_REVIEW.get(), 1.2F, 1.3F);
+            this.playSound(ModSounds.LOST_RECORDER_CHIEF_EXPOSED.get(), 1.2F, 1.0F);
+            MiniBossFx.breachAura(serverLevel, this, this.fxTheme(), serverLevel.getGameTime());
+            BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                    24.0D, 0.46F, 6, this.combatImpactColor());
             this.broadcastHint(serverLevel, hintKey);
         }
     }
 
-    /** 展开账册:散落 3 张残页并进入审阅(护盾)。 */
     private void castPagestorm(ServerLevel serverLevel) {
         this.triggerAnim("attack_controller", "pagestorm");
-        this.playSound(ModSounds.LOST_RECORDER_CHIEF_REVIEW.get(), 1.4F, 0.6F);
+        this.playSound(ModSounds.LOST_RECORDER_CHIEF_PAGESTORM.get(), 1.4F, 1.0F);
         this.readTicks = 0;
         Vec3 anchor = Vec3.atCenterOf(this.arenaAnchor());
         for (int i = 0; i < PAGE_COUNT; i++) {
@@ -220,18 +222,19 @@ public class LostRecorderChief extends MiniBossEntity {
             double dist = 5.0 + this.random.nextDouble() * (ARENA_RADIUS - 7);
             Vec3 page = new Vec3(anchor.x + Math.cos(angle) * dist, anchor.y, anchor.z + Math.sin(angle) * dist);
             this.scatteredPages.add(page);
-            serverLevel.sendParticles(ParticleTypes.ENCHANT, page.x, page.y + 1.0, page.z, 16, 0.4, 0.8, 0.4, 0.1);
+            MiniBossFx.impactZone(serverLevel, page, this.fxTheme(), PAGE_PICKUP_RADIUS, 1.0D);
         }
+        BossFx.cinematicImpact(serverLevel, anchor.add(0.0D, 0.8D, 0.0D),
+                26.0D, 0.22F, 4, this.combatImpactColor());
         this.broadcastHint(serverLevel, "message.unknown_echoes.lost_recorder_chief.guarded");
     }
 
     private static boolean hasNearbyAlivePlayer(ServerLevel level, Vec3 pos, double rangeSqr) {
-        for (ServerPlayer player : level.players()) {
-            if (!player.isSpectator() && player.isAlive() && player.distanceToSqr(pos) <= rangeSqr) {
-                return true;
-            }
-        }
-        return false;
+        double range = Math.sqrt(rangeSqr);
+        return !level.getEntitiesOfClass(ServerPlayer.class,
+                new AABB(pos, pos).inflate(range),
+                player -> !player.isSpectator() && player.isAlive()
+                        && player.distanceToSqr(pos) <= rangeSqr).isEmpty();
     }
 
     private void tickSpecialAttacks(ServerLevel serverLevel) {
@@ -248,11 +251,10 @@ public class LostRecorderChief extends MiniBossEntity {
         }
     }
 
-    /** 墨迹弹:沿锁定方向喷出墨线,命中致盲 + 低伤。 */
     private void castInkbolt(ServerLevel serverLevel, LivingEntity target) {
         this.inkboltCooldown = 110;
         this.triggerAnim("attack_controller", "inkbolt");
-        this.playSound(ModSounds.LOST_RECORDER_CHIEF_AMBIENT.get(), 1.2F, 1.1F);
+        this.playSound(ModSounds.LOST_RECORDER_CHIEF_INKBOLT.get(), 1.2F, 1.0F);
         Vec3 origin = this.position().add(0, this.getBbHeight() * 0.7, 0);
         Vec3 dir = target.position().add(0, target.getBbHeight() * 0.5, 0).subtract(origin);
         if (dir.lengthSqr() < 1.0E-4) {
@@ -260,57 +262,55 @@ public class LostRecorderChief extends MiniBossEntity {
         }
         dir = dir.normalize();
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.5F;
-        for (double d = 1.0; d <= INK_RANGE; d += 1.0) {
-            Vec3 p = origin.add(dir.scale(d));
-            serverLevel.sendParticles(ParticleTypes.SQUID_INK, p.x, p.y, p.z, 2, 0.12, 0.12, 0.12, 0.0);
-            serverLevel.sendParticles(ParticleTypes.ENCHANT, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
-        }
+        MiniBossFx.pierceBeam(serverLevel, origin, dir, this.fxTheme(), INK_RANGE);
         Vec3 end = origin.add(dir.scale(INK_RANGE));
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                new AABB(origin, end).inflate(1.1D),
+                new AABB(origin, end).inflate(INK_BEAM_RADIUS),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy) && e.isAlive())) {
             Vec3 victimCenter = victim.position().add(0, victim.getBbHeight() * 0.5, 0);
             Vec3 toVictim = victimCenter.subtract(origin);
             double along = toVictim.dot(dir);
-            double hitRadius = 1.1D + victim.getBbWidth() * 0.5D;
+            double hitRadius = INK_BEAM_RADIUS + victim.getBbWidth() * 0.5D;
             if (along < 0.0D || along > INK_RANGE
                     || toVictim.subtract(dir.scale(along)).lengthSqr() > hitRadius * hitRadius) {
                 continue;
             }
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            victim.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 80, 0), this);
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                victim.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 80, 0), this);
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+            }
         }
-        BossFx.sparkSpray(serverLevel, origin, dir, INK_RANGE, ParticleTypes.SQUID_INK);
+        BossFx.cinematicImpact(serverLevel,
+                target.position().add(0.0D, target.getBbHeight() * 0.5D, 0.0D),
+                18.0D, 0.2F, 4, this.combatImpactColor());
     }
 
-    /** 墨爆:贴身 ~4 格 AoE 击退 + 虚弱。 */
     private void castPulse(ServerLevel serverLevel) {
         this.pulseCooldown = 240;
         this.triggerAnim("attack_controller", "pulse");
-        this.playSound(ModSounds.LOST_RECORDER_CHIEF_AMBIENT.get(), 1.4F, 0.6F);
+        this.playSound(ModSounds.LOST_RECORDER_CHIEF_PULSE.get(), 1.4F, 1.0F);
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.5F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                this.getBoundingBox().inflate(4.0, 2.0, 4.0),
+                this.getBoundingBox().inflate(PULSE_RADIUS, 2.0, PULSE_RADIUS),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 0), this);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
-            if (away.lengthSqr() > 1.0E-4) {
-                Vec3 dir = away.normalize();
-                victim.setDeltaMovement(victim.getDeltaMovement().add(dir.x * 0.6, 0.35, dir.z * 0.6));
-                victim.hurtMarked = true;
+            if (away.lengthSqr() > PULSE_RADIUS * PULSE_RADIUS) {
+                continue;
+            }
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 0), this);
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+                if (away.lengthSqr() > 1.0E-4) {
+                    Vec3 dir = away.normalize();
+                    victim.setDeltaMovement(victim.getDeltaMovement().add(
+                            dir.x * 0.6, 0.35, dir.z * 0.6));
+                    victim.hurtMarked = true;
+                }
             }
         }
-        for (int i = 0; i < 28; i++) {
-            double angle = Math.PI * 2 * i / 28;
-            serverLevel.sendParticles(ParticleTypes.SQUID_INK,
-                    this.getX(), this.getY() + 1.4, this.getZ(),
-                    0, Math.cos(angle) * 0.6, 0.1, Math.sin(angle) * 0.6, 1.0);
-        }
-        serverLevel.sendParticles(ParticleTypes.ENCHANT,
-                this.getX(), this.getY() + 1.4, this.getZ(), 24, 1.5, 0.8, 1.5, 0.0);
-        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.3, 0), 4.0, ParticleTypes.SQUID_INK);
-        BossFx.impactBurst(serverLevel, this.position().add(0, 1.2, 0), ParticleTypes.ENCHANT);
+        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), PULSE_RADIUS);
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                26.0D, 0.52F, 7, this.combatImpactColor());
     }
 
     @Override
@@ -320,20 +320,16 @@ public class LostRecorderChief extends MiniBossEntity {
             player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 70, 0), this);
             player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0), this);
             this.triggerAnim("attack_controller", "swipe");
-            if (this.level() instanceof ServerLevel serverLevel) {
-                BossFx.impactBurst(serverLevel,
-                        target.position().add(0, target.getBbHeight() * 0.5, 0), ParticleTypes.SQUID_INK);
-            }
         }
         return hit;
     }
 
     private void broadcastHint(ServerLevel serverLevel, String key) {
         double radius = settlementRadius();
-        for (ServerPlayer player : serverLevel.players()) {
-            if (player.distanceToSqr(this) <= radius * radius) {
-                player.displayClientMessage(Component.translatable(key), true);
-            }
+        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(radius),
+                candidate -> candidate.distanceToSqr(this) <= radius * radius)) {
+            player.displayClientMessage(Component.translatable(key), true);
         }
     }
 

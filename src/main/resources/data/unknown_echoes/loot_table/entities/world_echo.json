@@ -1,0 +1,5 @@
+{
+  "type": "minecraft:entity",
+  "pools": [],
+  "random_sequence": "unknown_echoes:entities/world_echo"
+}

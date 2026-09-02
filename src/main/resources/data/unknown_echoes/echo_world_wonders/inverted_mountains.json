@@ -5,8 +5,8 @@
   "biome_tags": [
     "unknown_echoes:has_inverted_mountains"
   ],
-  "spacing": 128,
-  "separation": 42,
+  "spacing": 152,
+  "separation": 50,
   "salt": 702504,
   "allow_multiple": true,
   "priority": 2,

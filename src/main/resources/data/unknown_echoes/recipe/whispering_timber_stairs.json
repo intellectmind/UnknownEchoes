@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "P  ",
+    "PP ",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "item": "unknown_echoes:whispering_timber_frame"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:whispering_timber_stairs",
+    "count": 4
+  }
+}

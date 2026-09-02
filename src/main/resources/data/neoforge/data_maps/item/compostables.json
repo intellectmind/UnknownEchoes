@@ -1,0 +1,58 @@
+{
+  "values": {
+    "unknown_echoes:archive_lichen": {
+      "chance": 0.3
+    },
+    "unknown_echoes:cinder_reed": {
+      "chance": 0.5
+    },
+    "unknown_echoes:cliff_heather": {
+      "chance": 0.3
+    },
+    "unknown_echoes:clockwork_thistle": {
+      "chance": 0.65
+    },
+    "unknown_echoes:crystal_bellflower": {
+      "chance": 0.65
+    },
+    "unknown_echoes:echo_leaves": {
+      "chance": 0.3
+    },
+    "unknown_echoes:glassveil_grass": {
+      "chance": 0.3
+    },
+    "unknown_echoes:inversion_reed": {
+      "chance": 0.5
+    },
+    "unknown_echoes:lantern_seafan": {
+      "chance": 0.3
+    },
+    "unknown_echoes:mire_bell": {
+      "chance": 0.65
+    },
+    "unknown_echoes:mute_reed": {
+      "chance": 0.5
+    },
+    "unknown_echoes:reflection_orchid": {
+      "chance": 0.65
+    },
+    "unknown_echoes:resonant_mushroom": {
+      "chance": 0.5
+    },
+    "unknown_echoes:seam_grass": {
+      "chance": 0.3
+    },
+    "unknown_echoes:shell_bloom": {
+      "chance": 0.65
+    },
+    "unknown_echoes:tuning_grass": {
+      "chance": 0.3
+    },
+    "unknown_echoes:tidewood_leaves": {
+      "chance": 0.3
+    },
+    "unknown_echoes:whispering_leaves": {
+      "chance": 0.3
+    }
+  }
+}

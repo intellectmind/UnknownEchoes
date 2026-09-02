@@ -2,60 +2,134 @@
   "format_version": "1.21.11",
   "credit": "Made with Blockbench",
   "textures": {
-    "0": "unknown_echoes:block/echo_stone_bricks",
-    "1": "unknown_echoes:block/resonance_beacon",
-    "2": "unknown_echoes:block/sky_lamp_glass",
-    "particle": "unknown_echoes:block/echo_stone_bricks"
+    "frame": "unknown_echoes:block/resonance_beacon_frame",
+    "gilt": "unknown_echoes:block/resonance_beacon_gilt",
+    "rune": "unknown_echoes:block/resonance_beacon_rune",
+    "flux": "unknown_echoes:block/resonance_beacon_flux",
+    "crystal": "unknown_echoes:block/resonance_beacon_crystal",
+    "particle": "unknown_echoes:block/resonance_beacon_frame"
   },
   "elements": [
     {
-      "name": "foundation",
+      "name": "art_resonance_beacon_relay_foundation",
       "from": [
+        0.5,
         0,
-        0,
-        0
+        0.5
       ],
       "to": [
-        16,
-        2.5,
-        16
+        15.5,
+        1.2,
+        15.5
       ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            0.5,
+            6.0,
+            15.5,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            6.0,
+            15.5,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            6.0,
+            15.5,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            6.0,
+            15.5,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#frame",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_foundation_band_n",
+      "from": [
+        1.3,
+        1.0,
+        0.7
+      ],
+      "to": [
+        14.7,
+        1.65,
+        1.4
+      ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
             0,
             0,
             16,
-            2.5
+            16
           ],
-          "texture": "#0"
+          "texture": "#gilt"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            16,
-            2.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#0"
+          "texture": "#frame"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            16,
-            2.5
+            1.3,
+            6,
+            14.7,
+            10
           ],
-          "texture": "#0"
+          "texture": "#frame"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            16,
-            2.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#0"
+          "texture": "#frame"
         },
         "up": {
           "uv": [
@@ -64,1758 +138,4336 @@
             16,
             16
           ],
-          "texture": "#0"
+          "texture": "#gilt"
         },
         "down": {
+          "uv": [
+            1.3,
+            6,
+            14.7,
+            10
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_foundation_band_s",
+      "from": [
+        1.3,
+        1.0,
+        14.6
+      ],
+      "to": [
+        14.7,
+        1.65,
+        15.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            1.3,
+            6,
+            14.7,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
           "uv": [
             0,
             0,
             16,
             16
           ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "dais",
-      "from": [
-        2,
-        2.5,
-        2
-      ],
-      "to": [
-        14,
-        4.5,
-        14
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
+          "texture": "#gilt"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            12,
-            2
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            12,
-            12
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            12,
-            12
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "tower_nw",
-      "from": [
-        1,
-        4.5,
-        1
-      ],
-      "to": [
-        4,
-        10.5,
-        4
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "tower_ne",
-      "from": [
-        12,
-        4.5,
-        1
-      ],
-      "to": [
-        15,
-        10.5,
-        4
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "tower_sw",
-      "from": [
-        1,
-        4.5,
-        12
-      ],
-      "to": [
-        4,
-        10.5,
-        15
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "tower_se",
-      "from": [
-        12,
-        4.5,
-        12
-      ],
-      "to": [
-        15,
-        10.5,
-        15
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            6
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "crown_n",
-      "from": [
-        2,
-        12.5,
-        2
-      ],
-      "to": [
-        14,
-        14,
-        3
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            12,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            1,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            12,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            1,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            12,
-            1
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            12,
-            1
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "crown_s",
-      "from": [
-        2,
-        12.5,
-        13
-      ],
-      "to": [
-        14,
-        14,
-        14
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            12,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            1,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            12,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            1,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            12,
-            1
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            12,
-            1
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "crown_w",
-      "from": [
-        2,
-        12.5,
-        3
-      ],
-      "to": [
-        3,
-        14,
-        13
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            10,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            10,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1,
-            10
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1,
-            10
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "crown_e",
-      "from": [
-        13,
-        12.5,
-        3
-      ],
-      "to": [
-        14,
-        14,
-        13
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            10,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            10,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1,
-            10
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1,
-            10
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "rune_floor",
-      "from": [
-        3,
-        4.5,
-        3
-      ],
-      "to": [
-        13,
-        5.25,
-        13
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            10,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            10,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            10,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            10,
-            0.75
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
+            6,
+            6,
             10,
             10
           ],
-          "texture": "#1"
+          "texture": "#frame"
         },
-        "down": {
+        "up": {
           "uv": [
             0,
             0,
-            10,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            1.3,
+            6,
+            14.7,
             10
           ],
-          "texture": "#1"
+          "texture": "#frame"
         }
       }
     },
     {
-      "name": "clamp_n",
+      "name": "art_resonance_beacon_relay_foundation_band_w",
       "from": [
-        6,
-        7,
-        2.5
+        0.7,
+        1.0,
+        1.3
       ],
       "to": [
-        10,
-        9,
-        7
+        1.4,
+        1.65,
+        14.7
       ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          8.5,
-          7
-        ]
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            1.3,
+            6,
+            14.7,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            1.3,
+            10,
+            14.7
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_foundation_band_e",
+      "from": [
+        14.6,
+        1.0,
+        1.3
+      ],
+      "to": [
+        15.3,
+        1.65,
+        14.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            1.3,
+            6,
+            14.7,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            1.3,
+            10,
+            14.7
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_dais",
+      "from": [
+        1.8,
+        1.2,
+        1.8
+      ],
+      "to": [
+        14.2,
+        3.3,
+        14.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            1.8,
+            6.0,
+            14.2,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            1.8,
+            6.0,
+            14.2,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            1.8,
+            6.0,
+            14.2,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            1.8,
+            6.0,
+            14.2,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            1.8,
+            1.8,
+            14.2,
+            14.2
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            1.8,
+            1.8,
+            14.2,
+            14.2
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_dais_trim",
+      "from": [
+        2.2,
+        3.1,
+        2.2
+      ],
+      "to": [
+        13.8,
+        3.75,
+        13.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            2.2,
+            6,
+            13.8,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            2.2,
+            6,
+            13.8,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            2.2,
+            6,
+            13.8,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            2.2,
+            6,
+            13.8,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            2.2,
+            2.2,
+            13.8,
+            13.8
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_dais_rune",
+      "from": [
+        3.0,
+        3.45,
+        3.0
+      ],
+      "to": [
+        13.0,
+        3.95,
+        13.0
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            3,
+            6,
+            13,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            3,
+            6,
+            13,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            3,
+            6,
+            13,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            3,
+            6,
+            13,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ],
+          "texture": "#frame"
+        }
       },
+      "light_emission": 6
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_nw",
+      "from": [
+        1.0,
+        3.4,
+        1.0
+      ],
+      "to": [
+        4.0,
+        10.8,
+        4.0
+      ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            4,
-            2
+            6.0,
+            4.3,
+            10.0,
+            11.7
           ],
-          "texture": "#1"
+          "texture": "#frame"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            4.5,
-            2
+            6.0,
+            4.3,
+            10.0,
+            11.7
           ],
-          "texture": "#1"
+          "texture": "#frame"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            4,
-            2
+            6.0,
+            4.3,
+            10.0,
+            11.7
           ],
-          "texture": "#1"
+          "texture": "#frame"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            4.5,
-            2
+            6.0,
+            4.3,
+            10.0,
+            11.7
           ],
-          "texture": "#1"
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_nw_gilt",
+      "from": [
+        0.8200000000000001,
+        7.0,
+        0.8200000000000001
+      ],
+      "to": [
+        4.18,
+        7.65,
+        4.18
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
         },
         "up": {
           "uv": [
             0,
             0,
-            4,
-            4.5
+            16,
+            16
           ],
-          "texture": "#1"
+          "texture": "#gilt"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            4,
-            4.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#1"
+          "texture": "#frame"
         }
       }
     },
     {
-      "name": "clamp_s",
+      "name": "art_resonance_beacon_relay_tower_nw_rune",
       "from": [
-        6,
-        7,
-        9
+        1.6,
+        8.1,
+        1.6
       ],
       "to": [
-        10,
-        9,
-        13.5
+        3.4,
+        9.9,
+        3.4
       ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 7
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_nw_cap",
+      "from": [
+        0.75,
+        10.6,
+        0.75
+      ],
+      "to": [
+        4.25,
+        11.4,
+        4.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_ne",
+      "from": [
+        12.0,
+        3.4,
+        1.0
+      ],
+      "to": [
+        15.0,
+        10.8,
+        4.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_ne_gilt",
+      "from": [
+        11.82,
+        7.0,
+        0.8200000000000001
+      ],
+      "to": [
+        15.18,
+        7.65,
+        4.18
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_ne_rune",
+      "from": [
+        12.6,
+        8.1,
+        1.6
+      ],
+      "to": [
+        14.4,
+        9.9,
+        3.4
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 7
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_ne_cap",
+      "from": [
+        11.75,
+        10.6,
+        0.75
+      ],
+      "to": [
+        15.25,
+        11.4,
+        4.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_sw",
+      "from": [
+        1.0,
+        3.4,
+        12.0
+      ],
+      "to": [
+        4.0,
+        10.8,
+        15.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_sw_gilt",
+      "from": [
+        0.8200000000000001,
+        7.0,
+        11.82
+      ],
+      "to": [
+        4.18,
+        7.65,
+        15.18
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_sw_rune",
+      "from": [
+        1.6,
+        8.1,
+        12.6
+      ],
+      "to": [
+        3.4,
+        9.9,
+        14.4
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 7
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_sw_cap",
+      "from": [
+        0.75,
+        10.6,
+        11.75
+      ],
+      "to": [
+        4.25,
+        11.4,
+        15.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_se",
+      "from": [
+        12.0,
+        3.4,
+        12.0
+      ],
+      "to": [
+        15.0,
+        10.8,
+        15.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            4.3,
+            10.0,
+            11.7
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_se_gilt",
+      "from": [
+        11.82,
+        7.0,
+        11.82
+      ],
+      "to": [
+        15.18,
+        7.65,
+        15.18
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_se_rune",
+      "from": [
+        12.6,
+        8.1,
+        12.6
+      ],
+      "to": [
+        14.4,
+        9.9,
+        14.4
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 7
+    },
+    {
+      "name": "art_resonance_beacon_relay_tower_se_cap",
+      "from": [
+        11.75,
+        10.6,
+        11.75
+      ],
+      "to": [
+        15.25,
+        11.4,
+        15.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_n",
+      "from": [
+        5.4,
+        5.4,
+        2.0
+      ],
+      "to": [
+        10.6,
+        7.0,
+        5.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      },
       "rotation": {
         "angle": -22.5,
         "axis": "x",
         "origin": [
           8,
-          8.5,
-          9
+          5.8,
+          5.0
         ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4,
-            4.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4,
-            4.5
-          ],
-          "texture": "#1"
-        }
       }
     },
     {
-      "name": "clamp_w",
+      "name": "art_resonance_beacon_relay_conduit_n_gilt",
       "from": [
-        2.5,
-        7,
-        6
+        5.7,
+        5.65,
+        2.3
       ],
       "to": [
-        7,
-        9,
-        10
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "z",
-        "origin": [
-          7,
-          8.5,
-          8
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            4
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            4
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "clamp_e",
-      "from": [
-        9,
-        7,
-        6
-      ],
-      "to": [
-        13.5,
-        9,
-        10
-      ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "z",
-        "origin": [
-          9,
-          8.5,
-          8
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            4
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4.5,
-            4
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "tower_band_nw",
-      "from": [
-        0.75,
-        7,
-        0.75
-      ],
-      "to": [
-        4.25,
-        8,
-        4.25
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            3.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "tower_band_ne",
-      "from": [
-        11.75,
-        7,
-        0.75
-      ],
-      "to": [
-        15.25,
-        8,
-        4.25
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            3.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "tower_band_sw",
-      "from": [
-        0.75,
-        7,
-        11.75
-      ],
-      "to": [
-        4.25,
-        8,
-        15.25
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            3.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "tower_band_se",
-      "from": [
-        11.75,
-        7,
-        11.75
-      ],
-      "to": [
-        15.25,
-        8,
-        15.25
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            3.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "beacon_core",
-      "from": [
-        5.5,
-        6.5,
+        10.299999999999999,
+        7.55,
         5.5
       ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          5.8,
+          5.0
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_n_rune",
+      "from": [
+        6.050000000000001,
+        5.880000000000001,
+        2.65
+      ],
       "to": [
-        10.5,
-        11.5,
+        9.95,
+        7.35,
+        5.1499999999999995
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          5.8,
+          5.0
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_n_flux",
+      "from": [
+        6.300000000000001,
+        6.1000000000000005,
+        2.9
+      ],
+      "to": [
+        9.7,
+        7.25,
+        4.8999999999999995
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          5.8,
+          5.0
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_s",
+      "from": [
+        5.4,
+        5.4,
+        10.2
+      ],
+      "to": [
+        10.6,
+        7.0,
+        14.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          5.8,
+          11.0
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_s_gilt",
+      "from": [
+        5.7,
+        5.65,
         10.5
       ],
+      "to": [
+        10.299999999999999,
+        7.55,
+        13.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          5.8,
+          11.0
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_s_rune",
+      "from": [
+        6.050000000000001,
+        5.880000000000001,
+        10.85
+      ],
+      "to": [
+        9.95,
+        7.35,
+        13.35
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          5.8,
+          11.0
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_s_flux",
+      "from": [
+        6.300000000000001,
+        6.1000000000000005,
+        11.1
+      ],
+      "to": [
+        9.7,
+        7.25,
+        13.1
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          5.8,
+          11.0
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_w",
+      "from": [
+        2.0,
+        5.4,
+        5.4
+      ],
+      "to": [
+        5.8,
+        7.0,
+        10.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            5.4,
+            10.0,
+            10.6
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            5.4,
+            10.0,
+            10.6
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5.0,
+          5.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_w_gilt",
+      "from": [
+        2.3,
+        5.65,
+        5.7
+      ],
+      "to": [
+        5.5,
+        7.55,
+        10.299999999999999
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            5.7,
+            10,
+            10.3
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5.0,
+          5.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_w_rune",
+      "from": [
+        2.65,
+        5.880000000000001,
+        6.050000000000001
+      ],
+      "to": [
+        5.1499999999999995,
+        7.35,
+        9.95
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5.0,
+          5.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_w_flux",
+      "from": [
+        2.9,
+        6.1000000000000005,
+        6.300000000000001
+      ],
+      "to": [
+        4.8999999999999995,
+        7.25,
+        9.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5.0,
+          5.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_e",
+      "from": [
+        10.2,
+        5.4,
+        5.4
+      ],
+      "to": [
+        14.0,
+        7.0,
+        10.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            5.4,
+            6.0,
+            10.6,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            5.4,
+            10.0,
+            10.6
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            5.4,
+            10.0,
+            10.6
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11.0,
+          5.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_e_gilt",
+      "from": [
+        10.5,
+        5.65,
+        5.7
+      ],
+      "to": [
+        13.7,
+        7.55,
+        10.299999999999999
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            5.7,
+            6,
+            10.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            5.7,
+            10,
+            10.3
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11.0,
+          5.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_e_rune",
+      "from": [
+        10.85,
+        5.880000000000001,
+        6.050000000000001
+      ],
+      "to": [
+        13.35,
+        7.35,
+        9.95
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11.0,
+          5.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_conduit_e_flux",
+      "from": [
+        11.1,
+        6.1000000000000005,
+        6.300000000000001
+      ],
+      "to": [
+        13.1,
+        7.25,
+        9.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 14,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11.0,
+          5.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_core_mount",
+      "from": [
+        4.7,
+        6.2,
+        4.7
+      ],
+      "to": [
+        11.3,
+        8.1,
+        11.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.7,
+            6,
+            11.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            4.7,
+            6,
+            11.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            4.7,
+            6,
+            11.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            4.7,
+            6,
+            11.3,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            4.7,
+            4.7,
+            11.3,
+            11.3
+          ],
+          "texture": "#frame"
+        }
+      },
       "rotation": {
         "angle": 45,
         "axis": "y",
         "origin": [
           8,
-          9,
+          7.0,
           8
         ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        }
       }
     },
     {
-      "name": "core_axis",
+      "name": "art_resonance_beacon_relay_core_shell",
       "from": [
-        6.75,
         5.5,
-        6.75
+        7.0,
+        5.5
       ],
       "to": [
-        9.25,
-        13,
-        9.25
+        10.5,
+        11.8,
+        10.5
       ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            2.5,
-            7.5
+            5.5,
+            5.6,
+            10.5,
+            10.4
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            2.5,
-            7.5
+            5.5,
+            5.6,
+            10.5,
+            10.4
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            2.5,
-            7.5
+            5.5,
+            5.6,
+            10.5,
+            10.4
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            2.5,
-            7.5
+            5.5,
+            5.6,
+            10.5,
+            10.4
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "up": {
           "uv": [
             0,
             0,
-            2.5,
-            2.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            5.5,
+            5.5,
+            10.5,
+            10.5
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 6
+    },
+    {
+      "name": "art_resonance_beacon_relay_core_flux",
+      "from": [
+        6.2,
+        7.6,
+        6.2
+      ],
+      "to": [
+        9.8,
+        12.9,
+        9.8
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
         },
         "down": {
           "uv": [
             0,
             0,
-            2.5,
-            2.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 15
+    },
+    {
+      "name": "art_resonance_beacon_relay_core_crystal",
+      "from": [
+        6.8,
+        8.2,
+        6.8
+      ],
+      "to": [
+        9.2,
+        11.8,
+        9.2
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crystal"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crystal"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crystal"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crystal"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crystal"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crystal"
+        }
+      },
+      "light_emission": 12
+    },
+    {
+      "name": "art_resonance_beacon_relay_core_ring_n",
+      "from": [
+        5.5,
+        9.7,
+        5.1
+      ],
+      "to": [
+        10.5,
+        10.25,
+        6.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            5.5,
+            6,
+            10.5,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            5.5,
+            6,
+            10.5,
+            10
+          ],
+          "texture": "#frame"
         }
       }
     },
     {
-      "name": "lens_nw",
+      "name": "art_resonance_beacon_relay_core_ring_s",
       "from": [
-        1.75,
-        9,
-        1.75
+        5.5,
+        9.7,
+        9.9
       ],
       "to": [
-        3.25,
         10.5,
-        3.25
+        10.25,
+        10.9
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            5.5,
+            6,
+            10.5,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "south": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#gilt"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "up": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#gilt"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            5.5,
+            6,
+            10.5,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         }
       }
     },
     {
-      "name": "lens_ne",
+      "name": "art_resonance_beacon_relay_core_ring_w",
       "from": [
-        12.75,
-        9,
-        1.75
+        5.1,
+        9.7,
+        6.1
       ],
       "to": [
-        14.25,
-        10.5,
-        3.25
+        6.1,
+        10.25,
+        9.9
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "west": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#gilt"
         },
         "up": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#gilt"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         }
       }
     },
     {
-      "name": "lens_sw",
+      "name": "art_resonance_beacon_relay_core_ring_e",
       "from": [
-        1.75,
-        9,
-        12.75
+        9.9,
+        9.7,
+        6.1
       ],
       "to": [
-        3.25,
-        10.5,
-        14.25
+        10.9,
+        10.25,
+        9.9
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "east": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#gilt"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "up": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#gilt"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         }
       }
     },
     {
-      "name": "lens_se",
+      "name": "art_resonance_beacon_relay_orbit_lower_n",
       "from": [
-        12.75,
-        9,
-        12.75
+        -0.3,
+        11.7,
+        7.5
       ],
       "to": [
-        14.25,
-        10.5,
-        14.25
+        16.3,
+        12.35,
+        8.5
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#gilt"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "south": {
           "uv": [
             0,
-            0,
-            1.5,
-            1.5
+            6,
+            16,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            1.5,
-            1.5
+            6,
+            6,
+            10,
+            10
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "up": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            16,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "y",
+        "origin": [
+          8,
+          11.7,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_orbit_lower_s",
+      "from": [
+        -0.3,
+        11.7,
+        7.5
+      ],
+      "to": [
+        16.3,
+        12.35,
+        8.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            6,
+            16,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            16,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "y",
+        "origin": [
+          8,
+          11.7,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_orbit_lower_rune",
+      "from": [
+        5.8,
+        11.799999999999999,
+        7.55
+      ],
+      "to": [
+        10.2,
+        12.2,
+        8.45
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            5.8,
+            6,
+            10.2,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            5.8,
+            6,
+            10.2,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            5.8,
+            6,
+            10.2,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "y",
+        "origin": [
+          8,
+          11.7,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_orbit_upper_n",
+      "from": [
+        -0.3,
+        14.0,
+        7.5
+      ],
+      "to": [
+        16.3,
+        14.65,
+        8.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            16,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            16,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "y",
+        "origin": [
+          8,
+          14.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_orbit_upper_s",
+      "from": [
+        -0.3,
+        14.0,
+        7.5
+      ],
+      "to": [
+        16.3,
+        14.65,
+        8.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            6,
+            16,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            16,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "y",
+        "origin": [
+          8,
+          14.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_orbit_upper_rune",
+      "from": [
+        5.8,
+        14.1,
+        7.55
+      ],
+      "to": [
+        10.2,
+        14.5,
+        8.45
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            5.8,
+            6,
+            10.2,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            5.8,
+            6,
+            10.2,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            5.8,
+            6,
+            10.2,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 7,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "y",
+        "origin": [
+          8,
+          14.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_beacon_housing",
+      "from": [
+        5.0,
+        13.0,
+        5.0
+      ],
+      "to": [
+        11.0,
+        15.0,
+        11.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            6,
+            11,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            5,
+            6,
+            11,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            5,
+            6,
+            11,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            5,
+            6,
+            11,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          14,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_beacon_prism",
+      "from": [
+        6.3,
+        13.3,
+        6.3
+      ],
+      "to": [
+        9.7,
+        18.0,
+        9.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            5.65,
+            10,
+            10.35
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            5.65,
+            10,
+            10.35
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            5.65,
+            10,
+            10.35
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            5.65,
+            10,
+            10.35
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#crystal"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 15,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          15.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_resonance_beacon_relay_beacon_flux",
+      "from": [
+        6.8,
+        14.2,
+        6.8
+      ],
+      "to": [
+        9.2,
+        17.2,
+        9.2
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
         },
         "down": {
           "uv": [
             0,
             0,
-            1.5,
-            1.5
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#flux"
         }
+      },
+      "light_emission": 15
+    },
+    {
+      "name": "art_resonance_beacon_relay_beacon_axis",
+      "from": [
+        7.25,
+        15.4,
+        7.25
+      ],
+      "to": [
+        8.75,
+        20.5,
+        8.75
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            5.45,
+            10,
+            10.55
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            5.45,
+            10,
+            10.55
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            5.45,
+            10,
+            10.55
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            5.45,
+            10,
+            10.55
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          17.5,
+          8
+        ]
       }
+    },
+    {
+      "name": "art_resonance_beacon_relay_beacon_tip",
+      "from": [
+        6.6,
+        19.5,
+        6.6
+      ],
+      "to": [
+        9.4,
+        20.8,
+        9.4
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#frame"
+        }
+      },
+      "light_emission": 10
     }
   ],
   "groups": [
     {
-      "name": "root",
+      "name": "art_resonance_beacon_relay",
       "origin": [
         8,
-        8,
+        0,
         8
       ],
       "scope": 0,
-      "color": 0,
-      "shade": false,
-      "children": []
-    },
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    17,
-    18,
-    19,
-    20,
-    21,
-    22,
-    23,
-    24
+      "color": 7,
+      "children": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58
+      ]
+    }
   ]
 }

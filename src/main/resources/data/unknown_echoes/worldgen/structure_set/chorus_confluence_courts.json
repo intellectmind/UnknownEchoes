@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:chorus_confluence_court", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 70,
+    "separation": 30,
+    "salt": 184297547,
+    "frequency": 0.0
+  }
+}

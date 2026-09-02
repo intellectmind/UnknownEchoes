@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.item;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -15,6 +16,9 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -25,6 +29,9 @@ import java.util.List;
 public class WorldtreeFruitItem extends Item {
     public static final int MAX_USES = 3;
     public static final double HEALTH_PER_USE = 5.0D;
+    public static final float SURPLUS_HEAL = 12.0F;
+    public static final int SURPLUS_REGEN_TICKS = 200;
+    public static final int SURPLUS_ABSORPTION_TICKS = 1200;
 
     private static final String USES_KEY = "ue_worldtree_fruit_uses";
     private static final net.minecraft.resources.ResourceLocation HEALTH_MODIFIER_ID =
@@ -36,30 +43,58 @@ public class WorldtreeFruitItem extends Item {
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
-        if (hasReachedUseLimit(level, player)) {
-            if (!level.isClientSide) {
-                player.displayClientMessage(
-                        Component.translatable("message.unknown_echoes.worldtree_fruit.limit"), true);
-            }
-            return InteractionResultHolder.fail(stack);
+        if (!canBenefit(player)) {
+            return InteractionResultHolder.fail(player.getItemInHand(hand));
         }
         return super.use(level, player, hand);
     }
 
     @Override
+    public int getUseDuration(ItemStack stack, LivingEntity entity) {
+        return 24;
+    }
+
+    @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
+        if (entity instanceof Player player && !canBenefit(player)) {
+            return stack;
+        }
         ItemStack result = super.finishUsingItem(stack, level, entity);
         if (!level.isClientSide && entity instanceof ServerPlayer player) {
-            int uses = Math.min(MAX_USES, getUses(player) + 1);
-            player.getPersistentData().putInt(USES_KEY, uses);
-            applyHealthBonus(player);
-            player.heal((float) HEALTH_PER_USE);
+            int currentUses = getUses(player);
+            if (currentUses < MAX_USES) {
+                int uses = currentUses + 1;
+                player.getPersistentData().putInt(USES_KEY, uses);
+                applyHealthBonus(player);
+                player.heal((float) HEALTH_PER_USE);
+                player.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.worldtree_fruit.used", uses, MAX_USES), true);
+            } else {
+                player.heal(SURPLUS_HEAL);
+                player.addEffect(new MobEffectInstance(
+                        MobEffects.REGENERATION, SURPLUS_REGEN_TICKS, 1, true, false, true));
+                FoodEffectSupport.applyAbsorption(
+                        player, SURPLUS_ABSORPTION_TICKS, 1, 8.0F);
+            }
             playConsumptionEffects(player);
-            player.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.worldtree_fruit.used", uses, MAX_USES), true);
         }
         return result;
+    }
+
+    private static boolean canBenefit(Player player) {
+        if (getUses(player) < MAX_USES) {
+            return true;
+        }
+        return player.getFoodData().getFoodLevel() < 20
+                || player.getHealth() < player.getMaxHealth()
+                || needsEffectRefresh(player, MobEffects.REGENERATION, SURPLUS_REGEN_TICKS, 1)
+                || FoodEffectSupport.needsAbsorptionRefresh(
+                player, SURPLUS_ABSORPTION_TICKS, 1, 8.0F);
+    }
+
+    private static boolean needsEffectRefresh(LivingEntity entity, Holder<MobEffect> effect,
+                                              int durationTicks, int amplifier) {
+        return FoodEffectSupport.needsEffectRefresh(entity, effect, durationTicks, amplifier);
     }
 
     @Override
@@ -72,6 +107,8 @@ public class WorldtreeFruitItem extends Item {
                                 List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.unknown_echoes.worldtree_fruit.effect")
                 .withStyle(ChatFormatting.LIGHT_PURPLE));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.worldtree_fruit.surplus")
+                .withStyle(ChatFormatting.GRAY));
         super.appendHoverText(stack, context, tooltip, flag);
     }
 
@@ -94,15 +131,6 @@ public class WorldtreeFruitItem extends Item {
                 HEALTH_MODIFIER_ID,
                 uses * HEALTH_PER_USE,
                 AttributeModifier.Operation.ADD_VALUE));
-    }
-
-    private static boolean hasReachedUseLimit(Level level, Player player) {
-        if (!level.isClientSide) {
-            return getUses(player) >= MAX_USES;
-        }
-        AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
-        AttributeModifier modifier = maxHealth == null ? null : maxHealth.getModifier(HEALTH_MODIFIER_ID);
-        return modifier != null && modifier.amount() >= MAX_USES * HEALTH_PER_USE;
     }
 
     private static int getUses(Player player) {

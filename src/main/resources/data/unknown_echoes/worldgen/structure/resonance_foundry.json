@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:resonance_foundry",
+  "biomes": "#unknown_echoes:has_resonance_foundry",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

@@ -7,19 +7,15 @@ import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
-/**
- * 镜尘执事 GeckoLib 渲染器(镜湖神殿隐藏房区域守护者)。
- * 模型:镜面礼服执事轮廓 + 裂镜面具 + 托盘礼杖(64x64 贴图)。
- * 发光层:mirror_dust_butler_glowing.png(裂镜面具缝隙微光)。
- * 注意:真假三像共用同一渲染(同型同贴图)——真身识别只能靠服务端驱动的
- * 粒子/音效线索,渲染层不做任何区分(红线 #9)。
- */
+/** 镜尘执事 GeckoLib 渲染器(镜湖神殿隐藏房区域守护者)。 */
 public class MirrorDustButlerRenderer extends GeoEntityRenderer<MirrorDustButler> {
 
     public MirrorDustButlerRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("mirror_dust_butler"), true));
-        this.shadowRadius = 0.6F;
-        this.withScale(1.15F);
+        this.shadowRadius = 1.2F;
+        // 几何主体经 1.72 倍缩放后约 2.10 × 4.10 格，碰撞箱按同一包围尺寸登记。
+        this.withScale(1.72F);
+
         addRenderLayer(new EchoGlowLayer<>(this,
                 ResourceLocation.fromNamespaceAndPath(UnknownEchoes.MODID,
                         "textures/entity/mirror_dust_butler_glowing.png")));

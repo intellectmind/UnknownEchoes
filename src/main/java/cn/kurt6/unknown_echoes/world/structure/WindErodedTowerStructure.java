@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.world.structure;
 
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModLootTables;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
 import com.mojang.serialization.MapCodec;
@@ -20,17 +21,12 @@ import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-/**
- * 风蚀塔:漂浮群岛垂直谜题(地面结构)。
- * 底层风门(服务端校验风之回响)封住入口;塔内整砖螺旋阶梯
- * (gotchas #13:不用梯子等方向性附着方块),塔身随机风蚀孔洞。
- * 塔顶:风纹石平台 + 宝箱。进度门槛是风门权限,不是跳跃能力(design-principles #1)。
- */
+/** 风蚀塔:漂浮群岛垂直谜题(地面结构)。 */
 public class WindErodedTowerStructure extends SinglePieceStructure {
     public static final MapCodec<WindErodedTowerStructure> CODEC = simpleCodec(WindErodedTowerStructure::new);
 
-    private static final int SIZE = 9;
-    private static final int HEIGHT = 20;
+    private static final int SIZE = 25;
+    private static final int HEIGHT = 40;
 
     public WindErodedTowerStructure(StructureSettings settings) {
         super(Piece::new, SIZE, SIZE, settings);
@@ -63,50 +59,53 @@ public class WindErodedTowerStructure extends SinglePieceStructure {
             BlockState windStone = ModBlocks.WIND_ETCHED_STONE.get().defaultBlockState();
             BlockState bricks = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
             BlockState cracked = ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState();
+            BlockState chiseled = ModBlocks.WIND_CHISELED_STONE.get().defaultBlockState();
+            BlockState lamp = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
             BlockState air = Blocks.AIR.defaultBlockState();
-            int topY = HEIGHT - 3;
+            int c = SIZE / 2;
+            int towerRadius = 7;
+            int topY = 33;
 
-            // 地基与塔身:9x9 外壳,内部中空;塔身越高风蚀孔越多
-            for (int x = 0; x < SIZE; x++) {
-                for (int z = 0; z < SIZE; z++) {
-                    this.placeBlock(level, bricks, x, 0, z, box);
-                }
-            }
-            for (int y = 1; y < topY; y++) {
-                for (int x = 0; x < SIZE; x++) {
-                    for (int z = 0; z < SIZE; z++) {
-                        boolean wall = x == 0 || z == 0 || x == SIZE - 1 || z == SIZE - 1;
-                        if (!wall) {
-                            this.placeBlock(level, air, x, y, z, box);
+            this.generateBox(level, box, 0, 1, 0, SIZE - 1, HEIGHT - 1, SIZE - 1,
+                    air, air, false);
+            buildSteppedDisk(level, box, c, 0, c, 11, 2, cracked, windStone);
+            buildRuneCauseway(level, box, c, 1, c, Direction.NORTH,
+                    towerRadius, 11, 2, bricks, windStone, chiseled);
+
+            for (int y = 2; y < topY; y++) {
+                int radius = y < 18 ? towerRadius : y < 28 ? towerRadius - 1 : towerRadius - 2;
+                for (int x = c - radius; x <= c + radius; x++) {
+                    for (int z = c - radius; z <= c + radius; z++) {
+                        int distance = (x - c) * (x - c) + (z - c) * (z - c);
+                        int innerRadius = radius - 2;
+                        boolean shell = distance <= radius * radius && distance >= innerRadius * innerRadius;
+                        if (!shell) {
                             continue;
                         }
-                        // 风蚀孔:高度越高越破,但 1~2 层保持完整(风门所在)
-                        float erodeChance = y <= 2 ? 0.0F : Math.min(0.3F, 0.02F * y);
-                        if (random.nextFloat() < erodeChance) {
-                            continue;
+                        boolean protectedBase = y <= 4;
+                        boolean erosionGap = !protectedBase && (x * 7 + z * 11 + y * 3) % 17 == 0;
+                        if (!erosionGap) {
+                            BlockState body = y % 7 == 0 ? chiseled
+                                    : random.nextFloat() < 0.28F ? cracked : windStone;
+                            this.placeBlock(level, body, x, y, z, box);
                         }
-                        BlockState body = random.nextFloat() < 0.3F ? windStone
-                                : (random.nextFloat() < 0.2F ? cracked : bricks);
-                        this.placeBlock(level, body, x, y, z, box);
                     }
                 }
+                if (y % 8 == 0) {
+                    architecturalRing(level, box, c, y, c, radius + 1, bricks);
+                }
             }
 
-            // 入口:南面正中,风门封住(权限门槛)
-            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), SIZE / 2, 1, 0, box);
-            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), SIZE / 2, 2, 0, box);
+            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, 2, c - towerRadius, box);
+            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, 3, c - towerRadius, box);
 
-            // 风流平台(V0.6E):塔心地面一座,激活后气流直送中段休息平台——
-            // 螺旋阶梯仍是无能力时的完整路线,气流只是风之玩家的容错与爽感(红线 #1)
             this.placeBlock(level, ModBlocks.WIND_CURRENT_PLATFORM.get().defaultBlockState(),
-                    SIZE / 2, 1, SIZE / 2, box);
+                    c, 2, c, box);
 
-            // 整砖螺旋阶梯:沿内壁逆时针,每步抬高 1 格;部分台阶蒙着蛛网(攀爬阻滞),
-            // 中段嵌一圈休息平台(次级宝箱 + 残破窗洞,垂直探索的节奏点)
-            int[][] ring = ringPath();
+            int[][] ring = ringPath(c, 5);
             int step = 0;
             int midY = topY / 2;
-            for (int y = 1; y < topY - 1; y++) {
+            for (int y = 2; y <= topY - 1; y++) {
                 int[] spot = ring[step % ring.length];
                 this.placeBlock(level, bricks, spot[0], y, spot[1], box);
                 if (y != midY && random.nextFloat() < 0.15F) {
@@ -115,48 +114,78 @@ public class WindErodedTowerStructure extends SinglePieceStructure {
                 step++;
             }
 
-            // 中段休息平台:3x3,靠西墙;放次级宝箱,平台外侧风蚀出一排大窗
-            for (int x = 1; x <= 3; x++) {
-                for (int z = 3; z <= 5; z++) {
+            for (int x = c - 5; x <= c - 1; x++) {
+                for (int z = c - 3; z <= c + 3; z++) {
                     this.placeBlock(level, windStone, x, midY, z, box);
                 }
             }
-            buildAccessibleChest(level, random, box, 2, midY + 1, 4, ModLootTables.SKY_OBSERVATORY_CHEST);
-            buildTrueSightVaultNiche(level, random, box, 6, midY + 1, 4, Direction.WEST);
-            for (int z = 3; z <= 5; z++) {
-                this.placeBlock(level, air, 0, midY + 1, z, box);
-                this.placeBlock(level, air, 0, midY + 2, z, box);
+            buildAccessibleChest(level, random, box, c - 3, midY + 1, c,
+                    ModLootTables.SKY_OBSERVATORY_CHEST);
+            buildTrueSightVaultNiche(level, random, box, c + 8, midY + 1, c, Direction.WEST);
+            this.placeBlock(level, ModBlocks.WIND_CURRENT_PLATFORM.get().defaultBlockState(),
+                    c, midY + 1, c + 2, box);
+            for (int z = c - 3; z <= c + 3; z++) {
+                this.placeBlock(level, air, c - towerRadius, midY + 1, z, box);
+                this.placeBlock(level, air, c - towerRadius, midY + 2, z, box);
             }
 
-            // 塔顶平台:风纹石,中央宝箱 + 符文砖
-            for (int x = 1; x < SIZE - 1; x++) {
-                for (int z = 1; z < SIZE - 1; z++) {
-                    this.placeBlock(level, windStone, x, topY, z, box);
-                }
-            }
-            // 顶层矮护栏(残缺)
-            for (int x = 0; x < SIZE; x++) {
-                if (random.nextFloat() < 0.6F) {
-                    this.placeBlock(level, cracked, x, topY + 1, 0, box);
-                }
-                if (random.nextFloat() < 0.6F) {
-                    this.placeBlock(level, cracked, x, topY + 1, SIZE - 1, box);
-                }
-            }
+            architecturalDisk(level, box, c, topY, c, 9, windStone);
+            architecturalRing(level, box, c, topY + 1, c, 9, chiseled);
+            buildCircularColonnade(level, box, c, topY + 1, c, 7, 8, 4,
+                    windStone, lamp, cracked);
+            // 收边必须用风蚀岩砖族:借用青色回响石砖会与浅灰风蚀岩撞色。
+            BlockState windStairs = ModBlocks.WIND_ETCHED_BRICK_STAIRS.get().defaultBlockState();
+            BlockState windSlab = ModBlocks.WIND_ETCHED_BRICK_SLAB.get().defaultBlockState();
+            buildStairCornice(level, box, c, topY, c, Footprint.square(8), windStairs, windSlab, false);
+            buildParapet(level, box, c, topY + 1, c, Footprint.square(9), 4, ModBlocks.WIND_ETCHED_BRICK_WALL.get().defaultBlockState(), chiseled);
+            buildStairCornice(level, box, c - 3, midY, c, Footprint.of(3, 4), windStairs, windSlab, false);
             this.placeBlock(level, ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState(),
-                    SIZE / 2, topY + 1, SIZE / 2 + 1, box);
-            buildAccessibleChest(level, random, box, SIZE / 2, topY + 1, SIZE / 2,
+                    c, topY + 1, c + 1, box);
+            buildAccessibleChest(level, random, box, c, topY + 1, c,
                     ModLootTables.WIND_VAULT_CHEST);
+
+            buildCornice(level, box, c, topY + 5, c, Footprint.square(6), chiseled, windStone);
+
+            int[][] diagonalDirections = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+            for (int[] diagonal : diagonalDirections) {
+                for (int distance = 6; distance <= 10; distance++) {
+                    int height = Math.max(3, 14 - (distance - 6));
+                    architecturalPillar(level, box, c + diagonal[0] * distance, 1,
+                            c + diagonal[1] * distance, height,
+                            distance % 3 == 0 ? chiseled : windStone);
+                }
+            }
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                Direction side = direction.getClockWise();
+                for (int sign : new int[]{-1, 1}) {
+                    int x = c + direction.getStepX() * 10 + side.getStepX() * 3 * sign;
+                    int z = c + direction.getStepZ() * 10 + side.getStepZ() * 3 * sign;
+                    architecturalPillar(level, box, x, 1, z, 14, bricks);
+                    this.placeBlock(level, lamp, x, 15, z, box);
+                }
+            }
+            scatterArchitecturalDebris(level, random, box, c, 1, c,
+                    8, 11, 24, cracked, windStone);
+
+            placeStructureSpawner(level, random, box, c + 8, 1, c - 4,
+                    ModEntities.WIND_ERODED_SENTINEL.get(), windStone, chiseled);
         }
 
-        /** 内壁一圈的踏步点位(7x7 内圈周长路径)。 */
-        private static int[][] ringPath() {
-            return new int[][]{
-                    {1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}, {7, 1},
-                    {7, 2}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7},
-                    {6, 7}, {5, 7}, {4, 7}, {3, 7}, {2, 7}, {1, 7},
-                    {1, 6}, {1, 5}, {1, 4}, {1, 3}, {1, 2}
-            };
+        private static int[][] ringPath(int center, int radius) {
+            java.util.List<int[]> path = new java.util.ArrayList<>();
+            for (int x = center - radius; x <= center + radius; x++) {
+                path.add(new int[]{x, center - radius});
+            }
+            for (int z = center - radius + 1; z <= center + radius; z++) {
+                path.add(new int[]{center + radius, z});
+            }
+            for (int x = center + radius - 1; x >= center - radius; x--) {
+                path.add(new int[]{x, center + radius});
+            }
+            for (int z = center + radius - 1; z > center - radius; z--) {
+                path.add(new int[]{center - radius, z});
+            }
+            return path.toArray(int[][]::new);
         }
 
         @Override

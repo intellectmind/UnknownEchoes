@@ -1,0 +1,35 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:palimpsest_saber", "weight": 2 },
+        { "type": "minecraft:item", "name": "unknown_echoes:archive_chisel", "weight": 2 },
+        { "type": "minecraft:item", "name": "unknown_echoes:folded_glaive", "weight": 1 },
+        { "type": "minecraft:item", "name": "unknown_echoes:anchor_blade", "weight": 1 },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_alloy_ingot", "weight": 6, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_weapon_frame", "weight": 4 },
+        { "type": "minecraft:item", "name": "minecraft:diamond", "weight": 3, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] }
+      ]
+    },
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 4, "max": 6 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:palimpsest_leaf", "weight": 12, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:folded_carapace", "weight": 9, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_ore_scrap", "weight": 8, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:space_anchor_shard", "weight": 7, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 154 } } ] },
+        { "type": "minecraft:item", "name": "minecraft:experience_bottle", "weight": 5, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 4, "max": 10 } } ] }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:palimpsest_leaf", "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 4, "max": 7 } } ] }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/deep/shattered_codex_vault"
+}

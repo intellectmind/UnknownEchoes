@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:riftworn_memorial_court", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 66,
+    "separation": 24,
+    "salt": 612948357,
+    "frequency": 0.0
+  }
+}

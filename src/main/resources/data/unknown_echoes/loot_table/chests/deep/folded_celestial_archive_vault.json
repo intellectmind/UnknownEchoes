@@ -1,0 +1,34 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:archive_chisel", "weight": 2 },
+        { "type": "minecraft:item", "name": "unknown_echoes:palimpsest_leaf", "weight": 7, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 3, "max": 6 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_alloy_ingot", "weight": 5, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:folded_carapace", "weight": 8, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 4, "max": 8 } } ] }
+      ]
+    },
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 3, "max": 5 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:archive_spore_roll", "weight": 7, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_bandage", "weight": 7, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 4 } } ] },
+        { "type": "minecraft:item", "name": "minecraft:experience_bottle", "weight": 5, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 3, "max": 8 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_ore_scrap", "weight": 8, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 168 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 169 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 170 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 171 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 172 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 173 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 174 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 175 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 176 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 177 } } ] }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/deep/folded_celestial_archive_vault"
+}

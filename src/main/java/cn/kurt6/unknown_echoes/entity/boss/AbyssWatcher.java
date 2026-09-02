@@ -5,6 +5,7 @@ import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -16,6 +17,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -62,20 +64,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * 深渊观测者:第二主线 Boss(镜湖底部,潮汐回响守护者)。
- *
- * 阶段(按设计文档 10.5,V1.7 改版:弱化辨真身、强化净化压力战):
- * - 黑潮守卫:侵蚀圣殿水下符文,并分裂出"黑潮拟影"分别守卫——符文 5 格内有存活拟影时无法净化,
- *   玩家需要击杀或引开守卫(拟影脱岗超过 8 格会回防)。拟影不伪装本体:周身缠绕墨丝、躯体暗沉,一眼可辨。
- *   未破防时伤害 = min(伤害 x 5%, 上限 4.0)。
- * - 潮汐破防:玩家净化全部被指定的水下符文 → 本体短暂暴露,正常受伤;超时重新侵蚀并恢复帷幕。
- *   (场地没有符文时退化为"清空拟影破防",保证刷怪蛋/空旷水域也能完整战斗。)
- * 攻击:潮汐冲刺(水纹预警线→突进)/ 齐射水刃(本体高伤、拟影低伤,全部直线光束预警)/
- *       深水牵引(漩涡拖拽)/ 深渊脉冲(近身爆发驱离)。全部动画先行、伤害延迟到命中帧。
- * 死亡:场地内参与玩家个人写入击败记录;潮汐回响由潮汐核心祭坛校验信物后解锁。
- */
-public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard, PhaseGatedBoss {
+public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard, PhaseGatedBoss,
+        BossVisualState,
+        RechallengeBoundBoss {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.abyss_watcher.idle");
     private static final RawAnimation SWIM_ANIM =
@@ -93,21 +84,41 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
     private static final RawAnimation BLADES_ANIM =
             RawAnimation.begin().then("animation.abyss_watcher.blades", Animation.LoopType.PLAY_ONCE);
 
+    // 状态表演动画。走独立的 state_controller,避免与攻击动画互相打断。
+    private static final RawAnimation AWAKEN_ANIM =
+            RawAnimation.begin().then("animation.abyss_watcher.awaken", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation RUNE_CORRUPT_ANIM =
+            RawAnimation.begin().then("animation.abyss_watcher.rune_corrupt", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation BREAK_VEIL_ANIM =
+            RawAnimation.begin().then("animation.abyss_watcher.break_veil", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation VEIL_RESTORE_ANIM =
+            RawAnimation.begin().then("animation.abyss_watcher.veil_restore", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation ENRAGE_ANIM =
+            RawAnimation.begin().then("animation.abyss_watcher.enrage", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation DEATH_ANIM =
+            RawAnimation.begin().then("animation.abyss_watcher.death", Animation.LoopType.PLAY_ONCE);
+
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
     private static final EntityDataAccessor<Boolean> DATA_BROKEN =
             SynchedEntityData.defineId(AbyssWatcher.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_CLONE =
             SynchedEntityData.defineId(AbyssWatcher.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_MODE =
+            SynchedEntityData.defineId(AbyssWatcher.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_AGE =
+            SynchedEntityData.defineId(AbyssWatcher.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_DURATION =
+            SynchedEntityData.defineId(AbyssWatcher.class, EntityDataSerializers.INT);
 
-    private static final int CLONE_COUNT_NO_RUNES = 2;          // 无符文场地的游荡拟影数
-    private static final int CLONE_GUARD_CAP = 3;               // 守卫拟影上限(符文更多时留无守卫缺口当突破口)
-    private static final int CLONE_LIFETIME_TICKS = 1200;       // 拟影 60 秒后自行消散并重新洗牌
+    private static final int CLONE_COUNT_NO_RUNES = 2;
+    private static final int CLONE_GUARD_CAP = 3;
+    private static final int CLONE_LIFETIME_TICKS = 1200;
     private static final double CLONE_MAX_HEALTH = 8.0D;
     private static final double CLONE_ATTACK_DAMAGE = 3.0D;
     /** 守卫判定半径:符文这个范围内有存活拟影时无法净化(TideRuneBlock 调用)。 */
     public static final double CLONE_GUARD_RADIUS = 5.0D;
-    private static final double CLONE_LEASH_DIST_SQ = 8.0D * 8.0D;   // 脱岗距离:超过即放弃追击回防
+    private static final double CLONE_LEASH_DIST_SQ = 8.0D * 8.0D;
     private static final double CLONE_RETURN_DONE_DIST_SQ = 2.5D * 2.5D;
 
     private final ServerBossEvent bossEvent = new ServerBossEvent(
@@ -116,6 +127,8 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
     private int cloneLifeTicks = CLONE_LIFETIME_TICKS;
     /** 拟影的守卫岗位(被侵蚀符文的位置);null = 无岗位游荡拟影。仅分身使用。 */
     private BlockPos guardPos = null;
+    /** 仅分身使用；用于父 Boss 异常销毁且分身稍后才重载时自清理。 */
+    private UUID cloneOwnerUuid = null;
     private int brokenTicksRemaining = 0;
     private float brokenWindowHealthFloor = 0.0F;
     private int veiledMessageCooldown = 0;
@@ -125,12 +138,12 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
     /** 无符文场地的重扫退避:避免每 10 tick 全量扫描 6 万+方块。 */
     private int runeRescanCooldown = 0;
     private final Set<UUID> participants = new HashSet<>();
+    private BlockPos rechallengeAltar;
 
-    // ---- 特殊攻击:动画先行,伤害延迟到命中帧 ----
-    private static final int VORTEX_HIT_DELAY = 15;   // 深水牵引:0.75s,旋转中段拖拽
-    private static final int BURST_HIT_DELAY = 8;     // 深渊脉冲:0.4s,膨胀爆发帧
-    private static final int DASH_WINDUP_TICKS = 14;  // 潮汐冲刺:0.7s 水纹预警线
-    private static final int BLADE_WINDUP_TICKS = 16; // 齐射水刃:0.8s 蓄力(本体+拟影光束追踪)
+    private static final int VORTEX_HIT_DELAY = 15;
+    private static final int BURST_HIT_DELAY = 8;
+    private static final int DASH_WINDUP_TICKS = 14;
+    private static final int BLADE_WINDUP_TICKS = 16;
     private static final double VORTEX_RANGE = 11.0D;
     private static final double BURST_RANGE = 5.5D;
     private static final double DASH_RANGE = 14.0D;
@@ -148,7 +161,6 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
     /** 水刃落点(蓄力开始时锁定目标,期间光束持续指向)。 */
     private Vec3 bladeTargetPos = Vec3.ZERO;
 
-    // ---- 破防机关:被侵蚀的水下符文(净化全部 → 破防窗口) ----
     private static final int RUNE_SCAN_RADIUS = 30;
     private static final int RUNE_SCAN_HEIGHT = 10;
     private static final int RUNE_MECHANIC_COUNT = 6;
@@ -161,7 +173,10 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
     private boolean runeSelectionNeedsRefresh = false;
     private int cloneRespawnCooldown = 0;
 
-    /** 多人扩容:参与者每多一人,血量上限 +150(只升不降,NBT 持久化防重载重复回血)。 */
+    /** 不入 NBT:只控制动画触发,重载后最多多播一次表演。 */
+    private boolean awakenPlayed = false;
+    private boolean enragePlayed = false;
+
     private int scaledParticipants = 1;
     private static final double BASE_MAX_HEALTH = 430.0D;
     private static final double HEALTH_PER_EXTRA_PLAYER = 150.0D;
@@ -201,7 +216,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
 
     @Override
     public boolean canDrownInFluidType(net.neoforged.neoforge.fluids.FluidType type) {
-        // 水栖:水中不会溺水(NeoForge 中 canBreatheUnderwater 为 final,走 FluidType 扩展)
+
         if (type == net.neoforged.neoforge.common.NeoForgeMod.WATER_TYPE.value()) {
             return false;
         }
@@ -210,7 +225,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
 
     @Override
     public void travel(Vec3 travelVector) {
-        // 仿守卫者:水中自体推进,离水退回默认重力行走
+
         if (this.isControlledByLocalInstance() && this.isInWater()) {
             this.moveRelative(0.1F, travelVector);
             this.move(MoverType.SELF, this.getDeltaMovement());
@@ -228,6 +243,9 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         super.defineSynchedData(builder);
         builder.define(DATA_BROKEN, false);
         builder.define(DATA_CLONE, false);
+        builder.define(DATA_VISUAL_ATTACK_MODE, 0);
+        builder.define(DATA_VISUAL_ATTACK_AGE, 0);
+        builder.define(DATA_VISUAL_ATTACK_DURATION, 0);
     }
 
     public boolean isBroken() {
@@ -242,7 +260,6 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         return this.entityData.get(DATA_CLONE);
     }
 
-    /** 把这只实例标记为黑潮拟影:低血量、弱攻击、无掉落无经验、限时消散。 */
     public void becomeClone() {
         this.entityData.set(DATA_CLONE, true);
         this.xpReward = 0;
@@ -258,9 +275,13 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         this.setHealth((float) CLONE_MAX_HEALTH);
     }
 
-    // ---- 黑潮拟影:守卫被侵蚀符文,阻碍净化 ----
+    private void becomeClone(AbyssWatcher owner) {
+        this.becomeClone();
+        this.cloneOwnerUuid = owner.getUUID();
+        this.homePos = owner.arenaAnchor().immutable();
+        this.restrictTo(this.homePos, RUNE_SCAN_RADIUS);
+    }
 
-    /** 脱岗回防:拟影离守卫岗位太远(被引开/追击过头)时放弃当前行动游回符文。 */
     private class ReturnToGuardPostGoal extends net.minecraft.world.entity.ai.goal.Goal {
         ReturnToGuardPostGoal() {
             this.setFlags(java.util.EnumSet.of(Flag.MOVE));
@@ -294,11 +315,17 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
     }
 
     private void summonClones(ServerLevel serverLevel) {
+        if (!BossNbtData.isHorizontalAreaLoaded(
+                serverLevel, this.arenaAnchor(), RUNE_SCAN_RADIUS)) {
+            return;
+        }
         this.cloneIds.clear();
-        // 一岗一哨:给仍处于侵蚀状态的符文各派一只拟影(上限 CLONE_GUARD_CAP,
-        // 符文更多时留出无守卫缺口当玩家的突破口);没有符文的场地退化为游荡拟影。
+
         List<BlockPos> posts = new ArrayList<>();
         for (BlockPos pos : this.corruptedRunes) {
+            if (!serverLevel.hasChunkAt(pos)) {
+                continue;
+            }
             var state = serverLevel.getBlockState(pos);
             if (state.getBlock() instanceof cn.kurt6.unknown_echoes.block.tide.TideRuneBlock
                     && state.getValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED)) {
@@ -315,26 +342,24 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 continue;
             }
             BlockPos post = i < posts.size() ? posts.get(i) : null;
-            if (post != null) {
-                // 出生在岗位旁,而不是本体旁——玩家一眼看清"谁守着哪块符文"
-                clone.moveTo(post.getX() + 0.5, post.getY() + 0.5, post.getZ() + 0.5,
-                        this.random.nextFloat() * 360.0F, 0.0F);
-            } else {
-                double angle = this.random.nextDouble() * Math.PI * 2;
-                double dist = 3.0 + this.random.nextDouble() * 3.0;
-                clone.moveTo(this.getX() + Math.cos(angle) * dist, this.getY(),
-                        this.getZ() + Math.sin(angle) * dist, this.random.nextFloat() * 360.0F, 0.0F);
+            Vec3 spawn = this.findCloneSpawn(serverLevel, clone, post);
+            if (spawn == null) {
+                clone.discard();
+                continue;
             }
-            clone.becomeClone();
+            clone.moveTo(spawn.x, spawn.y, spawn.z,
+                    this.random.nextFloat() * 360.0F, 0.0F);
+            clone.becomeClone(this);
             clone.guardPos = post;
             clone.setTarget(this.getTarget());
             clone.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(clone.blockPosition()),
                     MobSpawnType.MOB_SUMMONED, null);
             if (!serverLevel.addFreshEntity(clone)) {
+                clone.discard();
                 continue;
             }
             this.cloneIds.add(clone.getUUID());
-            serverLevel.sendParticles(ParticleTypes.SQUID_INK,
+            serverLevel.sendParticles(BossParticleTheme.ABYSS.body(),
                     clone.getX(), clone.getY() + 0.8, clone.getZ(), 16, 0.5, 0.5, 0.5, 0.06);
         }
         if (!this.cloneIds.isEmpty()) {
@@ -344,7 +369,6 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         }
     }
 
-    /** 符文 pos 周围是否有存活的守卫拟影(净化拦截判定,TideRuneBlock 调用)。 */
     public static boolean isRuneGuarded(ServerLevel serverLevel, BlockPos pos) {
         return !serverLevel.getEntitiesOfClass(AbyssWatcher.class,
                 new net.minecraft.world.phys.AABB(pos).inflate(CLONE_GUARD_RADIUS),
@@ -363,7 +387,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
     private void discardClones(ServerLevel serverLevel) {
         for (UUID id : this.cloneIds) {
             if (serverLevel.getEntity(id) instanceof AbyssWatcher clone) {
-                serverLevel.sendParticles(ParticleTypes.POOF,
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.body(),
                         clone.getX(), clone.getY() + 0.6, clone.getZ(), 12, 0.4, 0.4, 0.4, 0.02);
                 clone.discard();
             }
@@ -371,26 +395,36 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         this.cloneIds.clear();
     }
 
+    private void cleanupArenaState(ServerLevel serverLevel) {
+        this.discardClones(serverLevel);
+        for (BlockPos pos : this.corruptedRunes) {
+            var state = serverLevel.getBlockState(pos);
+            if (state.getBlock() instanceof cn.kurt6.unknown_echoes.block.tide.TideRuneBlock
+                    && state.getValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED)) {
+                serverLevel.setBlock(pos,
+                        state.setValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED,
+                                Boolean.FALSE), 3);
+            }
+        }
+        this.corruptedRunes.clear();
+    }
+
     private void broadcastNearby(Component message) {
         if (this.level() instanceof ServerLevel serverLevel) {
             double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
-            for (ServerPlayer player : serverLevel.players()) {
-                if (player.distanceToSqr(this) <= radius * radius) {
-                    player.sendSystemMessage(message);
-                }
+            for (ServerPlayer player : this.nearbyPlayers(serverLevel, radius)) {
+                player.sendSystemMessage(message);
             }
         }
     }
-
-    // ---- 特殊攻击调度:远距水刃齐射,中距冲刺/漩涡,近身脉冲驱离 ----
 
     private void tickSpecialAttacks(ServerLevel serverLevel) {
         if (this.vortexCooldown > 0) this.vortexCooldown--;
         if (this.burstCooldown > 0) this.burstCooldown--;
         if (this.dashCooldown > 0) this.dashCooldown--;
         if (this.bladeCooldown > 0) this.bladeCooldown--;
+        this.syncVisualAttackState(serverLevel);
 
-        // 预警/蓄力演出:每 tick 持续铺设
         if (this.pendingDashTicks > 0) {
             this.spawnDashWarning(serverLevel);
             if (--this.pendingDashTicks == 0) {
@@ -417,7 +451,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         if (target == null || !target.isAlive()) {
             return;
         }
-        // 低血量"深渊回流":冷却缩短,但所有攻击仍保留完整前摇与预警
+
         int cooldownScale = this.getHealth() < this.getMaxHealth() * 0.3F ? 70 : 100;
         double distSq = this.distanceToSqr(target);
         if (this.burstCooldown <= 0 && distSq <= BURST_RANGE * BURST_RANGE) {
@@ -425,10 +459,10 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
             this.burstCooldown = 160 * cooldownScale / 100;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "burst");
-            this.playSound(SoundEvents.GUARDIAN_ATTACK, 1.4F, 0.6F);
+            this.playSound(ModSounds.ABYSS_WATCHER_BURST.get(), 1.4F, 1.0F);
         } else if (this.dashCooldown <= 0 && distSq <= DASH_RANGE * DASH_RANGE
                 && distSq > BURST_RANGE * BURST_RANGE && this.hasLineOfSight(target)) {
-            // 潮汐冲刺:锁定方向并铺水纹预警线
+
             this.dashDirection = target.position().add(0, target.getBbHeight() * 0.5, 0)
                     .subtract(this.position().add(0, this.getBbHeight() * 0.5, 0))
                     .multiply(1, 0.3, 1).normalize();
@@ -436,42 +470,40 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
             this.dashCooldown = 200 * cooldownScale / 100;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "dash");
-            this.playSound(SoundEvents.DOLPHIN_SPLASH, 1.6F, 0.5F);
+            this.playSound(ModSounds.ABYSS_WATCHER_DASH.get(), 1.6F, 1.0F);
         } else if (this.vortexCooldown <= 0 && distSq <= VORTEX_RANGE * VORTEX_RANGE) {
             this.pendingVortexTicks = VORTEX_HIT_DELAY;
             this.vortexCooldown = 220 * cooldownScale / 100;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "vortex");
-            this.playSound(SoundEvents.BUBBLE_COLUMN_WHIRLPOOL_INSIDE, 1.8F, 0.5F);
+            this.playSound(ModSounds.ABYSS_WATCHER_VORTEX.get(), 1.8F, 1.0F);
         } else if (this.bladeCooldown <= 0 && distSq <= BLADE_RANGE * BLADE_RANGE) {
-            // 齐射水刃:锁定落点,本体与全部拟影一起亮起蓄力光束
+
             this.bladeTargetPos = target.position().add(0, target.getBbHeight() * 0.5, 0);
             this.pendingBladeTicks = BLADE_WINDUP_TICKS;
             this.bladeCooldown = 240 * cooldownScale / 100;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "blades");
-            this.playSound(SoundEvents.ELDER_GUARDIAN_CURSE, 1.2F, 1.6F);
+            this.playSound(ModSounds.ABYSS_WATCHER_BLADES.get(), 1.2F, 1.0F);
         }
     }
 
-    /** 潮汐冲刺预警:沿锁定方向铺设水纹线 + 自身环绕加速水花。 */
     private void spawnDashWarning(ServerLevel serverLevel) {
         Vec3 eye = this.position().add(0, this.getBbHeight() * 0.5, 0);
         BossFx.chargeSpiral(serverLevel, eye, this.tickCount,
-                BossFx.waterBubbleOr(serverLevel, eye, ParticleTypes.SPLASH));
+                BossFx.waterBubbleOr(serverLevel, eye, BossParticleTheme.ABYSS.body()));
         for (int d = 1; d <= (int) DASH_RANGE; d += 2) {
             Vec3 p = eye.add(this.dashDirection.scale(d));
-            serverLevel.sendParticles(ParticleTypes.SPLASH, p.x, p.y, p.z, 3, 0.4, 0.2, 0.4, 0.0);
+            serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(), p.x, p.y, p.z, 3, 0.4, 0.2, 0.4, 0.0);
             if (d % 4 == 1) {
-                serverLevel.sendParticles(ParticleTypes.GLOW, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(), p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
             }
         }
-        serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, eye, ParticleTypes.SPLASH),
+        serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, eye, BossParticleTheme.ABYSS.body()),
                 this.getX(), this.getY() + this.getBbHeight() * 0.5, this.getZ(),
                 6, this.getBbWidth() * 0.5, 0.4, this.getBbWidth() * 0.5, 0.05);
     }
 
-    /** 潮汐冲刺:沿预警线高速突进,走廊内的玩家受击退与伤害。 */
     private void doTidalDash(ServerLevel serverLevel) {
         if (!this.isAlive()) {
             return;
@@ -491,26 +523,28 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
             if (perpendicular > 2.2) {
                 continue;
             }
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            victim.setDeltaMovement(victim.getDeltaMovement()
-                    .add(this.dashDirection.x * 0.9, 0.4, this.dashDirection.z * 0.9));
-            victim.hurtMarked = true;
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                victim.setDeltaMovement(victim.getDeltaMovement()
+                        .add(this.dashDirection.x * 0.9, 0.4, this.dashDirection.z * 0.9));
+                victim.hurtMarked = true;
+            }
         }
-        // 突进本体:一次强位移 + 尾迹水花
+
         this.setDeltaMovement(this.dashDirection.scale(2.2));
         this.hurtMarked = true;
         serverLevel.playSound(null, this.blockPosition(),
                 SoundEvents.DOLPHIN_JUMP, SoundSource.HOSTILE, 1.8F, 0.5F);
         for (int d = 0; d <= (int) DASH_RANGE; d++) {
             Vec3 p = start.add(this.dashDirection.scale(d));
-            serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, p, ParticleTypes.SPLASH),
+            serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, p, BossParticleTheme.ABYSS.body()),
                     p.x, p.y, p.z, 6, 0.6, 0.6, 0.6, 0.1);
-            serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, p.x, p.y, p.z, 2, 0.3, 0.3, 0.3, 0.02);
+            serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(), p.x, p.y, p.z, 2, 0.3, 0.3, 0.3, 0.02);
         }
-        BossFx.sparkSpray(serverLevel, start, this.dashDirection, DASH_RANGE, ParticleTypes.BUBBLE_POP);
+        BossFx.sparkSpray(serverLevel, start, this.dashDirection, DASH_RANGE, BossParticleTheme.ABYSS.spark());
+        Vec3 dashCenter = start.add(this.dashDirection.scale(DASH_RANGE * 0.5D));
+        BossFx.cinematicImpact(serverLevel, dashCenter, 30.0D, 0.58F, 7, 0x43BFD1);
     }
 
-    /** 齐射水刃蓄力:本体与拟影各自亮起一条指向落点的直线光束(全部都是真的,提示走位)。 */
     private void spawnBladeChargeBeams(ServerLevel serverLevel) {
         if (this.tickCount % 2 != 0) {
             return;
@@ -527,17 +561,15 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         return this.position().add(0, this.getBbHeight() * 0.55, 0);
     }
 
-    /** 沿 from→to 铺一条 GLOW 粒子光束。 */
     private void spawnBeam(ServerLevel serverLevel, Vec3 from, Vec3 to) {
         Vec3 delta = to.subtract(from);
         int steps = Math.max(4, (int) (delta.length() * 1.5));
         for (int i = 0; i <= steps; i++) {
             Vec3 p = from.add(delta.scale(i / (double) steps));
-            serverLevel.sendParticles(ParticleTypes.GLOW, p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
+            serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(), p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
         }
     }
 
-    /** 沿 from→落点 的直线走廊结算一次水刃伤害(本体与拟影共用)。 */
     private void damageAlongBlade(ServerLevel serverLevel, Vec3 from, float damage, boolean applySlow) {
         Vec3 delta = this.bladeTargetPos.subtract(from);
         double length = delta.length();
@@ -557,14 +589,13 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
             if (toVictim.subtract(dir.scale(along)).length() > 1.6) {
                 continue;
             }
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            if (applySlow) {
+            boolean hurt = victim.hurt(this.damageSources().mobAttack(this), damage);
+            if (hurt && applySlow) {
                 victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50, 0));
             }
         }
     }
 
-    /** 齐射水刃命中:本体水刃高伤附缓慢,拟影水刃低伤;落点水压炸开。 */
     private void doWaterBlades(ServerLevel serverLevel) {
         if (!this.isAlive()) {
             return;
@@ -573,7 +604,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         Vec3 from = this.eyeBeamOrigin();
         this.damageAlongBlade(serverLevel, from, damage, true);
         spawnBeam(serverLevel, from, this.bladeTargetPos);
-        // 拟影齐射:每条走廊低伤结算——躲开本体光束不等于安全,逼玩家看全场光束
+
         for (UUID id : this.cloneIds) {
             if (serverLevel.getEntity(id) instanceof AbyssWatcher clone && clone.isAlive()) {
                 Vec3 cloneFrom = clone.eyeBeamOrigin();
@@ -581,18 +612,18 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 spawnBeam(serverLevel, cloneFrom, this.bladeTargetPos);
             }
         }
-        serverLevel.sendParticles(ParticleTypes.END_ROD,
+        serverLevel.sendParticles(BossParticleTheme.ABYSS.body(),
                 this.bladeTargetPos.x, this.bladeTargetPos.y, this.bladeTargetPos.z,
                 14, 0.5, 0.5, 0.5, 0.12);
-        serverLevel.sendParticles(ParticleTypes.BUBBLE_POP,
+        serverLevel.sendParticles(BossParticleTheme.ABYSS.body(),
                 this.bladeTargetPos.x, this.bladeTargetPos.y, this.bladeTargetPos.z,
                 20, 0.8, 0.8, 0.8, 0.15);
-        BossFx.impactBurst(serverLevel, this.bladeTargetPos, ParticleTypes.BUBBLE_POP);
+        BossFx.impactBurst(serverLevel, this.bladeTargetPos, BossParticleTheme.ABYSS.spark());
+        BossFx.cinematicImpact(serverLevel, this.bladeTargetPos, 26.0D, 0.52F, 7, 0x55C7D5);
         serverLevel.playSound(null, BlockPos.containing(this.bladeTargetPos),
                 SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 1.4F, 0.8F);
     }
 
-    /** 深渊漩涡:把范围内玩家向本体拖拽并造成中等伤害——水下暗流,打断走位与远程风筝。 */
     private void doVortexPull(ServerLevel serverLevel) {
         if (!this.isAlive()) {
             return;
@@ -602,6 +633,10 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 this.getBoundingBox().inflate(VORTEX_RANGE, VORTEX_RANGE * 0.6, VORTEX_RANGE),
                 e -> e != this && !e.isSpectator()
                         && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
+            Vec3 horizontal = victim.position().subtract(this.position()).multiply(1, 0, 1);
+            if (horizontal.lengthSqr() > VORTEX_RANGE * VORTEX_RANGE) {
+                continue;
+            }
             Vec3 pull = this.position().add(0, this.getBbHeight() * 0.5, 0)
                     .subtract(victim.position());
             if (pull.lengthSqr() < 1.0E-4) {
@@ -615,7 +650,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         }
         serverLevel.playSound(null, this.blockPosition(),
                 SoundEvents.BUBBLE_COLUMN_WHIRLPOOL_AMBIENT, SoundSource.HOSTILE, 2.0F, 0.4F);
-        // 漩涡环粒子:由外向内三圈(逐点探水,水中气泡/岸上水花)
+
         for (int ring = 0; ring < 3; ring++) {
             double r = VORTEX_RANGE - ring * 2.5;
             for (int i = 0; i < 14; i++) {
@@ -623,15 +658,15 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 Vec3 point = new Vec3(this.getX() + Math.cos(angle) * r,
                         this.getY() + this.getBbHeight() * 0.5,
                         this.getZ() + Math.sin(angle) * r);
-                serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, point, ParticleTypes.SPLASH),
+                serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, point, BossParticleTheme.ABYSS.body()),
                         point.x, point.y, point.z, 2, 0.1, 0.3, 0.1, 0.02);
             }
         }
         BossFx.groundShockwave(serverLevel, this.position().add(0, 0.2, 0), VORTEX_RANGE * 0.7,
-                BossFx.waterBubbleOr(serverLevel, this.position(), ParticleTypes.SPLASH));
+                BossFx.waterBubbleOr(serverLevel, this.position(), BossParticleTheme.ABYSS.body()));
+        BossFx.cinematicImpact(serverLevel, this.position(), 34.0D, 0.62F, 8, 0x2B92A6);
     }
 
-    /** 深渊脉冲:近身 AOE 爆发,高击退 + 短暂缓慢——惩罚贴脸硬打,逼玩家利用破防窗口。 */
     private void doBurstDamage(ServerLevel serverLevel) {
         if (!this.isAlive()) {
             return;
@@ -641,59 +676,47 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 this.getBoundingBox().inflate(BURST_RANGE, 2.0, BURST_RANGE),
                 e -> e != this && !e.isSpectator()
                         && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
-            victim.hurt(this.damageSources().mobAttack(this), damage);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
-            if (away.lengthSqr() > 1.0E-4) {
-                Vec3 dir = away.normalize();
-                victim.setDeltaMovement(victim.getDeltaMovement()
-                        .add(dir.x * 1.6, 0.5, dir.z * 1.6));
-                victim.hurtMarked = true;
+            if (away.lengthSqr() > BURST_RANGE * BURST_RANGE) {
+                continue;
             }
-            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                if (away.lengthSqr() > 1.0E-4) {
+                    Vec3 dir = away.normalize();
+                    victim.setDeltaMovement(victim.getDeltaMovement()
+                            .add(dir.x * 1.6, 0.5, dir.z * 1.6));
+                    victim.hurtMarked = true;
+                }
+                victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
+            }
         }
         serverLevel.playSound(null, this.blockPosition(),
                 SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 1.2F, 1.6F);
         for (int i = 0; i < 20; i++) {
             double angle = Math.PI * 2 * i / 20;
-            serverLevel.sendParticles(ParticleTypes.BUBBLE_POP,
+            serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(),
                     this.getX() + Math.cos(angle) * 2.5,
                     this.getY() + this.getBbHeight() * 0.5,
                     this.getZ() + Math.sin(angle) * 2.5, 3, 0.2, 0.3, 0.2, 0.08);
         }
-        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.2, 0), BURST_RANGE, ParticleTypes.BUBBLE_POP);
-        BossFx.impactBurst(serverLevel, this.position().add(0, this.getBbHeight() * 0.5, 0), ParticleTypes.SCULK_SOUL);
+        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.2, 0), BURST_RANGE, BossParticleTheme.ABYSS.ember());
+        BossFx.impactBurst(serverLevel, this.position().add(0, this.getBbHeight() * 0.5, 0), BossParticleTheme.ABYSS.spark());
+        BossFx.cinematicImpact(serverLevel, this.position(), 30.0D, 0.82F, 10, 0x247F91);
     }
 
     @Override
     public void aiStep() {
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
+                && this.tickRechallengeBinding(serverLevel)) {
+            return;
+        }
         super.aiStep();
         if (this.level().isClientSide) {
             return;
         }
 
-        // 拟影:限时消散,不参与任何 Boss 逻辑
         if (this.isClone()) {
-            if (this.level() instanceof ServerLevel serverLevel) {
-                // 黑潮墨丝:拟影不伪装本体,周身持续缠绕墨色雾丝,一眼可辨
-                if (this.isAlive() && this.tickCount % 10 == 0) {
-                    serverLevel.sendParticles(ParticleTypes.SQUID_INK,
-                            this.getX(), this.getY() + this.getBbHeight() * 0.5, this.getZ(),
-                            2, this.getBbWidth() * 0.4, this.getBbHeight() * 0.3, this.getBbWidth() * 0.4, 0.01);
-                }
-                // 守卫的符文已被净化 → 撤岗,转为游荡骚扰
-                if (this.guardPos != null && this.tickCount % 20 == 0) {
-                    var state = serverLevel.getBlockState(this.guardPos);
-                    if (!(state.getBlock() instanceof cn.kurt6.unknown_echoes.block.tide.TideRuneBlock)
-                            || !state.getValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED)) {
-                        this.guardPos = null;
-                    }
-                }
-                if (--this.cloneLifeTicks <= 0) {
-                    serverLevel.sendParticles(ParticleTypes.POOF,
-                            this.getX(), this.getY() + 0.6, this.getZ(), 12, 0.4, 0.4, 0.4, 0.02);
-                    this.discard();
-                }
-            }
+            tickCloneLifecycle();
             return;
         }
 
@@ -707,27 +730,40 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         if (this.veiledMessageCooldown > 0) {
             this.veiledMessageCooldown--;
         }
+
+        // 沉湖苏醒:第一次锁定目标时演一次,不改 AI 与数值。
+        if (!this.awakenPlayed && this.getTarget() != null) {
+            this.awakenPlayed = true;
+            this.triggerAnim("state_controller", "awaken");
+        }
+        // 深渊回流:低血阈值必须与 tickSpecialAttacks 的 cooldownScale 用同一个 0.3F,
+        // 否则演出与冷却缩短会在不同血量触发。
+        if (!this.enragePlayed && this.isAlive()
+                && this.getHealth() < this.getMaxHealth() * 0.3F) {
+            this.enragePlayed = true;
+            this.triggerAnim("state_controller", "enrage");
+        }
+
         if (!this.isBroken() && this.runeSelectionNeedsRefresh) {
             this.corruptRunes(serverLevel, false);
         }
 
-        // 状态演出:帷幕期辉光螺旋环绕;破防期裂纹火花迸发(按 5 tick 节流,不逐 tick 广播)
         if (this.isAlive() && this.tickCount % 5 == 0) {
             if (this.isBroken()) {
-                serverLevel.sendParticles(ParticleTypes.END_ROD,
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(),
                         this.getX(), this.getY() + this.getBbHeight() * 0.55, this.getZ(),
                         4, this.getBbWidth() * 0.5, this.getBbHeight() * 0.35, this.getBbWidth() * 0.5, 0.04);
-                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(),
                         this.getX(), this.getY() + this.getBbHeight() * 0.55, this.getZ(),
                         3, this.getBbWidth() * 0.4, this.getBbHeight() * 0.3, this.getBbWidth() * 0.4, 0.08);
             } else {
-                // 双股辉光螺旋:沿身体盘旋上升的"帷幕"
+
                 double angle = this.tickCount * 0.35;
                 double radius = this.getBbWidth() * 0.75;
                 double yOffset = (this.tickCount % 40) / 40.0 * this.getBbHeight();
                 for (int strand = 0; strand < 2; strand++) {
                     double a = angle + strand * Math.PI;
-                    serverLevel.sendParticles(ParticleTypes.GLOW,
+                    serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(),
                             this.getX() + Math.cos(a) * radius,
                             this.getY() + yOffset,
                             this.getZ() + Math.sin(a) * radius, 1, 0.05, 0.05, 0.05, 0.0);
@@ -735,13 +771,14 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
             }
         }
 
-        boolean hasNearbyRuneViewer = this.hasNearbyRuneViewer(serverLevel);
+        boolean guidanceTick = !this.isBroken() && this.tickCount % 5 == 0;
+        boolean hasNearbyRuneViewer = guidanceTick && this.hasNearbyRuneViewer(serverLevel);
         if (this.isBroken()) {
             if (--this.brokenTicksRemaining <= 0 && this.isAlive()) {
                 restoreTideVeil(serverLevel);
             }
         } else {
-            // 创造模式测试或 AI 尚未锁定时也初始化符文,否则列表为空会让引导永久缺席。
+
             if (this.tickCount % 10 == 0 && hasNearbyRuneViewer && this.corruptedRunes.isEmpty()) {
                 if (this.runeRescanCooldown > 0) {
                     this.runeRescanCooldown -= 10;
@@ -756,32 +793,31 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 if (this.cloneRespawnCooldown > 0) {
                     this.cloneRespawnCooldown -= 10;
                 }
-                // 场地没有符文时退化为"清空拟影破防"
-                if (this.corruptedRunes.isEmpty() && !anyCloneAlive(serverLevel)
+                boolean cloneAlive = anyCloneAlive(serverLevel);
+
+                if (this.corruptedRunes.isEmpty() && !cloneAlive
                         && this.cloneRespawnCooldown > 0) {
                     this.triggerBroken(serverLevel);
                 }
-                // 黑潮守卫:保持拟影在岗(被清掉后隔一段时间重新分裂)
-                if (!anyCloneAlive(serverLevel) && this.cloneRespawnCooldown <= 0) {
+
+                if (!cloneAlive && this.cloneRespawnCooldown <= 0) {
                     this.summonClones(serverLevel);
                     this.cloneRespawnCooldown = 200;
                 }
             }
         }
-        if (!this.isBroken() && hasNearbyRuneViewer
-                && !this.corruptedRunes.isEmpty() && this.tickCount % 5 == 0) {
+        if (guidanceTick && hasNearbyRuneViewer && !this.corruptedRunes.isEmpty()) {
             this.tickRuneGuidance(serverLevel);
         }
 
-        // 主线 Boss 在场心跳(挖掘/开箱封锁的快速预判依赖它)
         if (this.tickCount % 20 == 0) {
             cn.kurt6.unknown_echoes.event.CommonEvents.noteMainBossPresence(serverLevel);
         }
-        // 战斗期间周期登记场地内玩家为参与者 + 多人血量扩容
+
         if (this.tickCount % 20 == 0 && this.getTarget() != null) {
             double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
-            for (ServerPlayer player : serverLevel.players()) {
-                if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
+            for (ServerPlayer player : this.nearbyPlayers(serverLevel, radius)) {
+                if (!player.isSpectator()) {
                     BossNbtData.addParticipant(this.participants, player.getUUID());
                 }
             }
@@ -794,20 +830,53 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         this.bossEvent.setProgress(this.getHealth() / this.getMaxHealth());
     }
 
-    /** 脱战回血:无存活目标持续 5 秒后,每秒回复 2% 最大生命(减员消耗战不可行,脱战即重置)。 */
-    private void tickOutOfCombatRegen() {
-        LivingEntity target = this.getTarget();
-        if (target != null && target.isAlive()) {
-            this.outOfCombatTicks = 0;
-            return;
-        }
-        if (++this.outOfCombatTicks > 100 && this.outOfCombatTicks % 20 == 0
-                && this.getHealth() < this.getMaxHealth()) {
-            this.heal(this.getMaxHealth() * 0.02F);
+    /**
+     * 拟影的独立生命周期:本体失效、寿命到点或守位符文被净化即自毁。
+     * 拟影不打招式、不吃阶段、不参与结算,不要并回 aiStep。
+     */
+    private void tickCloneLifecycle() {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            if (this.cloneOwnerUuid != null && this.tickCount % 20 == 0
+                    && BossNbtData.isHorizontalAreaLoaded(serverLevel,
+                    this.homePos != null ? this.homePos : this.blockPosition(), RUNE_SCAN_RADIUS + 2)) {
+                Entity owner = serverLevel.getEntity(this.cloneOwnerUuid);
+                if (!(owner instanceof AbyssWatcher watcher)
+                        || watcher.isClone() || !watcher.isAlive()) {
+                    serverLevel.sendParticles(BossParticleTheme.ABYSS.body(),
+                            this.getX(), this.getY() + 0.6, this.getZ(),
+                            12, 0.4, 0.4, 0.4, 0.02);
+                    this.discard();
+                    return;
+                }
+            }
+
+            if (this.isAlive() && this.tickCount % 10 == 0) {
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(),
+                        this.getX(), this.getY() + this.getBbHeight() * 0.5, this.getZ(),
+                        2, this.getBbWidth() * 0.4, this.getBbHeight() * 0.3, this.getBbWidth() * 0.4, 0.01);
+            }
+
+            if (this.guardPos != null && this.tickCount % 20 == 0
+                    && serverLevel.hasChunkAt(this.guardPos)) {
+                var state = serverLevel.getBlockState(this.guardPos);
+                if (!(state.getBlock() instanceof cn.kurt6.unknown_echoes.block.tide.TideRuneBlock)
+                        || !state.getValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED)) {
+                    this.guardPos = null;
+                }
+            }
+            if (--this.cloneLifeTicks <= 0) {
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.body(),
+                        this.getX(), this.getY() + 0.6, this.getZ(), 12, 0.4, 0.4, 0.4, 0.02);
+                this.discard();
+            }
         }
     }
 
-    // ---- 破防机关:侵蚀/净化水下符文 ----
+    /** 脱战回血:判据与配置口径由 OutOfCombatRegen 统一持有。 */
+    private void tickOutOfCombatRegen() {
+        this.outOfCombatTicks = OutOfCombatRegen.tick(this, this.outOfCombatTicks);
+    }
+
 
     /** 从竞技场边缘均匀指定机制符文,避免把整圈装饰符文都变成净化目标。 */
     private void corruptRunes(ServerLevel serverLevel) {
@@ -815,8 +884,12 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
     }
 
     private void corruptRunes(ServerLevel serverLevel, boolean announce) {
-        this.corruptedRunes.clear();
         BlockPos center = arenaAnchor();
+        if (!isScanAreaLoaded(serverLevel, center, RUNE_SCAN_RADIUS)) {
+            this.runeSelectionNeedsRefresh = true;
+            return;
+        }
+        this.corruptedRunes.clear();
         List<BlockPos> candidates = new ArrayList<>();
         for (BlockPos pos : BlockPos.betweenClosed(
                 center.offset(-RUNE_SCAN_RADIUS, -RUNE_SCAN_HEIGHT, -RUNE_SCAN_RADIUS),
@@ -828,6 +901,10 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         }
 
         this.corruptedRunes.addAll(selectMechanicRunes(center, candidates));
+        // 侵蚀演出只在 announce(玩家在场)时播,静默迁移旧存档时不播。
+        if (announce && !this.corruptedRunes.isEmpty()) {
+            this.triggerAnim("state_controller", "rune_corrupt");
+        }
         Set<BlockPos> selected = new HashSet<>(this.corruptedRunes);
         for (BlockPos pos : candidates) {
             var state = serverLevel.getBlockState(pos);
@@ -839,7 +916,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                                 shouldBeCorrupted), 3);
             }
             if (announce && shouldBeCorrupted) {
-                serverLevel.sendParticles(ParticleTypes.SQUID_INK,
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.body(),
                         pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5, 12, 0.3, 0.3, 0.3, 0.04);
             }
         }
@@ -921,11 +998,15 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         return this.homePos != null ? this.homePos : this.blockPosition();
     }
 
+    private static boolean isScanAreaLoaded(ServerLevel level, BlockPos center, int radius) {
+        return BossNbtData.isHorizontalAreaLoaded(level, center, radius);
+    }
+
     private void tickRuneGuidance(ServerLevel serverLevel) {
         if (this.corruptedRunes.isEmpty()) {
             return;
         }
-        // 拟影就在 cloneIds 里,按 UUID 直取,不做大范围实体扫描
+
         List<AbyssWatcher> guards = new ArrayList<>();
         for (UUID id : this.cloneIds) {
             if (serverLevel.getEntity(id) instanceof AbyssWatcher clone
@@ -935,6 +1016,9 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         }
         Vec3 core = this.eyeBeamOrigin();
         for (BlockPos pos : this.corruptedRunes) {
+            if (!serverLevel.hasChunkAt(pos)) {
+                continue;
+            }
             var state = serverLevel.getBlockState(pos);
             if (!(state.getBlock() instanceof cn.kurt6.unknown_echoes.block.tide.TideRuneBlock)
                     || !state.getValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED)) {
@@ -942,26 +1026,32 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
             }
             Vec3 rune = Vec3.atCenterOf(pos).add(0, 0.35, 0);
             AbyssWatcher guard = nearestRuneGuard(guards, rune);
-            BossFx.guidanceMarker(serverLevel, rune, ParticleTypes.GLOW);
+            BossFx.guidanceMarker(serverLevel, rune, BossParticleTheme.ABYSS.ember());
             if (guard != null) {
                 BossFx.guidanceFlow(serverLevel, guard.eyeBeamOrigin(), rune,
-                        ParticleTypes.GLOW, ParticleTypes.END_ROD, this.tickCount);
+                        BossParticleTheme.ABYSS.ember(), BossParticleTheme.ABYSS.ember(), this.tickCount);
             } else {
                 BossFx.guidanceFlow(serverLevel, core, rune,
-                        ParticleTypes.GLOW, ParticleTypes.ELECTRIC_SPARK, this.tickCount);
+                        BossParticleTheme.ABYSS.ember(), BossParticleTheme.ABYSS.ember(), this.tickCount);
             }
         }
     }
 
     private boolean hasNearbyRuneViewer(ServerLevel level) {
         double radius = RUNE_SCAN_RADIUS + 8.0D;
-        for (ServerPlayer player : level.players()) {
-            if (!player.isSpectator() && player.isAlive()
-                    && player.distanceToSqr(this) <= radius * radius) {
+        for (ServerPlayer player : this.nearbyPlayers(level, radius)) {
+            if (!player.isSpectator() && player.isAlive()) {
                 return true;
             }
         }
         return false;
+    }
+
+    private List<ServerPlayer> nearbyPlayers(ServerLevel level, double radius) {
+        AABB bounds = this.getBoundingBox().inflate(radius);
+        double radiusSqr = radius * radius;
+        return level.getEntitiesOfClass(ServerPlayer.class, bounds,
+                player -> player.distanceToSqr(this) <= radiusSqr);
     }
 
     private static AbyssWatcher nearestRuneGuard(List<AbyssWatcher> guards, Vec3 rune) {
@@ -977,7 +1067,6 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         return nearest;
     }
 
-    /** 玩家净化一块符文时由 TideRuneBlock 调用:全部净化 → 破防窗口。 */
     public void onRunePurified(Player purifier) {
         if (this.level().isClientSide || this.isBroken()
                 || !(this.level() instanceof ServerLevel serverLevel)) {
@@ -986,6 +1075,10 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         BossNbtData.addParticipant(this.participants, purifier.getUUID());
         int remaining = 0;
         for (BlockPos pos : this.corruptedRunes) {
+            if (!serverLevel.hasChunkAt(pos)) {
+                remaining++;
+                continue;
+            }
             var state = serverLevel.getBlockState(pos);
             if (state.getBlock() instanceof cn.kurt6.unknown_echoes.block.tide.TideRuneBlock
                     && state.getValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED)) {
@@ -1001,9 +1094,9 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         }
     }
 
-    /** 潮汐破防:水面投影裂开,真身短暂暴露。 */
     private void triggerBroken(ServerLevel serverLevel) {
         this.setBroken(true);
+        this.triggerAnim("state_controller", "break_veil");
         this.brokenTicksRemaining = ServerConfig.BOSS_BROKEN_DURATION_TICKS.get();
         this.brokenWindowHealthFloor = BossPhaseGate.nextFloor(this.getHealth(), this.getMaxHealth(),
                 0.70F, 0.35F);
@@ -1011,21 +1104,21 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2.0F, 0.5F);
         serverLevel.playSound(null, this.blockPosition(),
                 SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 0.8F, 1.6F);
-        // 破防演出:中心音爆 + 三圈火花涟漪向外扩散("倒影裂开")
-        serverLevel.sendParticles(ParticleTypes.SONIC_BOOM,
+
+        serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(),
                 this.getX(), this.getY() + this.getBbHeight() * 0.55, this.getZ(), 1, 0, 0, 0, 0);
         Vec3 core = this.eyeBeamOrigin();
         for (BlockPos pos : this.corruptedRunes) {
             Vec3 rune = Vec3.atCenterOf(pos).add(0, 0.35, 0);
-            BossFx.guidanceMarker(serverLevel, rune, ParticleTypes.END_ROD);
+            BossFx.guidanceMarker(serverLevel, rune, BossParticleTheme.ABYSS.ember());
             BossFx.guidanceFlow(serverLevel, rune, core,
-                    ParticleTypes.GLOW, ParticleTypes.ELECTRIC_SPARK, this.tickCount);
+                    BossParticleTheme.ABYSS.ember(), BossParticleTheme.ABYSS.ember(), this.tickCount);
         }
         for (int ring = 1; ring <= 3; ring++) {
             double r = ring * 2.0;
             for (int i = 0; i < 12 + ring * 6; i++) {
                 double angle = Math.PI * 2 * i / (12 + ring * 6);
-                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(),
                         this.getX() + Math.cos(angle) * r,
                         this.getY() + this.getBbHeight() * 0.55,
                         this.getZ() + Math.sin(angle) * r, 1, 0.1, 0.2, 0.1, 0.06);
@@ -1034,7 +1127,6 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         broadcastNearby(Component.translatable("message.unknown_echoes.watcher.broken"));
     }
 
-    /** 多人扩容:参与者每多一人,血量上限 +100 并补上同量血(只升不降)。 */
     private void updateDynamicScaling() {
         int count = Math.max(1, this.participants.size());
         if (count <= this.scaledParticipants) {
@@ -1042,14 +1134,20 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         }
         var maxHealth = this.getAttribute(Attributes.MAX_HEALTH);
         if (maxHealth != null) {
-            maxHealth.setBaseValue(BASE_MAX_HEALTH + HEALTH_PER_EXTRA_PLAYER * (count - 1));
-            this.heal((float) (HEALTH_PER_EXTRA_PLAYER * (count - this.scaledParticipants)));
+            double multiplier = ServerConfig.BOSS_HEALTH_MULTIPLIER.get();
+            maxHealth.setBaseValue((BASE_MAX_HEALTH + HEALTH_PER_EXTRA_PLAYER * (count - 1)) * multiplier);
+            this.heal((float) (HEALTH_PER_EXTRA_PLAYER * (count - this.scaledParticipants) * multiplier));
         }
         this.scaledParticipants = count;
     }
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
+                && !source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
+                && this.isRechallengeCombatBlocked(serverLevel)) {
+            return false;
+        }
         if (!this.level().isClientSide
                 && source.getEntity() instanceof net.minecraft.world.entity.monster.Enemy) {
             return false;
@@ -1090,6 +1188,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
 
     private void restoreTideVeil(ServerLevel serverLevel) {
         this.setBroken(false);
+        this.triggerAnim("state_controller", "veil_restore");
         this.brokenTicksRemaining = 0;
         this.brokenWindowHealthFloor = 0.0F;
         this.corruptRunes(serverLevel);
@@ -1099,62 +1198,143 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
     }
 
     @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        if (this.level() instanceof ServerLevel serverLevel) {
+            if (!this.registerRechallengePresence(serverLevel)) {
+                this.discard();
+            }
+        }
+    }
+
+    @Override
     public void die(DamageSource source) {
+        boolean wasDead = this.dead;
         super.die(source);
-        if (this.isClone() || !(this.level() instanceof ServerLevel serverLevel)) {
+        if (wasDead || !this.dead || this.isClone()
+                || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
-        this.discardClones(serverLevel);
-        // 死亡演出:全场粒子向核心收束 + 外扩水环(设计文档:死亡以粒子收束为主,无关键掉落)
+        // 沉回湖底的死亡表演,只有本体会走到这里;拟影已在上面 return,走墨雾即时散逸。
+        this.triggerAnim("state_controller", "death");
+        this.cleanupArenaState(serverLevel);
+
         for (int ring = 1; ring <= 4; ring++) {
             double r = ring * 1.8;
             for (int i = 0; i < 16; i++) {
                 double angle = Math.PI * 2 * i / 16 + ring * 0.4;
-                serverLevel.sendParticles(ParticleTypes.END_ROD,
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.spark(),
                         this.getX() + Math.cos(angle) * r,
                         this.getY() + this.getBbHeight() * 0.5,
                         this.getZ() + Math.sin(angle) * r, 1, 0.05, 0.05, 0.05, -0.12);
             }
         }
-        serverLevel.sendParticles(ParticleTypes.BUBBLE_POP,
+        serverLevel.sendParticles(BossParticleTheme.ABYSS.body(),
                 this.getX(), this.getY() + this.getBbHeight() * 0.5, this.getZ(),
                 40, 1.5, 1.0, 1.5, 0.2);
-        // 清理战斗状态:残余侵蚀符文恢复平静
-        for (BlockPos pos : this.corruptedRunes) {
-            var state = serverLevel.getBlockState(pos);
-            if (state.getBlock() instanceof cn.kurt6.unknown_echoes.block.tide.TideRuneBlock
-                    && state.getValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED)) {
-                serverLevel.setBlock(pos,
-                        state.setValue(cn.kurt6.unknown_echoes.block.tide.TideRuneBlock.CORRUPTED, Boolean.FALSE), 3);
-            }
-        }
-        this.corruptedRunes.clear();
-        // 设计红线 #4:奖励只发给死亡时仍在场地范围内的参与玩家
+
         double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
-        for (ServerPlayer player : serverLevel.players()) {
-            if (!player.isSpectator() && this.participants.contains(player.getUUID())
-                    && player.distanceToSqr(this) <= radius * radius) {
+        boolean hasEligibleParticipant = false;
+        boolean firstKillDrop = false;
+        for (ServerPlayer player : this.nearbyPlayers(serverLevel, radius)) {
+            if (!player.isSpectator() && this.participants.contains(player.getUUID())) {
                 boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
                         EchoPermission.ABYSS_WATCHER_ID);
+                hasEligibleParticipant = true;
+
+                // 记录写失败不影响首杀判定,否则记录已满时整队会降级成复战奖励。
+                firstKillDrop |= firstKill;
                 if (firstKill && !EchoAbilityManager.markBossDefeated(
                         player, EchoPermission.ABYSS_WATCHER_ID)) {
                     player.sendSystemMessage(Component.translatable(
                             "message.unknown_echoes.progress_record.full"));
-                    continue;
                 }
-                if (firstKill) {
-                    BossMaterialRewards.givePersonal(player, EchoPermission.ABYSS_WATCHER_ID,
-                            new ItemStack(ModItems.TIDE_CORE.get()));
-                } else {
-                    // 重复击败也发 1 枚核心(普通材料语义):守誓套与升级链按件消耗,仅靠首杀凑不齐
-                    BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.TIDE_CORE.get()));
-                }
-                BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.WATCHER_EYE_SHARD.get(),
-                        2 + this.random.nextInt(3)));
-                BossMaterialRewards.giveOrdinary(player, new ItemStack(ModItems.BLACK_TIDE_THREAD.get(),
-                        1 + this.random.nextInt(2)));
             }
         }
+        if (hasEligibleParticipant) {
+            BossMaterialRewards.drop(this, new ItemStack(ModItems.TIDE_CORE.get(), firstKillDrop ? 2 : 1));
+            BossMaterialRewards.drop(this, new ItemStack(ModItems.WATCHER_EYE_SHARD.get(),
+                    2 + this.random.nextInt(3)));
+            BossMaterialRewards.drop(this, new ItemStack(ModItems.BLACK_TIDE_THREAD.get(),
+                    1 + this.random.nextInt(2)));
+            BossMaterialRewards.drop(this, new ItemStack(ModItems.MIRROR_LAKE_SHARD.get(),
+                    3 + this.random.nextInt(4)));
+            BossMaterialRewards.drop(this, new ItemStack(ModItems.ECHO_SHARD.get(),
+                    2 + this.random.nextInt(4)));
+            BossMaterialRewards.drop(this, new ItemStack(ModItems.TIDE_RUNE_FRAGMENT.get(),
+                    2 + this.random.nextInt(3)));
+        }
+        this.finishRechallenge(serverLevel);
+    }
+
+    @Override
+    public cn.kurt6.unknown_echoes.world.MainBossRechallengeData.BossKind rechallengeKind() {
+        return cn.kurt6.unknown_echoes.world.MainBossRechallengeData.BossKind.ABYSS_WATCHER;
+    }
+
+    @Override
+    public BlockPos rechallengeAltar() {
+        return this.rechallengeAltar;
+    }
+
+    @Override
+    public void bindRechallengeAltar(BlockPos altarPos) {
+        this.rechallengeAltar = altarPos.immutable();
+    }
+
+    @Override
+    public void bindRechallengeArena(BlockPos altarPos, BlockPos arenaCenter) {
+        this.rechallengeAltar = altarPos.immutable();
+        if (!this.isClone()) {
+            this.homePos = arenaCenter.immutable();
+            this.restrictTo(this.homePos, RUNE_SCAN_RADIUS);
+        }
+    }
+
+    private Vec3 findCloneSpawn(ServerLevel level, AbyssWatcher clone, BlockPos post) {
+        if (post != null) {
+            for (int distance = 2; distance <= 4; distance++) {
+                for (Direction direction : Direction.Plane.HORIZONTAL) {
+                    for (int dy : new int[]{0, 1, -1}) {
+                        Vec3 candidate = Vec3.atCenterOf(post.relative(direction, distance).offset(0, dy, 0));
+                        if (isSafeCloneSpawn(level, clone, candidate)) {
+                            return candidate;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+        for (int attempt = 0; attempt < 16; attempt++) {
+            double angle = this.random.nextDouble() * Math.PI * 2.0D;
+            double distance = 3.0D + this.random.nextDouble() * 3.0D;
+            Vec3 candidate = new Vec3(this.getX() + Math.cos(angle) * distance,
+                    this.getY() + (this.random.nextDouble() - 0.5D) * 2.0D,
+                    this.getZ() + Math.sin(angle) * distance);
+            if (isSafeCloneSpawn(level, clone, candidate)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isSafeCloneSpawn(ServerLevel level, AbyssWatcher clone, Vec3 destination) {
+        AABB moved = clone.getBoundingBox().move(destination.subtract(clone.position()));
+        BlockPos min = BlockPos.containing(moved.minX, moved.minY, moved.minZ);
+        BlockPos max = BlockPos.containing(moved.maxX - 1.0E-7D,
+                moved.maxY - 1.0E-7D, moved.maxZ - 1.0E-7D);
+        if (!level.isInWorldBounds(min) || !level.isInWorldBounds(max)
+                || !level.getWorldBorder().isWithinBounds(moved)) {
+            return false;
+        }
+        for (int x : new int[]{min.getX(), max.getX()}) {
+            for (int z : new int[]{min.getZ(), max.getZ()}) {
+                if (!level.hasChunkAt(new BlockPos(x, min.getY(), z))) {
+                    return false;
+                }
+            }
+        }
+        return level.noCollision(clone, moved);
     }
 
     @Override
@@ -1183,7 +1363,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
 
     @Override
     public void checkDespawn() {
-        // 本体不自然消失;分身由计时器消散
+
     }
 
     @Override
@@ -1191,24 +1371,20 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         return false;
     }
 
-    // ---- 音效(守卫者系,水下氛围) ----
-
     @Override
     protected SoundEvent getAmbientSound() {
-        return this.isInWater() ? SoundEvents.GUARDIAN_AMBIENT : SoundEvents.GUARDIAN_AMBIENT_LAND;
+        return this.isInWater() ? ModSounds.ABYSS_WATCHER_AMBIENT.get() : ModSounds.ABYSS_WATCHER_AMBIENT_LAND.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return this.isInWater() ? SoundEvents.GUARDIAN_HURT : SoundEvents.GUARDIAN_HURT_LAND;
+        return this.isInWater() ? ModSounds.ABYSS_WATCHER_HURT.get() : ModSounds.ABYSS_WATCHER_HURT_LAND.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return this.isInWater() ? SoundEvents.GUARDIAN_DEATH : SoundEvents.GUARDIAN_DEATH_LAND;
+        return this.isInWater() ? ModSounds.ABYSS_WATCHER_DEATH.get() : ModSounds.ABYSS_WATCHER_DEATH_LAND.get();
     }
-
-    // ---- NBT ----
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
@@ -1218,6 +1394,9 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         if (this.guardPos != null) {
             tag.put("GuardPos", new net.minecraft.nbt.IntArrayTag(
                     new int[]{this.guardPos.getX(), this.guardPos.getY(), this.guardPos.getZ()}));
+        }
+        if (this.cloneOwnerUuid != null) {
+            tag.putUUID("CloneOwnerUuid", this.cloneOwnerUuid);
         }
         tag.putBoolean("Broken", this.isBroken());
         tag.putInt("BrokenTicks", this.brokenTicksRemaining);
@@ -1232,6 +1411,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
             participantsTag.add(NbtUtils.createUUID(uuid));
         }
         tag.put("Participants", participantsTag);
+        this.saveRechallengeBinding(tag);
         tag.putInt("ScaledParticipants", this.scaledParticipants);
         ListTag runes = new ListTag();
         for (BlockPos pos : this.corruptedRunes) {
@@ -1251,8 +1431,12 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 RUNE_SCAN_RADIUS * 2, RUNE_SCAN_HEIGHT * 2);
         BlockPos arenaCenter = this.homePos != null ? this.homePos : entityPos;
         if (tag.getBoolean("IsClone")) {
+            float loadedHealth = this.getHealth();
             this.becomeClone();
+            this.setHealth(BossNbtData.clampHealthFloor(loadedHealth, (float) CLONE_MAX_HEALTH));
             this.cloneLifeTicks = BossNbtData.clampTimer(tag.getInt("CloneLife"), CLONE_LIFETIME_TICKS);
+            this.cloneOwnerUuid = tag.hasUUID("CloneOwnerUuid")
+                    ? tag.getUUID("CloneOwnerUuid") : null;
             this.guardPos = BossNbtData.loadPositionNear(tag, "GuardPos", arenaCenter,
                     RUNE_SCAN_RADIUS, RUNE_SCAN_HEIGHT);
         }
@@ -1263,6 +1447,7 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 tag.getFloat("BrokenWindowHealthFloor"), this.getMaxHealth());
         BossNbtData.loadUuids(tag, "CloneIds", this.cloneIds, BossNbtData.MAX_SUMMONS);
         BossNbtData.loadUuids(tag, "Participants", this.participants, BossNbtData.MAX_PARTICIPANTS);
+        this.loadRechallengeBinding(tag);
         this.scaledParticipants = BossNbtData.clampParticipantScale(tag.getInt("ScaledParticipants"));
         BossNbtData.loadPositionsNear(tag, "CorruptedRunes", this.corruptedRunes,
                 BossNbtData.MAX_ARENA_POSITIONS, arenaCenter, RUNE_SCAN_RADIUS, RUNE_SCAN_HEIGHT);
@@ -1284,16 +1469,18 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         this.bossEvent.setName(this.getDisplayName());
     }
 
-    // ---- GeckoLib 动画 ----
-
     @Override
     public boolean doHurtTarget(Entity target) {
+        if (this.level() instanceof ServerLevel serverLevel
+                && this.isRechallengeCombatBlocked(serverLevel)) {
+            return false;
+        }
         boolean hit = super.doHurtTarget(target);
         if (hit && !this.level().isClientSide) {
             this.triggerAnim("attack_controller", "attack");
             if (this.level() instanceof ServerLevel serverLevel) {
                 BossFx.impactBurst(serverLevel,
-                        target.position().add(0, target.getBbHeight() * 0.5, 0), ParticleTypes.SQUID_INK);
+                        target.position().add(0, target.getBbHeight() * 0.5, 0), BossParticleTheme.ABYSS.spark());
             }
         }
         return hit;
@@ -1316,6 +1503,13 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
                 .triggerableAnim("blades", BLADES_ANIM)
                 .triggerableAnim("vortex", VORTEX_ANIM)
                 .triggerableAnim("burst", BURST_ANIM));
+        controllers.add(new AnimationController<>(this, "state_controller", 0, state -> PlayState.STOP)
+                .triggerableAnim("awaken", AWAKEN_ANIM)
+                .triggerableAnim("rune_corrupt", RUNE_CORRUPT_ANIM)
+                .triggerableAnim("break_veil", BREAK_VEIL_ANIM)
+                .triggerableAnim("veil_restore", VEIL_RESTORE_ANIM)
+                .triggerableAnim("enrage", ENRAGE_ANIM)
+                .triggerableAnim("death", DEATH_ANIM));
     }
 
     @Override
@@ -1323,13 +1517,70 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         return this.geoCache;
     }
 
-    /** 拟影被击杀时用墨雾散逸替代死亡表现。 */
+    private void syncVisualAttackState(ServerLevel level) {
+        int mode;
+        int remaining;
+        int duration;
+        if (this.pendingBurstTicks > 0) {
+            mode = 1;
+            remaining = this.pendingBurstTicks;
+            duration = BURST_HIT_DELAY;
+        } else if (this.pendingDashTicks > 0) {
+            mode = 2;
+            remaining = this.pendingDashTicks;
+            duration = DASH_WINDUP_TICKS;
+        } else if (this.pendingVortexTicks > 0) {
+            mode = 3;
+            remaining = this.pendingVortexTicks;
+            duration = VORTEX_HIT_DELAY;
+        } else if (this.pendingBladeTicks > 0) {
+            mode = 4;
+            remaining = this.pendingBladeTicks;
+            duration = BLADE_WINDUP_TICKS;
+        } else {
+            mode = 0;
+            remaining = 0;
+            duration = 0;
+        }
+        int age = Math.max(0, duration - remaining);
+        this.setVisualAttackState(mode, age, duration);
+        for (UUID id : this.cloneIds) {
+            if (level.getEntity(id) instanceof AbyssWatcher clone && clone.isAlive()) {
+                clone.setVisualAttackState(mode, age, duration);
+            }
+        }
+    }
+
+    private void setVisualAttackState(int mode, int age, int duration) {
+        this.entityData.set(DATA_VISUAL_ATTACK_MODE, mode);
+        this.entityData.set(DATA_VISUAL_ATTACK_AGE, age);
+        this.entityData.set(DATA_VISUAL_ATTACK_DURATION, duration);
+    }
+
+    @Override
+    public int visualAttackMode() {
+        return this.entityData.get(DATA_VISUAL_ATTACK_MODE);
+    }
+
+    @Override
+    public int visualAttackAge() {
+        return this.entityData.get(DATA_VISUAL_ATTACK_AGE);
+    }
+
+    @Override
+    public int visualAttackDuration() {
+        return this.entityData.get(DATA_VISUAL_ATTACK_DURATION);
+    }
+
     @Override
     public void remove(RemovalReason reason) {
-        if (this.isClone() && reason == RemovalReason.KILLED
-                && this.level() instanceof ServerLevel serverLevel) {
-            serverLevel.sendParticles(ParticleTypes.SQUID_INK,
-                    this.getX(), this.getY() + 0.6, this.getZ(), 16, 0.4, 0.4, 0.4, 0.08);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            if (!this.isClone() && reason.shouldDestroy()) {
+                this.cleanupArenaState(serverLevel);
+            } else if (this.isClone() && reason == RemovalReason.KILLED) {
+                serverLevel.sendParticles(BossParticleTheme.ABYSS.body(),
+                        this.getX(), this.getY() + 0.6, this.getZ(), 16, 0.4, 0.4, 0.4, 0.08);
+            }
         }
         super.remove(reason);
     }
@@ -1339,12 +1590,11 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
         return !this.isInWater();
     }
 
-    /** 水下移动考验:本体在水里不受溺水/下沉惩罚,但离水后行动迟缓。 */
     @Override
     public void tick() {
         super.tick();
         if (!this.level().isClientSide && !this.isInWater() && this.onGround()) {
-            // 离水搁浅:缓慢扑腾(降低威胁,鼓励玩家在水下正面应对)
+
             if (this.tickCount % 40 == 0) {
                 this.setDeltaMovement(this.getDeltaMovement().add(
                         (this.random.nextFloat() * 2.0F - 1.0F) * 0.1F, 0.3,

@@ -1,0 +1,4 @@
+{
+  "parent": "unknown_echoes:block/realm_habitat_chime_base",
+  "textures": { "core": "unknown_echoes:block/realm_habitat_chime_wayfarer" }
+}

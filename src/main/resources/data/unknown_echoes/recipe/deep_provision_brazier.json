@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CAC",
+    "BDB",
+    "AAA"
+  ],
+  "key": {
+    "A": { "item": "unknown_echoes:echo_stone_bricks" },
+    "B": { "item": "minecraft:chain" },
+    "C": { "item": "unknown_echoes:deep_alloy_ingot" },
+    "D": { "item": "minecraft:cauldron" }
+  },
+  "result": { "id": "unknown_echoes:deep_provision_brazier" }
+}

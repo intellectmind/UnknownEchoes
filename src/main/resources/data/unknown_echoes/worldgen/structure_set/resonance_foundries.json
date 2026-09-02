@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:resonance_foundry", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 52,
+    "separation": 18,
+    "salt": 207384619,
+    "frequency": 0.0
+  }
+}

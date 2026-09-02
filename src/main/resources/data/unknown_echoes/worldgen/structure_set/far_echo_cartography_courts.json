@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:far_echo_cartography_court", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 72,
+    "separation": 32,
+    "salt": 184297531,
+    "frequency": 0.0
+  }
+}

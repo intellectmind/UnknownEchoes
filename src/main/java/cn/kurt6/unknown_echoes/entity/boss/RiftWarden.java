@@ -5,15 +5,22 @@ import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.block.deep.BossRechallengeAltarBlockEntity;
 import cn.kurt6.unknown_echoes.block.deep.VoidCoreAltarBlock;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.entity.EntityHitboxProfiles;
+import cn.kurt6.unknown_echoes.entity.ai.CirclePreferredRangeGoal;
+import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -34,6 +41,7 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -51,13 +59,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * 裂隙看守者主线 Boss。
- *
- * 六种攻击按 Blockbench 动画关键帧分段执行。66% 与 33% 血线会强制执行解锚阶段，
- * 高伤害不能跨越阶段；死亡时只给仍在场地内的有效参与者写个人击败记录。
- */
-public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
+public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, BossVisualState,
+        DeepRechallengeBoundBoss {
+    private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_MODE =
+            SynchedEntityData.defineId(RiftWarden.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_AGE =
+            SynchedEntityData.defineId(RiftWarden.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_DURATION =
+            SynchedEntityData.defineId(RiftWarden.class, EntityDataSerializers.INT);
     private static final RawAnimation IDLE =
             RawAnimation.begin().thenLoop("animation.rift_warden.idle");
     private static final RawAnimation WALK =
@@ -74,6 +83,16 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
             RawAnimation.begin().then("animation.rift_warden.rift_charge", Animation.LoopType.PLAY_ONCE);
     private static final RawAnimation RIFT_STORM =
             RawAnimation.begin().then("animation.rift_warden.rift_storm", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation AWAKEN =
+            RawAnimation.begin().then("animation.rift_warden.awaken", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation PHASE_LOCK =
+            RawAnimation.begin().then("animation.rift_warden.phase_lock", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation PHASE_OPEN =
+            RawAnimation.begin().then("animation.rift_warden.phase_open", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation STORM_CALL =
+            RawAnimation.begin().then("animation.rift_warden.storm_call", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation DEATH =
+            RawAnimation.begin().then("animation.rift_warden.death", Animation.LoopType.PLAY_ONCE);
 
     private static final int RIFT_SLASH_DURATION = 32;
     private static final int ANCHOR_SLAM_DURATION = 38;
@@ -81,8 +100,10 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
     private static final int SHIELD_BREAK_DURATION = 48;
     private static final int RIFT_CHARGE_DURATION = 36;
     private static final int RIFT_STORM_DURATION = 60;
+    private static final double BASE_MAX_HEALTH = 800.0D;
+    private static final double HEALTH_PER_EXTRA_PLAYER = 220.0D;
     private static final int MAX_RIFT_SCARS = 64;
-    private static final double ARENA_RADIUS = 21.0D;
+    private static final double ARENA_RADIUS = 22.0D;
     private static final float FIRST_PHASE_FLOOR = 0.66F;
     private static final float SECOND_PHASE_FLOOR = 0.33F;
 
@@ -93,6 +114,7 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
     private final List<Vec3> stormMarks = new ArrayList<>();
     private final Set<UUID> attackHits = new HashSet<>();
     private final Set<UUID> participants = new HashSet<>();
+    private final Set<BlockPos> phaseMechanismStabilizers = new HashSet<>();
 
     private AttackMode attackMode = AttackMode.NONE;
     private int attackAge;
@@ -105,8 +127,11 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
     private int riftStormCooldown = 240;
     private boolean entranceFxPlayed;
     private int phaseGateStage;
+    private int scaledParticipants = 1;
     private boolean phaseTransitionPending;
     private boolean phaseTransitionActive;
+    /** 裂隙风暴阶段预告只播一次；客户端表现标记,不参与判定。 */
+    private boolean stormPhaseAnnounced;
     private int protectedMessageCooldown;
     private BlockPos arenaCenter;
 
@@ -114,6 +139,26 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         super(type, level);
         this.xpReward = 160;
         this.bossEvent.setDarkenScreen(true);
+    }
+
+    /** 裂隙特效与外伸构件不参与实体命中，底面使用贴合主体的 profile。 */
+    @Override
+    protected AABB makeBoundingBox() {
+        return EntityHitboxProfiles.make(this);
+    }
+
+    @Override
+    public void setYRot(float yRot) {
+        super.setYRot(yRot);
+        EntityHitboxProfiles.refresh(this);
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_VISUAL_ATTACK_MODE, AttackMode.NONE.ordinal());
+        builder.define(DATA_VISUAL_ATTACK_AGE, 0);
+        builder.define(DATA_VISUAL_ATTACK_DURATION, 0);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -129,8 +174,14 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                 .add(Attributes.STEP_HEIGHT, 1.5D);
     }
 
+    /**
+     * 绕圈半径必须超过虚空牵引的下限(距离平方 36),否则永久贴脸只会循环锚击。
+     * 优先级数必须小于近战:MOVE 只能被更小的数抢走,排在后面等于永不触发。
+     */
     @Override
     protected void registerGoals() {
+        this.goalSelector.addGoal(1, new CirclePreferredRangeGoal(this, 6.0D, 11.0D, 0.9D,
+                () -> this.attackMode != AttackMode.NONE));
         this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.05D, true));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.55D));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
@@ -140,8 +191,17 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     public void aiStep() {
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
+                && this.tickDeepRechallengeBinding(serverLevel)) {
+            return;
+        }
         super.aiStep();
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        if (this.isAlive() && this.tickCount % 20 == 0
+                && !this.registerDeepRechallengePresence(serverLevel)) {
+            this.discard();
             return;
         }
         if (this.tickCount % 20 == 0) {
@@ -151,6 +211,8 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         if (!this.entranceFxPlayed) {
             this.entranceFxPlayed = true;
             this.playEntranceFx(serverLevel);
+            // 裂隙封锁入场演出,不改变判定
+            this.triggerAnim("state_controller", "awaken");
         }
         this.enforceArenaBoundary(serverLevel);
 
@@ -165,17 +227,18 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
 
         if (this.tickCount % 20 == 0 && this.getTarget() != null) {
             double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
-            for (ServerPlayer player : serverLevel.players()) {
-                if (!player.isSpectator() && player.isAlive()
-                        && player.distanceToSqr(this) <= radius * radius) {
-                    this.registerParticipant(player);
-                }
+            for (ServerPlayer player : this.nearbyVictims(serverLevel, radius)) {
+                this.registerParticipant(player);
+            }
+            if (ServerConfig.BOSS_DYNAMIC_SCALING.get()) {
+                this.updateDynamicScaling();
             }
         }
         if (this.phaseGateStage < 2 && !this.phaseTransitionPending
                 && !this.phaseTransitionActive
                 && BossPhaseGate.reachedFloor(this, this.currentMechanicFloor())) {
             this.phaseTransitionPending = true;
+            this.phaseMechanismStabilizers.clear();
         }
 
         if (this.attackMode != AttackMode.NONE) {
@@ -184,11 +247,13 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
             this.setDeltaMovement(movement.x * 0.15D, movement.y, movement.z * 0.15D);
             this.tickAttack(serverLevel);
             this.attackAge++;
+            this.syncVisualAttackState();
             if (this.attackAge >= this.attackDuration) {
                 boolean completedTransition = this.phaseTransitionActive;
                 this.attackMode = AttackMode.NONE;
                 this.attackAge = 0;
                 this.attackDuration = 0;
+                this.syncVisualAttackState();
                 this.attackHits.clear();
                 this.stormMarks.clear();
                 if (completedTransition) {
@@ -200,16 +265,19 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
 
         LivingEntity target = this.getTarget();
         if (this.phaseTransitionPending) {
-            if (target == null || !target.isAlive()) {
-                target = this.findPhaseTarget(serverLevel);
-            }
-            if (target != null) {
-                this.beginPhaseTransition(target);
-            }
+            this.drawStabilizerBreakGuidance(serverLevel,
+                    this.position().add(0.0D, this.getBbHeight() * 0.52D, 0.0D));
             return;
         }
         if (target == null || !target.isAlive()) {
             return;
+        }
+
+        // 裂隙风暴预告,与 rift_storm 同一条血量门槛,只播一次;不触碰 attackMode、冷却与选敌。
+        if (!this.stormPhaseAnnounced
+                && this.getHealth() <= this.getMaxHealth() * 0.5F) {
+            this.stormPhaseAnnounced = true;
+            this.triggerAnim("state_controller", "storm_call");
         }
 
         double distanceSqr = this.distanceToSqr(target);
@@ -242,6 +310,7 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         this.attackMode = mode;
         this.attackAge = 0;
         this.attackDuration = duration;
+        this.syncVisualAttackState();
         this.attackHits.clear();
         this.stormMarks.clear();
         this.attackDirection = horizontalDirectionTo(target);
@@ -264,6 +333,8 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
             this.beginAttack(AttackMode.RIFT_STORM, RIFT_STORM_DURATION,
                     "rift_storm", target);
         }
+        // 两段锚定破裂提示的第一段：护住核心
+        this.triggerAnim("state_controller", "phase_lock");
         this.broadcastNearby(Component.translatable("message.unknown_echoes.rift_warden.phase_locked"));
     }
 
@@ -272,6 +343,8 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         this.phaseGateStage = Math.min(2, this.phaseGateStage + 1);
         level.playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE,
                 SoundSource.HOSTILE, 2.0F, 0.55F + this.phaseGateStage * 0.18F);
+        // 两段锚定破裂提示的第二段：护盾碎裂成虚空尘、核心暴露
+        this.triggerAnim("state_controller", "phase_open");
         this.broadcastNearby(Component.translatable("message.unknown_echoes.rift_warden.phase_open"));
     }
 
@@ -279,15 +352,32 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
         ServerPlayer nearest = null;
         double nearestDistance = Double.MAX_VALUE;
-        for (ServerPlayer player : level.players()) {
+        for (ServerPlayer player : this.nearbyVictims(level, radius)) {
             double distance = player.distanceToSqr(this);
-            if (!player.isSpectator() && player.isAlive() && distance <= radius * radius
-                    && distance < nearestDistance) {
+            if (distance < nearestDistance) {
                 nearest = player;
                 nearestDistance = distance;
             }
         }
         return nearest;
+    }
+
+    private void updateDynamicScaling() {
+        int count = Math.max(1, this.participants.size());
+        if (count <= this.scaledParticipants) {
+            return;
+        }
+        var maxHealth = this.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealth == null) {
+            return;
+        }
+        double multiplier = ServerConfig.DEEP_BOSS_HEALTH_MULTIPLIER.get();
+        int added = count - this.scaledParticipants;
+        maxHealth.setBaseValue((BASE_MAX_HEALTH + HEALTH_PER_EXTRA_PLAYER * (count - 1)) * multiplier);
+        this.heal((float) (HEALTH_PER_EXTRA_PLAYER * added * multiplier));
+        this.scaledParticipants = count;
+        this.broadcastNearby(Component.translatable(
+                "message.unknown_echoes.rift_warden.scaled", count));
     }
 
     private float currentMechanicFloor() {
@@ -312,21 +402,58 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         }
     }
 
+    /** 稳定器由玩家操作后调用；同一场的三座稳定器完成才开始阶段攻击。 */
+    public void onStabilizerActivated(ServerLevel level, BlockPos stabilizerPos) {
+        if (!this.phaseTransitionPending || this.arenaCenter == null || !this.isAlive()
+                || this.arenaCenter.distManhattan(stabilizerPos) > 48) {
+            return;
+        }
+        List<BlockPos> expected = VoidCoreAltarBlock.findStabilizerPositions(level, this.arenaCenter);
+        if (!expected.contains(stabilizerPos)) {
+            return;
+        }
+        this.phaseMechanismStabilizers.add(stabilizerPos.immutable());
+        if (this.phaseMechanismStabilizers.size() >= expected.size()
+                && expected.size() >= 3) {
+            LivingEntity target = this.getTarget();
+            if (target == null || !target.isAlive()) {
+                target = this.findPhaseTarget(level);
+            }
+            if (target != null) {
+                this.beginPhaseTransition(target);
+                this.phaseMechanismStabilizers.clear();
+            }
+        }
+    }
+
     private void broadcastNearby(Component message) {
         if (!(this.level() instanceof ServerLevel level)) {
             return;
         }
         double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
-        for (ServerPlayer player : level.players()) {
-            if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
-                player.displayClientMessage(message, true);
-            }
+        for (ServerPlayer player : this.nearbyPlayers(level, this.position(), radius, false)) {
+            player.displayClientMessage(message, true);
         }
     }
 
     public void bindArena(BlockPos center) {
         this.arenaCenter = center.immutable();
         this.restrictTo(this.arenaCenter, (int) ARENA_RADIUS);
+    }
+
+    @Override
+    public BlockPos deepRechallengeAltar() {
+        return this.arenaCenter;
+    }
+
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        if (this.level() instanceof ServerLevel level) {
+            if (!this.registerDeepRechallengePresence(level)) {
+                this.discard();
+            }
+        }
     }
 
     private void enforceArenaBoundary(ServerLevel level) {
@@ -341,12 +468,30 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                 || this.horizontalDistanceSqr(this.position()) <= square(ARENA_RADIUS + 3.0D)) {
             return;
         }
-        Vec3 returnPoint = Vec3.atBottomCenterOf(this.arenaCenter).add(0.0D, 0.0D, 8.0D);
+        Vec3 returnPoint = this.findArenaReturnPoint(level);
+        if (returnPoint == null) {
+            return;
+        }
         this.teleportTo(returnPoint.x, returnPoint.y, returnPoint.z);
         this.setDeltaMovement(Vec3.ZERO);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+        level.sendParticles(BossParticleTheme.RIFT.body(),
                 returnPoint.x, returnPoint.y + this.getBbHeight() * 0.5D, returnPoint.z,
                 34, 0.9D, 1.4D, 0.9D, 0.12D);
+    }
+
+    private Vec3 findArenaReturnPoint(ServerLevel level) {
+        if (this.arenaCenter == null || !level.hasChunkAt(this.arenaCenter)
+                || !(level.getBlockState(this.arenaCenter).getBlock() instanceof VoidCoreAltarBlock)) {
+            return null;
+        }
+        BlockPos returnPos = VoidCoreAltarBlock.findSpawnPos(level, this.arenaCenter);
+        if (returnPos == null) {
+            return null;
+        }
+        Vec3 target = Vec3.atBottomCenterOf(returnPos);
+        AABB movedBounds = this.getBoundingBox().move(target.subtract(this.position()));
+        return level.getWorldBorder().isWithinBounds(movedBounds)
+                && level.noCollision(this, movedBounds) ? target : null;
     }
 
     private double horizontalDistanceSqr(Vec3 position) {
@@ -379,18 +524,18 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                     SoundSource.HOSTILE, 1.4F, 0.55F);
         }
         if (this.attackAge <= 12) {
-            BossFx.chargeSpiral(level, body, this.tickCount, ParticleTypes.REVERSE_PORTAL);
+            BossFx.chargeSpiral(level, body, this.tickCount, BossParticleTheme.RIFT.body());
             if (this.attackAge % 3 == 0) {
                 BossFx.sweepArc(level, this.position().add(0.0D, 0.05D, 0.0D),
-                        this.attackDirection, 7.0D, ParticleTypes.ELECTRIC_SPARK);
+                        this.attackDirection, 7.0D, BossParticleTheme.RIFT.spark());
             }
         }
-        // 动画 0.7 秒处是挥刃峰值。
+
         if (this.attackAge == 14) {
             this.releaseRiftSlash(level);
         } else if (this.attackAge == 18) {
             BossFx.sweepArc(level, this.position().add(0.0D, 1.0D, 0.0D),
-                    this.attackDirection, 8.0D, ParticleTypes.PORTAL);
+                    this.attackDirection, 8.0D, BossParticleTheme.RIFT.spark());
         }
     }
 
@@ -400,11 +545,11 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                 SoundSource.HOSTILE, 2.0F, 0.62F);
         level.playSound(null, this.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
                 SoundSource.HOSTILE, 1.6F, 0.45F);
-        BossFx.sweepArc(level, origin, this.attackDirection, 8.0D, ParticleTypes.END_ROD);
-        BossFx.sparkSpray(level, origin, this.attackDirection, 8.5D, ParticleTypes.REVERSE_PORTAL);
+        BossFx.sweepArc(level, origin, this.attackDirection, 8.0D, BossParticleTheme.RIFT.spark());
+        BossFx.sparkSpray(level, origin, this.attackDirection, 8.5D, BossParticleTheme.RIFT.spark());
         Vec3 impact = origin.add(this.attackDirection.scale(4.5D));
-        BossFx.impactBurst(level, impact, ParticleTypes.REVERSE_PORTAL);
-        level.sendParticles(ParticleTypes.SWEEP_ATTACK,
+        BossFx.impactBurst(level, impact, BossParticleTheme.RIFT.spark());
+        level.sendParticles(BossParticleTheme.RIFT.spark(),
                 impact.x, impact.y, impact.z, 7, 1.8D, 1.0D, 1.8D, 0.0D);
 
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE);
@@ -423,18 +568,18 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                     SoundSource.HOSTILE, 2.0F, 0.48F);
         }
         if (this.attackAge <= 19) {
-            BossFx.chargeSpiral(level, core, this.tickCount, ParticleTypes.SCULK_SOUL);
+            BossFx.chargeSpiral(level, core, this.tickCount, BossParticleTheme.RIFT.body());
             if (this.attackAge % 4 == 0) {
                 double contraction = 6.8D - this.attackAge / 19.0D * 4.8D;
-                BossFx.ring(level, center, 7.5D, 56, 0.12D, ParticleTypes.REVERSE_PORTAL);
-                BossFx.ring(level, center, contraction, 32, 0.2D, ParticleTypes.ELECTRIC_SPARK);
+                BossFx.ring(level, center, 7.5D, 56, 0.12D, BossParticleTheme.RIFT.ember());
+                BossFx.ring(level, center, contraction, 32, 0.2D, BossParticleTheme.RIFT.ember());
             }
         }
-        // 动画 1.05 秒处是锚刃落地帧。
+
         if (this.attackAge == 21) {
             this.releaseAnchorSlam(level);
         } else if (this.attackAge == 27) {
-            BossFx.ring(level, center, 9.5D, 64, 0.18D, ParticleTypes.PORTAL);
+            BossFx.ring(level, center, 9.5D, 64, 0.18D, BossParticleTheme.RIFT.ember());
         }
     }
 
@@ -445,9 +590,10 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         level.playSound(null, this.blockPosition(), SoundEvents.WITHER_BREAK_BLOCK,
                 SoundSource.HOSTILE, 2.0F, 0.58F);
         BossFx.groundShockwave(level, center.add(0.0D, 0.15D, 0.0D),
-                7.5D, ParticleTypes.REVERSE_PORTAL);
-        BossFx.impactBurst(level, center.add(0.0D, 0.35D, 0.0D), ParticleTypes.SCULK_SOUL);
-        level.sendParticles(ParticleTypes.SCULK_SOUL,
+                7.5D, BossParticleTheme.RIFT.ember());
+        BossFx.impactBurst(level, center.add(0.0D, 0.35D, 0.0D), BossParticleTheme.RIFT.spark());
+        BossFx.cinematicImpact(level, center, 34.0D, 0.86F, 11, 0x6F55C8);
+        level.sendParticles(BossParticleTheme.RIFT.body(),
                 center.x, center.y + 0.5D, center.z, 64, 3.1D, 0.9D, 3.1D, 0.1D);
         this.damageAndKnockbackPlayers(level, 7.5D, 22.0F, 1.35D, 0.48D);
         this.addRadialRiftScars(center, 8, 3, 82);
@@ -460,20 +606,20 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                     SoundSource.HOSTILE, 2.1F, 0.58F);
         }
         if (this.attackAge <= 29) {
-            BossFx.chargeSpiral(level, core, -this.tickCount, ParticleTypes.DRAGON_BREATH);
+            BossFx.chargeSpiral(level, core, -this.tickCount, BossParticleTheme.RIFT.body());
             if (this.attackAge % 2 == 0) {
                 double contraction = 18.0D - this.attackAge / 29.0D * 15.0D;
-                BossFx.ring(level, core, contraction, 40, 0.0D, ParticleTypes.PORTAL);
+                BossFx.ring(level, core, contraction, 40, 0.0D, BossParticleTheme.RIFT.ember());
             }
             if (this.attackAge % 3 == 0) {
                 this.pullPlayers(level, core, 20.0D, 0.13D, 0.05D, 0.0F, true);
             }
         }
-        // 动画 1.55 秒处核心合拢，牵引在这里达到峰值。
+
         if (this.attackAge == 31) {
             this.releaseVoidPull(level, core);
         } else if (this.attackAge >= 34 && this.attackAge <= 40 && this.attackAge % 2 == 0) {
-            level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+            level.sendParticles(BossParticleTheme.RIFT.body(),
                     core.x, core.y, core.z, 20, 1.2D, 1.2D, 1.2D, 0.22D);
         }
     }
@@ -481,17 +627,17 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
     private void releaseVoidPull(ServerLevel level, Vec3 core) {
         level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
                 SoundSource.HOSTILE, 2.3F, 0.72F);
-        level.playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_SPAWN,
-                SoundSource.HOSTILE, 1.8F, 1.35F);
+        level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_RIFT.get(),
+                SoundSource.HOSTILE, 1.8F, 1.0F);
         this.pullPlayers(level, core, 20.0D, 1.15D, 0.28D, 11.0F, true);
-        BossFx.impactBurst(level, core, ParticleTypes.DRAGON_BREATH);
+        BossFx.impactBurst(level, core, BossParticleTheme.RIFT.spark());
         for (double radius : new double[]{4.0D, 8.0D, 12.0D, 18.0D}) {
             BossFx.ring(level, core, radius, Math.max(32, (int) (radius * 5.0D)),
-                    0.0D, ParticleTypes.REVERSE_PORTAL);
+                    0.0D, BossParticleTheme.RIFT.ember());
         }
-        level.sendParticles(ParticleTypes.SONIC_BOOM,
+        level.sendParticles(BossParticleTheme.RIFT.spark(),
                 core.x, core.y, core.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.sendParticles(ParticleTypes.DRAGON_BREATH,
+        level.sendParticles(BossParticleTheme.RIFT.body(),
                 core.x, core.y, core.z, 80, 2.6D, 2.6D, 2.6D, 0.08D);
     }
 
@@ -505,22 +651,22 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                     SoundSource.HOSTILE, 1.8F, 0.62F);
         }
         if (this.attackAge <= 26) {
-            BossFx.chargeSpiral(level, core, this.tickCount * 1.35D, ParticleTypes.ELECTRIC_SPARK);
+            BossFx.chargeSpiral(level, core, this.tickCount * 1.35D, BossParticleTheme.RIFT.body());
             if (this.attackAge % 4 == 0) {
-                BossFx.ring(level, center, 4.0D, 28, 0.16D, ParticleTypes.END_ROD);
-                BossFx.ring(level, center, 8.0D, 44, 0.2D, ParticleTypes.REVERSE_PORTAL);
-                BossFx.ring(level, center, 11.0D, 60, 0.24D, ParticleTypes.ELECTRIC_SPARK);
+                BossFx.ring(level, center, 4.0D, 28, 0.16D, BossParticleTheme.RIFT.ember());
+                BossFx.ring(level, center, 8.0D, 44, 0.2D, BossParticleTheme.RIFT.ember());
+                BossFx.ring(level, center, 11.0D, 60, 0.24D, BossParticleTheme.RIFT.ember());
             }
         }
         if (this.phaseTransitionActive && this.attackAge % 4 == 0) {
             this.drawStabilizerBreakGuidance(level, core);
         }
-        // 精修后的双臂外爆峰值位于 1.4 秒。
+
         if (this.attackAge == 28) {
             this.releaseShieldBreak(level);
         } else if (this.attackAge == 35) {
-            BossFx.ring(level, center, 14.0D, 72, 0.18D, ParticleTypes.PORTAL);
-            level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+            BossFx.ring(level, center, 14.0D, 72, 0.18D, BossParticleTheme.RIFT.ember());
+            level.sendParticles(BossParticleTheme.RIFT.body(),
                     core.x, core.y, core.z, 48, 2.0D, 2.2D, 2.0D, 0.16D);
         }
     }
@@ -531,15 +677,15 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                 SoundSource.HOSTILE, 2.7F, 0.55F);
         level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
                 SoundSource.HOSTILE, 2.2F, 0.48F);
-        BossFx.groundShockwave(level, center, 11.0D, ParticleTypes.ELECTRIC_SPARK);
-        BossFx.impactBurst(level, center.add(0.0D, 2.0D, 0.0D), ParticleTypes.END_ROD);
-        level.sendParticles(ParticleTypes.SONIC_BOOM,
+        BossFx.groundShockwave(level, center, 11.0D, BossParticleTheme.RIFT.ember());
+        BossFx.impactBurst(level, center.add(0.0D, 2.0D, 0.0D), BossParticleTheme.RIFT.spark());
+        BossFx.cinematicImpact(level, center, 44.0D, 1.0F, 14, 0x8D68D8);
+        level.sendParticles(BossParticleTheme.RIFT.spark(),
                 center.x, center.y + 2.2D, center.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        this.damageAndKnockbackPlayers(level, 11.0D, 28.0F, 1.75D, 0.68D);
-        for (ServerPlayer player : level.players()) {
-            if (this.isValidVictim(player, 11.0D)) {
-                player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1), this);
-            }
+        List<ServerPlayer> victims = this.damageAndKnockbackPlayers(
+                level, 11.0D, 28.0F, 1.75D, 0.68D);
+        for (ServerPlayer player : victims) {
+            player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1), this);
         }
         this.addRadialRiftScars(this.position(), 12, 2, 96);
     }
@@ -554,7 +700,7 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                     SoundSource.HOSTILE, 1.5F, 1.25F);
         }
         if (this.attackAge <= 10) {
-            BossFx.chargeSpiral(level, core, this.tickCount * 1.4D, ParticleTypes.ELECTRIC_SPARK);
+            BossFx.chargeSpiral(level, core, this.tickCount * 1.4D, BossParticleTheme.RIFT.body());
             if (this.attackAge % 2 == 0) {
                 this.drawChargeLane(level, center, this.attackDirection, 11.0D);
             }
@@ -566,17 +712,17 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
             if (this.attackAge % 2 == 0) {
                 Vec3 trail = this.position().subtract(this.attackDirection.scale(1.5D))
                         .add(0.0D, 0.35D, 0.0D);
-                BossFx.ring(level, trail, 1.8D, 24, 0.0D, ParticleTypes.REVERSE_PORTAL);
+                BossFx.ring(level, trail, 1.8D, 24, 0.0D, BossParticleTheme.RIFT.ember());
                 this.addRiftScar(this.position(), 56, 0);
                 this.damageChargeVictims(level, 4.5D, 24.0F);
             }
         }
-        // 动画 0.85 秒处达到最大前倾，随后在 1.05 秒挥出终结横斩。
+
         if (this.attackAge == 17) {
             level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
                     SoundSource.HOSTILE, 1.8F, 1.35F);
             BossFx.impactBurst(level, core.add(this.attackDirection.scale(1.5D)),
-                    ParticleTypes.ELECTRIC_SPARK);
+                    BossParticleTheme.RIFT.spark());
         } else if (this.attackAge == 21) {
             this.releaseChargeSlash(level);
         }
@@ -588,23 +734,24 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
             Vec3 center = origin.add(direction.scale(distance)).add(0.0D, 0.12D, 0.0D);
             for (double offset : new double[]{-2.2D, 0.0D, 2.2D}) {
                 Vec3 point = center.add(side.scale(offset));
-                level.sendParticles(offset == 0.0D ? ParticleTypes.ELECTRIC_SPARK : ParticleTypes.PORTAL,
+                level.sendParticles(offset == 0.0D ? BossParticleTheme.RIFT.spark() : BossParticleTheme.RIFT.spark(),
                         point.x, point.y, point.z, 1, 0.04D, 0.03D, 0.04D, 0.0D);
             }
         }
     }
 
     private void damageChargeVictims(ServerLevel level, double radius, float damage) {
-        for (ServerPlayer player : level.players()) {
-            if (!this.isValidVictim(player, radius) || !this.attackHits.add(player.getUUID())) {
+        for (ServerPlayer player : this.nearbyVictims(level, radius)) {
+            if (!this.attackHits.add(player.getUUID())) {
                 continue;
             }
-            player.hurt(this.damageSources().mobAttack(this), damage);
-            player.setDeltaMovement(player.getDeltaMovement().add(
-                    this.attackDirection.x * 1.2D, 0.35D, this.attackDirection.z * 1.2D));
-            player.hurtMarked = true;
+            if (player.hurt(this.damageSources().mobAttack(this), damage)) {
+                player.setDeltaMovement(player.getDeltaMovement().add(
+                        this.attackDirection.x * 1.2D, 0.35D, this.attackDirection.z * 1.2D));
+                player.hurtMarked = true;
+            }
             BossFx.impactBurst(level, player.position().add(0.0D, 0.8D, 0.0D),
-                    ParticleTypes.REVERSE_PORTAL);
+                    BossParticleTheme.RIFT.spark());
         }
     }
 
@@ -612,11 +759,11 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         Vec3 origin = this.position().add(0.0D, this.getBbHeight() * 0.4D, 0.0D);
         level.playSound(null, this.blockPosition(), SoundEvents.IRON_GOLEM_ATTACK,
                 SoundSource.HOSTILE, 2.1F, 0.82F);
-        BossFx.sweepArc(level, origin, this.attackDirection, 7.0D, ParticleTypes.END_ROD);
-        BossFx.sparkSpray(level, origin, this.attackDirection, 8.0D, ParticleTypes.ELECTRIC_SPARK);
+        BossFx.sweepArc(level, origin, this.attackDirection, 7.0D, BossParticleTheme.RIFT.spark());
+        BossFx.sparkSpray(level, origin, this.attackDirection, 8.0D, BossParticleTheme.RIFT.spark());
         this.damageChargeVictims(level, 6.0D, 20.0F);
         BossFx.groundShockwave(level, this.position().add(0.0D, 0.1D, 0.0D),
-                5.5D, ParticleTypes.REVERSE_PORTAL);
+                5.5D, BossParticleTheme.RIFT.ember());
     }
 
     private void tickRiftStorm(ServerLevel level) {
@@ -633,23 +780,23 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         }
         if (this.attackAge <= 37) {
             if (this.attackAge % 2 == 0) {
-                BossFx.chargeSpiral(level, core, this.tickCount * 1.7D, ParticleTypes.REVERSE_PORTAL);
+                BossFx.chargeSpiral(level, core, this.tickCount * 1.7D, BossParticleTheme.RIFT.body());
             }
             if (this.attackAge % 4 == 0) {
                 double radius = 3.0D + this.attackAge * 0.22D;
-                BossFx.ring(level, core, radius, 24, 0.0D, ParticleTypes.ELECTRIC_SPARK);
+                BossFx.ring(level, core, radius, 24, 0.0D, BossParticleTheme.RIFT.ember());
             }
             this.tickStormWarnings(level);
         }
         if (this.phaseTransitionActive && this.attackAge % 4 == 0) {
             this.drawStabilizerBreakGuidance(level, core);
         }
-        // 动画 2.0 秒处双臂下压，全部裂隙同步爆发。
+
         if (this.attackAge == 40) {
             this.releaseRiftStorm(level, core);
         } else if (this.attackAge == 46) {
             BossFx.groundShockwave(level, center.add(0.0D, 0.12D, 0.0D),
-                    15.0D, ParticleTypes.PORTAL);
+                    15.0D, BossParticleTheme.RIFT.ember());
         }
     }
 
@@ -660,19 +807,19 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         Vec3 altarCore = Vec3.atCenterOf(this.arenaCenter).add(0.0D, 0.65D, 0.0D);
         for (BlockPos stabilizerPos : VoidCoreAltarBlock.findStabilizerPositions(level, this.arenaCenter)) {
             Vec3 stabilizer = Vec3.atCenterOf(stabilizerPos).add(0.0D, 0.55D, 0.0D);
-            BossFx.guidanceMarker(level, stabilizer, ParticleTypes.SCULK_SOUL);
+            BossFx.guidanceMarker(level, stabilizer, BossParticleTheme.RIFT.ember());
             BossFx.guidanceFlow(level, stabilizer, altarCore,
-                    ParticleTypes.PORTAL, ParticleTypes.ELECTRIC_SPARK, this.tickCount);
+                    BossParticleTheme.RIFT.ember(), BossParticleTheme.RIFT.ember(), this.tickCount);
         }
-        BossFx.guidanceMarker(level, altarCore, ParticleTypes.END_ROD);
+        BossFx.guidanceMarker(level, altarCore, BossParticleTheme.RIFT.ember());
         BossFx.guidanceFlow(level, altarCore, bossCore,
-                ParticleTypes.REVERSE_PORTAL, ParticleTypes.END_ROD, this.tickCount);
+                BossParticleTheme.RIFT.ember(), BossParticleTheme.RIFT.ember(), this.tickCount);
     }
 
     private void prepareStormMarks(ServerLevel level) {
         this.stormMarks.clear();
-        for (ServerPlayer player : level.players()) {
-            if (this.isValidVictim(player, 26.0D) && this.stormMarks.size() < 4) {
+        for (ServerPlayer player : this.nearbyVictims(level, 26.0D)) {
+            if (this.stormMarks.size() < 4) {
                 this.stormMarks.add(player.position());
             }
         }
@@ -694,10 +841,10 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         for (int i = 0; i < this.stormMarks.size(); i++) {
             Vec3 mark = this.stormMarks.get(i);
             if (pulse) {
-                BossFx.ring(level, mark, 2.7D, 12, 0.12D, ParticleTypes.REVERSE_PORTAL);
+                BossFx.ring(level, mark, 2.7D, 12, 0.12D, BossParticleTheme.RIFT.ember());
             }
             if (this.attackAge % 2 == 0) {
-                level.sendParticles(i % 2 == 0 ? ParticleTypes.END_ROD : ParticleTypes.ELECTRIC_SPARK,
+                level.sendParticles(i % 2 == 0 ? BossParticleTheme.RIFT.spark() : BossParticleTheme.RIFT.spark(),
                         mark.x, mark.y + 0.25D + (this.attackAge - 8) * 0.08D, mark.z,
                         1, 0.12D, 0.22D, 0.12D, 0.0D);
             }
@@ -711,56 +858,55 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                 SoundSource.HOSTILE, 2.5F, 0.82F);
         this.attackHits.clear();
         for (Vec3 mark : this.stormMarks) {
-            BossFx.areaBurst(level, mark.add(0.0D, 0.2D, 0.0D), ParticleTypes.REVERSE_PORTAL);
-            level.sendParticles(ParticleTypes.SONIC_BOOM,
+            BossFx.areaBurst(level, mark.add(0.0D, 0.2D, 0.0D), BossParticleTheme.RIFT.spark());
+            level.sendParticles(BossParticleTheme.RIFT.spark(),
                     mark.x, mark.y + 0.4D, mark.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-            for (ServerPlayer player : level.players()) {
-                if (player.isSpectator() || !player.isAlive()
-                        || player.distanceToSqr(mark) > 9.0D
-                        || !this.attackHits.add(player.getUUID())) {
+            for (ServerPlayer player : this.nearbyPlayers(level, mark, 3.0D, true)) {
+                if (!this.attackHits.add(player.getUUID())) {
                     continue;
                 }
-                player.hurt(this.damageSources().mobAttack(this), 26.0F);
-                Vec3 away = player.position().subtract(mark).multiply(1.0D, 0.0D, 1.0D);
-                if (away.lengthSqr() > 1.0E-4D) {
-                    Vec3 force = away.normalize().scale(1.15D);
-                    player.setDeltaMovement(player.getDeltaMovement().add(force.x, 0.55D, force.z));
-                    player.hurtMarked = true;
+                if (player.hurt(this.damageSources().mobAttack(this), 26.0F)) {
+                    Vec3 away = player.position().subtract(mark).multiply(1.0D, 0.0D, 1.0D);
+                    if (away.lengthSqr() > 1.0E-4D) {
+                        Vec3 force = away.normalize().scale(1.15D);
+                        player.setDeltaMovement(player.getDeltaMovement().add(force.x, 0.55D, force.z));
+                        player.hurtMarked = true;
+                    }
                 }
             }
             this.addRiftScar(mark, 100, 0);
         }
-        BossFx.impactBurst(level, core, ParticleTypes.ELECTRIC_SPARK);
+        BossFx.impactBurst(level, core, BossParticleTheme.RIFT.spark());
         BossFx.groundShockwave(level, this.position().add(0.0D, 0.15D, 0.0D),
-                12.0D, ParticleTypes.REVERSE_PORTAL);
+                12.0D, BossParticleTheme.RIFT.ember());
+        BossFx.cinematicImpact(level, this.position(), 48.0D, 1.0F, 14, 0x7655C9);
     }
 
     private void damageConePlayers(ServerLevel level, double radius, double minimumDot,
                                    float damage, double horizontalForce, double verticalForce) {
-        for (ServerPlayer player : level.players()) {
-            if (!this.isValidVictim(player, radius)) {
-                continue;
-            }
+        for (ServerPlayer player : this.nearbyVictims(level, radius)) {
             Vec3 toVictim = player.position().subtract(this.position()).multiply(1.0D, 0.0D, 1.0D);
             if (toVictim.lengthSqr() > 1.0E-4D
                     && this.attackDirection.dot(toVictim.normalize()) < minimumDot) {
                 continue;
             }
-            player.hurt(this.damageSources().mobAttack(this), damage);
-            player.setDeltaMovement(player.getDeltaMovement().add(
-                    this.attackDirection.x * horizontalForce, verticalForce,
-                    this.attackDirection.z * horizontalForce));
-            player.hurtMarked = true;
+            if (player.hurt(this.damageSources().mobAttack(this), damage)) {
+                player.setDeltaMovement(player.getDeltaMovement().add(
+                        this.attackDirection.x * horizontalForce, verticalForce,
+                        this.attackDirection.z * horizontalForce));
+                player.hurtMarked = true;
+            }
         }
     }
 
-    private void damageAndKnockbackPlayers(ServerLevel level, double radius, float damage,
-                                           double horizontalForce, double verticalForce) {
-        for (ServerPlayer player : level.players()) {
-            if (!this.isValidVictim(player, radius)) {
+    private List<ServerPlayer> damageAndKnockbackPlayers(ServerLevel level, double radius, float damage,
+                                                         double horizontalForce, double verticalForce) {
+        List<ServerPlayer> hitPlayers = new ArrayList<>();
+        for (ServerPlayer player : this.nearbyVictims(level, radius)) {
+            if (!player.hurt(this.damageSources().mobAttack(this), damage)) {
                 continue;
             }
-            player.hurt(this.damageSources().mobAttack(this), damage);
+            hitPlayers.add(player);
             Vec3 away = player.position().subtract(this.position()).multiply(1.0D, 0.0D, 1.0D);
             if (away.lengthSqr() > 1.0E-4D) {
                 Vec3 force = away.normalize().scale(horizontalForce);
@@ -768,15 +914,13 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                 player.hurtMarked = true;
             }
         }
+        return hitPlayers;
     }
 
     private void pullPlayers(ServerLevel level, Vec3 core, double radius,
                              double horizontalForce, double verticalForce,
                              float damage, boolean drawFlow) {
-        for (ServerPlayer player : level.players()) {
-            if (!this.isValidVictim(player, radius)) {
-                continue;
-            }
+        for (ServerPlayer player : this.nearbyVictims(level, radius)) {
             Vec3 playerCenter = player.position().add(0.0D, 0.8D, 0.0D);
             Vec3 towardCore = core.subtract(playerCenter);
             Vec3 horizontal = towardCore.multiply(1.0D, 0.0D, 1.0D);
@@ -790,13 +934,22 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
             }
             if (drawFlow) {
                 BossFx.guidanceFlow(level, playerCenter, core,
-                        ParticleTypes.PORTAL, ParticleTypes.ELECTRIC_SPARK, this.tickCount);
+                        BossParticleTheme.RIFT.ember(), BossParticleTheme.RIFT.ember(), this.tickCount);
             }
         }
     }
 
-    private boolean isValidVictim(ServerPlayer player, double radius) {
-        return !player.isSpectator() && player.isAlive() && player.distanceToSqr(this) <= radius * radius;
+    private List<ServerPlayer> nearbyVictims(ServerLevel level, double radius) {
+        return this.nearbyPlayers(level, this.position(), radius, true);
+    }
+
+    private List<ServerPlayer> nearbyPlayers(ServerLevel level, Vec3 center, double radius,
+                                             boolean requireAlive) {
+        AABB area = new AABB(center, center).inflate(radius);
+        double radiusSqr = radius * radius;
+        return level.getEntitiesOfClass(ServerPlayer.class, area,
+                player -> !player.isSpectator() && (!requireAlive || player.isAlive())
+                        && player.distanceToSqr(center.x, center.y, center.z) <= radiusSqr);
     }
 
     private Vec3 horizontalDirectionTo(LivingEntity target) {
@@ -811,6 +964,11 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
+                && !source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
+                && this.isDeepRechallengeCombatBlocked(serverLevel)) {
+            return false;
+        }
         if (!this.level().isClientSide && source.getEntity() instanceof net.minecraft.world.entity.monster.Enemy) {
             return false;
         }
@@ -832,6 +990,10 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     public boolean doHurtTarget(Entity target) {
+        if (this.level() instanceof ServerLevel serverLevel
+                && this.isDeepRechallengeCombatBlocked(serverLevel)) {
+            return false;
+        }
         if (this.attackMode != AttackMode.NONE || !(target instanceof LivingEntity living)) {
             return false;
         }
@@ -870,17 +1032,17 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
             }
             scar.age++;
             if (scar.age == 1) {
-                level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                level.sendParticles(BossParticleTheme.RIFT.body(),
                         scar.position.x, scar.position.y + 0.12D, scar.position.z,
                         8, 0.22D, 0.1D, 0.22D, 0.08D);
             }
             if (scar.age % 3 == 0) {
-                level.sendParticles(ParticleTypes.PORTAL,
+                level.sendParticles(BossParticleTheme.RIFT.spark(),
                         scar.position.x, scar.position.y + 0.12D, scar.position.z,
                         2, 0.2D, 0.04D, 0.2D, 0.03D);
             }
             if (scar.age % 7 == 0) {
-                level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                level.sendParticles(BossParticleTheme.RIFT.spark(),
                         scar.position.x, scar.position.y + 0.2D, scar.position.z,
                         1, 0.12D, 0.08D, 0.12D, 0.01D);
             }
@@ -895,52 +1057,71 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_EMERGE,
                 SoundSource.HOSTILE, 2.2F, 0.62F);
         BossFx.groundShockwave(level, center.add(0.0D, 0.15D, 0.0D),
-                6.5D, ParticleTypes.REVERSE_PORTAL);
+                6.5D, BossParticleTheme.RIFT.ember());
         for (int ring = 1; ring <= 3; ring++) {
             BossFx.ring(level, center, ring * 2.4D, 24 + ring * 8,
-                    0.2D + ring * 0.08D, ParticleTypes.ELECTRIC_SPARK);
+                    0.2D + ring * 0.08D, BossParticleTheme.RIFT.ember());
         }
-        level.sendParticles(ParticleTypes.SCULK_SOUL,
+        level.sendParticles(BossParticleTheme.RIFT.body(),
                 center.x, center.y + this.getBbHeight() * 0.5D, center.z,
                 56, 1.8D, 2.4D, 1.8D, 0.08D);
     }
 
     @Override
     public void die(DamageSource source) {
+        boolean wasDead = this.dead;
         super.die(source);
-        if (!(this.level() instanceof ServerLevel level)) {
+        if (wasDead || !this.dead || !(this.level() instanceof ServerLevel level)) {
             return;
         }
+        // 死亡演出：核心向内收束、护盾碎裂成虚空尘,不改变结算
+        this.triggerAnim("state_controller", "death");
         this.riftScars.clear();
         this.stormMarks.clear();
         this.attackHits.clear();
         double rewardRadius = ServerConfig.BOSS_REWARD_RADIUS.get();
-        for (ServerPlayer player : level.players()) {
-            if (!player.isSpectator() && this.participants.contains(player.getUUID())
-                    && player.distanceToSqr(this) <= rewardRadius * rewardRadius) {
+        boolean hasEligibleParticipant = false;
+        boolean firstKillDrop = false;
+        for (ServerPlayer player : this.nearbyPlayers(
+                level, this.position(), rewardRadius, false)) {
+            if (this.participants.contains(player.getUUID())) {
+                boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
+                        EchoPermission.RIFT_WARDEN_ID);
+                hasEligibleParticipant = true;
                 if (!EchoAbilityManager.markBossDefeated(player, EchoPermission.RIFT_WARDEN_ID)) {
                     player.sendSystemMessage(Component.translatable(
                             "message.unknown_echoes.progress_record.full"));
                     continue;
                 }
-                player.sendSystemMessage(Component.translatable(
-                        "message.unknown_echoes.rift_warden.defeated"));
+                firstKillDrop |= firstKill;
+            }
+        }
+        if (hasEligibleParticipant) {
+            BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
+                    ModItems.VOID_RIFT_SHARD.get(), 3 + this.random.nextInt(3)));
+            BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
+                    ModItems.SPACE_ANCHOR_SHARD.get(), firstKillDrop ? 2 : 1));
+            BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
+                    ModItems.DEEP_ORE_SCRAP.get(), 2 + this.random.nextInt(3)));
+            if (firstKillDrop || this.random.nextFloat() < 0.25F) {
+                BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
+                        ModItems.VOID_RESEARCH_RUBBING.get()));
             }
         }
         if (this.arenaCenter != null) {
-            BossRechallengeAltarBlockEntity.startCooldown(level, this.arenaCenter);
+            this.finishDeepRechallenge(level);
         }
         Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.52D, 0.0D);
-        BossFx.impactBurst(level, core, ParticleTypes.REVERSE_PORTAL);
+        BossFx.impactBurst(level, core, BossParticleTheme.RIFT.spark());
         for (int ring = 1; ring <= 5; ring++) {
             BossFx.ring(level, core, ring * 2.2D, 28 + ring * 8,
-                    0.0D, ring % 2 == 0 ? ParticleTypes.END_ROD : ParticleTypes.ELECTRIC_SPARK);
+                    0.0D, ring % 2 == 0 ? BossParticleTheme.RIFT.ember() : BossParticleTheme.RIFT.ember());
         }
         level.sendParticles(ParticleTypes.FLASH,
                 core.x, core.y, core.z, 3, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+        level.sendParticles(BossParticleTheme.RIFT.body(),
                 core.x, core.y, core.z, 220, 3.4D, 3.2D, 3.4D, 0.42D);
-        level.sendParticles(ParticleTypes.SCULK_SOUL,
+        level.sendParticles(BossParticleTheme.RIFT.body(),
                 core.x, core.y, core.z, 80, 2.2D, 2.8D, 2.2D, 0.18D);
         level.playSound(null, this.blockPosition(), SoundEvents.WITHER_DEATH,
                 SoundSource.HOSTILE, 2.5F, 0.72F);
@@ -984,7 +1165,7 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     public void checkDespawn() {
-        // 主线 Boss 不自然消失。
+
     }
 
     @Override
@@ -994,23 +1175,24 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.ENDERMAN_AMBIENT;
+        return ModSounds.RIFT_WARDEN_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.WARDEN_HURT;
+        return ModSounds.RIFT_WARDEN_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.WARDEN_DEATH;
+        return ModSounds.RIFT_WARDEN_DEATH.get();
     }
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("PhaseGateStage", this.phaseGateStage);
+        tag.putInt("ScaledParticipants", this.scaledParticipants);
         tag.putBoolean("PhaseTransitionPending",
                 this.phaseTransitionPending || this.phaseTransitionActive);
         if (this.arenaCenter != null) {
@@ -1030,6 +1212,7 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
         this.phaseGateStage = Math.max(0, Math.min(2, tag.getInt("PhaseGateStage")));
         this.phaseTransitionPending = tag.getBoolean("PhaseTransitionPending");
         this.phaseTransitionActive = false;
+        this.scaledParticipants = BossNbtData.clampParticipantScale(tag.getInt("ScaledParticipants"));
         this.attackMode = AttackMode.NONE;
         this.attackAge = 0;
         this.attackDuration = 0;
@@ -1054,11 +1237,39 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss {
                 .triggerableAnim("shield_break", SHIELD_BREAK)
                 .triggerableAnim("rift_charge", RIFT_CHARGE)
                 .triggerableAnim("rift_storm", RIFT_STORM));
+        // 状态演出单独一个 controller：入场、锚定破裂提示、风暴预告与死亡都可能与攻击并发。
+        controllers.add(new AnimationController<>(this, "state_controller", 0, state -> PlayState.STOP)
+                .triggerableAnim("awaken", AWAKEN)
+                .triggerableAnim("phase_lock", PHASE_LOCK)
+                .triggerableAnim("phase_open", PHASE_OPEN)
+                .triggerableAnim("storm_call", STORM_CALL)
+                .triggerableAnim("death", DEATH));
     }
 
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
+    }
+
+    private void syncVisualAttackState() {
+        this.entityData.set(DATA_VISUAL_ATTACK_MODE, this.attackMode.ordinal());
+        this.entityData.set(DATA_VISUAL_ATTACK_AGE, this.attackAge);
+        this.entityData.set(DATA_VISUAL_ATTACK_DURATION, this.attackDuration);
+    }
+
+    @Override
+    public int visualAttackMode() {
+        return this.entityData.get(DATA_VISUAL_ATTACK_MODE);
+    }
+
+    @Override
+    public int visualAttackAge() {
+        return this.entityData.get(DATA_VISUAL_ATTACK_AGE);
+    }
+
+    @Override
+    public int visualAttackDuration() {
+        return this.entityData.get(DATA_VISUAL_ATTACK_DURATION);
     }
 
     private enum AttackMode {

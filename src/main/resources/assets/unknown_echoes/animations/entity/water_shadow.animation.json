@@ -23,25 +23,6 @@
             ]
           }
         },
-        "head": {
-          "rotation": {
-            "0.0": [
-              -10,
-              0,
-              6
-            ],
-            "0.6": [
-              8,
-              0,
-              -5
-            ],
-            "1.2": [
-              -10,
-              0,
-              6
-            ]
-          }
-        },
         "seg_b": {
           "rotation": {
             "0.0": [
@@ -136,12 +117,31 @@
               -14
             ]
           }
+        },
+        "head_anim": {
+          "rotation": {
+            "0.0": [
+              -10,
+              0,
+              6
+            ],
+            "0.6": [
+              8,
+              0,
+              -5
+            ],
+            "1.2": [
+              -10,
+              0,
+              6
+            ]
+          }
         }
       },
       "loop": true
     },
     "animation.water_shadow.attack": {
-      "animation_length": 0.45,
+      "animation_length": 0.5,
       "bones": {
         "body": {
           "rotation": {

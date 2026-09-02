@@ -4,6 +4,7 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.archive.EchoArchiveTerminalBlockEntity;
 import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlockEntity;
 import cn.kurt6.unknown_echoes.block.deep.BossRechallengeAltarBlockEntity;
+import cn.kurt6.unknown_echoes.block.deep.EndingRecordTableBlockEntity;
 import cn.kurt6.unknown_echoes.block.deep.GravityFieldCoreBlockEntity;
 import cn.kurt6.unknown_echoes.block.deep.WorldResonanceAltarBlockEntity;
 import cn.kurt6.unknown_echoes.block.puzzle.PuzzleCoreBlockEntity;
@@ -21,6 +22,18 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("puzzle_core",
                     () -> BlockEntityType.Builder.of(PuzzleCoreBlockEntity::new,
                             ModBlocks.PUZZLE_CORE.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<cn.kurt6.unknown_echoes.block.puzzle.ChimeEchoCoreBlockEntity>> CHIME_ECHO_CORE =
+            BLOCK_ENTITY_TYPES.register("chime_echo_core",
+                    () -> BlockEntityType.Builder.of(
+                            cn.kurt6.unknown_echoes.block.puzzle.ChimeEchoCoreBlockEntity::new,
+                            ModBlocks.CHIME_ECHO_CORE.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<cn.kurt6.unknown_echoes.block.puzzle.FoldpagePairCoreBlockEntity>> FOLDPAGE_PAIR_CORE =
+            BLOCK_ENTITY_TYPES.register("foldpage_pair_core",
+                    () -> BlockEntityType.Builder.of(
+                            cn.kurt6.unknown_echoes.block.puzzle.FoldpagePairCoreBlockEntity::new,
+                            ModBlocks.FOLDPAGE_PAIR_CORE.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MiniBossSpawnerBlockEntity>> MINIBOSS_SPAWNER =
             BLOCK_ENTITY_TYPES.register("miniboss_spawner",
@@ -69,4 +82,9 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("world_resonance_altar",
                     () -> BlockEntityType.Builder.of(WorldResonanceAltarBlockEntity::new,
                             ModBlocks.WORLD_RESONANCE_ALTAR.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EndingRecordTableBlockEntity>> ENDING_RECORD_TABLE =
+            BLOCK_ENTITY_TYPES.register("ending_record_table",
+                    () -> BlockEntityType.Builder.of(EndingRecordTableBlockEntity::new,
+                            ModBlocks.ENDING_RECORD_TABLE.get()).build(null));
 }

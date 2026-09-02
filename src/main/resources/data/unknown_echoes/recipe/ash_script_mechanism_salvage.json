@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:ash_script_mechanism" },
+    { "item": "unknown_echoes:ash_script_mechanism" }
+  ],
+  "result": {
+    "id": "unknown_echoes:deep_alloy_ingot"
+  }
+}

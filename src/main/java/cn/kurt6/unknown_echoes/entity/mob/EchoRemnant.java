@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
+import cn.kurt6.unknown_echoes.entity.ai.FlankTargetGoal;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -13,7 +15,12 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.ZombieAttackGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -24,10 +31,7 @@ import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * 回响残影:回响森林与遗迹外围的基础敌怪。
- * 只掉落普通回响粉尘;残页线索仍由结构、箱表或个人进度系统控制。
- */
+/** 回响残影:回响森林与遗迹外围的基础敌怪。 */
 public class EchoRemnant extends Zombie implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.echo_remnant.idle");
@@ -65,6 +69,20 @@ public class EchoRemnant extends Zombie implements GeoEntity {
         return false;
     }
 
+    /**
+     * 覆写 Zombie 的行为组:去掉村庄穿行(本 Mod 无村民),补侧翼包夹与同族拉群。
+     * 战术 Goal 的优先级数必须小于近战,MOVE 只能被更小的数抢走。
+     */
+    @Override
+    protected void addBehaviourGoals() {
+        this.goalSelector.addGoal(1, new FlankTargetGoal(this, 1.1D));
+        this.goalSelector.addGoal(2, new ZombieAttackGoal(this, 1.0D, false));
+        this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.0D));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(3, new AlertPackGoal(this, 14.0D));
+    }
+
     @Override
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
@@ -82,17 +100,17 @@ public class EchoRemnant extends Zombie implements GeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return ModSounds.ECHO_WANDERER_AMBIENT.get();
+        return ModSounds.ECHO_REMNANT_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return ModSounds.ECHO_WANDERER_HURT.get();
+        return ModSounds.ECHO_REMNANT_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return ModSounds.ECHO_WANDERER_DEATH.get();
+        return ModSounds.ECHO_REMNANT_DEATH.get();
     }
 
     @Override

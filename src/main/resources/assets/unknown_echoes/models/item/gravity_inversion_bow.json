@@ -1,0 +1,20 @@
+{
+  "parent": "minecraft:item/bow",
+  "textures": {
+    "layer0": "unknown_echoes:item/gravity_inversion_bow"
+  },
+  "overrides": [
+    {
+      "predicate": { "pulling": 1 },
+      "model": "unknown_echoes:item/gravity_inversion_bow_pulling_0"
+    },
+    {
+      "predicate": { "pulling": 1, "pull": 0.45 },
+      "model": "unknown_echoes:item/gravity_inversion_bow_pulling_1"
+    },
+    {
+      "predicate": { "pulling": 1, "pull": 0.7 },
+      "model": "unknown_echoes:item/gravity_inversion_bow_pulling_2"
+    }
+  ]
+}

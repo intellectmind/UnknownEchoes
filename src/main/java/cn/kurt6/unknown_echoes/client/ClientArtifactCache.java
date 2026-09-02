@@ -6,10 +6,7 @@ import net.minecraft.client.Minecraft;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * 客户端神器/能量展示缓存(纯表现层,5.8:客户端只展示、服务端是数据源)。
- * 能量按服务端同步的百分比速率 + gameTime 戳本地外推,服务端只在变更时推送。
- */
+/** 客户端神器与能量展示缓存；服务端是唯一数据源。 */
 public class ClientArtifactCache {
 
     /** 单件神器的展示数据；耗能单位为 1/20 点。 */
@@ -67,19 +64,24 @@ public class ClientArtifactCache {
         }
         long now = currentGameTime();
         long elapsed = syncGameTime >= 0L && syncGameTime <= now ? now - syncGameTime : 0L;
-        long value = Math.min((long) maxEnergy * 20,
-                energyTwentieths + elapsed * (long) regenHundredthsPerTick / 100L);
+        long capacity = Math.max(0L, (long) maxEnergy * 20L);
+        long regenerated = saturatedMultiply(elapsed, Math.max(0L, regenHundredthsPerTick)) / 100L;
+        long baseEnergy = Math.max(0L, energyTwentieths);
+        long value = Math.min(capacity,
+                baseEnergy > Long.MAX_VALUE - regenerated
+                        ? Long.MAX_VALUE : baseEnergy + regenerated);
         return (int) (value / 20);
     }
 
-    /** 神器剩余冷却秒数(0=就绪)。 */
     public static int getCooldownSeconds(String artifactId) {
         Entry entry = ARTIFACTS.get(artifactId);
         if (entry == null) {
             return 0;
         }
-        long remain = entry.cooldownEnd() - currentGameTime();
-        return remain <= 0 ? 0 : (int) Math.ceil(remain / 20.0);
+        long now = currentGameTime();
+        long remain = entry.cooldownEnd() > now ? entry.cooldownEnd() - now : 0L;
+        long seconds = remain / 20L + (remain % 20L == 0L ? 0L : 1L);
+        return (int) Math.min(Integer.MAX_VALUE, seconds);
     }
 
     private static long currentGameTime() {
@@ -87,7 +89,17 @@ public class ClientArtifactCache {
         if (level == null) {
             return syncGameTime;
         }
-        return syncGameTime + Math.max(0L, level.getGameTime() - localGameTimeAtSync);
+        long base = Math.max(0L, syncGameTime);
+        long localNow = level.getGameTime();
+        long elapsed = localNow >= localGameTimeAtSync ? localNow - localGameTimeAtSync : 0L;
+        return base > Long.MAX_VALUE - elapsed ? Long.MAX_VALUE : base + elapsed;
+    }
+
+    private static long saturatedMultiply(long left, long right) {
+        if (left <= 0L || right <= 0L) {
+            return 0L;
+        }
+        return left > Long.MAX_VALUE / right ? Long.MAX_VALUE : left * right;
     }
 
     public static void clear() {

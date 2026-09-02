@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:hushed_cathedral", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 58,
+    "separation": 20,
+    "salt": 1358027749,
+    "frequency": 0.0
+  }
+}

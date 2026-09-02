@@ -1,11 +1,14 @@
 package cn.kurt6.unknown_echoes.artifact;
 
 import cn.kurt6.unknown_echoes.network.OpenArtifactStationPayload;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
@@ -18,17 +21,31 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-/**
- * 神器台座(V0.6D 12.2):RECORD=记录台(领取/复领凭据),TUNING=升级台(升级/调谐)。
- * 交互只打开回响总览"神器"页并携带台座上下文(5.8:不开独立原版界面);
- * 实际领取/升级/调谐由 ArtifactActionPayload 回到服务端,经 ArtifactManager 校验距离与资格落账。
- */
 public class ArtifactStationBlock extends Block {
 
-    public enum Mode { RECORD, TUNING }
+    public enum Mode implements StringRepresentable {
+        RECORD("record"),
+        TUNING("tuning");
 
-    public static final MapCodec<ArtifactStationBlock> CODEC = simpleCodec(
-            properties -> new ArtifactStationBlock(Mode.RECORD, properties));
+        public static final Codec<Mode> CODEC = StringRepresentable.fromEnum(Mode::values);
+
+        private final String serializedName;
+
+        Mode(String serializedName) {
+            this.serializedName = serializedName;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return serializedName;
+        }
+    }
+
+    public static final MapCodec<ArtifactStationBlock> CODEC = RecordCodecBuilder.mapCodec(instance ->
+            instance.group(
+                    Mode.CODEC.fieldOf("mode").forGetter(block -> block.mode),
+                    propertiesCodec()
+            ).apply(instance, ArtifactStationBlock::new));
 
     /** 玩家与台座的最大有效操作距离(服务端校验 ArtifactActionPayload 用)。 */
     public static final double USE_RANGE = 6.0D;
@@ -67,7 +84,7 @@ public class ArtifactStationBlock extends Block {
         }
         if (player instanceof ServerPlayer serverPlayer) {
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.8F, 1.1F);
-            // 先推一次最新神器/能量数据,再让客户端打开神器页(数据先行,UI 只展示)
+
             ArtifactManager.syncToClient(serverPlayer);
             PacketDistributor.sendToPlayer(serverPlayer, new OpenArtifactStationPayload(
                     mode == Mode.RECORD ? OpenArtifactStationPayload.MODE_RECORD

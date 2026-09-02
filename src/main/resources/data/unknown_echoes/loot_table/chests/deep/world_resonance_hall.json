@@ -34,6 +34,16 @@
         { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 164 } } ] },
         { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 166 } } ] },
         { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 167 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 198 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 199 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 200 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 201 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 202 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 203 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 204 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 205 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 206 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:ancient_page", "weight": 3, "functions": [ { "function": "minecraft:set_components", "components": { "unknown_echoes:page_id": 207 } } ] },
         { "type": "minecraft:empty", "weight": 2 }
       ]
     },

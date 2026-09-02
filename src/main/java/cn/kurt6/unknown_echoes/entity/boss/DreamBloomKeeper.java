@@ -2,7 +2,6 @@ package cn.kurt6.unknown_echoes.entity.boss;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
@@ -42,17 +41,6 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 沉眠花守:沉眠花屋地下温室 Mini Boss(设计文档 10.4 / 重设计 P2)。
- *
- * 机制(低杀伤 + 治疗花苞,设计红线 #4 用机制而非血量做门槛):
- * - 治疗花苞:周期性绽放(bloom)在场地内召唤数枚治疗花苞,花苞存在期间持续回血且受护(未破防)。
- *   玩家走近花苞将其清除;全部清除后进入 12 秒"凋萎"暴露窗口——停止回血、可全额输出,且暂不能再绽放。
- * - 梦雾(mist):正面锥形喷吐,使玩家缓速 + 反胃(低伤、控制为主)。
- * - 花粉爆(nova):贴身花粉爆发,击退 + 虚弱。
- * - 藤臂横扫(swipe):近战命中附带缓速 + 反胃。
- * 结算沿用 MiniBossEntity 个人首杀/重复发放(MiniBossRewardTable)。
- */
 public class DreamBloomKeeper extends MiniBossEntity {
     public static final ResourceLocation MINIBOSS_ID = UnknownEchoes.id("dream_bloom_keeper");
 
@@ -71,9 +59,16 @@ public class DreamBloomKeeper extends MiniBossEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    private static final int ARENA_RADIUS = 12;
-    private static final int EXPOSED_WINDOW = 240; // 凋萎暴露窗口 12s
+    private static final int ARENA_RADIUS = 14;
+    private static final int EXPOSED_WINDOW = 240;
     private static final int BUD_COUNT = 3;
+    /** 玩家站进这个半径即掐灭花苞。演出环画在这个值上，两处必须同一个常量。 */
+    private static final double BUD_DOUSE_RADIUS = 2.0D;
+    /** 花冠新星的水平结算半径。 */
+    private static final double NOVA_RADIUS = 4.0D;
+    /** 梦雾的锥形射程与锥半角(弧度)，由结算侧的 dot 阈值 0.35 反算。 */
+    private static final double MIST_RANGE = 7.0D;
+    private static final double MIST_MIN_DOT = 0.35D;
 
     /** 当前在场治疗花苞位置;非空 = 正在回血且受护。 */
     private final List<Vec3> healingBuds = new ArrayList<>();
@@ -122,7 +117,7 @@ public class DreamBloomKeeper extends MiniBossEntity {
 
     @Override
     protected boolean isDamageGuarded() {
-        // 治疗花苞存在期间受护(回血+减伤);凋萎窗口或无花苞时可全额输出
+
         return !this.healingBuds.isEmpty();
     }
 
@@ -134,23 +129,25 @@ public class DreamBloomKeeper extends MiniBossEntity {
     @Override
     protected void tickMechanicGuidance(ServerLevel level) {
         Vec3 core = this.position().add(0, 1.0, 0);
+        long age = level.getGameTime();
         for (Vec3 bud : this.healingBuds) {
             Vec3 marker = bud.add(0, 0.4, 0);
-            BossFx.guidanceMarker(level, marker, ParticleTypes.HAPPY_VILLAGER);
-            BossFx.guidanceLink(level, marker, core, ParticleTypes.GLOW);
+            MiniBossFx.objectiveMarker(level, marker, this.fxTheme(), age);
+            MiniBossFx.objectiveLink(level, marker, core, this.fxTheme(), age);
         }
     }
 
     @Override
-    protected void grantSettlement(ServerPlayer player, boolean firstKill) {
-        MiniBossRewardTable.grantDreamBloomKeeper(this, player, firstKill);
+    protected void grantSettlement(boolean firstKill) {
+        MiniBossRewardTable.grantDreamBloomKeeper(this, firstKill);
     }
-
-    // ---- 主循环 ----
 
     @Override
     public void aiStep() {
         super.aiStep();
+        if (this.isSpawnerBindingPaused()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -162,8 +159,8 @@ public class DreamBloomKeeper extends MiniBossEntity {
         if (this.exposedTicks > 0) {
             this.exposedTicks--;
             if (this.tickCount % 6 == 0) {
-                serverLevel.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR,
-                        this.getX(), this.getY() + 1.6, this.getZ(), 4, 0.5, 0.6, 0.5, 0.0);
+                MiniBossFx.breachAura(serverLevel, this, this.fxTheme(),
+                        serverLevel.getGameTime());
             }
         } else if (!this.healingBuds.isEmpty()) {
             this.tickHealingBuds(serverLevel);
@@ -174,33 +171,30 @@ public class DreamBloomKeeper extends MiniBossEntity {
         this.tickSpecialAttacks(serverLevel);
     }
 
-    /** 治疗花苞:持续回血 + 粒子;玩家走近清除;全清后进入凋萎暴露窗口。 */
     private void tickHealingBuds(ServerLevel serverLevel) {
         if (this.tickCount % 20 == 0 && this.getHealth() < this.getMaxHealth()) {
             this.heal(this.getMaxHealth() * 0.015F * this.healingBuds.size());
         }
         for (Vec3 bud : this.healingBuds) {
             if (this.tickCount % 4 == 0) {
-                serverLevel.sendParticles(ParticleTypes.CHERRY_LEAVES,
-                        bud.x, bud.y + 0.6, bud.z, 2, 0.25, 0.4, 0.25, 0.0);
-                serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER,
-                        bud.x, bud.y + 0.4, bud.z, 1, 0.2, 0.3, 0.2, 0.0);
+                // 环画在"踩进去就熄灭"的那个半径上，玩家能读出要站到哪里。
+                MiniBossFx.groundRing(serverLevel, bud, this.fxTheme(), BUD_DOUSE_RADIUS);
             }
         }
-        // 清除:任意玩家靠近(2 格内)
-        this.healingBuds.removeIf(bud -> hasNearbyAlivePlayer(serverLevel, bud, 4.0D));
+
+        this.healingBuds.removeIf(bud ->
+                hasNearbyAlivePlayer(serverLevel, bud, BUD_DOUSE_RADIUS * BUD_DOUSE_RADIUS));
         if (this.healingBuds.isEmpty()) {
             this.exposedTicks = EXPOSED_WINDOW;
-            this.playSound(ModSounds.DREAM_BLOOM_KEEPER_BLOOM.get(), 1.0F, 1.4F);
+            this.playSound(ModSounds.DREAM_BLOOM_KEEPER_BUDS.get(), 1.0F, 1.0F);
             this.broadcastHint(serverLevel, "message.unknown_echoes.dream_bloom_keeper.exposed");
         }
     }
 
-    /** 绽放:召唤治疗花苞 + 小幅回血。 */
     private void castBloom(ServerLevel serverLevel) {
         this.bloomCooldown = 400;
         this.triggerAnim("attack_controller", "bloom");
-        this.playSound(ModSounds.DREAM_BLOOM_KEEPER_BLOOM.get(), 1.2F, 0.7F);
+        this.playSound(ModSounds.DREAM_BLOOM_KEEPER_BLOOM.get(), 1.2F, 1.0F);
         this.heal(6.0F);
         Vec3 anchor = Vec3.atCenterOf(this.arenaAnchor());
         for (int i = 0; i < BUD_COUNT; i++) {
@@ -208,18 +202,19 @@ public class DreamBloomKeeper extends MiniBossEntity {
             double dist = 4.0 + this.random.nextDouble() * (ARENA_RADIUS - 6);
             Vec3 bud = new Vec3(anchor.x + Math.cos(angle) * dist, anchor.y, anchor.z + Math.sin(angle) * dist);
             this.healingBuds.add(bud);
-            serverLevel.sendParticles(ParticleTypes.CHERRY_LEAVES, bud.x, bud.y + 0.5, bud.z, 12, 0.3, 0.5, 0.3, 0.02);
+            MiniBossFx.impactZone(serverLevel, bud, this.fxTheme(), BUD_DOUSE_RADIUS, 1.0D);
         }
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                28.0D, 0.34F, 5, this.combatImpactColor());
         this.broadcastHint(serverLevel, "message.unknown_echoes.dream_bloom_keeper.guarded");
     }
 
     private static boolean hasNearbyAlivePlayer(ServerLevel level, Vec3 pos, double rangeSqr) {
-        for (ServerPlayer player : level.players()) {
-            if (!player.isSpectator() && player.isAlive() && player.distanceToSqr(pos) <= rangeSqr) {
-                return true;
-            }
-        }
-        return false;
+        double range = Math.sqrt(rangeSqr);
+        return !level.getEntitiesOfClass(ServerPlayer.class,
+                new AABB(pos, pos).inflate(range),
+                player -> !player.isSpectator() && player.isAlive()
+                        && player.distanceToSqr(pos) <= rangeSqr).isEmpty();
     }
 
     private void tickSpecialAttacks(ServerLevel serverLevel) {
@@ -237,82 +232,74 @@ public class DreamBloomKeeper extends MiniBossEntity {
         }
     }
 
-    /** 孢子弹:远程直击,梦雾孢子弹道,命中缓速 + 反胃(补齐花守的远程手段)。 */
     private void castSporeBolt(ServerLevel serverLevel, LivingEntity target) {
         this.sporeBoltCooldown = 90;
         this.triggerAnim("attack_controller", "mist");
-        this.playSound(ModSounds.DREAM_BLOOM_KEEPER_AMBIENT.get(), 1.1F, 1.2F);
-        double ex = this.getX(), ey = this.getEyeY(), ez = this.getZ();
-        double tx = target.getX(), ty = target.getY() + target.getBbHeight() * 0.5, tz = target.getZ();
-        int steps = 14;
-        for (int i = 1; i <= steps; i++) {
-            double f = i / (double) steps;
-            double px = ex + (tx - ex) * f, py = ey + (ty - ey) * f, pz = ez + (tz - ez) * f;
-            serverLevel.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR, px, py, pz, 2, 0.08, 0.08, 0.08, 0.0);
-            serverLevel.sendParticles(ParticleTypes.CHERRY_LEAVES, px, py, pz, 1, 0.05, 0.05, 0.05, 0.0);
-        }
+        this.playSound(ModSounds.DREAM_BLOOM_KEEPER_SPORE_BOLT.get(), 1.1F, 1.0F);
+        Vec3 origin = this.position().add(0.0D, this.getEyeHeight(), 0.0D);
+        Vec3 waist = target.position().add(0.0D, target.getBbHeight() * 0.5D, 0.0D);
+        Vec3 delta = waist.subtract(origin);
+        MiniBossFx.pierceBeam(serverLevel, origin, delta, this.fxTheme(), delta.length());
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.45F;
-        target.hurt(this.damageSources().mobAttack(this), damage);
-        if (target instanceof Player) {
+        if (target.hurt(this.damageSources().mobAttack(this), damage) && target instanceof Player) {
             target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 0), this);
             target.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 60, 0), this);
+            MiniBossFx.hitMark(serverLevel, target, this.fxTheme());
         }
-        BossFx.sparkSpray(serverLevel, this.position().add(0, this.getEyeHeight(), 0),
-                target.position().subtract(this.position()), 6.0, ParticleTypes.CHERRY_LEAVES);
+        BossFx.cinematicImpact(serverLevel, waist, 18.0D, 0.2F, 4,
+                this.combatImpactColor());
     }
 
-    /** 梦雾锥:正面 ~7 格内玩家缓速 + 反胃(低伤控制)。 */
     private void castMist(ServerLevel serverLevel, LivingEntity target) {
         this.mistCooldown = 160;
         this.triggerAnim("attack_controller", "mist");
-        this.playSound(ModSounds.DREAM_BLOOM_KEEPER_AMBIENT.get(), 1.2F, 0.8F);
+        this.playSound(ModSounds.DREAM_BLOOM_KEEPER_MIST.get(), 1.2F, 1.0F);
         Vec3 forward = target.position().subtract(this.position()).multiply(1, 0, 1).normalize();
-        for (double d = 1.0; d <= 7.0; d += 1.0) {
-            Vec3 p = this.position().add(forward.scale(d)).add(0, 1.2, 0);
-            serverLevel.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR, p.x, p.y, p.z, 6, 0.6, 0.5, 0.6, 0.0);
-            serverLevel.sendParticles(ParticleTypes.WITCH, p.x, p.y, p.z, 2, 0.5, 0.4, 0.5, 0.0);
-        }
-        BossFx.sparkSpray(serverLevel, this.position().add(0, 1.2, 0), forward, 7.0, ParticleTypes.SPORE_BLOSSOM_AIR);
-        for (Player victim : serverLevel.players()) {
-            if (victim.isSpectator() || !victim.isAlive() || victim.distanceToSqr(this) > 64.0) {
-                continue;
-            }
+        // 锥半角由结算侧的 dot 阈值反算，画出来的扇形与实际吃效果的区域同构。
+        MiniBossFx.coneSpray(serverLevel, this.position().add(0, 1.2, 0), forward,
+                this.fxTheme(), MIST_RANGE, Math.acos(MIST_MIN_DOT));
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                24.0D, 0.28F, 4, this.combatImpactColor());
+        for (ServerPlayer victim : serverLevel.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(MIST_RANGE + 1.0D),
+                candidate -> !candidate.isSpectator() && candidate.isAlive()
+                        && candidate.distanceToSqr(this) <= MIST_RANGE * MIST_RANGE)) {
             Vec3 toVictim = victim.position().subtract(this.position()).multiply(1, 0, 1);
-            if (toVictim.lengthSqr() > 1.0E-4 && toVictim.normalize().dot(forward) > 0.35) {
+            if (toVictim.lengthSqr() > 1.0E-4
+                    && toVictim.normalize().dot(forward) > MIST_MIN_DOT) {
                 victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 1), this);
                 victim.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 120, 0), this);
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
             }
         }
     }
 
-    /** 花粉爆:贴身 ~4 格 AoE 击退 + 虚弱。 */
     private void castNova(ServerLevel serverLevel) {
         this.novaCooldown = 240;
         this.triggerAnim("attack_controller", "nova");
-        this.playSound(ModSounds.DREAM_BLOOM_KEEPER_AMBIENT.get(), 1.4F, 0.6F);
+        this.playSound(ModSounds.DREAM_BLOOM_KEEPER_NOVA.get(), 1.4F, 1.0F);
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.5F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                this.getBoundingBox().inflate(4.0, 2.0, 4.0),
+                this.getBoundingBox().inflate(NOVA_RADIUS, 2.0, NOVA_RADIUS),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 0), this);
             Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
-            if (away.lengthSqr() > 1.0E-4) {
-                Vec3 dir = away.normalize();
-                victim.setDeltaMovement(victim.getDeltaMovement().add(dir.x * 0.6, 0.35, dir.z * 0.6));
-                victim.hurtMarked = true;
+            if (away.lengthSqr() > NOVA_RADIUS * NOVA_RADIUS) {
+                continue;
+            }
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 0), this);
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
+                if (away.lengthSqr() > 1.0E-4) {
+                    Vec3 dir = away.normalize();
+                    victim.setDeltaMovement(victim.getDeltaMovement().add(
+                            dir.x * 0.6, 0.35, dir.z * 0.6));
+                    victim.hurtMarked = true;
+                }
             }
         }
-        for (int i = 0; i < 28; i++) {
-            double angle = Math.PI * 2 * i / 28;
-            serverLevel.sendParticles(ParticleTypes.CHERRY_LEAVES,
-                    this.getX(), this.getY() + 1.4, this.getZ(),
-                    0, Math.cos(angle) * 0.6, 0.1, Math.sin(angle) * 0.6, 1.0);
-        }
-        serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER,
-                this.getX(), this.getY() + 1.4, this.getZ(), 20, 1.5, 0.8, 1.5, 0.0);
-        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.3, 0), 4.0, ParticleTypes.CHERRY_LEAVES);
-        BossFx.impactBurst(serverLevel, this.position().add(0, 1.2, 0), ParticleTypes.CHERRY_LEAVES);
+        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), NOVA_RADIUS);
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                26.0D, 0.54F, 7, this.combatImpactColor());
     }
 
     @Override
@@ -322,20 +309,16 @@ public class DreamBloomKeeper extends MiniBossEntity {
             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1), this);
             player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 80, 0), this);
             this.triggerAnim("attack_controller", "swipe");
-            if (this.level() instanceof ServerLevel serverLevel) {
-                BossFx.impactBurst(serverLevel,
-                        target.position().add(0, target.getBbHeight() * 0.5, 0), ParticleTypes.CHERRY_LEAVES);
-            }
         }
         return hit;
     }
 
     private void broadcastHint(ServerLevel serverLevel, String key) {
         double radius = settlementRadius();
-        for (ServerPlayer player : serverLevel.players()) {
-            if (player.distanceToSqr(this) <= radius * radius) {
-                player.displayClientMessage(Component.translatable(key), true);
-            }
+        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(radius),
+                candidate -> candidate.distanceToSqr(this) <= radius * radius)) {
+            player.displayClientMessage(Component.translatable(key), true);
         }
     }
 

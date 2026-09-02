@@ -5,25 +5,39 @@
       "rolls": 1,
       "entries": [
         {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:tide_grass"
-        }
-      ]
-    },
-    {
-      "rolls": 1,
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:tide_glass_eel"
+          "type": "minecraft:alternatives",
+          "children": [
+            {
+              "type": "minecraft:item",
+              "name": "unknown_echoes:tide_grass",
+              "conditions": [
+                {
+                  "condition": "minecraft:match_tool",
+                  "predicate": {
+                    "items": ["minecraft:shears", "unknown_echoes:echo_shears"]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "unknown_echoes:tide_glass_eel",
+              "conditions": [
+                {
+                  "condition": "minecraft:random_chance",
+                  "chance": 0.35
+                }
+              ]
+            }
+          ]
         }
       ],
       "conditions": [
         {
-          "condition": "minecraft:random_chance",
-          "chance": 0.35
+          "condition": "minecraft:survives_explosion"
         }
       ]
     }
-  ]
+  ],
+  "random_sequence": "unknown_echoes:blocks/tide_grass"
 }

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:glass"
+    },
+    {
+      "item": "unknown_echoes:silent_resin"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:hush_lantern_glass",
+    "count": 2
+  }
+}

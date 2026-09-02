@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:far_bell_wayfarer_harbor", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 88,
+    "separation": 42,
+    "salt": 184297579,
+    "frequency": 0.0
+  }
+}

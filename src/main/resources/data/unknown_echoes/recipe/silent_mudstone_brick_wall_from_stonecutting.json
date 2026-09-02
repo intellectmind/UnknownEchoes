@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:silent_mudstone_bricks"
+  },
+  "result": {
+    "id": "unknown_echoes:silent_mudstone_brick_wall",
+    "count": 1
+  }
+}

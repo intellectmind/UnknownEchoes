@@ -2,11 +2,13 @@ package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.trade.EchoTradeManager;
+import cn.kurt6.unknown_echoes.worldevent.WorldEventType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
@@ -26,17 +28,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animation.Animation;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * 迷途旅者(9.2/16.4):仍残留聆者血脉的流浪者——听得见,但听不懂。
- * 非任务型中立 NPC:给出模糊提示、出售少量特殊物品;不发布任务,不出售任何关键进度物。
- * 交易入口走自绘交易 Screen(5.8):右键由服务端下发交易表,不打开原版 Merchant。
- * 营地随时间更换(4.2.1):驻留时间到后离开；事件不放置任何世界方块。
- */
+/** 迷途旅者：仍残留聆者血脉的流浪者，听得见却听不懂。 */
 public class LostTraveler extends PathfinderMob implements GeoEntity {
 
     private static final int MAX_HORIZONTAL_COORDINATE = 30_000_000;
@@ -46,6 +44,8 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
             RawAnimation.begin().thenLoop("animation.lost_traveler.idle");
     private static final RawAnimation WALK_ANIM =
             RawAnimation.begin().thenLoop("animation.lost_traveler.walk");
+    private static final RawAnimation INSPECT_ANIM =
+            RawAnimation.begin().then("animation.lost_traveler.inspect", Animation.LoopType.PLAY_ONCE);
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
@@ -53,6 +53,7 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
     private BlockPos stayAnchorPos;
     /** 驻留截止 gameTime;0=常驻(刷怪蛋/指令生成的旅者不自动离开)。 */
     private long stayUntil;
+    private long lastObservedGameTime;
 
     public LostTraveler(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -80,14 +81,27 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
         this.stayAnchorPos = anchorPos;
         long duration = ServerConfig.LOST_TRAVELER_STAY_TICKS.get();
         this.stayUntil = duration > Long.MAX_VALUE - gameTime ? Long.MAX_VALUE : gameTime + duration;
+        this.lastObservedGameTime = gameTime;
         this.restrictTo(anchorPos, 12);
     }
 
     @Override
     public void aiStep() {
         super.aiStep();
-        if (this.level().isClientSide || this.stayUntil <= 0
-                || this.level().getGameTime() < this.stayUntil) {
+        if (this.level().isClientSide || this.stayUntil <= 0) {
+            return;
+        }
+        if (!ServerConfig.WORLD_EVENTS_ENABLED.get()
+                || !ServerConfig.LOST_TRAVELER_CAMP_EVENT.get()
+                || ServerConfig.DISABLED_WORLD_EVENTS.get().contains(
+                        WorldEventType.LOST_CARAVAN.getId())) {
+            this.discard();
+            return;
+        }
+        long now = this.level().getGameTime();
+        boolean rolledBack = now < this.lastObservedGameTime;
+        this.lastObservedGameTime = now;
+        if (!rolledBack && now < this.stayUntil) {
             return;
         }
         this.level().playSound(null, this.blockPosition(),
@@ -101,7 +115,8 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
             return InteractionResult.SUCCESS;
         }
         if (player instanceof ServerPlayer serverPlayer && this.isAlive()) {
-            // 模糊提示(9.2 示例台词风格)+ 下发交易表,客户端打开总览交易页
+            this.triggerAnim("movement", "inspect");
+
             serverPlayer.sendSystemMessage(Component.translatable(
                     "message.unknown_echoes.lost_traveler.mutter."
                             + this.random.nextInt(4)).withStyle(net.minecraft.ChatFormatting.GRAY,
@@ -115,10 +130,13 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         if (this.stayAnchorPos != null) {
-            // 保留旧键名，确保已有世界里的旅者仍能恢复驻留锚点。
+
             tag.put("CampPos", NbtUtils.writeBlockPos(this.stayAnchorPos));
         }
         tag.putLong("StayUntil", this.stayUntil);
+        if (this.stayUntil > 0L) {
+            tag.putLong("LastObservedGameTime", this.lastObservedGameTime);
+        }
     }
 
     @Override
@@ -133,6 +151,12 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
         long duration = ServerConfig.LOST_TRAVELER_STAY_TICKS.get();
         long maxStayUntil = duration > Long.MAX_VALUE - now ? Long.MAX_VALUE : now + duration;
         this.stayUntil = savedStayUntil <= 0L ? 0L : Math.min(savedStayUntil, maxStayUntil);
+        this.lastObservedGameTime = tag.contains("LastObservedGameTime", net.minecraft.nbt.Tag.TAG_LONG)
+                ? tag.getLong("LastObservedGameTime") : now;
+        if (this.stayUntil > 0L && now < this.lastObservedGameTime) {
+            this.stayUntil = now;
+        }
+        this.lastObservedGameTime = now;
         if (this.stayAnchorPos != null) {
             this.restrictTo(this.stayAnchorPos, 12);
         }
@@ -147,17 +171,17 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.VILLAGER_AMBIENT;
+        return ModSounds.LOST_TRAVELER_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.VILLAGER_HURT;
+        return ModSounds.LOST_TRAVELER_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.VILLAGER_DEATH;
+        return ModSounds.LOST_TRAVELER_DEATH.get();
     }
 
     @Override
@@ -171,7 +195,8 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "movement", 5, state ->
-                state.setAndContinue(state.isMoving() ? WALK_ANIM : IDLE_ANIM)));
+                state.setAndContinue(state.isMoving() ? WALK_ANIM : IDLE_ANIM))
+                .triggerableAnim("inspect", INSPECT_ANIM));
     }
 
     @Override

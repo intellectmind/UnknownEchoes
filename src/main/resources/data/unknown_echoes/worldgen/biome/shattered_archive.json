@@ -37,6 +37,12 @@
         "weight": 4,
         "minCount": 1,
         "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:folded_mantis",
+        "weight": 24,
+        "minCount": 1,
+        "maxCount": 2
       }
     ],
     "creature": [
@@ -45,6 +51,12 @@
         "weight": 48,
         "minCount": 2,
         "maxCount": 5
+      },
+      {
+        "type": "unknown_echoes:ashback_grazer",
+        "weight": 22,
+        "minCount": 1,
+        "maxCount": 3
       }
     ],
     "ambient": [], "axolotls": [],

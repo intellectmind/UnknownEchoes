@@ -4,15 +4,22 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.block.deep.BossRechallengeAltarBlockEntity;
 import cn.kurt6.unknown_echoes.block.deep.GravityCoreAltarBlock;
+import cn.kurt6.unknown_echoes.block.deep.DeepCalibrationNodeBlock;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.entity.EntityHitboxProfiles;
+import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -52,10 +59,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * 虚空先知:第四主线 Boss。由校准大厅核心召唤，死亡时为仍在场地内的参与玩家结算。
- */
-public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
+public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss, BossVisualState,
+        DeepRechallengeBoundBoss {
+    private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_MODE =
+            SynchedEntityData.defineId(VoidProphet.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_AGE =
+            SynchedEntityData.defineId(VoidProphet.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_DURATION =
+            SynchedEntityData.defineId(VoidProphet.class, EntityDataSerializers.INT);
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.void_prophet.idle");
     private static final RawAnimation SPELL_SWAY_ANIM =
@@ -70,6 +81,18 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
             RawAnimation.begin().then("animation.void_prophet.core_break", Animation.LoopType.PLAY_ONCE);
     private static final RawAnimation VOID_LANCE_ANIM =
             RawAnimation.begin().then("animation.void_prophet.void_lance", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation CONSTELLATION_ANIM =
+            RawAnimation.begin().then("animation.void_prophet.constellation", Animation.LoopType.PLAY_ONCE);
+
+    // 状态演出走独立的 state_controller,避免与攻击动画互相打断。
+    private static final RawAnimation AWAKEN_ANIM =
+            RawAnimation.begin().then("animation.void_prophet.awaken", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation OMEN_ANIM =
+            RawAnimation.begin().then("animation.void_prophet.omen", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation CALIBRATE_ANIM =
+            RawAnimation.begin().then("animation.void_prophet.calibrate", Animation.LoopType.PLAY_ONCE);
+    private static final RawAnimation COLLAPSE_ANIM =
+            RawAnimation.begin().then("animation.void_prophet.collapse", Animation.LoopType.PLAY_ONCE);
 
     private static final double BASE_MAX_HEALTH = 680.0D;
     private static final double HEALTH_PER_EXTRA_PLAYER = 220.0D;
@@ -77,7 +100,7 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
     private static final double REND_HALF_WIDTH = 1.35D;
     private static final double GRAVITY_RADIUS = 10.0D;
     private static final double LANCE_BLAST_RADIUS = 2.35D;
-    private static final double ARENA_RADIUS = 19.0D;
+    private static final double ARENA_RADIUS = 20.0D;
     private static final float ENRAGE_THRESHOLD = 0.45F;
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
@@ -88,6 +111,7 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
     private final List<Vec3> constellationMarks = new ArrayList<>();
     private final List<Vec3> lanceMarks = new ArrayList<>();
     private final List<VoidScar> voidScars = new ArrayList<>();
+    private final Set<BlockPos> phaseMechanismNodes = new HashSet<>();
 
     private AttackMode attackMode = AttackMode.NONE;
     private int attackTicks = 0;
@@ -101,12 +125,35 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
     private int protectedMessageCooldown;
     private boolean enraged = false;
     private boolean phaseTransitionTriggered = false;
+    private boolean phaseTransitionPending = false;
+    /** 空间错位显形只播一次。客户端表现用,不参与判定、不写 NBT。 */
+    private boolean awakenPlayed = false;
     private BlockPos arenaCenter;
 
     public VoidProphet(EntityType<? extends Monster> type, Level level) {
         super(type, level);
         this.xpReward = 120;
         this.bossEvent.setDarkenScreen(true);
+    }
+
+    /** 法袍/法杖等外伸部分不计入主体碰撞箱，底面按 profile 保留 X/Z 长方形。 */
+    @Override
+    protected AABB makeBoundingBox() {
+        return EntityHitboxProfiles.make(this);
+    }
+
+    @Override
+    public void setYRot(float yRot) {
+        super.setYRot(yRot);
+        EntityHitboxProfiles.refresh(this);
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_VISUAL_ATTACK_MODE, AttackMode.NONE.ordinal());
+        builder.define(DATA_VISUAL_ATTACK_AGE, 0);
+        builder.define(DATA_VISUAL_ATTACK_DURATION, 0);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -133,8 +180,17 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     public void aiStep() {
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
+                && this.tickDeepRechallengeBinding(serverLevel)) {
+            return;
+        }
         super.aiStep();
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        if (this.isAlive() && this.tickCount % 20 == 0
+                && !this.registerDeepRechallengePresence(serverLevel)) {
+            this.discard();
             return;
         }
         if (this.tickCount % 20 == 0) {
@@ -145,19 +201,40 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         this.tickVoidScars(serverLevel);
         this.spawnAmbientVoid(serverLevel);
 
-        if (!this.phaseTransitionTriggered && this.getHealth() <= this.getMaxHealth() * ENRAGE_THRESHOLD) {
-            this.startCoreBreak(serverLevel);
+        // 空间错位显形：只播一次动画,不停导航、不改冷却、不加无敌。
+        if (!this.awakenPlayed && this.getTarget() != null) {
+            this.awakenPlayed = true;
+            this.triggerAnim("state_controller", "awaken");
+        }
+
+        if (!this.phaseTransitionTriggered && !this.phaseTransitionPending
+                && this.getHealth() <= this.getMaxHealth() * ENRAGE_THRESHOLD) {
+            this.phaseTransitionPending = true;
+            this.phaseMechanismNodes.clear();
+            // 虚空预兆宣告：与 phase_locked 提示同帧。
+            this.triggerAnim("state_controller", "omen");
+            this.broadcastNearby(serverLevel, Component.translatable(
+                    "message.unknown_echoes.void_prophet.phase_locked"));
+        }
+
+        if (this.phaseTransitionPending && this.attackMode == AttackMode.NONE) {
+            this.getNavigation().stop();
+            this.drawCalibrationBreakGuidance(serverLevel,
+                    this.position().add(0.0D, this.getBbHeight() * 0.58D, 0.0D));
+            return;
         }
 
         if (this.attackMode != AttackMode.NONE) {
             this.getNavigation().stop();
             this.setDeltaMovement(this.getDeltaMovement().multiply(0.45D, 1.0D, 0.45D));
+            this.syncVisualAttackState();
             this.tickActiveAttack(serverLevel);
             return;
         }
 
         this.tickCooldowns();
         this.tryStartAttack(serverLevel);
+        this.syncVisualAttackState();
     }
 
     private void tickBossSystems(ServerLevel serverLevel) {
@@ -170,10 +247,11 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
             this.outOfCombatTicks = 0;
             if (this.tickCount % 20 == 0) {
                 double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
-                for (ServerPlayer player : serverLevel.players()) {
-                    if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
-                        this.registerParticipant(player);
-                    }
+                for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
+                        this.getBoundingBox().inflate(radius),
+                        candidate -> !candidate.isSpectator()
+                                && candidate.distanceToSqr(this) <= radius * radius)) {
+                    this.registerParticipant(player);
                 }
                 if (ServerConfig.BOSS_DYNAMIC_SCALING.get()) {
                     this.updateDynamicScaling();
@@ -191,6 +269,21 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         this.restrictTo(this.arenaCenter, (int) ARENA_RADIUS);
     }
 
+    @Override
+    public BlockPos deepRechallengeAltar() {
+        return this.arenaCenter;
+    }
+
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        if (this.level() instanceof ServerLevel level) {
+            if (!this.registerDeepRechallengePresence(level)) {
+                this.discard();
+            }
+        }
+    }
+
     private void enforceArenaBoundary(ServerLevel level) {
         if (this.arenaCenter == null) {
             return;
@@ -203,12 +296,30 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                 || this.horizontalDistanceSqr(this.position()) <= square(ARENA_RADIUS + 3.0D)) {
             return;
         }
-        Vec3 returnPoint = Vec3.atBottomCenterOf(this.arenaCenter).add(0.0D, 0.0D, 8.0D);
+        Vec3 returnPoint = this.findArenaReturnPoint(level);
+        if (returnPoint == null) {
+            return;
+        }
         this.teleportTo(returnPoint.x, returnPoint.y, returnPoint.z);
         this.setDeltaMovement(Vec3.ZERO);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+        level.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                 returnPoint.x, returnPoint.y + this.getBbHeight() * 0.5D, returnPoint.z,
                 28, 0.8D, 1.2D, 0.8D, 0.1D);
+    }
+
+    private Vec3 findArenaReturnPoint(ServerLevel level) {
+        if (this.arenaCenter == null || !level.hasChunkAt(this.arenaCenter)
+                || !(level.getBlockState(this.arenaCenter).getBlock() instanceof GravityCoreAltarBlock)) {
+            return null;
+        }
+        BlockPos returnPos = GravityCoreAltarBlock.findSpawnPos(level, this.arenaCenter);
+        if (returnPos == null) {
+            return null;
+        }
+        Vec3 target = Vec3.atBottomCenterOf(returnPos);
+        AABB movedBounds = this.getBoundingBox().move(target.subtract(this.position()));
+        return level.getWorldBorder().isWithinBounds(movedBounds)
+                && level.noCollision(this, movedBounds) ? target : null;
     }
 
     private double horizontalDistanceSqr(Vec3 position) {
@@ -228,8 +339,9 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         }
         var maxHealth = this.getAttribute(Attributes.MAX_HEALTH);
         if (maxHealth != null) {
-            maxHealth.setBaseValue(BASE_MAX_HEALTH + HEALTH_PER_EXTRA_PLAYER * (count - 1));
-            this.heal((float) (HEALTH_PER_EXTRA_PLAYER * (count - this.scaledParticipants)));
+            double multiplier = ServerConfig.DEEP_BOSS_HEALTH_MULTIPLIER.get();
+            maxHealth.setBaseValue((BASE_MAX_HEALTH + HEALTH_PER_EXTRA_PLAYER * (count - 1)) * multiplier);
+            this.heal((float) (HEALTH_PER_EXTRA_PLAYER * (count - this.scaledParticipants) * multiplier));
         }
         this.scaledParticipants = count;
     }
@@ -282,8 +394,6 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         }
     }
 
-    // ---- 裂隙短跃 + 延迟残影爆发 ----
-
     private void startShortHop(ServerLevel serverLevel, LivingEntity target) {
         this.attackMode = AttackMode.SHORT_HOP;
         this.attackTicks = 18;
@@ -296,7 +406,11 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
 
     private void tickShortHop(ServerLevel serverLevel) {
         Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.55D, 0.0D);
-        spiral(serverLevel, core, 1.4D, this.attackTicks * 0.6D, ParticleTypes.REVERSE_PORTAL);
+        spiral(serverLevel, core, 1.4D, this.attackTicks * 0.6D, BossParticleTheme.VOID_PROPHET.body());
+        if ((this.attackTicks & 1) == 0) {
+            BossFx.converge(serverLevel, core, 1.4D + this.attackTicks * 0.04D,
+                    10, BossParticleTheme.VOID_PROPHET.body());
+        }
         if (this.attackTicks != 10) {
             return;
         }
@@ -312,14 +426,17 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         this.setDeltaMovement(Vec3.ZERO);
         this.hurtMarked = true;
 
-        serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
+        serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                 oldPos.x, oldPos.y + this.getBbHeight() * 0.5D, oldPos.z,
                 70, 1.0D, 2.2D, 1.0D, 0.12D);
-        serverLevel.sendParticles(ParticleTypes.PORTAL,
+        serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                 destination.x, destination.y + this.getBbHeight() * 0.5D, destination.z,
                 90, 1.1D, 2.4D, 1.1D, 0.18D);
         drawLine(serverLevel, oldPos.add(0.0D, 1.0D, 0.0D), destination.add(0.0D, 1.0D, 0.0D),
-                0.7D, ParticleTypes.DRAGON_BREATH);
+                0.7D, BossParticleTheme.VOID_PROPHET.spark());
+        BossFx.helix(serverLevel, oldPos.add(0.0D, 1.2D, 0.0D),
+                destination.add(0.0D, 1.2D, 0.0D), 0.32D, BossParticleTheme.VOID_PROPHET.body());
+        BossFx.cinematicImpact(serverLevel, destination, 20.0D, 0.24F, 4, 0x5E3A94);
         serverLevel.playSound(null, this.blockPosition(), SoundEvents.ENDERMAN_TELEPORT,
                 SoundSource.HOSTILE, 2.2F, 0.65F);
     }
@@ -334,12 +451,14 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
             for (int dy = 2; dy >= -2; dy--) {
                 double y = target.getY() + dy;
                 BlockPos floor = BlockPos.containing(x, y - 0.1D, z);
-                if (!level.getBlockState(floor).isFaceSturdy(level, floor, Direction.UP)) {
+                if (!level.hasChunkAt(floor)
+                        || !level.getBlockState(floor).isFaceSturdy(level, floor, Direction.UP)) {
                     continue;
                 }
                 AABB movedBox = this.getBoundingBox().move(
                         x - this.getX(), y - this.getY(), z - this.getZ());
-                if (level.noCollision(this, movedBox)) {
+                if (level.getWorldBorder().isWithinBounds(movedBox)
+                        && level.noCollision(this, movedBox)) {
                     return new Vec3(x, y, z);
                 }
             }
@@ -355,10 +474,14 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
             VoidScar scar = this.voidScars.get(i);
             double radius = 0.7D + (26 - scar.ticks) * 0.045D;
             if (scar.ticks % 2 == 0) {
-                ring(serverLevel, scar.position, radius, 12, ParticleTypes.PORTAL);
-                serverLevel.sendParticles(ParticleTypes.DRAGON_BREATH,
+                ring(serverLevel, scar.position, radius, 12, BossParticleTheme.VOID_PROPHET.body());
+                serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.spark(),
                         scar.position.x, scar.position.y + 0.5D, scar.position.z,
                         3, radius * 0.4D, 0.5D, radius * 0.4D, 0.01D);
+            }
+            if (scar.ticks % 4 == 0) {
+                BossFx.lockSigil(serverLevel, scar.position, 3.2D,
+                        1.0D - scar.ticks / 26.0D, this.tickCount, BossParticleTheme.VOID_PROPHET.ember());
             }
             if (--scar.ticks <= 0) {
                 this.damagePlayersNear(serverLevel, scar.position, 3.2D,
@@ -367,7 +490,7 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                 serverLevel.sendParticles(ParticleTypes.FLASH,
                         scar.position.x, scar.position.y + 0.6D, scar.position.z,
                         1, 0.0D, 0.0D, 0.0D, 0.0D);
-                serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                         scar.position.x, scar.position.y + 0.6D, scar.position.z,
                         45, 0.9D, 0.7D, 0.9D, 0.25D);
                 serverLevel.playSound(null, BlockPos.containing(scar.position), SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(),
@@ -376,8 +499,6 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
             }
         }
     }
-
-    // ---- 空间撕裂:锁定位置的线形裂缝,二阶段变为三线交叉 ----
 
     private void startSpatialRend(ServerLevel serverLevel, LivingEntity target) {
         this.attackMode = AttackMode.SPATIAL_REND;
@@ -400,8 +521,8 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                     direction, REND_LENGTH));
         }
         this.triggerAnim("attack_controller", "spatial_rend");
-        serverLevel.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_CHARGE,
-                SoundSource.HOSTILE, 2.1F, 1.45F);
+        serverLevel.playSound(null, this.blockPosition(), ModSounds.VOID_PROPHET_SONIC.get(),
+                SoundSource.HOSTILE, 2.1F, 1.0F);
     }
 
     private void tickSpatialRend(ServerLevel serverLevel) {
@@ -410,14 +531,19 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                 for (double d = 0.0D; d <= line.length; d += 1.25D) {
                     Vec3 point = line.origin.add(line.direction.scale(d));
                     serverLevel.sendParticles(this.attackTicks % 3 == 0
-                                    ? ParticleTypes.DRAGON_BREATH : ParticleTypes.ELECTRIC_SPARK,
+                                    ? BossParticleTheme.VOID_PROPHET.spark() : BossParticleTheme.VOID_PROPHET.spark(),
                             point.x, point.y, point.z, 1, 0.08D, 0.04D, 0.08D, 0.0D);
+                }
+                if (this.attackTicks % 4 == 0) {
+                    BossFx.guidanceFlow(serverLevel, line.origin.add(0.0D, 0.16D, 0.0D),
+                            line.origin.add(line.direction.scale(line.length)).add(0.0D, 0.16D, 0.0D),
+                            BossParticleTheme.VOID_PROPHET.ember(), BossParticleTheme.VOID_PROPHET.ember(), this.tickCount);
                 }
             }
         }
         if (this.attackTicks % 5 == 0) {
             Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.62D, 0.0D);
-            spiral(serverLevel, core, 1.8D, this.attackTicks * 0.45D, ParticleTypes.PORTAL);
+            spiral(serverLevel, core, 1.8D, this.attackTicks * 0.45D, BossParticleTheme.VOID_PROPHET.body());
         }
         if (this.attackTicks == 5) {
             this.releaseSpatialRend(serverLevel);
@@ -439,29 +565,32 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                 if (away.horizontalDistanceSqr() > REND_HALF_WIDTH * REND_HALF_WIDTH) {
                     continue;
                 }
-                player.hurt(this.damageSources().mobAttack(this), damage);
-                Vec3 knock = away.lengthSqr() > 1.0E-4D
-                        ? away.normalize() : new Vec3(-line.direction.z, 0.0D, line.direction.x);
-                player.setDeltaMovement(player.getDeltaMovement().add(knock.x * 0.85D, 0.28D, knock.z * 0.85D));
-                player.hurtMarked = true;
-                player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 50, 0));
+                if (player.hurt(this.damageSources().mobAttack(this), damage)) {
+                    Vec3 knock = away.lengthSqr() > 1.0E-4D
+                            ? away.normalize() : new Vec3(-line.direction.z, 0.0D, line.direction.x);
+                    player.setDeltaMovement(player.getDeltaMovement().add(
+                            knock.x * 0.85D, 0.28D, knock.z * 0.85D));
+                    player.hurtMarked = true;
+                    player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 50, 0));
+                }
                 hit.add(player.getUUID());
             }
             for (double d = 0.0D; d <= line.length; d += 0.55D) {
                 Vec3 point = line.origin.add(line.direction.scale(d));
-                serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.spark(),
                         point.x, point.y + 0.25D, point.z, 2, 0.18D, 0.25D, 0.18D, 0.08D);
                 if (((int) (d * 10.0D)) % 22 == 0) {
-                    serverLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
+                    serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.spark(),
                             point.x, point.y + 0.15D, point.z, 1, 0.05D, 0.1D, 0.05D, 0.0D);
                 }
             }
+            BossFx.helix(serverLevel, line.origin.add(0.0D, 0.35D, 0.0D),
+                    end.add(0.0D, 0.35D, 0.0D), 0.42D, BossParticleTheme.VOID_PROPHET.body());
         }
         serverLevel.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
                 SoundSource.HOSTILE, 2.4F, 1.65F);
+        BossFx.cinematicImpact(serverLevel, this.position(), 34.0D, 0.66F, 8, 0x7651C9);
     }
-
-    // ---- 重力反冲:收束牵引 -> 内爆 -> 外推冲击 ----
 
     private void startGravityRecoil(ServerLevel serverLevel) {
         this.attackMode = AttackMode.GRAVITY_RECOIL;
@@ -476,11 +605,15 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         Vec3 center = this.position().add(0.0D, 0.35D, 0.0D);
         double warningRadius = 2.0D + GRAVITY_RADIUS * this.attackTicks / 36.0D;
         if ((this.attackTicks & 1) == 0) {
-            ring(serverLevel, center, warningRadius, 28, ParticleTypes.REVERSE_PORTAL);
+            ring(serverLevel, center, warningRadius, 28, BossParticleTheme.VOID_PROPHET.body());
             ring(serverLevel, center, Math.max(1.0D, warningRadius * 0.58D), 18,
-                    ParticleTypes.ELECTRIC_SPARK);
+                    BossParticleTheme.VOID_PROPHET.body());
             spiral(serverLevel, center.add(0.0D, 2.0D, 0.0D), 2.2D,
-                    (36 - this.attackTicks) * 0.65D, ParticleTypes.DRAGON_BREATH);
+                    (36 - this.attackTicks) * 0.65D, BossParticleTheme.VOID_PROPHET.body());
+        }
+        if (this.attackTicks > 3 && this.attackTicks % 3 == 0) {
+            BossFx.converge(serverLevel, center.add(0.0D, 1.0D, 0.0D),
+                    Math.max(2.0D, warningRadius), 14, BossParticleTheme.VOID_PROPHET.body());
         }
 
         if (this.attackTicks > 18 && this.attackTicks % 3 == 0) {
@@ -490,28 +623,28 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
             this.damagePlayersNear(serverLevel, center, 7.0D,
                     (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.4F,
                     0.9D, 0.22D, true);
-            serverLevel.sendParticles(ParticleTypes.SCULK_SOUL,
+            serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                     center.x, center.y + 1.0D, center.z, 55, 3.5D, 1.2D, 3.5D, 0.18D);
             serverLevel.playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_SPAWN,
                     SoundSource.HOSTILE, 1.8F, 1.65F);
+            BossFx.cinematicImpact(serverLevel, center, 28.0D, 0.42F, 5, 0x4F367A);
         }
         if (this.attackTicks == 3) {
             this.damagePlayersNear(serverLevel, center, 8.5D,
                     (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.75F,
                     1.65D, 0.55D, false);
             for (int band = 1; band <= 3; band++) {
-                ring(serverLevel, center, band * 3.0D, 32, ParticleTypes.DRAGON_BREATH);
+                ring(serverLevel, center, band * 3.0D, 32, BossParticleTheme.VOID_PROPHET.body());
             }
-            serverLevel.sendParticles(ParticleTypes.EXPLOSION,
+            serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.spark(),
                     center.x, center.y + 1.0D, center.z, 4, 1.5D, 1.0D, 1.5D, 0.0D);
-            serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
+            serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                     center.x, center.y + 1.0D, center.z, 120, 2.0D, 2.2D, 2.0D, 0.35D);
             serverLevel.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),
                     SoundSource.HOSTILE, 2.5F, 0.55F);
+            BossFx.cinematicImpact(serverLevel, center, 34.0D, 0.9F, 11, 0x7C4DC3);
         }
     }
-
-    // ---- 虚空星阵:多点预警,延迟引爆 ----
 
     private void startConstellation(ServerLevel serverLevel, LivingEntity target) {
         this.attackMode = AttackMode.CONSTELLATION;
@@ -526,9 +659,9 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
             this.constellationMarks.add(target.position().add(
                     Math.cos(angle) * distance, 0.1D, Math.sin(angle) * distance));
         }
-        this.triggerAnim("attack_controller", "spell_sway");
-        serverLevel.playSound(null, this.blockPosition(), SoundEvents.EVOKER_PREPARE_SUMMON,
-                SoundSource.HOSTILE, 2.0F, 0.6F);
+        this.triggerAnim("attack_controller", "constellation");
+        serverLevel.playSound(null, this.blockPosition(), ModSounds.VOID_PROPHET_SUMMON.get(),
+                SoundSource.HOSTILE, 2.0F, 1.0F);
     }
 
     private void tickConstellation(ServerLevel serverLevel) {
@@ -537,14 +670,25 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
             for (int index = 0; index < this.constellationMarks.size(); index++) {
                 Vec3 mark = this.constellationMarks.get(index);
                 ring(serverLevel, mark, radius, 12, index % 2 == 0
-                        ? ParticleTypes.PORTAL : ParticleTypes.DRAGON_BREATH);
+                        ? BossParticleTheme.VOID_PROPHET.body() : BossParticleTheme.VOID_PROPHET.body());
                 if (this.attackTicks % 4 == 0) {
-                    serverLevel.sendParticles(ParticleTypes.ENCHANT,
+                    serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.spark(),
                             mark.x, mark.y + 0.25D, mark.z,
                             3, radius * 0.5D, 0.05D, radius * 0.5D, 0.0D);
-                    serverLevel.sendParticles(ParticleTypes.END_ROD,
+                    serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.spark(),
                             mark.x, mark.y + 2.8D, mark.z, 1, 0.05D, 0.2D, 0.05D, 0.01D);
                 }
+            }
+        }
+        if (this.attackTicks % 4 == 0) {
+            for (int index = 0; index < this.constellationMarks.size(); index++) {
+                Vec3 from = this.constellationMarks.get(index);
+                Vec3 to = this.constellationMarks.get((index + 1) % this.constellationMarks.size());
+                BossFx.guidanceFlow(serverLevel, from.add(0.0D, 0.2D, 0.0D),
+                        to.add(0.0D, 0.2D, 0.0D), BossParticleTheme.VOID_PROPHET.ember(),
+                        BossParticleTheme.VOID_PROPHET.ember(), this.tickCount + index * 3L);
+                BossFx.lockSigil(serverLevel, from, 2.35D,
+                        1.0D - this.attackTicks / 36.0D, this.tickCount + index, BossParticleTheme.VOID_PROPHET.ember());
             }
         }
         if (this.attackTicks == 4) {
@@ -560,28 +704,29 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                     new AABB(mark.x - 2.35D, mark.y - 1.0D, mark.z - 2.35D,
                             mark.x + 2.35D, mark.y + 4.0D, mark.z + 2.35D),
                     p -> p.isAlive() && !p.isSpectator() && !hit.contains(p.getUUID()))) {
-                player.hurt(this.damageSources().mobAttack(this), damage);
-                player.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 24, 0));
-                player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0));
+                if (player.hurt(this.damageSources().mobAttack(this), damage)) {
+                    player.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 24, 0));
+                    player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0));
+                }
                 hit.add(player.getUUID());
             }
             serverLevel.sendParticles(ParticleTypes.FLASH,
                     mark.x, mark.y + 0.7D, mark.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-            serverLevel.sendParticles(ParticleTypes.DRAGON_BREATH,
+            serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                     mark.x, mark.y + 0.8D, mark.z, 38, 0.75D, 1.3D, 0.75D, 0.16D);
-            serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
+            serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                     mark.x, mark.y + 0.7D, mark.z, 24, 0.45D, 1.0D, 0.45D, 0.2D);
         }
         for (int i = 0; i < this.constellationMarks.size(); i++) {
             drawLine(serverLevel, this.constellationMarks.get(i),
                     this.constellationMarks.get((i + 1) % this.constellationMarks.size()),
-                    0.45D, ParticleTypes.ELECTRIC_SPARK);
+                    0.45D, BossParticleTheme.VOID_PROPHET.spark());
         }
         serverLevel.playSound(null, this.blockPosition(), SoundEvents.EVOKER_CAST_SPELL,
                 SoundSource.HOSTILE, 2.3F, 0.5F);
+        BossFx.cinematicImpact(serverLevel, this.constellationMarks.getFirst(),
+                34.0D, 0.62F, 7, 0x8253B5);
     }
-
-    // ---- 虚空棱雨:多点锁定后从高空贯穿,狂暴阶段增加落点 ----
 
     private void startVoidLance(ServerLevel serverLevel, LivingEntity target) {
         this.attackMode = AttackMode.VOID_LANCE;
@@ -612,7 +757,8 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         BlockPos start = BlockPos.containing(candidate.x, candidate.y + 2.0D, candidate.z);
         for (int offset = 0; offset <= 9; offset++) {
             BlockPos floor = start.below(offset);
-            if (level.getBlockState(floor).isFaceSturdy(level, floor, Direction.UP)) {
+            if (level.hasChunkAt(floor)
+                    && level.getBlockState(floor).isFaceSturdy(level, floor, Direction.UP)) {
                 return new Vec3(candidate.x, floor.getY() + 1.05D, candidate.z);
             }
         }
@@ -625,26 +771,35 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         if ((this.attackTicks & 1) == 0) {
             for (int index = 0; index < this.lanceMarks.size(); index++) {
                 Vec3 mark = this.lanceMarks.get(index);
-                ring(serverLevel, mark, LANCE_BLAST_RADIUS, 18, ParticleTypes.REVERSE_PORTAL);
+                ring(serverLevel, mark, LANCE_BLAST_RADIUS, 18, BossParticleTheme.VOID_PROPHET.body());
                 ring(serverLevel, mark.add(0.0D, 0.04D, 0.0D), closingRadius, 14,
-                        index % 2 == 0 ? ParticleTypes.ELECTRIC_SPARK : ParticleTypes.END_ROD);
+                        index % 2 == 0 ? BossParticleTheme.VOID_PROPHET.body() : BossParticleTheme.VOID_PROPHET.body());
 
                 double lanceHeight = 4.0D + this.attackTicks * 0.18D;
-                serverLevel.sendParticles(ParticleTypes.END_ROD,
+                serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.spark(),
                         mark.x, mark.y + lanceHeight, mark.z,
                         2, 0.12D, 0.5D, 0.12D, 0.015D);
                 if (this.attackTicks % 4 == 0) {
                     drawLine(serverLevel, mark.add(0.0D, 0.15D, 0.0D),
                             mark.add(0.0D, lanceHeight + 2.0D, 0.0D),
-                            1.15D, ParticleTypes.ELECTRIC_SPARK);
+                            1.15D, BossParticleTheme.VOID_PROPHET.spark());
                     drawLine(serverLevel, core, mark.add(0.0D, lanceHeight, 0.0D),
-                            1.4D, ParticleTypes.DRAGON_BREATH);
+                            1.4D, BossParticleTheme.VOID_PROPHET.body());
                 }
+            }
+        }
+        if (this.attackTicks % 4 == 0) {
+            double progress = 1.0D - this.attackTicks / 34.0D;
+            for (int index = 0; index < this.lanceMarks.size(); index++) {
+                Vec3 mark = this.lanceMarks.get(index);
+                BossFx.lockSigil(serverLevel, mark, LANCE_BLAST_RADIUS,
+                        progress, this.tickCount + index, BossParticleTheme.VOID_PROPHET.ember());
+                BossFx.comet(serverLevel, mark, 11.0D, progress, BossParticleTheme.VOID_PROPHET.body());
             }
         }
         if (this.attackTicks % 3 == 0) {
             spiral(serverLevel, core, 2.4D, (34 - this.attackTicks) * 0.7D,
-                    ParticleTypes.REVERSE_PORTAL);
+                    BossParticleTheme.VOID_PROPHET.body());
         }
         if (this.attackTicks == 7) {
             this.detonateVoidLances(serverLevel);
@@ -664,39 +819,39 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                 if (horizontal.horizontalDistanceSqr() > LANCE_BLAST_RADIUS * LANCE_BLAST_RADIUS) {
                     continue;
                 }
-                player.hurt(this.damageSources().mobAttack(this), damage);
-                player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 50, 0));
-                player.setDeltaMovement(player.getDeltaMovement().add(0.0D, 0.58D, 0.0D));
-                player.hurtMarked = true;
+                if (player.hurt(this.damageSources().mobAttack(this), damage)) {
+                    player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 50, 0));
+                    player.setDeltaMovement(player.getDeltaMovement().add(0.0D, 0.58D, 0.0D));
+                    player.hurtMarked = true;
+                }
                 hit.add(player.getUUID());
             }
             this.spawnVoidLanceBurst(serverLevel, mark);
         }
         serverLevel.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
                 SoundSource.HOSTILE, 2.8F, 1.75F);
+        BossFx.cinematicImpact(serverLevel, this.position(), 38.0D, 0.72F, 9, 0x8A55D1);
     }
 
     private void spawnVoidLanceBurst(ServerLevel level, Vec3 mark) {
         level.sendParticles(ParticleTypes.FLASH,
                 mark.x, mark.y + 1.0D, mark.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.sendParticles(ParticleTypes.SCULK_SOUL,
+        level.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                 mark.x, mark.y + 4.2D, mark.z, 42, 0.5D, 3.8D, 0.5D, 0.14D);
-        level.sendParticles(ParticleTypes.DRAGON_BREATH,
+        level.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                 mark.x, mark.y + 2.0D, mark.z, 62, 0.8D, 2.4D, 0.8D, 0.18D);
-        level.sendParticles(ParticleTypes.END_ROD,
+        level.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                 mark.x, mark.y + 5.0D, mark.z, 24, 0.4D, 4.0D, 0.4D, 0.12D);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+        level.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                 mark.x, mark.y + 0.25D, mark.z, 46, 1.4D, 0.2D, 1.4D, 0.28D);
         drawLine(level, mark.add(0.0D, 0.1D, 0.0D), mark.add(0.0D, 13.0D, 0.0D),
-                0.38D, ParticleTypes.ELECTRIC_SPARK);
-        ring(level, mark.add(0.0D, 0.08D, 0.0D), 1.2D, 20, ParticleTypes.END_ROD);
+                0.38D, BossParticleTheme.VOID_PROPHET.body());
+        ring(level, mark.add(0.0D, 0.08D, 0.0D), 1.2D, 20, BossParticleTheme.VOID_PROPHET.body());
         ring(level, mark.add(0.0D, 0.1D, 0.0D), LANCE_BLAST_RADIUS, 30,
-                ParticleTypes.DRAGON_BREATH);
+                BossParticleTheme.VOID_PROPHET.body());
         ring(level, mark.add(0.0D, 0.12D, 0.0D), LANCE_BLAST_RADIUS * 1.55D, 34,
-                ParticleTypes.ELECTRIC_SPARK);
+                BossParticleTheme.VOID_PROPHET.body());
     }
-
-    // ---- 核心坍缩:45% 血量强制转入虚空预兆阶段 ----
 
     private void startCoreBreak(ServerLevel serverLevel) {
         this.phaseTransitionTriggered = true;
@@ -712,13 +867,44 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                 SoundSource.HOSTILE, 2.4F, 1.7F);
     }
 
+    /** 校准节点由玩家操作后调用；三座节点完成才开始破防演出。 */
+    public void onCalibrationNodeActivated(ServerLevel level, BlockPos nodePos) {
+        if (!this.phaseTransitionPending || this.arenaCenter == null
+                || !this.isAlive() || this.arenaCenter.distManhattan(nodePos) > 48) {
+            return;
+        }
+        boolean knownNode = false;
+        for (BlockPos candidate : GravityCoreAltarBlock.findCalibrationNodes(level, this.arenaCenter)) {
+            if (candidate.equals(nodePos)) {
+                knownNode = true;
+                break;
+            }
+        }
+        if (!knownNode) {
+            return;
+        }
+        boolean newNode = this.phaseMechanismNodes.add(nodePos.immutable());
+        if (newNode) {
+            // 三声校准反应,每座新节点播一次;重复交互不刷动画。
+            this.triggerAnim("state_controller", "calibrate");
+        }
+        if (this.phaseMechanismNodes.size() >= DeepCalibrationNodeBlock.Calibration.values().length) {
+            this.phaseTransitionPending = false;
+            this.phaseMechanismNodes.clear();
+            this.startCoreBreak(level);
+        }
+    }
+
     private void tickCoreBreak(ServerLevel serverLevel) {
         Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.58D, 0.0D);
         double collapse = Math.max(0.8D, this.attackTicks * 0.15D);
         if ((this.attackTicks & 1) == 0) {
-            ring(serverLevel, core, collapse, 30, ParticleTypes.REVERSE_PORTAL);
-            ring(serverLevel, core, collapse * 0.65D, 22, ParticleTypes.DRAGON_BREATH);
-            spiral(serverLevel, core, 2.6D, (44 - this.attackTicks) * 0.8D, ParticleTypes.SCULK_SOUL);
+            ring(serverLevel, core, collapse, 30, BossParticleTheme.VOID_PROPHET.body());
+            ring(serverLevel, core, collapse * 0.65D, 22, BossParticleTheme.VOID_PROPHET.body());
+            spiral(serverLevel, core, 2.6D, (44 - this.attackTicks) * 0.8D, BossParticleTheme.VOID_PROPHET.body());
+        }
+        if (this.attackTicks > 6 && this.attackTicks % 3 == 0) {
+            BossFx.converge(serverLevel, core, collapse, 16, BossParticleTheme.VOID_PROPHET.body());
         }
         if (this.attackTicks % 3 == 0 && this.attackTicks > 8) {
             this.pullPlayers(serverLevel, core, 12.0D, 0.12D);
@@ -732,14 +918,19 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                     1.25D, 0.5D, false);
             serverLevel.sendParticles(ParticleTypes.FLASH,
                     core.x, core.y, core.z, 2, 0.0D, 0.0D, 0.0D, 0.0D);
-            serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
+            serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                     core.x, core.y, core.z, 180, 2.8D, 3.0D, 2.8D, 0.45D);
             for (int band = 1; band <= 4; band++) {
                 ring(serverLevel, this.position().add(0.0D, 0.2D, 0.0D),
-                        band * 2.7D, 36, ParticleTypes.SOUL_FIRE_FLAME);
+                        band * 2.7D, 36, BossParticleTheme.VOID_PROPHET.spark());
             }
+            BossFx.pillar(serverLevel, this.position().add(0.0D, 0.1D, 0.0D),
+                    9.0D, BossParticleTheme.VOID_PROPHET.body());
+            BossFx.groundShockwave(serverLevel, this.position().add(0.0D, 0.1D, 0.0D),
+                    10.0D, BossParticleTheme.VOID_PROPHET.ember());
             serverLevel.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
                     SoundSource.HOSTILE, 2.7F, 0.45F);
+            BossFx.cinematicImpact(serverLevel, core, 42.0D, 1.0F, 14, 0x6C37A6);
         }
         if (this.attackTicks == 2) {
             this.blinkCooldown = 18;
@@ -759,13 +950,13 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         Vec3 altarCore = Vec3.atCenterOf(this.arenaCenter).add(0.0D, 0.65D, 0.0D);
         for (BlockPos nodePos : GravityCoreAltarBlock.findCalibrationNodes(level, this.arenaCenter)) {
             Vec3 node = Vec3.atCenterOf(nodePos).add(0.0D, 0.45D, 0.0D);
-            BossFx.guidanceMarker(level, node, ParticleTypes.END_ROD);
+            BossFx.guidanceMarker(level, node, BossParticleTheme.VOID_PROPHET.ember());
             BossFx.guidanceFlow(level, node, altarCore,
-                    ParticleTypes.GLOW, ParticleTypes.ENCHANT, this.tickCount);
+                    BossParticleTheme.VOID_PROPHET.ember(), BossParticleTheme.VOID_PROPHET.ember(), this.tickCount);
         }
-        BossFx.guidanceMarker(level, altarCore, ParticleTypes.ELECTRIC_SPARK);
+        BossFx.guidanceMarker(level, altarCore, BossParticleTheme.VOID_PROPHET.ember());
         BossFx.guidanceFlow(level, altarCore, bossCore,
-                ParticleTypes.ENCHANT, ParticleTypes.ELECTRIC_SPARK, this.tickCount);
+                BossParticleTheme.VOID_PROPHET.ember(), BossParticleTheme.VOID_PROPHET.ember(), this.tickCount);
     }
 
     private void spawnAmbientVoid(ServerLevel serverLevel) {
@@ -774,7 +965,7 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         }
         double angle = this.tickCount * 0.22D;
         double radius = 1.5D + Math.sin(this.tickCount * 0.1D) * 0.3D;
-        serverLevel.sendParticles(this.enraged ? ParticleTypes.DRAGON_BREATH : ParticleTypes.PORTAL,
+        serverLevel.sendParticles(this.enraged ? BossParticleTheme.VOID_PROPHET.spark() : BossParticleTheme.VOID_PROPHET.spark(),
                 this.getX() + Math.cos(angle) * radius,
                 this.getY() + 1.2D + (this.tickCount % 30) * this.getBbHeight() / 30.0D,
                 this.getZ() + Math.sin(angle) * radius,
@@ -806,23 +997,25 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
             if (delta.horizontalDistanceSqr() > radius * radius) {
                 continue;
             }
-            player.hurt(this.damageSources().mobAttack(this), damage);
-            Vec3 direction = delta.lengthSqr() > 1.0E-4D
-                    ? delta.normalize() : new Vec3(1.0D, 0.0D, 0.0D);
-            double sign = pull ? -1.0D : 1.0D;
-            player.setDeltaMovement(player.getDeltaMovement().add(
-                    direction.x * horizontalForce * sign, verticalForce,
-                    direction.z * horizontalForce * sign));
-            player.hurtMarked = true;
+            if (player.hurt(this.damageSources().mobAttack(this), damage)) {
+                Vec3 direction = delta.lengthSqr() > 1.0E-4D
+                        ? delta.normalize() : new Vec3(1.0D, 0.0D, 0.0D);
+                double sign = pull ? -1.0D : 1.0D;
+                player.setDeltaMovement(player.getDeltaMovement().add(
+                        direction.x * horizontalForce * sign, verticalForce,
+                        direction.z * horizontalForce * sign));
+                player.hurtMarked = true;
+            }
         }
     }
 
     private void broadcastNearby(ServerLevel level, Component message) {
         double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
-        for (ServerPlayer player : level.players()) {
-            if (!player.isSpectator() && player.distanceToSqr(this) <= radius * radius) {
-                player.displayClientMessage(message, true);
-            }
+        for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(radius),
+                candidate -> !candidate.isSpectator()
+                        && candidate.distanceToSqr(this) <= radius * radius)) {
+            player.displayClientMessage(message, true);
         }
     }
 
@@ -874,6 +1067,11 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
+                && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)
+                && this.isDeepRechallengeCombatBlocked(serverLevel)) {
+            return false;
+        }
         if (!this.level().isClientSide && source.getEntity() instanceof Enemy) {
             return false;
         }
@@ -892,7 +1090,7 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         }
         boolean hurt = super.hurt(source, amount);
         if (hurt && !this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
-            serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
+            serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                     this.getX(), this.getY() + this.getBbHeight() * 0.58D, this.getZ(),
                     9, 0.65D, 1.2D, 0.65D, 0.08D);
         }
@@ -906,35 +1104,55 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     public void die(DamageSource source) {
+        boolean wasDead = this.dead;
         super.die(source);
-        if (!(this.level() instanceof ServerLevel serverLevel)) {
+        if (wasDead || !this.dead || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
+        // 死亡只有视觉:getDeathSound 返回 null 是既定演出(见 audit_entity_sounds),不要补音效。
+        this.triggerAnim("state_controller", "collapse");
         double rewardRadius = ServerConfig.BOSS_REWARD_RADIUS.get();
-        for (ServerPlayer player : serverLevel.players()) {
+        boolean hasEligibleParticipant = false;
+        boolean firstKillDrop = false;
+        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(rewardRadius), player -> !player.isSpectator())) {
             if (!player.isSpectator() && this.participants.contains(player.getUUID())
                     && player.distanceToSqr(this) <= rewardRadius * rewardRadius) {
+                boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
+                        EchoPermission.VOID_PROPHET_ID);
+                hasEligibleParticipant = true;
                 if (!EchoAbilityManager.markBossDefeated(player, EchoPermission.VOID_PROPHET_ID)) {
                     player.sendSystemMessage(Component.translatable(
                             "message.unknown_echoes.progress_record.full"));
                     continue;
                 }
-                player.sendSystemMessage(Component.translatable(
-                        "message.unknown_echoes.void_prophet.defeated"));
+                firstKillDrop |= firstKill;
+            }
+        }
+        if (hasEligibleParticipant) {
+            BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
+                    ModItems.DEEP_ORE_SCRAP.get(), 3 + this.random.nextInt(3)));
+            BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
+                    ModItems.GRAVITY_CORE_FRAGMENT.get(), firstKillDrop ? 2 : 1));
+            BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
+                    ModItems.SPACE_ANCHOR_SHARD.get(), 1 + this.random.nextInt(2)));
+            if (firstKillDrop || this.random.nextFloat() < 0.25F) {
+                BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
+                        ModItems.GRAVITY_RESEARCH_RUBBING.get()));
             }
         }
         if (this.arenaCenter != null) {
-            BossRechallengeAltarBlockEntity.startCooldown(serverLevel, this.arenaCenter);
+            this.finishDeepRechallenge(serverLevel);
         }
         Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.55D, 0.0D);
         serverLevel.sendParticles(ParticleTypes.FLASH,
                 core.x, core.y, core.z, 3, 0.0D, 0.0D, 0.0D, 0.0D);
-        serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
+        serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                 core.x, core.y, core.z, 240, 3.0D, 3.2D, 3.0D, 0.5D);
-        serverLevel.sendParticles(ParticleTypes.SCULK_SOUL,
+        serverLevel.sendParticles(BossParticleTheme.VOID_PROPHET.body(),
                 core.x, core.y, core.z, 80, 2.0D, 2.5D, 2.0D, 0.2D);
         for (int band = 1; band <= 5; band++) {
-            ring(serverLevel, core, band * 1.8D, 36, ParticleTypes.DRAGON_BREATH);
+            ring(serverLevel, core, band * 1.8D, 36, BossParticleTheme.VOID_PROPHET.spark());
         }
         serverLevel.playSound(null, this.blockPosition(), SoundEvents.WITHER_DEATH,
                 SoundSource.HOSTILE, 2.6F, 1.35F);
@@ -966,7 +1184,7 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     public void checkDespawn() {
-        // 主线 Boss 不自然消失。
+
     }
 
     @Override
@@ -976,12 +1194,12 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.ENDERMAN_AMBIENT;
+        return ModSounds.VOID_PROPHET_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.ENDERMAN_HURT;
+        return ModSounds.VOID_PROPHET_HURT.get();
     }
 
     @Override
@@ -994,7 +1212,8 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("Enraged", this.enraged);
         tag.putBoolean("PhaseTransitionTriggered", this.phaseTransitionTriggered);
-        tag.putBoolean("PhaseTransitionPending", this.attackMode == AttackMode.CORE_BREAK);
+        tag.putBoolean("PhaseTransitionPending", this.phaseTransitionPending
+                || this.attackMode == AttackMode.CORE_BREAK);
         tag.putInt("BlinkCooldown", this.blinkCooldown);
         tag.putInt("RendCooldown", this.rendCooldown);
         tag.putInt("GravityCooldown", this.gravityCooldown);
@@ -1017,6 +1236,7 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
         super.readAdditionalSaveData(tag);
         this.enraged = tag.getBoolean("Enraged");
         boolean phaseTransitionPending = tag.getBoolean("PhaseTransitionPending");
+        this.phaseTransitionPending = phaseTransitionPending;
         this.phaseTransitionTriggered = tag.getBoolean("PhaseTransitionTriggered")
                 && !phaseTransitionPending;
         this.blinkCooldown = clampTimer(tag.getInt("BlinkCooldown"), 220);
@@ -1058,12 +1278,49 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss {
                 .triggerableAnim("spatial_rend", SPATIAL_REND_ANIM)
                 .triggerableAnim("gravity_recoil", GRAVITY_RECOIL_ANIM)
                 .triggerableAnim("core_break", CORE_BREAK_ANIM)
-                .triggerableAnim("void_lance", VOID_LANCE_ANIM));
+                .triggerableAnim("void_lance", VOID_LANCE_ANIM)
+                .triggerableAnim("constellation", CONSTELLATION_ANIM));
+        // 状态演出单独一个 controller：显形/预兆/校准/死亡都可能与攻击并发,同 controller 会互相截断。
+        controllers.add(new AnimationController<>(this, "state_controller", 0,
+                state -> PlayState.STOP)
+                .triggerableAnim("awaken", AWAKEN_ANIM)
+                .triggerableAnim("omen", OMEN_ANIM)
+                .triggerableAnim("calibrate", CALIBRATE_ANIM)
+                .triggerableAnim("collapse", COLLAPSE_ANIM));
     }
 
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
+    }
+
+    private void syncVisualAttackState() {
+        int duration = switch (this.attackMode) {
+            case SHORT_HOP -> 18;
+            case SPATIAL_REND -> 32;
+            case GRAVITY_RECOIL, CONSTELLATION -> 36;
+            case VOID_LANCE -> 34;
+            case CORE_BREAK -> 44;
+            case NONE -> 0;
+        };
+        this.entityData.set(DATA_VISUAL_ATTACK_MODE, this.attackMode.ordinal());
+        this.entityData.set(DATA_VISUAL_ATTACK_AGE, Math.max(0, duration - this.attackTicks));
+        this.entityData.set(DATA_VISUAL_ATTACK_DURATION, duration);
+    }
+
+    @Override
+    public int visualAttackMode() {
+        return this.entityData.get(DATA_VISUAL_ATTACK_MODE);
+    }
+
+    @Override
+    public int visualAttackAge() {
+        return this.entityData.get(DATA_VISUAL_ATTACK_AGE);
+    }
+
+    @Override
+    public int visualAttackDuration() {
+        return this.entityData.get(DATA_VISUAL_ATTACK_DURATION);
     }
 
     private enum AttackMode {

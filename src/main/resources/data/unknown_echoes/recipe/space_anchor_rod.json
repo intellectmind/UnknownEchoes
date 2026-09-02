@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " C ",
+    " A ",
+    " D "
+  ],
+  "key": {
+    "A": { "item": "unknown_echoes:space_anchor_shard" },
+    "C": { "item": "unknown_echoes:suspended_crystal" },
+    "D": { "item": "unknown_echoes:deep_alloy_ingot" }
+  },
+  "result": { "id": "unknown_echoes:space_anchor_rod", "count": 2 }
+}

@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "unknown_echoes:item/illusion_dust"
+    "layer0": "unknown_echoes:item/decoy_shard"
   }
 }

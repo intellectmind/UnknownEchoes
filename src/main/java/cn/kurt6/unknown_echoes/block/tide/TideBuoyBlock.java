@@ -25,13 +25,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * 潮汐浮标:潮汐灯塔礁的破灯机制方块(V0.6C 潮汐执灯者)。
- * - LIT = 浮标灯亮(可用):执灯者冲刺撞上亮灯浮标时灯火熄灭,进入输出窗口。
- * - 撞击后浮标熄灭并进入冷却(20 秒,scheduleTick 自动复亮)——不是一次性消耗,
- *   多人服不会因浮标耗尽卡档(10.4.2 开发边界)。
- * - 不可破坏(critical_blocks + 强度 -1),撞击判定由执灯者实体在服务端做。
- */
+/** 潮汐浮标:潮汐灯塔礁的破灯机制方块( 潮汐执灯者)。 */
 public class TideBuoyBlock extends Block implements SimpleWaterloggedBlock {
     public static final MapCodec<TideBuoyBlock> CODEC = simpleCodec(TideBuoyBlock::new);
 
@@ -105,7 +99,7 @@ public class TideBuoyBlock extends Block implements SimpleWaterloggedBlock {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        // 浮标只是机制锚点:右键给观察提示,真正的破灯靠引导执灯者冲撞
+
         player.displayClientMessage(Component.translatable(state.getValue(LIT)
                 ? "message.unknown_echoes.tide_buoy.lit"
                 : "message.unknown_echoes.tide_buoy.cooling"), true);

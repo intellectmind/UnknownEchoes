@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:inverted_pendulum_palace", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 128,
+    "separation": 64,
+    "salt": 1774926311,
+    "frequency": 1.0
+  }
+}

@@ -1,11 +1,13 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
@@ -42,11 +44,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
 
-/**
- * 晶羽鸟:漂浮群岛被动飞行生物(生命 8)。
- * 击杀掉落晶羽 0-1(战利品表);喂食荧光花可无伤获得晶羽×1(有冷却),鼓励非猎杀获取。
- * 摔落无伤、缓降。设定:记述派档案馆的信使,如今只剩本能还记得路线。
- */
+/** 晶羽鸟:漂浮群岛被动飞行生物(生命 8)。 */
 public class CrystalFeatherBird extends Animal implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.crystal_feather_bird.idle");
@@ -83,23 +81,25 @@ public class CrystalFeatherBird extends Animal implements GeoEntity {
         return navigation;
     }
 
+    /** 躲避排在 PanicGoal 之后、繁殖之前:被打到的反应优先,但要在敌怪贴上来之前就走开。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PanicGoal(this, 1.5D));
-        this.goalSelector.addGoal(2, new BreedGoal(this, 1.0D));
-        this.goalSelector.addGoal(3, new TemptGoal(this, 1.1D,
+        this.goalSelector.addGoal(2, new FleeThreatGoal(this, 12.0D, 1.15D, 1.45D));
+        this.goalSelector.addGoal(3, new BreedGoal(this, 1.0D));
+        this.goalSelector.addGoal(4, new TemptGoal(this, 1.1D,
                 stack -> stack.is(Items.WHEAT_SEEDS) || stack.is(Items.GLOW_BERRIES), false));
-        this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.1D));
-        this.goalSelector.addGoal(5, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
-        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.1D));
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
     @Override
     public void aiStep() {
         super.aiStep();
-        // 缓降:下落时扇动翅膀减速,摔落无伤
+
         Vec3 movement = this.getDeltaMovement();
         if (!this.onGround() && movement.y < 0.0D) {
             this.setDeltaMovement(movement.multiply(1.0D, 0.6D, 1.0D));
@@ -109,9 +109,7 @@ public class CrystalFeatherBird extends Animal implements GeoEntity {
         }
     }
 
-    /**
-     * 喂食荧光花:冷却就绪时无伤获得晶羽×1;冷却中给含蓄提示。
-     */
+    /** 喂食荧光花:冷却就绪时无伤获得晶羽×1;冷却中给含蓄提示。 */
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
@@ -169,24 +167,20 @@ public class CrystalFeatherBird extends Animal implements GeoEntity {
         return ModEntities.CRYSTAL_FEATHER_BIRD.get().create(level);
     }
 
-    // ---- 声音 ----
-
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.ALLAY_AMBIENT_WITHOUT_ITEM;
+        return ModSounds.CRYSTAL_FEATHER_BIRD_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.ALLAY_HURT;
+        return ModSounds.CRYSTAL_FEATHER_BIRD_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.ALLAY_DEATH;
+        return ModSounds.CRYSTAL_FEATHER_BIRD_DEATH.get();
     }
-
-    // ---- GeckoLib 动画 ----
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {

@@ -2,1251 +2,5101 @@
   "format_version": "1.21.11",
   "credit": "Made with Blockbench",
   "textures": {
-    "0": "unknown_echoes:block/echo_cliff_stone",
-    "1": "unknown_echoes:block/artifact_record_table",
-    "2": "unknown_echoes:block/sky_lamp_glass",
-    "particle": "unknown_echoes:block/echo_cliff_stone"
+    "frame": "unknown_echoes:block/artifact_record_table_frame",
+    "brass": "unknown_echoes:block/artifact_record_table_brass",
+    "archive": "unknown_echoes:block/artifact_record_table",
+    "lens": "unknown_echoes:block/sky_lamp_glass",
+    "paper": "unknown_echoes:block/artifact_record_table_pages",
+    "particle": "unknown_echoes:block/artifact_record_table_frame"
   },
   "elements": [
     {
-      "name": "foundation",
+      "name": "art_artifact_record_table_curator_foundation",
       "from": [
-        1,
+        2,
         0,
-        1
+        2
       ],
       "to": [
-        15,
-        2,
-        15
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            14,
-            2
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            14,
-            2
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            14,
-            2
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            14,
-            2
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            14,
-            14
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            14,
-            14
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "cabinet",
-      "from": [
-        3,
-        2,
-        5
-      ],
-      "to": [
-        13,
-        7.5,
+        14,
+        1.1,
         14
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            10,
-            5.5
+            2.0,
+            6.0,
+            14.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#frame"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            9,
-            5.5
+            2.0,
+            6.0,
+            14.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#frame"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            10,
-            5.5
+            2.0,
+            6.0,
+            14.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#frame"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            9,
-            5.5
+            2.0,
+            6.0,
+            14.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#frame"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            10,
-            9
+            2.0,
+            2.0,
+            14.0,
+            14.0
           ],
-          "texture": "#0"
+          "texture": "#frame"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            10,
-            9
+            2.0,
+            2.0,
+            14.0,
+            14.0
           ],
-          "texture": "#0"
+          "texture": "#frame",
+          "cullface": "down"
         }
       }
     },
     {
-      "name": "leg_nw",
-      "from": [
-        2,
-        2,
-        2
-      ],
-      "to": [
-        5,
-        7.5,
-        5
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            5.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            5.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            5.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            5.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "leg_ne",
-      "from": [
-        11,
-        2,
-        2
-      ],
-      "to": [
-        14,
-        7.5,
-        5
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3,
-            5.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            5.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3,
-            5.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            5.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3,
-            3
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "shelf_left",
-      "from": [
-        2,
-        4.5,
-        5
-      ],
-      "to": [
-        4,
-        6,
-        13
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            8,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            8,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2,
-            8
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2,
-            8
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "shelf_right",
-      "from": [
-        12,
-        4.5,
-        5
-      ],
-      "to": [
-        14,
-        6,
-        13
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            8,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            8,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2,
-            8
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2,
-            8
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "tabletop",
-      "from": [
-        1.5,
-        7.5,
-        2
-      ],
-      "to": [
-        14.5,
-        9,
-        14
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            13,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            12,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            13,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            12,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            13,
-            12
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            13,
-            12
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "archive_panel",
-      "from": [
-        3,
-        8.5,
-        4
-      ],
-      "to": [
-        13,
-        10.5,
-        12
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          9,
-          12
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            10,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            8,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            10,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            8,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            10,
-            8
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            10,
-            8
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "ledger_spine",
-      "from": [
-        3.5,
-        10.25,
-        10
-      ],
-      "to": [
-        12.5,
-        11.5,
-        13
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          10.5,
-          12
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            9,
-            1.25
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.25
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            9,
-            1.25
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3,
-            1.25
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            9,
-            3
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            9,
-            3
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "scroll_left",
-      "from": [
-        2,
-        9,
-        4
-      ],
-      "to": [
-        3.5,
-        11,
-        12
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            8,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            8,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1.5,
-            8
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1.5,
-            8
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "scroll_right",
-      "from": [
-        12.5,
-        9,
-        4
-      ],
-      "to": [
-        14,
-        11,
-        12
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            8,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            8,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1.5,
-            8
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1.5,
-            8
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "seal_left",
-      "from": [
-        2.25,
-        11,
-        5
-      ],
-      "to": [
-        3.25,
-        13.5,
-        7
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1,
-            2
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1,
-            2
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "seal_right",
-      "from": [
-        12.75,
-        11,
-        5
-      ],
-      "to": [
-        13.75,
-        13.5,
-        7
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            1,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            1,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2,
-            2.5
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            1,
-            2
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            1,
-            2
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "reading_surface",
+      "name": "art_artifact_record_table_curator_toe_n",
       "from": [
         4,
-        9.5,
-        3.5
+        0,
+        0.6
       ],
       "to": [
         12,
-        10.25,
-        10.5
+        1.0,
+        2.4
       ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          9.75,
-          10.5
-        ]
-      },
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            8,
-            0.75
+            4.0,
+            6.0,
+            12.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            7,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            8,
-            0.75
+            4.0,
+            6.0,
+            12.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            7,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            8,
-            7
+            4.0,
+            6.0,
+            12.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#frame"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            8,
-            7
+            4.0,
+            6.0,
+            12.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#frame",
+          "cullface": "down"
         }
       }
     },
     {
-      "name": "record_core",
+      "name": "art_artifact_record_table_curator_toe_s",
       "from": [
-        6,
-        11.5,
-        9.5
+        4,
+        0,
+        13.6
       ],
       "to": [
-        10,
-        14.5,
+        12,
+        1.0,
+        15.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#frame",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_toe_w",
+      "from": [
+        0.6,
+        0,
+        4
+      ],
+      "to": [
+        2.4,
+        1.0,
+        12
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#frame",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_toe_e",
+      "from": [
+        13.6,
+        0,
+        4
+      ],
+      "to": [
+        15.4,
+        1.0,
+        12
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            4.0,
+            6.0,
+            12.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.0,
+            10.0,
+            12.0
+          ],
+          "texture": "#frame",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_foot_nw",
+      "from": [
+        1.2,
+        0.1,
+        1.2
+      ],
+      "to": [
+        4.0,
+        1.4,
+        4.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame",
+          "cullface": "down"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.6,
+          0.5,
+          2.6
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_foot_ne",
+      "from": [
+        12.0,
+        0.1,
+        1.2
+      ],
+      "to": [
+        14.8,
+        1.4,
+        4.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame",
+          "cullface": "down"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.4,
+          0.5,
+          2.6
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_foot_sw",
+      "from": [
+        1.2,
+        0.1,
+        12.0
+      ],
+      "to": [
+        4.0,
+        1.4,
+        14.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame",
+          "cullface": "down"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.6,
+          0.5,
+          13.4
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_foot_se",
+      "from": [
+        12.0,
+        0.1,
+        12.0
+      ],
+      "to": [
+        14.8,
+        1.4,
+        14.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame",
+          "cullface": "down"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.4,
+          0.5,
+          13.4
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_foundation_band_n",
+      "from": [
+        3.0,
+        0.9,
+        1.2
+      ],
+      "to": [
+        13.0,
+        1.55,
+        2.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_foundation_band_s",
+      "from": [
+        3.0,
+        0.9,
+        14.0
+      ],
+      "to": [
+        13.0,
+        1.55,
+        14.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_foundation_band_w",
+      "from": [
+        1.2,
+        0.9,
+        3.0
+      ],
+      "to": [
+        2.0,
+        1.55,
+        13.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            3.0,
+            10.0,
+            13.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.0,
+            10.0,
+            13.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_foundation_band_e",
+      "from": [
+        14.0,
+        0.9,
+        3.0
+      ],
+      "to": [
+        14.8,
+        1.55,
+        13.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            3.0,
+            10.0,
+            13.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.0,
+            10.0,
+            13.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_post_nw",
+      "from": [
+        2.1,
+        1.0,
+        2.2
+      ],
+      "to": [
+        4.1,
+        7.0,
+        4.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_post_ne",
+      "from": [
+        11.9,
+        1.0,
+        2.2
+      ],
+      "to": [
+        13.9,
+        7.0,
+        4.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_post_sw",
+      "from": [
+        2.1,
+        1.0,
+        11.8
+      ],
+      "to": [
+        4.1,
+        7.0,
+        13.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_post_se",
+      "from": [
+        11.9,
+        1.0,
+        11.8
+      ],
+      "to": [
+        13.9,
+        7.0,
+        13.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.0,
+            10.0,
+            11.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_post_band_nw",
+      "from": [
+        1.8,
+        4.2,
+        1.9
+      ],
+      "to": [
+        4.4,
+        5.0,
+        4.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_post_band_ne",
+      "from": [
+        11.6,
+        4.2,
+        1.9
+      ],
+      "to": [
+        14.2,
+        5.0,
+        4.5
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_post_band_sw",
+      "from": [
+        1.8,
+        4.2,
+        11.5
+      ],
+      "to": [
+        4.4,
+        5.0,
+        14.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_post_band_se",
+      "from": [
+        11.6,
+        4.2,
+        11.5
+      ],
+      "to": [
+        14.2,
+        5.0,
+        14.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_shelf_low",
+      "from": [
+        2.8,
+        2.0,
+        3.0
+      ],
+      "to": [
+        13.2,
+        3.0,
+        13.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            2.8,
+            6.0,
+            13.2,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            2.8,
+            6.0,
+            13.2,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            2.8,
+            3.0,
+            13.2,
+            13.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            2.8,
+            3.0,
+            13.2,
+            13.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_shelf_lip_n",
+      "from": [
+        3.3,
+        2.65,
+        2.5
+      ],
+      "to": [
+        12.7,
+        3.35,
+        3.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.3,
+            6.0,
+            12.7,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            3.3,
+            6.0,
+            12.7,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            3.3,
+            6.0,
+            12.7,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            3.3,
+            6.0,
+            12.7,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_shelf_lip_s",
+      "from": [
+        3.3,
+        2.65,
+        12.7
+      ],
+      "to": [
+        12.7,
+        3.35,
         13.5
       ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.3,
+            6.0,
+            12.7,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            3.3,
+            6.0,
+            12.7,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            3.3,
+            6.0,
+            12.7,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            3.3,
+            6.0,
+            12.7,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_archive_drawer_w",
+      "from": [
+        -0.7,
+        2.2,
+        5.0
+      ],
+      "to": [
+        2.3,
+        5.9,
+        11.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            4.65,
+            6.0,
+            11.35,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            4.65,
+            6.0,
+            11.35,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.65,
+            10.0,
+            11.35
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.65,
+            10.0,
+            11.35
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_archive_drawer_w_face",
+      "from": [
+        -1.05,
+        2.65,
+        5.5
+      ],
+      "to": [
+        -0.45,
+        5.45,
+        11.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "east": {
+          "uv": [
+            5.15,
+            6.0,
+            10.85,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#archive"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            5.15,
+            10.0,
+            10.85
+          ],
+          "texture": "#archive"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            5.15,
+            10.0,
+            10.85
+          ],
+          "texture": "#archive"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_archive_drawer_w_handle",
+      "from": [
+        -1.35,
+        3.6,
+        7.0
+      ],
+      "to": [
+        -0.85,
+        4.5,
+        9.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_archive_drawer_e",
+      "from": [
+        13.7,
+        2.2,
+        5.0
+      ],
+      "to": [
+        16.7,
+        5.9,
+        11.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            4.65,
+            6.0,
+            11.35,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            4.65,
+            6.0,
+            11.35,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            4.65,
+            10.0,
+            11.35
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            4.65,
+            10.0,
+            11.35
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_archive_drawer_e_face",
+      "from": [
+        16.45,
+        2.65,
+        5.5
+      ],
+      "to": [
+        17.05,
+        5.45,
+        11.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#archive"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "west": {
+          "uv": [
+            5.15,
+            6.0,
+            10.85,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            5.15,
+            10.0,
+            10.85
+          ],
+          "texture": "#archive"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            5.15,
+            10.0,
+            10.85
+          ],
+          "texture": "#archive"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_archive_drawer_e_handle",
+      "from": [
+        16.85,
+        3.6,
+        7.0
+      ],
+      "to": [
+        17.35,
+        4.5,
+        9.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_underbrace_w",
+      "from": [
+        2.4,
+        4.9,
+        6.8
+      ],
+      "to": [
+        4.2,
+        8.0,
+        9.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          4,
+          5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_underbrace_e",
+      "from": [
+        11.8,
+        4.9,
+        6.8
+      ],
+      "to": [
+        13.6,
+        8.0,
+        9.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          12,
+          5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_deck_core",
+      "from": [
+        1.8,
+        6.7,
+        2.0
+      ],
+      "to": [
+        14.2,
+        8.3,
+        14.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            1.8,
+            6.0,
+            14.2,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            1.8,
+            6.0,
+            14.2,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            1.8,
+            2.0,
+            14.2,
+            14.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            1.8,
+            2.0,
+            14.2,
+            14.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_deck_apron_n",
+      "from": [
+        1.0,
+        7.0,
+        1.25
+      ],
+      "to": [
+        15.0,
+        8.5,
+        2.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_deck_apron_s",
+      "from": [
+        1.0,
+        7.0,
+        13.2
+      ],
+      "to": [
+        15.0,
+        8.5,
+        14.75
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            1.0,
+            6.0,
+            15.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_deck_rail_n",
+      "from": [
+        2.0,
+        8.0,
+        1.0
+      ],
+      "to": [
+        14.0,
+        8.7,
+        1.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_deck_rail_s",
+      "from": [
+        2.0,
+        8.0,
+        14.2
+      ],
+      "to": [
+        14.0,
+        8.7,
+        15.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            2.0,
+            6.0,
+            14.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_corner_nw",
+      "from": [
+        1.2,
+        7.6,
+        1.6
+      ],
+      "to": [
+        3.2,
+        9.0,
+        3.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.2,
+          8.0,
+          2.6
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_corner_ne",
+      "from": [
+        12.8,
+        7.6,
+        1.6
+      ],
+      "to": [
+        14.8,
+        9.0,
+        3.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.8,
+          8.0,
+          2.6
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_corner_sw",
+      "from": [
+        1.2,
+        7.6,
+        12.4
+      ],
+      "to": [
+        3.2,
+        9.0,
+        14.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.2,
+          8.0,
+          13.4
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_corner_se",
+      "from": [
+        12.8,
+        7.6,
+        12.4
+      ],
+      "to": [
+        14.8,
+        9.0,
+        14.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.8,
+          8.0,
+          13.4
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_ledger_bed",
+      "from": [
+        2.3,
+        7.9,
+        3.0
+      ],
+      "to": [
+        13.7,
+        8.8,
+        12.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            2.3,
+            6.0,
+            13.7,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            3.1,
+            6.0,
+            12.9,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            2.3,
+            6.0,
+            13.7,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            3.1,
+            6.0,
+            12.9,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            2.3,
+            3.1,
+            13.7,
+            12.9
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            2.3,
+            3.1,
+            13.7,
+            12.9
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_ledger_left",
+      "from": [
+        2.8,
+        8.45,
+        3.4
+      ],
+      "to": [
+        7.75,
+        8.9,
+        12.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.525,
+            6.0,
+            10.475,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "east": {
+          "uv": [
+            3.5,
+            6.0,
+            12.5,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "south": {
+          "uv": [
+            5.525,
+            6.0,
+            10.475,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "west": {
+          "uv": [
+            3.5,
+            6.0,
+            12.5,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#paper"
+        },
+        "down": {
+          "uv": [
+            5.525,
+            3.5,
+            10.475,
+            12.5
+          ],
+          "texture": "#paper"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_ledger_right",
+      "from": [
+        8.25,
+        8.45,
+        3.4
+      ],
+      "to": [
+        13.2,
+        8.9,
+        12.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.525,
+            6.0,
+            10.475,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "east": {
+          "uv": [
+            3.5,
+            6.0,
+            12.5,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "south": {
+          "uv": [
+            5.525,
+            6.0,
+            10.475,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "west": {
+          "uv": [
+            3.5,
+            6.0,
+            12.5,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#paper"
+        },
+        "down": {
+          "uv": [
+            5.525,
+            3.5,
+            10.475,
+            12.5
+          ],
+          "texture": "#paper"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_page_leaf_w",
+      "from": [
+        3.2,
+        8.85,
+        4.0
+      ],
+      "to": [
+        7.45,
+        9.05,
+        11.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.875,
+            6.0,
+            10.125,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "east": {
+          "uv": [
+            4.15,
+            6.0,
+            11.85,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "south": {
+          "uv": [
+            5.875,
+            6.0,
+            10.125,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "west": {
+          "uv": [
+            4.15,
+            6.0,
+            11.85,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#paper"
+        },
+        "down": {
+          "uv": [
+            5.875,
+            4.15,
+            10.125,
+            11.85
+          ],
+          "texture": "#paper"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_page_leaf_e",
+      "from": [
+        8.55,
+        8.85,
+        4.0
+      ],
+      "to": [
+        12.8,
+        9.05,
+        11.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.875,
+            6.0,
+            10.125,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "east": {
+          "uv": [
+            4.15,
+            6.0,
+            11.85,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "south": {
+          "uv": [
+            5.875,
+            6.0,
+            10.125,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "west": {
+          "uv": [
+            4.15,
+            6.0,
+            11.85,
+            10.0
+          ],
+          "texture": "#paper"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#paper"
+        },
+        "down": {
+          "uv": [
+            5.875,
+            4.15,
+            10.125,
+            11.85
+          ],
+          "texture": "#paper"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_page_tab_w",
+      "from": [
+        2.45,
+        8.8,
+        5.2
+      ],
+      "to": [
+        3.15,
+        9.2,
+        7.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#archive"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_page_tab_e",
+      "from": [
+        12.85,
+        8.8,
+        8.4
+      ],
+      "to": [
+        13.55,
+        9.2,
+        10.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#archive"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_ledger_spine",
+      "from": [
+        7.55,
+        8.3,
+        3.1
+      ],
+      "to": [
+        8.45,
+        9.3,
+        12.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            3.2,
+            6.0,
+            12.8,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            3.2,
+            6.0,
+            12.8,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            3.2,
+            10.0,
+            12.8
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.2,
+            10.0,
+            12.8
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_ledger_clasp_nw",
+      "from": [
+        2.5,
+        8.4,
+        3.1
+      ],
+      "to": [
+        3.6,
+        9.3,
+        4.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_ledger_clasp_ne",
+      "from": [
+        12.4,
+        8.4,
+        3.1
+      ],
+      "to": [
+        13.5,
+        9.3,
+        4.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_ledger_clasp_sw",
+      "from": [
+        2.5,
+        8.4,
+        11.6
+      ],
+      "to": [
+        3.6,
+        9.3,
+        12.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_ledger_clasp_se",
+      "from": [
+        12.4,
+        8.4,
+        11.6
+      ],
+      "to": [
+        13.5,
+        9.3,
+        12.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_arm_w_base",
+      "from": [
+        -0.2,
+        8.0,
+        6.8
+      ],
+      "to": [
+        3.1,
+        9.6,
+        9.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          2.8,
+          8.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_arm_w_joint",
+      "from": [
+        1.2,
+        9.0,
+        6.6
+      ],
+      "to": [
+        3.6,
+        11.4,
+        9.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          2.4,
+          10.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_arm_w_probe",
+      "from": [
+        2.6,
+        10.0,
+        7.2
+      ],
+      "to": [
+        4.0,
+        14.2,
+        8.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          3.2,
+          10.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_arm_e_base",
+      "from": [
+        12.9,
+        8.0,
+        6.8
+      ],
+      "to": [
+        16.2,
+        9.6,
+        9.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          13.2,
+          8.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_arm_e_joint",
+      "from": [
+        12.4,
+        9.0,
+        6.6
+      ],
+      "to": [
+        14.8,
+        11.4,
+        9.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13.6,
+          10.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_arm_e_probe",
+      "from": [
+        12.0,
+        10.0,
+        7.2
+      ],
+      "to": [
+        13.4,
+        14.2,
+        8.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.9,
+            10.0,
+            10.1
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          12.8,
+          10.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_lens_yoke",
+      "from": [
+        5.1,
+        11.8,
+        11.1
+      ],
+      "to": [
+        10.9,
+        13.0,
+        13.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.1,
+            6.0,
+            10.9,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            5.1,
+            6.0,
+            10.9,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            5.1,
+            6.0,
+            10.9,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            5.1,
+            6.0,
+            10.9,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_lens_post",
+      "from": [
+        7.3,
+        10.0,
+        11.6
+      ],
+      "to": [
+        8.7,
+        15.3,
+        13.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            5.35,
+            10.0,
+            10.65
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            5.35,
+            10.0,
+            10.65
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            5.35,
+            10.0,
+            10.65
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            5.35,
+            10.0,
+            10.65
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_lens_frame_top",
+      "from": [
+        5.6,
+        15.4,
+        10.8
+      ],
+      "to": [
+        10.4,
+        16.0,
+        11.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          14.4,
+          12.3
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_lens_frame_bottom",
+      "from": [
+        5.6,
+        13.6,
+        10.8
+      ],
+      "to": [
+        10.4,
+        14.2,
+        11.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          14.4,
+          12.3
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_lens_frame_w",
+      "from": [
+        5.6,
+        14.2,
+        10.8
+      ],
+      "to": [
+        6.3,
+        15.4,
+        11.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          14.4,
+          12.3
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_lens_frame_e",
+      "from": [
+        9.7,
+        14.2,
+        10.8
+      ],
+      "to": [
+        10.4,
+        15.4,
+        11.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#brass"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          14.4,
+          12.3
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_lens_glass",
+      "from": [
+        6.3,
+        14.1,
+        10.55
+      ],
+      "to": [
+        9.7,
+        15.5,
+        11.15
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#lens"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#lens"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#lens"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#lens"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#lens"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#lens"
+        }
+      },
+      "light_emission": 9,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          14.4,
+          12.3
+        ]
+      }
+    },
+    {
+      "name": "art_artifact_record_table_curator_index_beacon",
+      "from": [
+        7.05,
+        9.4,
+        1.5
+      ],
+      "to": [
+        8.95,
+        11.4,
+        3.0
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#archive"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#archive"
+        }
+      },
+      "light_emission": 6,
       "rotation": {
         "angle": 45,
         "axis": "y",
         "origin": [
           8,
-          13,
-          11.5
+          10.4,
+          2.25
         ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4,
-            3
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            4,
-            3
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4,
-            3
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            4,
-            3
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4,
-            4
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4,
-            4
-          ],
-          "texture": "#2"
-        }
-      }
-    },
-    {
-      "name": "index_light_left",
-      "from": [
-        2.25,
-        6.25,
-        2.25
-      ],
-      "to": [
-        4.75,
-        7.25,
-        4.75
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#2"
-        }
-      }
-    },
-    {
-      "name": "index_light_right",
-      "from": [
-        11.25,
-        6.25,
-        2.25
-      ],
-      "to": [
-        13.75,
-        7.25,
-        4.75
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            1
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            2.5,
-            2.5
-          ],
-          "texture": "#2"
-        }
       }
     }
   ],
   "groups": [
     {
-      "name": "root",
+      "name": "art_artifact_record_table_curator",
       "origin": [
         8,
-        8,
+        0,
         8
       ],
       "scope": 0,
-      "color": 0,
-      "shade": false,
-      "children": []
-    },
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16
+      "color": 4,
+      "children": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66
+      ]
+    }
   ]
 }

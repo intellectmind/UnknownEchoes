@@ -98,6 +98,15 @@
             5,
             0,
             0
+          ]
+        },
+        {
+          "name": "head_anim",
+          "parent": "head",
+          "pivot": [
+            0,
+            10,
+            -2
           ],
           "cubes": [
             {

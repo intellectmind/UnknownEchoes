@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 3, "max": 5 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:folded_carapace", "weight": 10, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_ore_scrap", "weight": 8, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:palimpsest_leaf", "weight": 5, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:archive_spore_roll", "weight": 7 },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_bandage", "weight": 6, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } } ] },
+        { "type": "minecraft:item", "name": "minecraft:amethyst_shard", "weight": 6, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 6 } } ] },
+        { "type": "minecraft:item", "name": "unknown_echoes:deep_alloy_ingot", "weight": 2 }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/deep/folded_celestial_archive_cache"
+}

@@ -4,6 +4,8 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.ability.ResonanceTokenManager;
+import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
+import cn.kurt6.unknown_echoes.world.MainBossRechallengeData;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -12,7 +14,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -26,18 +31,11 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 风之核心祭坛(场地内奖励祭坛)。V0.6E 共鸣信物仪式(5.1.1):
- * 服务端双记录校验——已击败遗忘巨像(个人 Boss 记录)+ 已完成记忆柱机关(个人仪式记录,
- * 破防瞬间对参与者写入)。双记录齐全后,持风之信物右键被吸收(消耗 + 演出)才写入能力;
- * 无信物时含蓄指引回记忆柱处免费复领。修正 V0.5 偏差:旧版只查 Boss 记录,
- * 服务器调高未破防伤害硬杀巨像即可跳过机关——现在机关记录是硬条件。
- * 散件摆放(周围无记忆柱)时只查 Boss 击败,保证管理员/数据包布景可用。
- */
+/** 风之核心祭坛：服务端确认 Boss 击败记录和机关完成记录后，吸收绑定信物并解锁能力。 */
 public class RewardAltarBlock extends Block {
     public static final MapCodec<RewardAltarBlock> CODEC = simpleCodec(RewardAltarBlock::new);
 
-    /** 祭坛搜索本场地记忆柱的范围(竞技场 29×29,祭坛在南侧,对角记忆柱距离约 19)。 */
+    /** 搜索本场地记忆柱的范围(格)。祭坛偏在场地一侧,水平半径要够到对角的记忆柱。 */
     private static final int PILLAR_RANGE_H = 20;
     private static final int PILLAR_RANGE_V = 6;
 
@@ -63,6 +61,19 @@ public class RewardAltarBlock extends Block {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                Player player, BlockHitResult hitResult) {
+        return interact(state, level, pos, player, hitResult);
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level,
+                                              BlockPos pos, Player player, InteractionHand hand,
+                                              BlockHitResult hitResult) {
+        interact(state, level, pos, player, hitResult);
+        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    private InteractionResult interact(BlockState state, Level level, BlockPos pos,
+                                       Player player, BlockHitResult hitResult) {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
@@ -71,7 +82,8 @@ public class RewardAltarBlock extends Block {
         }
 
         if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.WIND_ECHO)) {
-            serverPlayer.displayClientMessage(Component.translatable("message.unknown_echoes.altar.claimed"), true);
+            MainBossRechallengeData.trySummon(serverPlayer, pos,
+                    MainBossRechallengeData.BossKind.FORGOTTEN_COLOSSUS);
             return InteractionResult.CONSUME;
         }
 
@@ -81,7 +93,13 @@ public class RewardAltarBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        // 机关条件:场地内存在记忆柱时必须有个人仪式记录(散件摆放只查 Boss,兼容布景)
+        if (!isRangeLoaded(level, pos, PILLAR_RANGE_H)) {
+            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
+            serverPlayer.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.altar.area_loading"), true);
+            return InteractionResult.CONSUME;
+        }
+
         boolean hasPillars = hasNearbyMemoryPillars(level, pos);
         if (hasPillars && !ResonanceTokenManager.hasRitualRecord(serverPlayer, EchoAbilityType.WIND_ECHO)) {
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
@@ -90,7 +108,6 @@ public class RewardAltarBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        // 共鸣信物仪式:双记录齐全后还需把信物交给祭坛(消耗 + 演出);无信物指引回机关复领
         if (hasPillars) {
             if (!ResonanceTokenManager.hasValidToken(serverPlayer, EchoAbilityType.WIND_ECHO)) {
                 level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.7F);
@@ -118,7 +135,10 @@ public class RewardAltarBlock extends Block {
         return false;
     }
 
-    /** 信物吸收演出:螺旋上升的回响光点 + 共鸣音(所有祭坛共用,5.1.1 仪式必经感)。 */
+    private static boolean isRangeLoaded(Level level, BlockPos center, int horizontalRange) {
+        return LoadedAreaCheck.horizontalRadiusLoaded(level, center, horizontalRange);
+    }
+
     public static void playAbsorbCeremony(Level level, BlockPos pos) {
         level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.3F, 0.7F);
         level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 0.8F, 1.4F);

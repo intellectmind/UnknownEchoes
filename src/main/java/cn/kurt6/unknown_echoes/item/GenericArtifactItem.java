@@ -3,25 +3,21 @@ package cn.kurt6.unknown_echoes.item;
 import cn.kurt6.unknown_echoes.artifact.ArtifactManager;
 import cn.kurt6.unknown_echoes.artifact.ArtifactEffectManager;
 import cn.kurt6.unknown_echoes.artifact.ArtifactType;
-import cn.kurt6.unknown_echoes.registry.ModDataComponents;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
 
 import java.util.List;
 
 /**
- * 通用神器凭据物品。具体效果先落为服务端校验、能量/冷却和含蓄反馈,
- * 后续可按神器类型替换成专门 Item,但不能绕过 ArtifactManager。
+ * 通用神器凭据物品。
+ * 具体效果先落为服务端校验、能量/冷却和含蓄反馈, 按神器类型替换成专门 Item,但不能绕过 ArtifactManager。
  */
-public class GenericArtifactItem extends Item {
+public class GenericArtifactItem extends Item implements ItemActiveSkill {
     private final ArtifactType type;
 
     public GenericArtifactItem(ArtifactType type, Properties properties) {
@@ -29,41 +25,48 @@ public class GenericArtifactItem extends Item {
         this.type = type;
     }
 
+    /** 神器由「使用神器」或「物品主动技能」键触发；锚点绑定走「物品副功能」键。 */
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
-        if (level.isClientSide || !(player instanceof ServerPlayer serverPlayer)) {
-            return InteractionResultHolder.success(stack);
-        }
+    public boolean activateItemSkill(ServerLevel level, ServerPlayer player,
+                                     ItemStack stack, InteractionHand hand) {
+        return activate(player, stack, hand, false);
+    }
+
+    @Override
+    public boolean hasAlternateItemSkill() {
+        return ArtifactEffectManager.hasBindMode(type);
+    }
+
+    @Override
+    public boolean activateAlternateItemSkill(ServerLevel level, ServerPlayer player,
+                                              ItemStack stack, InteractionHand hand) {
+        return activate(player, stack, hand, true);
+    }
+
+    private boolean activate(ServerPlayer player, ItemStack stack, InteractionHand hand,
+                             boolean bindInstead) {
         if (!ArtifactManager.isEnabled(type)) {
-            actionbar(serverPlayer, "message.unknown_echoes.artifact.disabled");
-            return InteractionResultHolder.consume(stack);
+            actionbar(player, "message.unknown_echoes.artifact.disabled");
+            return false;
         }
-        if (!ArtifactManager.validateCredential(serverPlayer, type, stack)) {
-            actionbar(serverPlayer, "message.unknown_echoes.artifact.not_yours");
-            return InteractionResultHolder.consume(stack);
+        if (!ArtifactManager.validateCredential(player, type, stack)) {
+            actionbar(player, "message.unknown_echoes.artifact.not_yours");
+            return false;
         }
-        if (ArtifactManager.isOnCooldown(serverPlayer, type)) {
-            actionbar(serverPlayer, "message.unknown_echoes.artifact.generic_cooldown");
-            return InteractionResultHolder.consume(stack);
+        if (ArtifactManager.isOnCooldown(player, type)) {
+            actionbar(player, "message.unknown_echoes.artifact.generic_cooldown");
+            return false;
         }
-        if (!ArtifactEffectManager.use(serverPlayer, type, hand)) {
-            return InteractionResultHolder.consume(stack);
-        }
-        return InteractionResultHolder.consume(stack);
+        return ArtifactEffectManager.use(player, type, hand, bindInstead);
+    }
+
+    private static void actionbar(ServerPlayer player, String key) {
+        player.displayClientMessage(Component.translatable(key), true);
     }
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {
-        Integer serial = stack.get(ModDataComponents.CREDENTIAL_SERIAL.get());
-        if (serial != null) {
-            tooltip.add(Component.translatable("tooltip.unknown_echoes.artifact.serial", serial)
-                    .withStyle(ChatFormatting.DARK_GRAY));
-        }
-    }
-
-    private static void actionbar(ServerPlayer player, String key) {
-        player.displayClientMessage(Component.translatable(key), true);
+        ArtifactTooltip.add(tooltip, type);
     }
 }

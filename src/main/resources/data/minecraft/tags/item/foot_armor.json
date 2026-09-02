@@ -2,6 +2,14 @@
   "replace": false,
   "values": [
     "unknown_echoes:explorer_boots",
-    "unknown_echoes:listener_boots"
+    "unknown_echoes:listener_boots",
+    "unknown_echoes:echo_traveler_boots",
+    "unknown_echoes:wind_walker_boots",
+    "unknown_echoes:tide_stalker_boots",
+    "unknown_echoes:true_sight_shadow_boots",
+    "unknown_echoes:silent_watch_boots",
+    "unknown_echoes:echo_oath_boots",
+    "unknown_echoes:abyss_walker_boots",
+    "unknown_echoes:resonator_boots"
   ]
 }

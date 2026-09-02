@@ -16,6 +16,6 @@ public class EchoHoeItem extends HoeItem {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {
-        EchoTooltips.add(tooltip, "echo_hoe");
+        EchoTooltips.addWithSkillKey(tooltip, "echo_hoe");
     }
 }

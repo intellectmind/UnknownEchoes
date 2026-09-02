@@ -32,16 +32,12 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * 风门:能力权限系统的核心验证方块。
- * 只有拥有风之回响的玩家可以开关;开关时相邻的风门(上下左右连成一片)一起联动,
- * 所以多格大门只需点击任意一块。带朝向(放置时面向玩家),关闭为 4 格厚门板。
- */
+/** 风门:能力权限系统的核心验证方块。 */
 public class WindDoorBlock extends Block {
     public static final MapCodec<WindDoorBlock> CODEC = simpleCodec(WindDoorBlock::new);
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
-    // 与相邻风门的连接状态(开启态据此省略中间的门框柱/顶梁,多格大门视觉上合并为一扇)
+
     public static final BooleanProperty CONN_NORTH = BooleanProperty.create("north");
     public static final BooleanProperty CONN_SOUTH = BooleanProperty.create("south");
     public static final BooleanProperty CONN_WEST = BooleanProperty.create("west");
@@ -137,7 +133,7 @@ public class WindDoorBlock extends Block {
         if (!state.getValue(OPEN)) {
             return isNorthSouth(state) ? CLOSED_NS : CLOSED_EW;
         }
-        // 开启态:只在没有相邻风门的一侧保留门框柱/顶梁,多格大门合并为一个整体门洞
+
         VoxelShape shape = Shapes.empty();
         if (!state.getValue(CONN_UP)) {
             shape = Shapes.or(shape, isNorthSouth(state) ? TOP_NS : TOP_EW);

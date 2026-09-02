@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "tag": "unknown_echoes:mini_boss_oath_materials"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:traveler_badge",
+    "count": 2
+  }
+}

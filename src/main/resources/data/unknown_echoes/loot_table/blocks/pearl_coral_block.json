@@ -8,6 +8,9 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:pearl_coral_block"
         }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

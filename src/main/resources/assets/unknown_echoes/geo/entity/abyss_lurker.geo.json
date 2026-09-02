@@ -83,6 +83,15 @@
             10,
             0,
             0
+          ]
+        },
+        {
+          "name": "head_anim",
+          "parent": "head",
+          "pivot": [
+            0,
+            3,
+            -5
           ],
           "cubes": [
             {
@@ -153,7 +162,7 @@
         },
         {
           "name": "jaw",
-          "parent": "head",
+          "parent": "head_anim",
           "pivot": [
             0,
             2,

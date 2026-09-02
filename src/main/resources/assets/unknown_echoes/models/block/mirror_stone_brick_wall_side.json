@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/template_wall_side",
+  "textures": {
+    "wall": "unknown_echoes:block/mirror_stone_bricks"
+  }
+}

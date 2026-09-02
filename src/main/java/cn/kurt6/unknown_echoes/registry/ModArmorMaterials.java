@@ -14,32 +14,29 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 件数效果不在材质里,见 ability/EchoArmorSets(服务端判定)。
- * 深渊行者为 V0.8 深层材料线;共鸣者(V1.0 终局材料线)继续后置。
- */
+/** 件数效果不在材质里,见 ability/EchoArmorSets(服务端判定)。 */
 public class ModArmorMaterials {
     public static final DeferredRegister<ArmorMaterial> ARMOR_MATERIALS =
             DeferredRegister.create(Registries.ARMOR_MATERIAL, UnknownEchoes.MODID);
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> EXPLORER =
             ARMOR_MATERIALS.register("explorer", () -> new ArmorMaterial(
-                    defense(1, 4, 3, 2),
+                    defense(2, 6, 5, 2),
                     14,
                     SoundEvents.ARMOR_EQUIP_LEATHER,
                     () -> Ingredient.of(ModItems.ECHO_FIBER.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("explorer"))),
-                    0.0F,
+                    0.5F,
                     0.0F));
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> LISTENER =
             ARMOR_MATERIALS.register("listener", () -> new ArmorMaterial(
-                    defense(3, 6, 5, 3),
+                    defense(3, 7, 6, 3),
                     18,
                     SoundEvents.ARMOR_EQUIP_CHAIN,
                     () -> Ingredient.of(ModItems.ECHO_METAL_INGOT.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("listener"))),
-                    1.0F,
+                    2.0F,
                     0.0F));
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> ECHO_TRAVELER =
@@ -49,8 +46,8 @@ public class ModArmorMaterials {
                     SoundEvents.ARMOR_EQUIP_DIAMOND,
                     () -> Ingredient.of(ModItems.ECHO_METAL_INGOT.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("echo_traveler"))),
-                    1.5F,
-                    0.0F));
+                    3.25F,
+                    0.10F));
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> WIND_WALKER =
             ARMOR_MATERIALS.register("wind_walker", () -> new ArmorMaterial(
@@ -59,8 +56,8 @@ public class ModArmorMaterials {
                     SoundEvents.ARMOR_EQUIP_DIAMOND,
                     () -> Ingredient.of(ModItems.WIND_RUNE_SHARD.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("wind_walker"))),
-                    3.1F,
-                    0.05F));
+                    3.75F,
+                    0.10F));
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> TIDE_STALKER =
             ARMOR_MATERIALS.register("tide_stalker", () -> new ArmorMaterial(
@@ -69,8 +66,8 @@ public class ModArmorMaterials {
                     SoundEvents.ARMOR_EQUIP_DIAMOND,
                     () -> Ingredient.of(ModItems.MIRROR_LAKE_SHARD.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("tide_stalker"))),
-                    3.1F,
-                    0.05F));
+                    3.75F,
+                    0.10F));
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> TRUE_SIGHT_SHADOW =
             ARMOR_MATERIALS.register("true_sight_shadow", () -> new ArmorMaterial(
@@ -79,38 +76,48 @@ public class ModArmorMaterials {
                     SoundEvents.ARMOR_EQUIP_DIAMOND,
                     () -> Ingredient.of(ModItems.ILLUSION_DUST.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("true_sight_shadow"))),
-                    3.1F,
-                    0.05F));
+                    3.75F,
+                    0.10F));
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> SILENT_WATCH =
             ARMOR_MATERIALS.register("silent_watch", () -> new ArmorMaterial(
-                    defense(4, 9, 8, 4),
+                    defense(4, 10, 8, 4),
                     22,
                     SoundEvents.ARMOR_EQUIP_DIAMOND,
                     () -> Ingredient.of(ModItems.SILENCE_MOSS.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("silent_watch"))),
-                    3.2F,
-                    0.05F));
+                    4.0F,
+                    0.10F));
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> ECHO_OATH =
             ARMOR_MATERIALS.register("echo_oath", () -> new ArmorMaterial(
-                    defense(5, 11, 10, 5),
+                    defense(5, 10, 8, 5),
                     25,
                     SoundEvents.ARMOR_EQUIP_NETHERITE,
                     () -> Ingredient.of(ModItems.ECHO_REALM_INGOT.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("echo_oath"))),
-                    3.75F,
-                    0.10F));
+                    4.5F,
+                    0.125F));
 
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> ABYSS_WALKER =
             ARMOR_MATERIALS.register("abyss_walker", () -> new ArmorMaterial(
-                    defense(6, 12, 10, 6),
-                    24,
+                    defense(5, 11, 9, 5),
+                    25,
                     SoundEvents.ARMOR_EQUIP_NETHERITE,
                     () -> Ingredient.of(ModItems.DEEP_ALLOY_INGOT.get()),
                     List.of(new ArmorMaterial.Layer(UnknownEchoes.id("abyss_walker"))),
-                    4.25F,
-                    0.12F));
+                    5.0F,
+                    0.15F));
+
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> RESONATOR =
+            ARMOR_MATERIALS.register("resonator", () -> new ArmorMaterial(
+                    defense(6, 12, 10, 6),
+                    26,
+                    SoundEvents.ARMOR_EQUIP_NETHERITE,
+                    () -> Ingredient.of(ModItems.RESONANCE_ALLOY_INGOT.get()),
+                    List.of(new ArmorMaterial.Layer(UnknownEchoes.id("resonator"))),
+                    6.0F,
+                    0.20F));
 
     private static Map<ArmorItem.Type, Integer> defense(int boots, int chest, int leggings, int helmet) {
         EnumMap<ArmorItem.Type, Integer> map = new EnumMap<>(ArmorItem.Type.class);

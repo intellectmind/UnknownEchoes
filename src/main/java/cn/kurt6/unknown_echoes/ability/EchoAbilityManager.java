@@ -7,7 +7,6 @@ import cn.kurt6.unknown_echoes.network.SyncAbilityPayload;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.research.EchoResearchManager;
 import cn.kurt6.unknown_echoes.registry.ModAttachments;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -19,9 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * 服务端能力数据读写入口。所有关键进度必须经由本类写入玩家数据并同步客户端。
- */
+/** 服务端能力数据读写入口。所有关键进度必须经由本类写入玩家数据并同步客户端。 */
 public class EchoAbilityManager {
 
     public static EchoAbilityData getData(Player player) {
@@ -40,14 +37,6 @@ public class EchoAbilityManager {
             syncToClient(player);
             ModAdvancements.awardAbility(player, ability.getId());
             ModAdvancements.checkResearchAdvancements(player);
-            if (ability == EchoAbilityType.WIND_ECHO) {
-                player.sendSystemMessage(Component.translatable("message.unknown_echoes.ability.wind_unlocked"));
-            } else if (ability == EchoAbilityType.TIDE_ECHO) {
-                player.sendSystemMessage(Component.translatable("message.unknown_echoes.ability.tide_unlocked"));
-            } else {
-                player.sendSystemMessage(Component.translatable("message.unknown_echoes.ability.unlocked",
-                        Component.translatable("ability.unknown_echoes." + ability.getId())));
-            }
             player.level().playSound(null, player.blockPosition(),
                     SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 0.8F);
         }
@@ -105,7 +94,8 @@ public class EchoAbilityManager {
 
     private static void onBossFirstRecorded(ServerPlayer player, ResourceLocation bossId) {
         ModAdvancements.awardBossDefeat(player, bossId.getPath());
-        // 守护者首杀研究点(V0.6B:研究进度来源之一;重复击败只走结算的普通奖励/拓片)
+        ModAdvancements.checkGuardianAdvancements(player);
+
         if (bossId.getPath().equals("storm_weaver")) {
             addResearchPoints(player, EchoAbilityType.WIND_ECHO, 1);
         }
@@ -125,17 +115,25 @@ public class EchoAbilityManager {
         return getData(player).getUnlockedDimensions().contains(dimensionId.toString());
     }
 
-    /** 个人机关激活记录(V0.5 潮汐符柱等):只在服务端判定,不参与客户端同步。 */
+    /** 个人机关激活记录( 潮汐符柱等):只在服务端判定,不参与客户端同步。 */
     public static boolean hasActivatedMechanism(Player player, String mechanismKey) {
         return getData(player).getActivatedMechanisms().contains(mechanismKey);
     }
 
     public static boolean activateMechanism(ServerPlayer player, String mechanismKey) {
-        return getData(player).activateMechanism(mechanismKey);
+        if (!getData(player).activateMechanism(mechanismKey)) {
+            return false;
+        }
+        ModAdvancements.checkMechanismAdvancements(player);
+        return true;
     }
 
     public static boolean activateMechanisms(ServerPlayer player, String... mechanismKeys) {
-        return getData(player).activateMechanisms(Arrays.asList(mechanismKeys));
+        if (!getData(player).activateMechanisms(Arrays.asList(mechanismKeys))) {
+            return false;
+        }
+        ModAdvancements.checkMechanismAdvancements(player);
+        return true;
     }
 
     public static boolean activateBeaconRoute(ServerPlayer player, ResourceLocation beaconId,
@@ -160,8 +158,7 @@ public class EchoAbilityManager {
         getData(player).getActivatedMechanisms().remove(mechanismKey);
     }
 
-    /** 研究点写入(V0.6B):拓片阅读/回访点交互/守护者首杀统一走这里。
-     *  研究只影响表现与强化数值,永不授予 EchoPermission 权限(design-principles #8)。 */
+    /** 研究点写入:拓片阅读/回访点交互/守护者首杀统一走这里。 */
     public static void addResearchPoints(ServerPlayer player, EchoAbilityType ability, int amount) {
         EchoResearchLine line = EchoResearchLine.byAbility(ability);
         if (line == null) {
@@ -172,8 +169,7 @@ public class EchoAbilityManager {
         EchoResearchManager.addResearchPoints(player, line, amount);
     }
 
-    /** 记录最近一次能力使用失败的含蓄提示(V0.6E,5.7 能力面板;瞬态,不入存档)。
-     *  failureKey 为 lang 键后缀,面板显示 "overview.unknown_echoes.failure.<failureKey>"。 */
+    /** 记录最近一次能力使用失败的提示；仅用于界面展示，不写入存档。 */
     public static void recordFailure(ServerPlayer player, EchoAbilityType ability, String failureKey) {
         if (!failureKey.equals(getData(player).getLastFailure(ability))) {
             getData(player).setLastFailure(ability, failureKey);
@@ -187,23 +183,18 @@ public class EchoAbilityManager {
         }
     }
 
-    // ---- V0.6D 管理员命令入口(/echoes admin):只走既有数据写入口,不绕过同步 ----
-
-    /** 撤销 Boss 击败记录(多人服修档用)。 */
     public static void revokeBossDefeated(ServerPlayer player, ResourceLocation bossId) {
         if (getData(player).getDefeatedBosses().remove(bossId.toString())) {
             syncToClient(player);
         }
     }
 
-    /** 撤销信标激活记录。 */
     public static void revokeBeacon(ServerPlayer player, ResourceLocation beaconId) {
         if (getData(player).getActivatedBeacons().remove(beaconId.toString())) {
             syncToClient(player);
         }
     }
 
-    /** 撤销维度解锁记录。 */
     public static void revokeDimension(ServerPlayer player, ResourceLocation dimensionId) {
         if (getData(player).getUnlockedDimensions().remove(dimensionId.toString())) {
             syncToClient(player);
@@ -223,8 +214,7 @@ public class EchoAbilityManager {
         }
         research.add("@puzzle_score:" + EchoCompletionManager.puzzleCompletionScore(player));
         for (EchoAbilityType type : EchoAbilityType.values()) {
-            // 凭据与誓记页(5.8/V0.6E):只同步"该能力核心机关是否完成"这一布尔事实,
-            // 不泄露机关坐标等隐藏数据(红线 #9)
+
             if (ResonanceTokenManager.hasRitualRecord(player, type)) {
                 tokens.add(type.getId());
             }
@@ -240,7 +230,7 @@ public class EchoAbilityManager {
                 research, tokens, failures));
         DeepEchoAbilityHandler.syncCooldowns(player);
         ModAdvancements.checkMainlineAdvancements(player);
-        // 能力/研究变化和登录同步时顺带核对一次配方书解锁。
+
         RecipeUnlocks.checkAndUnlock(player);
     }
 }

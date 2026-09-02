@@ -1,0 +1,24 @@
+{
+  "parent": "minecraft:item/crossbow",
+  "textures": {
+    "layer0": "unknown_echoes:item/ash_script_crossbow"
+  },
+  "overrides": [
+    {
+      "predicate": { "pulling": 1 },
+      "model": "unknown_echoes:item/ash_script_crossbow_pulling_0"
+    },
+    {
+      "predicate": { "pulling": 1, "pull": 0.42 },
+      "model": "unknown_echoes:item/ash_script_crossbow_pulling_1"
+    },
+    {
+      "predicate": { "pulling": 1, "pull": 0.72 },
+      "model": "unknown_echoes:item/ash_script_crossbow_pulling_2"
+    },
+    {
+      "predicate": { "charged": 1 },
+      "model": "unknown_echoes:item/ash_script_crossbow_charged"
+    }
+  ]
+}

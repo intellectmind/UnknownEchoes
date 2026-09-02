@@ -11,11 +11,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
 
-/**
- * Mini Boss 场地计时器(技术方块,V0.6A Mini Boss 公共框架):
- * 埋在守护者场地内,负责首次生成与击败后的场地重开(MINIBOSS_ARENA_REOPEN 配置)。
- * 不可见、不掉落、无 BlockItem(只由结构生成或管理员 /setblock 放置);强度 -1 防破坏。
- */
+/** Mini Boss 场地计时器：负责首次生成和击败后的重开。 */
 public class MiniBossSpawnerBlock extends BaseEntityBlock {
     public static final MapCodec<MiniBossSpawnerBlock> CODEC = simpleCodec(MiniBossSpawnerBlock::new);
 

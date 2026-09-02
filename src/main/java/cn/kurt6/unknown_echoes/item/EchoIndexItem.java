@@ -13,10 +13,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.List;
 
-/**
- * 回响索引:阅读型查询物品。右键展示第一维度闭环进度并在条件齐备时领取 T7 个人奖励。
- * 物品本身不承载任何进度(进度在玩家数据),不消耗,可正常交易。
- */
+/** 回响索引:阅读型查询物品。右键展示第一维度闭环进度并在条件齐备时领取 T7 个人奖励。 */
 public class EchoIndexItem extends EchoMaterialItem {
 
     public EchoIndexItem(Properties properties) {
@@ -35,7 +32,8 @@ public class EchoIndexItem extends EchoMaterialItem {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.echo_index.hint")
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.echo_index.hint",
+                        Component.keybind("key.use"))
                 .withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.ITALIC));
         super.appendHoverText(stack, context, tooltip, flag);
     }

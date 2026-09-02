@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "unknown_echoes:block/whispering_timber_slab"
+    },
+    "type=top": {
+      "model": "unknown_echoes:block/whispering_timber_slab_top"
+    },
+    "type=double": {
+      "model": "unknown_echoes:block/whispering_timber_slab_double"
+    }
+  }
+}

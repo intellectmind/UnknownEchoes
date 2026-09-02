@@ -1,9 +1,10 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -11,6 +12,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.PanicGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.player.Player;
@@ -23,10 +25,7 @@ import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * 晶歌浮灵:晶歌林地低威胁生态生物。
- * 行为保持轻量,只提供晶歌碎片等普通材料来源和环境氛围。
- */
+/** 晶歌浮灵:晶歌林地低威胁生态生物。 */
 public class CrystalChimeSpirit extends PathfinderMob implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.crystal_chime_spirit.idle");
@@ -46,12 +45,15 @@ public class CrystalChimeSpirit extends PathfinderMob implements GeoEntity {
                 .add(Attributes.MOVEMENT_SPEED, 0.22D);
     }
 
+    /** 躲避排在游荡之前:MOVE 只能被更小的优先级数抢走,排在后面等于永不触发。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new WaterAvoidingRandomStrollGoal(this, 0.8D));
-        this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 8.0F));
-        this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(1, new PanicGoal(this, 1.3D));
+        this.goalSelector.addGoal(2, new FleeThreatGoal(this, 9.0D, 1.0D, 1.25D));
+        this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
     }
 
     @Override
@@ -69,17 +71,17 @@ public class CrystalChimeSpirit extends PathfinderMob implements GeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.AMETHYST_BLOCK_CHIME;
+        return ModSounds.CRYSTAL_CHIME_SPIRIT_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.AMETHYST_CLUSTER_HIT;
+        return ModSounds.CRYSTAL_CHIME_SPIRIT_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.AMETHYST_CLUSTER_BREAK;
+        return ModSounds.CRYSTAL_CHIME_SPIRIT_DEATH.get();
     }
 
     @Override

@@ -6,9 +6,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
-/**
- * 苔背龟 GeckoLib 渲染器(无发光层,沼泽生物保持低调)。
- */
+/** 苔背龟 GeckoLib 渲染器(无发光层,沼泽生物保持低调)。 */
 public class MossBackTurtleRenderer extends GeoEntityRenderer<MossBackTurtle> {
 
     public MossBackTurtleRenderer(EntityRendererProvider.Context context) {

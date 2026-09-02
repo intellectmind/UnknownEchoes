@@ -2,6 +2,9 @@
   "values": [
     "unknown_echoes:storm_compass",
     "unknown_echoes:tide_lantern",
-    "unknown_echoes:echo_lens"
+    "unknown_echoes:echo_lens",
+    "unknown_echoes:time_hourglass",
+    "unknown_echoes:dimension_anchor",
+    "unknown_echoes:rift_anchor"
   ]
 }

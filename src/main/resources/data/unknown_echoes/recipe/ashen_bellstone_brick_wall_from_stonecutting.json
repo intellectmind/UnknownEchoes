@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:ashen_bellstone_bricks"
+  },
+  "result": {
+    "id": "unknown_echoes:ashen_bellstone_brick_wall",
+    "count": 1
+  }
+}

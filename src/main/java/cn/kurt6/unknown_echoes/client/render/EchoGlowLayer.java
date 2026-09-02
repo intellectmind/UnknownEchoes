@@ -11,22 +11,27 @@ import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoRenderer;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
+import software.bernie.geckolib.util.Color;
 
 import javax.annotation.Nullable;
+import java.util.function.Function;
 
-/**
- * 自发光渲染层:用原版 RenderType.eyes(蜘蛛眼同款)整体重绘一遍发光贴图。
- * 发光贴图为透明底,只绘制需要发光的像素(由纹理脚本与底图同步输出)。
- *
- * 不用 GeckoLib 的 AutoGlowingGeoLayer:它会动态改写并重新上传基础贴图,
- * 在 Sodium/光影环境下有把整个实体渲染成黑色的已知风险(本项目实际发生过)。
- */
+/** 自发光渲染层:用原版 RenderType.eyes(蜘蛛眼同款)整体重绘一遍发光贴图。 */
 public class EchoGlowLayer<T extends GeoAnimatable> extends GeoRenderLayer<T> {
     private final ResourceLocation glowTexture;
+    @Nullable
+    private final Function<T, Color> glowTint;
 
     public EchoGlowLayer(GeoRenderer<T> renderer, ResourceLocation glowTexture) {
+        this(renderer, glowTexture, null);
+    }
+
+    /** glowTint 为空时沿用渲染器的整体着色;本体被整体压暗的实体(拟影等)必须单独给发光层提亮,否则辉光随本体一起压到不可见。 */
+    public EchoGlowLayer(GeoRenderer<T> renderer, ResourceLocation glowTexture,
+                         @Nullable Function<T, Color> glowTint) {
         super(renderer);
         this.glowTexture = glowTexture;
+        this.glowTint = glowTint;
     }
 
     @Override
@@ -38,8 +43,11 @@ public class EchoGlowLayer<T extends GeoAnimatable> extends GeoRenderLayer<T> {
             return;
         }
         RenderType glow = RenderType.eyes(this.glowTexture);
+        Color tint = this.glowTint != null
+                ? this.glowTint.apply(animatable)
+                : getRenderer().getRenderColor(animatable, partialTick, packedLight);
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, glow,
                 bufferSource.getBuffer(glow), partialTick, LightTexture.FULL_SKY, packedOverlay,
-                getRenderer().getRenderColor(animatable, partialTick, packedLight).argbInt());
+                tint.argbInt());
     }
 }

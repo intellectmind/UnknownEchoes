@@ -7,9 +7,6 @@ import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
-/**
- * 残钟鸦 GeckoLib 渲染器。
- */
 public class BrokenBellCrowRenderer extends GeoEntityRenderer<BrokenBellCrow> {
 
     public BrokenBellCrowRenderer(EntityRendererProvider.Context context) {

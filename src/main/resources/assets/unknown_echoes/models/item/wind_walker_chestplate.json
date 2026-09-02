@@ -2,5 +2,14 @@
   "parent": "minecraft:item/generated",
   "textures": {
     "layer0": "unknown_echoes:item/wind_walker_chestplate"
+  },
+  "display": {
+    "gui": {
+      "scale": [
+        0.9,
+        0.9,
+        0.9
+      ]
+    }
   }
 }

@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "unknown_echoes:block/folded_slate_brick_slab"
+    },
+    "type=top": {
+      "model": "unknown_echoes:block/folded_slate_brick_slab_top"
+    },
+    "type=double": {
+      "model": "unknown_echoes:block/folded_slate_brick_slab_double"
+    }
+  }
+}

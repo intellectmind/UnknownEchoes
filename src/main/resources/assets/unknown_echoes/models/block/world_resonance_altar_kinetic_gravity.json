@@ -1,0 +1,768 @@
+{
+  "ambientocclusion": false,
+  "gui_light": "front",
+  "textures": {
+    "particle": "unknown_echoes:block/world_resonance_altar_alloy",
+    "alloy": "unknown_echoes:block/world_resonance_altar_alloy",
+    "rune": "unknown_echoes:block/world_resonance_altar_rune",
+    "core": "unknown_echoes:block/world_resonance_core",
+    "wind": "unknown_echoes:block/world_resonance_wind",
+    "tide": "unknown_echoes:block/world_resonance_tide",
+    "true_sight": "unknown_echoes:block/world_resonance_true_sight",
+    "gravity": "unknown_echoes:block/world_resonance_gravity",
+    "void": "unknown_echoes:block/world_resonance_void"
+  },
+  "elements": [
+    {
+      "name": "kinetic_gravity_axis",
+      "from": [
+        -1.52,
+        10.85,
+        17.48
+      ],
+      "to": [
+        -0.48,
+        20.4,
+        18.52
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      }
+    },
+    {
+      "name": "kinetic_gravity_orbit_x",
+      "from": [
+        -5.0,
+        14.4,
+        17.55
+      ],
+      "to": [
+        3.0,
+        15.4,
+        18.45
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        }
+      },
+      "shade": false,
+      "light_emission": 11,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "y",
+        "origin": [
+          -1,
+          14.9,
+          18
+        ]
+      }
+    },
+    {
+      "name": "kinetic_gravity_orbit_z",
+      "from": [
+        -1.45,
+        14.4,
+        14.0
+      ],
+      "to": [
+        -0.55,
+        15.4,
+        22.0
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        }
+      },
+      "shade": false,
+      "light_emission": 11,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "y",
+        "origin": [
+          -1,
+          14.9,
+          18
+        ]
+      }
+    },
+    {
+      "name": "kinetic_gravity_weight_w",
+      "from": [
+        -6,
+        13.5,
+        17
+      ],
+      "to": [
+        -4.4,
+        16.3,
+        19
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 12
+    },
+    {
+      "name": "kinetic_gravity_weight_e",
+      "from": [
+        2.4,
+        13.5,
+        17
+      ],
+      "to": [
+        4,
+        16.3,
+        19
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 12
+    },
+    {
+      "name": "kinetic_gravity_weight_n",
+      "from": [
+        -2,
+        13.5,
+        12.9
+      ],
+      "to": [
+        0,
+        16.3,
+        14.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 12
+    },
+    {
+      "name": "kinetic_gravity_weight_s",
+      "from": [
+        -2,
+        13.5,
+        21.5
+      ],
+      "to": [
+        0,
+        16.3,
+        23.1
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 12
+    },
+    {
+      "name": "kinetic_gravity_crown_w",
+      "from": [
+        -4.4,
+        19,
+        17.4
+      ],
+      "to": [
+        -1.7,
+        19.8,
+        18.6
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          -1,
+          18,
+          18
+        ]
+      }
+    },
+    {
+      "name": "kinetic_gravity_crown_e",
+      "from": [
+        -0.3,
+        19,
+        17.4
+      ],
+      "to": [
+        2.4,
+        19.8,
+        18.6
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "light_emission": 8,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          -1,
+          18,
+          18
+        ]
+      }
+    },
+    {
+      "name": "kinetic_gravity_heart",
+      "from": [
+        -1.78,
+        20,
+        17.2
+      ],
+      "to": [
+        -0.22,
+        22.4,
+        18.8
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#gravity"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 15,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          -1,
+          21.2,
+          18
+        ]
+      }
+    }
+  ]
+}

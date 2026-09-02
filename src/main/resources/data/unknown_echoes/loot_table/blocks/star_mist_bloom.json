@@ -6,16 +6,33 @@
       "bonus_rolls": 0,
       "entries": [
         {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:star_mist_bloom",
-          "functions": [
+          "type": "minecraft:alternatives",
+          "children": [
             {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 2
-              }
+              "type": "minecraft:item",
+              "name": "unknown_echoes:star_mist_bloom",
+              "conditions": [
+                {
+                  "condition": "minecraft:match_tool",
+                  "predicate": {
+                    "items": ["minecraft:shears", "unknown_echoes:echo_shears"]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "unknown_echoes:star_mist_petal",
+              "functions": [
+                {
+                  "function": "minecraft:set_count",
+                  "count": {
+                    "type": "minecraft:uniform",
+                    "min": 1,
+                    "max": 2
+                  }
+                }
+              ]
             }
           ]
         }

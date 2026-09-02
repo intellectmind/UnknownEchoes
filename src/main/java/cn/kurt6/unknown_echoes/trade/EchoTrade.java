@@ -18,11 +18,6 @@ import net.minecraft.world.item.Items;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 单条数据驱动交易(V0.6D 迷途旅者):data/unknown_echoes/echo_trades/*.json。
- * min_stage = 玩家已解锁能力数门槛(9.2:库存随已解锁能力数缓慢升级);
- * 交易表只允许普通材料与线索物,关键进度物不进 JSON(16.4 边界,服务端不再二次发放)。
- */
 public record EchoTrade(List<Cost> costs, ResourceLocation resultItem, int resultCount,
                         int minStage, int maxUses, String requiredAbility,
                         int resultPageId, String resultClueStructure) {

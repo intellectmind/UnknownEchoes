@@ -22,6 +22,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
 
 /** 深层回响的安全落点、入口锚记录与延迟跨维度传送。 */
 public final class DeepEchoTeleporter {
@@ -58,7 +62,7 @@ public final class DeepEchoTeleporter {
         BlockPos source = sourceBeacon.immutable();
         ServerLevel sourceLevel = player.serverLevel();
         player.server.tell(new TickTask(player.server.getTickCount() + 1, () -> {
-            if (player.isRemoved() || !player.isAlive() || player.level() != sourceLevel) {
+            if (!isFormalEntryCurrent(player, sourceLevel, source)) {
                 return;
             }
             prepareChunks(destination, DEEP_ORIGIN, 6);
@@ -70,7 +74,9 @@ public final class DeepEchoTeleporter {
                 return;
             }
             player.server.tell(new TickTask(player.server.getTickCount() + 1, () -> {
-                if (player.isRemoved() || !player.isAlive() || player.level() != sourceLevel) {
+                if (!isFormalEntryCurrent(player, sourceLevel, source)
+                        || !isArrivalHallReady(destination, arrival, arrival.below())
+                        || !isSafe(destination, arrival, player)) {
                     return;
                 }
                 if (!rememberReturnAnchor(player, source)) {
@@ -80,9 +86,10 @@ public final class DeepEchoTeleporter {
                 }
                 player.teleportTo(destination, arrival.getX() + 0.5, arrival.getY(),
                         arrival.getZ() + 0.5, player.getYRot(), player.getXRot());
+                if (player.serverLevel() != destination) {
+                    return;
+                }
                 ModAdvancements.recordDeepEchoesEntry(player);
-                player.displayClientMessage(Component.translatable(
-                        "message.unknown_echoes.deep_echoes.entered"), true);
                 destination.playSound(null, arrival, SoundEvents.PORTAL_TRAVEL,
                         SoundSource.PLAYERS, 0.6F, 0.75F);
             }));
@@ -113,11 +120,15 @@ public final class DeepEchoTeleporter {
                 return;
             }
             player.server.tell(new TickTask(player.server.getTickCount() + 1, () -> {
-                if (player.isRemoved() || !player.isAlive() || player.level() != sourceLevel) {
+                if (player.isRemoved() || !player.isAlive() || player.level() != sourceLevel
+                        || !isSafe(destination, arrival, player)) {
                     return;
                 }
                 player.teleportTo(destination, arrival.getX() + 0.5D, arrival.getY(),
                         arrival.getZ() + 0.5D, player.getYRot(), player.getXRot());
+                if (player.serverLevel() != destination) {
+                    return;
+                }
                 destination.playSound(null, arrival, SoundEvents.PORTAL_TRAVEL,
                         SoundSource.PLAYERS, 0.6F, 0.75F);
             }));
@@ -125,41 +136,67 @@ public final class DeepEchoTeleporter {
         return true;
     }
 
-    public static void returnToEchoRealm(ServerPlayer player) {
+    public static void returnToEchoRealm(ServerPlayer player, BlockPos sourceBeacon) {
         ServerLevel echoRealm = player.server.getLevel(EchoBeaconBlock.ECHO_REALM);
         if (echoRealm == null) {
             UnknownEchoes.LOGGER.error("Echo Realm dimension is missing: {}", EchoBeaconBlock.ECHO_REALM.location());
-            EchoBeaconBlock.teleportBack(player);
+            EchoBeaconBlock.teleportBackFromAbyssBeacon(player, sourceBeacon);
             return;
         }
         BlockPos anchor = readReturnAnchor(player, echoRealm);
         if (anchor == null) {
-            EchoBeaconBlock.teleportBack(player);
+            EchoBeaconBlock.teleportBackFromAbyssBeacon(player, sourceBeacon);
             return;
         }
 
         ServerLevel sourceLevel = player.serverLevel();
+        BlockPos source = sourceBeacon.immutable();
         player.server.tell(new TickTask(player.server.getTickCount() + 1, () -> {
-            if (player.isRemoved() || !player.isAlive() || player.level() != sourceLevel) {
+            if (!isReturnSourceCurrent(player, sourceLevel, source)
+                    || !anchor.equals(readReturnAnchor(player, echoRealm))) {
                 return;
             }
             prepareChunks(echoRealm, anchor, 5);
-            BlockPos arrival = findSafeNear(echoRealm, anchor);
+            BlockPos arrival = findSafeNear(echoRealm, anchor, player);
             if (arrival == null) {
                 player.displayClientMessage(Component.translatable(
                         "message.unknown_echoes.deep_echoes.return_blocked"), true);
                 return;
             }
             player.server.tell(new TickTask(player.server.getTickCount() + 1, () -> {
-                if (player.isRemoved() || !player.isAlive() || player.level() != sourceLevel) {
+                if (!isReturnSourceCurrent(player, sourceLevel, source)
+                        || !anchor.equals(readReturnAnchor(player, echoRealm))) {
+                    return;
+                }
+                if (!isSafe(echoRealm, arrival, player)) {
+                    player.displayClientMessage(Component.translatable(
+                            "message.unknown_echoes.deep_echoes.return_blocked"), true);
                     return;
                 }
                 player.teleportTo(echoRealm, arrival.getX() + 0.5, arrival.getY(),
                         arrival.getZ() + 0.5, player.getYRot(), player.getXRot());
-                player.displayClientMessage(Component.translatable(
-                        "message.unknown_echoes.deep_echoes.returned"), true);
+                if (player.serverLevel() != echoRealm) {
+                    return;
+                }
             }));
         }));
+    }
+
+    private static boolean isReturnSourceCurrent(ServerPlayer player, ServerLevel sourceLevel,
+                                                 BlockPos sourceBeacon) {
+        return !player.isRemoved() && player.isAlive() && player.level() == sourceLevel
+                && sourceLevel.hasChunkAt(sourceBeacon)
+                && sourceLevel.getBlockState(sourceBeacon).is(ModBlocks.ABYSS_BEACON.get());
+    }
+
+    private static boolean isFormalEntryCurrent(ServerPlayer player, ServerLevel sourceLevel,
+                                                BlockPos sourceBeacon) {
+        return !player.isRemoved()
+                && player.isAlive()
+                && player.level() == sourceLevel
+                && CommonConfig.ENABLE_DEEP_ECHOES.get()
+                && EchoPermission.canEnterDeepEchoes(player)
+                && AbyssBeaconBlock.isCalibratedFor(player, sourceLevel, sourceBeacon);
     }
 
     private static BlockPos resolveArrival(ServerLevel level) {
@@ -245,7 +282,7 @@ public final class DeepEchoTeleporter {
         }
         level.setBlock(floorCenter.offset(5, 1, 5),
                 ModBlocks.ABYSS_BEACON.get().defaultBlockState(), 3);
-        return isSafe(level, arrival);
+        return isSafe(level, arrival, null);
     }
 
     private static void buildRouteArm(ServerLevel level, BlockPos floorCenter,
@@ -268,7 +305,7 @@ public final class DeepEchoTeleporter {
     }
 
     private static boolean isArrivalHallReady(ServerLevel level, BlockPos arrival, BlockPos floorCenter) {
-        if (!isHallFloor(level.getBlockState(floorCenter)) || !isSafe(level, arrival)
+        if (!isHallFloor(level.getBlockState(floorCenter)) || !isSafe(level, arrival, null)
                 || !level.getBlockState(floorCenter.offset(5, 1, 5)).is(ModBlocks.ABYSS_BEACON.get())) {
             return false;
         }
@@ -338,7 +375,7 @@ public final class DeepEchoTeleporter {
                 || state.is(ModBlocks.ECHO_RUNE_BRICKS.get());
     }
 
-    private static BlockPos findSafeNear(ServerLevel level, BlockPos beacon) {
+    private static BlockPos findSafeNear(ServerLevel level, BlockPos beacon, ServerPlayer player) {
         for (int radius = 2; radius <= 5; radius++) {
             for (int x = -radius; x <= radius; x++) {
                 for (int z = -radius; z <= radius; z++) {
@@ -346,7 +383,7 @@ public final class DeepEchoTeleporter {
                         continue;
                     }
                     BlockPos candidate = beacon.offset(x, -1, z);
-                    if (isSafe(level, candidate)) {
+                    if (isSafe(level, candidate, player)) {
                         return candidate;
                     }
                 }
@@ -355,9 +392,18 @@ public final class DeepEchoTeleporter {
         return null;
     }
 
-    private static boolean isSafe(ServerLevel level, BlockPos pos) {
-        return level.getBlockState(pos).getCollisionShape(level, pos).isEmpty()
-                && level.getBlockState(pos.above()).getCollisionShape(level, pos.above()).isEmpty()
+    private static boolean isSafe(ServerLevel level, BlockPos pos, @Nullable ServerPlayer player) {
+        AABB box;
+        if (player == null) {
+
+            box = new AABB(pos.getX() + 0.2D, pos.getY(), pos.getZ() + 0.2D,
+                    pos.getX() + 0.8D, pos.getY() + 1.8D, pos.getZ() + 0.8D);
+        } else {
+            Vec3 target = new Vec3(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+            box = player.getBoundingBox().move(target.subtract(player.position()));
+        }
+        return level.getWorldBorder().isWithinBounds(box)
+                && level.noCollision(player, box)
                 && Block.canSupportCenter(level, pos.below(), Direction.UP);
     }
 
@@ -398,7 +444,7 @@ public final class DeepEchoTeleporter {
                     return anchor;
                 }
             } catch (NumberFormatException ignored) {
-                // 损坏的旧记录不阻塞安全返程，继续寻找其他有效锚点。
+
             }
         }
         return null;

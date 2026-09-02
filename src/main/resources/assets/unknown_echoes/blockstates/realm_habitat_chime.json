@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "mode=wayfarer,active=false": { "model": "unknown_echoes:block/realm_habitat_chime_wayfarer" },
+    "mode=wayfarer,active=true": { "model": "unknown_echoes:block/realm_habitat_chime_wayfarer" },
+    "mode=confluence,active=false": { "model": "unknown_echoes:block/realm_habitat_chime_confluence" },
+    "mode=confluence,active=true": { "model": "unknown_echoes:block/realm_habitat_chime_confluence" },
+    "mode=interlayer,active=false": { "model": "unknown_echoes:block/realm_habitat_chime_interlayer" },
+    "mode=interlayer,active=true": { "model": "unknown_echoes:block/realm_habitat_chime_interlayer" }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:gravity_crown_observatory", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 56,
+    "separation": 20,
+    "salt": 1537402861,
+    "frequency": 0.0
+  }
+}

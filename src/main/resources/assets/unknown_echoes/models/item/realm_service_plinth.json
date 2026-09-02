@@ -1,0 +1,22 @@
+{
+  "parent": "unknown_echoes:block/realm_service_plinth_wayfarer",
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.46,
+        0.46,
+        0.46
+      ]
+    }
+  }
+}

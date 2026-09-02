@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/wall_inventory",
+  "textures": {
+    "wall": "unknown_echoes:block/gravity_shale_bricks"
+  }
+}

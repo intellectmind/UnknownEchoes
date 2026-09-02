@@ -1,0 +1,23 @@
+{
+  "replace": false,
+  "values": [
+    "#unknown_echoes:echo_mobs",
+    "unknown_echoes:tide_water_shade",
+    "unknown_echoes:echo_deer",
+    "unknown_echoes:glow_rabbit",
+    "unknown_echoes:mirror_tail_fish",
+    "unknown_echoes:echo_cuttlefish",
+    "unknown_echoes:pearlback_ray",
+    "unknown_echoes:moss_back_turtle",
+    "unknown_echoes:foldpage_bug",
+    "unknown_echoes:anchor_shell_beast",
+    "unknown_echoes:abyss_lurker",
+    "unknown_echoes:void_wanderer",
+    "unknown_echoes:rift_glider",
+    "unknown_echoes:ashback_grazer",
+    "unknown_echoes:hushlight_jelly",
+    "unknown_echoes:folded_mantis",
+    "unknown_echoes:gravity_ram",
+    "unknown_echoes:ashveil_stalker"
+  ]
+}

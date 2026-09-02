@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/template_wall_post",
+  "textures": {
+    "wall": "unknown_echoes:block/echo_stone_bricks"
+  }
+}

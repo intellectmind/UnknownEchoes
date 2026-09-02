@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "ingredients": [
+    { "item": "minecraft:honey_bottle" },
+    { "item": "unknown_echoes:gravity_bell" },
+    { "item": "minecraft:sugar" }
+  ],
+  "result": { "id": "unknown_echoes:gravity_bell_jelly" }
+}

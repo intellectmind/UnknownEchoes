@@ -24,12 +24,7 @@ import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * 隐纹石砖(幻象墙):外观与回响石砖完全一致,且不可破坏(挖掘绕过无效)。
- * - 体验层:持真视回响的玩家在客户端能看到它周期性泛出微光粒子(ClientGameEvents)。
- * - 权限层:持真视回响右键 → 服务端校验后,整片相连的幻象墙一次性消散成通路。
- * 没有真视:看不出、挖不动、右键只得到一句普通石砖的描述——判定永远在服务端。
- */
+/** 隐纹石砖(幻象墙):外观与回响石砖完全一致,且不可破坏(挖掘绕过无效)。 */
 public class HiddenRuneBlock extends Block {
     public static final MapCodec<HiddenRuneBlock> CODEC = simpleCodec(HiddenRuneBlock::new);
 
@@ -52,15 +47,10 @@ public class HiddenRuneBlock extends Block {
             return InteractionResult.SUCCESS;
         }
         if (!EchoPermission.canUseEchoMechanism(player, EchoAbilityType.TRUE_SIGHT_ECHO)) {
-            // 没有真视:表现得像一块普通石砖
-            player.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.hidden_rune.plain"), true);
             return InteractionResult.CONSUME;
         }
         dissolveConnected(level, pos);
-        player.displayClientMessage(
-                Component.translatable("message.unknown_echoes.hidden_rune.dissolved"), true);
-        // 回访点研究来源(V0.6B):每片幻象墙首次消散 +1 真视研究点(个人绑定,按起点坐标去重)
+
         if (player instanceof ServerPlayer serverPlayer) {
             String key = "research_revisit:hidden_rune:" + level.dimension().location() + ":" + pos.asLong();
             if (!EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)
@@ -73,7 +63,6 @@ public class HiddenRuneBlock extends Block {
         return InteractionResult.CONSUME;
     }
 
-    /** 广度优先消散与起点相连的所有幻象墙方块。 */
     private void dissolveConnected(Level level, BlockPos origin) {
         Set<BlockPos> visited = new HashSet<>();
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
@@ -90,6 +79,7 @@ public class HiddenRuneBlock extends Block {
             for (Direction direction : Direction.values()) {
                 BlockPos next = pos.relative(direction);
                 if (visited.size() < MAX_DISSOLVE && !visited.contains(next)
+                        && level.hasChunkAt(next)
                         && level.getBlockState(next).is(this)) {
                     visited.add(next);
                     queue.add(next);

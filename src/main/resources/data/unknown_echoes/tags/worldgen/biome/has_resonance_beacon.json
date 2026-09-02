@@ -13,6 +13,30 @@
     "minecraft:windswept_gravelly_hills",
     "minecraft:stony_peaks",
     "minecraft:jagged_peaks",
-    "minecraft:stony_shore"
+    "minecraft:stony_shore",
+    {
+      "id": "#c:is_forest",
+      "required": false
+    },
+    {
+      "id": "#c:is_plains",
+      "required": false
+    },
+    {
+      "id": "#c:is_taiga",
+      "required": false
+    },
+    {
+      "id": "#c:is_hill",
+      "required": false
+    },
+    {
+      "id": "#c:is_mountain",
+      "required": false
+    },
+    {
+      "id": "#c:is_stony_shores",
+      "required": false
+    }
   ]
 }

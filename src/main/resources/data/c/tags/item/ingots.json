@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:echo_metal_ingot",
+    "unknown_echoes:echo_realm_ingot",
+    "unknown_echoes:deep_alloy_ingot",
+    "unknown_echoes:resonance_alloy_ingot",
+    "unknown_echoes:oathbound_alloy"
+  ]
+}

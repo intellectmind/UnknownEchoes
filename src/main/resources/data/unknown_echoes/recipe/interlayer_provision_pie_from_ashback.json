@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "ingredients": [
+    { "item": "minecraft:wheat" },
+    { "item": "unknown_echoes:ashback_moss_meat" },
+    { "item": "unknown_echoes:folded_sporebloom" },
+    { "item": "unknown_echoes:gravity_bell" },
+    { "item": "unknown_echoes:hush_thorn" }
+  ],
+  "result": {
+    "id": "unknown_echoes:interlayer_provision_pie",
+    "count": 2
+  }
+}

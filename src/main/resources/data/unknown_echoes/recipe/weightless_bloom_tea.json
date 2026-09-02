@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "ingredients": [
+    { "item": "minecraft:honey_bottle" },
+    { "item": "minecraft:glass_bottle" },
+    { "item": "unknown_echoes:weightless_bloom" },
+    { "item": "unknown_echoes:star_mist_bloom" }
+  ],
+  "result": { "id": "unknown_echoes:weightless_bloom_tea" }
+}

@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "unknown_echoes:echo_strata_bricks"
+  },
+  "result": {
+    "id": "unknown_echoes:echo_strata_brick_stairs",
+    "count": 1
+  }
+}

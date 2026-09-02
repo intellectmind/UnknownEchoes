@@ -9,9 +9,10 @@ import cn.kurt6.unknown_echoes.block.beacon.DeepEchoTeleporter;
 import cn.kurt6.unknown_echoes.entity.boss.BossFx;
 import cn.kurt6.unknown_echoes.entity.boss.RiftWarden;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
+import cn.kurt6.unknown_echoes.world.EntitySpawnSafety;
+import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -19,8 +20,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -82,6 +86,19 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                Player player, BlockHitResult hitResult) {
+        return interact(state, level, pos, player, hitResult);
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level,
+                                              BlockPos pos, Player player, InteractionHand hand,
+                                              BlockHitResult hitResult) {
+        interact(state, level, pos, player, hitResult);
+        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    private InteractionResult interact(BlockState state, Level level, BlockPos pos,
+                                       Player player, BlockHitResult hitResult) {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
@@ -112,11 +129,11 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
                     REQUIRED_STABILIZERS - completedStabilizers);
             return InteractionResult.CONSUME;
         }
+        if (rejectDuringRechallengeCooldown(serverLevel, state, pos, serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
 
         if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.VOID_ECHO)) {
-            if (rejectDuringRechallengeCooldown(serverLevel, state, pos, serverPlayer)) {
-                return InteractionResult.CONSUME;
-            }
             summonOrJoinWarden(serverLevel, pos, serverPlayer);
             return InteractionResult.CONSUME;
         }
@@ -194,12 +211,13 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
 
     static int countActivatedStabilizersNear(ServerPlayer player, Level level, BlockPos stabilizerPos) {
         int best = 0;
-        // 从已点击节点反推祭坛，仅接受同一结构旋转下的完整节点组。
+
         for (int rotation = 0; rotation < 4; rotation++) {
             for (int[] offset : STABILIZER_OFFSETS) {
                 int[] rotated = rotateOffset(offset[0], offset[1], rotation);
                 BlockPos altarPos = stabilizerPos.offset(-rotated[0], 0, -rotated[1]);
-                if (level.getBlockState(altarPos).getBlock() instanceof VoidCoreAltarBlock
+                if (level.hasChunkAt(altarPos)
+                        && level.getBlockState(altarPos).getBlock() instanceof VoidCoreAltarBlock
                         && countPresentForRotation(level, altarPos, rotation) == REQUIRED_STABILIZERS) {
                     best = Math.max(best, countActivatedForRotation(player, level, altarPos, rotation));
                 }
@@ -216,7 +234,8 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
             for (int[] offset : STABILIZER_OFFSETS) {
                 int[] rotated = rotateOffset(offset[0], offset[1], rotation);
                 BlockPos candidate = stabilizerPos.offset(-rotated[0], 0, -rotated[1]);
-                if (!(level.getBlockState(candidate).getBlock() instanceof VoidCoreAltarBlock)) {
+                if (!level.hasChunkAt(candidate)
+                        || !(level.getBlockState(candidate).getBlock() instanceof VoidCoreAltarBlock)) {
                     continue;
                 }
                 int present = countPresentForRotation(level, candidate, rotation);
@@ -236,7 +255,8 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
             for (int[] offset : STABILIZER_OFFSETS) {
                 int[] rotated = rotateOffset(offset[0], offset[1], rotation);
                 BlockPos candidate = center.offset(rotated[0], 0, rotated[1]);
-                if (level.getBlockState(candidate).getBlock() instanceof VoidStabilizerBlock) {
+                if (level.hasChunkAt(candidate)
+                        && level.getBlockState(candidate).getBlock() instanceof VoidStabilizerBlock) {
                     present.add(candidate);
                 }
             }
@@ -252,7 +272,8 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
         for (int[] offset : STABILIZER_OFFSETS) {
             int[] rotated = rotateOffset(offset[0], offset[1], rotation);
             BlockPos candidate = center.offset(rotated[0], 0, rotated[1]);
-            if (level.getBlockState(candidate).getBlock() instanceof VoidStabilizerBlock) {
+            if (level.hasChunkAt(candidate)
+                    && level.getBlockState(candidate).getBlock() instanceof VoidStabilizerBlock) {
                 present++;
             }
         }
@@ -265,7 +286,8 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
         for (int[] offset : STABILIZER_OFFSETS) {
             int[] rotated = rotateOffset(offset[0], offset[1], rotation);
             BlockPos cursor = center.offset(rotated[0], 0, rotated[1]);
-            if (level.getBlockState(cursor).getBlock() instanceof VoidStabilizerBlock
+            if (level.hasChunkAt(cursor)
+                    && level.getBlockState(cursor).getBlock() instanceof VoidStabilizerBlock
                     && VoidStabilizerBlock.isActivated(player, level, cursor)) {
                 completed++;
             }
@@ -283,11 +305,42 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
     }
 
     private static void summonOrJoinWarden(ServerLevel level, BlockPos altarPos, ServerPlayer player) {
-        AABB arena = new AABB(altarPos).inflate(BOSS_RANGE_H, BOSS_RANGE_V, BOSS_RANGE_H);
-        List<RiftWarden> active = level.getEntitiesOfClass(RiftWarden.class, arena,
-                warden -> warden.isAlive() && !warden.isRemoved());
-        if (!active.isEmpty()) {
-            active.getFirst().registerParticipant(player);
+        BossRechallengeAltarBlockEntity altar = BossRechallengeAltarBlockEntity.getOrCreate(
+                level, altarPos, level.getBlockState(altarPos));
+        if (altar.findActiveBoss(level) instanceof RiftWarden active) {
+            active.registerParticipant(player);
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.void_core.boss_active"), true);
+            return;
+        }
+        if (!areArenaChunksLoaded(level, altarPos)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.void_core.arena_loading"), true);
+            return;
+        }
+        List<RiftWarden> recovered = level.getEntitiesOfClass(RiftWarden.class,
+                new AABB(altarPos).inflate(BOSS_RANGE_H, BOSS_RANGE_V, BOSS_RANGE_H),
+                boss -> boss.isAlive() && !boss.isRemoved()
+                        && altarPos.equals(boss.deepRechallengeAltar()));
+        if (!recovered.isEmpty()) {
+            RiftWarden owner = recovered.stream()
+                    .filter(boss -> altar.ownsBoss(boss.getUUID()))
+                    .findFirst()
+                    .orElse(altar.canAdoptUnownedBoss() ? recovered.getFirst() : null);
+            for (RiftWarden boss : recovered) {
+                if (boss != owner) {
+                    boss.discard();
+                }
+            }
+            if (owner != null) {
+                altar.replaceActiveBoss(owner.getUUID());
+                owner.registerParticipant(player);
+                player.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.void_core.boss_active"), true);
+                return;
+            }
+        }
+        if (altar.hasActiveBoss()) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.void_core.boss_active"), true);
             return;
@@ -300,12 +353,14 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
         }
         BlockPos spawnPos = findSpawnPos(level, altarPos);
         if (spawnPos == null) {
+            warden.discard();
             reject(player, level, altarPos, "message.unknown_echoes.void_core.summon_failed");
             return;
         }
         warden.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5,
                 level.random.nextFloat() * 360.0F, 0.0F);
-        if (!level.noCollision(warden)) {
+        if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, warden)) {
+            warden.discard();
             reject(player, level, altarPos, "message.unknown_echoes.void_core.summon_failed");
             return;
         }
@@ -314,7 +369,15 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
                 MobSpawnType.TRIGGERED, null);
         warden.bindArena(altarPos);
         warden.registerParticipant(player);
+        if (!altar.reserveBoss(warden.getUUID())) {
+            warden.discard();
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.void_core.boss_active"), true);
+            return;
+        }
         if (!level.addFreshEntity(warden)) {
+            warden.discard();
+            altar.releaseBossReservation(warden.getUUID());
             reject(player, level, altarPos, "message.unknown_echoes.void_core.summon_failed");
             return;
         }
@@ -324,23 +387,16 @@ public class VoidCoreAltarBlock extends BaseEntityBlock {
                 160, 1.8, 2.8, 1.8, 0.3);
         level.playSound(null, spawnPos, SoundEvents.END_PORTAL_SPAWN,
                 SoundSource.HOSTILE, 2.0F, 0.55F);
-        player.displayClientMessage(Component.translatable(
-                "message.unknown_echoes.void_core.boss_summoned"), true);
     }
 
+    /** 落点判据由 EntitySpawnSafety.findAltarSpawnPos 统一持有;两座祭坛与其 Boss 归位共用。 */
     @Nullable
-    private static BlockPos findSpawnPos(ServerLevel level, BlockPos altarPos) {
-        Direction[] directions = {Direction.SOUTH, Direction.NORTH, Direction.EAST, Direction.WEST};
-        for (Direction direction : directions) {
-            BlockPos candidate = altarPos.relative(direction, 8);
-            BlockPos floor = candidate.below();
-            if (level.getBlockState(candidate).isAir()
-                    && level.getBlockState(candidate.above(6)).isAir()
-                    && level.getBlockState(floor).isFaceSturdy(level, floor, Direction.UP)) {
-                return candidate;
-            }
-        }
-        return null;
+    public static BlockPos findSpawnPos(ServerLevel level, BlockPos altarPos) {
+        return EntitySpawnSafety.findAltarSpawnPos(level, altarPos);
+    }
+
+    private static boolean areArenaChunksLoaded(ServerLevel level, BlockPos altarPos) {
+        return LoadedAreaCheck.horizontalRadiusLoaded(level, altarPos, BOSS_RANGE_H);
     }
 
     private static void reject(ServerPlayer player, Level level, BlockPos pos, String messageKey,

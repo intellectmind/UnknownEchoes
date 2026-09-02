@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:wind_sac_membrane" },
+    { "item": "unknown_echoes:wind_sac_membrane" },
+    { "item": "unknown_echoes:echo_dust" },
+    { "item": "unknown_echoes:echo_dust" },
+    { "item": "minecraft:glass_bottle" }
+  ],
+  "result": {
+    "id": "unknown_echoes:wind_chime_bottle"
+  }
+}

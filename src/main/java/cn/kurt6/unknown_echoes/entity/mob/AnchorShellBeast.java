@@ -1,13 +1,21 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
@@ -21,6 +29,7 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -37,6 +46,7 @@ import java.util.EnumSet;
 
 /** 锚壳兽:只在受击后反击,并会在空间锚与稳定器附近安静休眠。 */
 public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
+    private static final int RESONANCE_COOLDOWN_TICKS = 200;
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.anchor_shell_beast.idle");
     private static final RawAnimation WALK_ANIM =
@@ -46,6 +56,7 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private int pulseCooldown;
+    private int resonanceCooldown;
     private boolean nearAnchor;
 
     public AnchorShellBeast(EntityType<? extends PathfinderMob> type, Level level) {
@@ -62,6 +73,7 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
                 .add(Attributes.FOLLOW_RANGE, 16.0D);
     }
 
+    /** 仍然只反击不主动索敌:AlertPackGoal 只在自己已有目标后拉群,不会让它先动手。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
@@ -70,7 +82,8 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
         this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.65D));
         this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 7.0F));
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
+        this.targetSelector.addGoal(2, new AlertPackGoal(this, 10.0D));
     }
 
     @Override
@@ -79,7 +92,10 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
         if (this.pulseCooldown > 0) {
             this.pulseCooldown--;
         }
-        if (!this.level().isClientSide && this.tickCount % 20 == 0) {
+        if (this.resonanceCooldown > 0) {
+            this.resonanceCooldown--;
+        }
+        if (!this.level().isClientSide && this.getTarget() == null && this.tickCount % 20 == 0) {
             this.nearAnchor = this.scanForAnchor();
         }
         if (!this.level().isClientSide && this.nearAnchor && this.getTarget() == null) {
@@ -88,9 +104,58 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
         }
     }
 
+    /** 消耗普通空间锚片，换取一次不影响进度的局部稳定脉冲。 */
+    @Override
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (!stack.is(ModItems.SPACE_ANCHOR_SHARD.get())) {
+            return super.mobInteract(player, hand);
+        }
+        if (this.level().isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
+        if (!(this.level() instanceof ServerLevel serverLevel) || player.isSpectator()) {
+            return InteractionResult.CONSUME;
+        }
+        this.nearAnchor = this.scanForAnchor();
+        if (!this.nearAnchor) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.anchor_shell_beast.no_anchor"), true);
+            return InteractionResult.CONSUME;
+        }
+        if (this.resonanceCooldown > 0) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.anchor_shell_beast.not_ready"), true);
+            return InteractionResult.CONSUME;
+        }
+        if (!player.getAbilities().instabuild) {
+            stack.shrink(1);
+        }
+        this.resonanceCooldown = RESONANCE_COOLDOWN_TICKS;
+        this.triggerAnim("pulse_controller", "pulse");
+        serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                this.getX(), this.getY() + 0.55D, this.getZ(),
+                48, 1.4D, 0.45D, 1.4D, 0.08D);
+        serverLevel.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
+                SoundSource.NEUTRAL, 1.0F, 0.9F);
+        for (Player nearby : serverLevel.getEntitiesOfClass(Player.class,
+                this.getBoundingBox().inflate(6.0D),
+                target -> target.isAlive() && !target.isSpectator()
+                        && target.distanceToSqr(this) <= 6.0D * 6.0D)) {
+            nearby.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING,
+                    120, 0, true, false, true));
+            nearby.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE,
+                    60, 0, true, false, true));
+        }
+        return InteractionResult.CONSUME;
+    }
+
     private boolean scanForAnchor() {
         BlockPos center = this.blockPosition();
         for (BlockPos pos : BlockPos.betweenClosed(center.offset(-5, -2, -5), center.offset(5, 2, 5))) {
+            if (!this.level().hasChunkAt(pos)) {
+                continue;
+            }
             BlockState state = this.level().getBlockState(pos);
             if (state.is(ModBlocks.SPACE_ANCHOR.get()) || state.is(ModBlocks.VOID_STABILIZER.get())) {
                 return true;
@@ -114,16 +179,17 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
         level.sendParticles(ParticleTypes.REVERSE_PORTAL,
                 this.getX(), this.getY() + 0.55D, this.getZ(),
                 42, 1.5D, 0.45D, 1.5D, 0.08D);
-        level.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                SoundSource.NEUTRAL, 1.2F, 0.7F);
+        level.playSound(null, this.blockPosition(), ModSounds.ANCHOR_SHELL_BEAST_PULSE.get(),
+                SoundSource.NEUTRAL, 1.2F, 1.0F);
 
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(4.5D), entity -> entity != this && entity.isAlive())) {
             Vec3 offset = entity.position().subtract(this.position());
-            double distance = offset.length();
-            if (distance < 0.1D) {
+            double distanceSqr = offset.lengthSqr();
+            if (distanceSqr < 0.1D * 0.1D || distanceSqr > 4.5D * 4.5D) {
                 continue;
             }
+            double distance = Math.sqrt(distanceSqr);
             double force = distance <= 2.5D ? 0.85D : -0.42D;
             Vec3 impulse = offset.normalize().scale(force);
             entity.push(impulse.x, 0.2D, impulse.z);
@@ -131,18 +197,31 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
     }
 
     @Override
+    public void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putInt("ResonanceCooldown", this.resonanceCooldown);
+    }
+
+    @Override
+    public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        this.resonanceCooldown = Math.max(0,
+                Math.min(tag.getInt("ResonanceCooldown"), RESONANCE_COOLDOWN_TICKS));
+    }
+
+    @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.ARMADILLO_AMBIENT;
+        return ModSounds.ANCHOR_SHELL_BEAST_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.ARMADILLO_HURT;
+        return ModSounds.ANCHOR_SHELL_BEAST_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.ARMADILLO_DEATH;
+        return ModSounds.ANCHOR_SHELL_BEAST_DEATH.get();
     }
 
     @Override

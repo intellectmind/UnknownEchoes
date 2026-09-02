@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:interlayer_expedition_ring", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 78,
+    "separation": 36,
+    "salt": 184297613,
+    "frequency": 0.0
+  }
+}

@@ -14,6 +14,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -23,17 +24,13 @@ import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-/**
- * 沉没圣殿:镜湖湖底的水下遗迹(V0.5 潮汐回响获取点)。
- * 镜石砖残殿,内部保留湖水不排空:三根潮汐符柱(个人激活)+ 中央潮汐核心祭坛 +
- * 四面水下符文 + 一只镜湖宝箱。所有机关判定都在服务端(设计红线 #1/#6)。
- */
+/** 沉没圣殿:镜湖湖底的水下遗迹( 潮汐回响获取点)。 */
 public class SunkenTempleStructure extends SinglePieceStructure {
     public static final MapCodec<SunkenTempleStructure> CODEC = simpleCodec(SunkenTempleStructure::new);
 
     private static final int WIDTH = 65;
     private static final int DEPTH = 65;
-    private static final int HEIGHT = 18;
+    private static final int HEIGHT = 30;
     private static final int BOSS_ARENA_SIZE = 29;
     private static final int CENTER_X = WIDTH / 2;
     private static final int CENTER_Z = DEPTH / 2;
@@ -45,18 +42,21 @@ public class SunkenTempleStructure extends SinglePieceStructure {
 
     @Override
     public java.util.Optional<GenerationStub> findGenerationPoint(GenerationContext context) {
-        // 镜湖群系存在旱地区段:只有整片场地确实沉在湖水里才生成。
-        // 不调用 super——SinglePieceStructure 默认"最低地表 < 海平面就不放"(防沙漠神殿落海),
-        // 对水下结构正好相反,必须绕开并改锚湖底(OCEAN_FLOOR_WG)。
-        //
-        // CRITICAL: 不在此处做连续水方块校验(getBaseColumn)——/locate 会对每个候选区块调用此方法。
-        // 这里只用五点高度图预判过滤空现场;严格水深校验推迟到 postProcess 首次生成时做。
-        if (!LakeBedPlacement.hasSubmergedFootprint(context, WIDTH, 14, 7)) {
+        Piece piece = new Piece(context.random(),
+                context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ());
+        BoundingBox footprint = piece.getBoundingBox();
+        if (!LakeBedPlacement.hasSubmergedFootprint(context,
+                footprint.minX(), footprint.minZ(), WIDTH, 25, 21)) {
             return java.util.Optional.empty();
         }
+        int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(
+                context, footprint.minX(), footprint.minZ(), WIDTH, DEPTH);
+        if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
+            return java.util.Optional.empty();
+        }
+        piece.anchorToLakeFloor(floorY);
         return onTopOfChunkCenter(context, Heightmap.Types.OCEAN_FLOOR_WG,
-                builder -> builder.addPiece(new Piece(context.random(),
-                        context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ())));
+                builder -> builder.addPiece(piece));
     }
 
     @Override
@@ -65,11 +65,21 @@ public class SunkenTempleStructure extends SinglePieceStructure {
     }
 
     public static class Piece extends EchoStructurePiece {
+        private static final int[][] SUNKEN_TEMPLE_MIRROR_NODES = {
+                {8, 8}, {32, 8}, {56, 8},
+                {8, 32}, {56, 32},
+                {8, 56}, {32, 56}, {56, 56},
+                {16, 16}, {32, 16}, {48, 16},
+                {16, 32}, {48, 32},
+                {16, 48}, {32, 48}, {48, 48}
+        };
 
         /** 已计算出的湖底基准高度;<0 表示尚未计算(随 NBT 持久化,避免跨区块重复下移)。 */
         private int oceanFloorY = -1;
         /** 深渊观测者只生成一次(随 NBT 持久化)。 */
         private boolean spawnedBoss = false;
+        private boolean bossSpawnChunkVisited = false;
+        private boolean altarChunkVisited = false;
         /** 水深校验已失败,整座结构取消生成(随 NBT 持久化,避免跨区块重复校验)。 */
         private boolean rejected = false;
 
@@ -85,6 +95,8 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                 this.oceanFloorY = -1;
             }
             this.spawnedBoss = tag.getBoolean("SpawnedBoss");
+            this.bossSpawnChunkVisited = tag.getBoolean("BossSpawnChunkVisited");
+            this.altarChunkVisited = tag.getBoolean("AltarChunkVisited");
             this.rejected = tag.getBoolean("Rejected");
         }
 
@@ -93,44 +105,40 @@ public class SunkenTempleStructure extends SinglePieceStructure {
             super.addAdditionalSaveData(context, tag);
             tag.putInt("OceanFloorY", this.oceanFloorY);
             tag.putBoolean("SpawnedBoss", this.spawnedBoss);
+            tag.putBoolean("BossSpawnChunkVisited", this.bossSpawnChunkVisited);
+            tag.putBoolean("AltarChunkVisited", this.altarChunkVisited);
             tag.putBoolean("Rejected", this.rejected);
         }
 
-        /**
-         * 把结构底部对齐到湖底(OCEAN_FLOOR_WG 忽略水面),并做水深校验。
-         * 仿照 updateAverageGroundHeight:只采样当前区块内的列,首次成功后锁定。
-         * 校验失败时标记 rejected,后续 postProcess 调用直接跳过不再生成任何方块。
-         */
+        public void anchorToLakeFloor(int floorY) {
+            if (this.oceanFloorY >= 0) {
+                return;
+            }
+            this.oceanFloorY = floorY;
+            this.boundingBox.move(0, floorY - this.boundingBox.minY() - 1, 0);
+        }
+
+        /** 把结构底部对齐到湖底(OCEAN_FLOOR_WG 忽略水面),并做水深校验。 */
         private boolean adjustToLakeFloor(WorldGenLevel level, BoundingBox chunkBox, ChunkGenerator generator) {
             if (this.rejected) {
-                return false;  // 已被拒绝,不再生成
+                return false;
             }
             if (this.oceanFloorY >= 0) {
-                return true;  // 已校验通过并锁定高度
+                return true;
             }
-            // 首次处理:先对齐湖底,再校验水深
-            int total = 0;
-            int count = 0;
-            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-            for (int z = this.boundingBox.minZ(); z <= this.boundingBox.maxZ(); z++) {
-                for (int x = this.boundingBox.minX(); x <= this.boundingBox.maxX(); x++) {
-                    cursor.set(x, 64, z);
-                    if (chunkBox.isInside(cursor)) {
-                        total += level.getHeight(Heightmap.Types.OCEAN_FLOOR_WG, x, z);
-                        count++;
-                    }
-                }
-            }
-            if (count == 0) {
-                return false;  // 当前区块内无采样点,等下次 postProcess
-            }
-            this.oceanFloorY = total / count;
 
-            // 水深校验:大型足印跨多个区块,用噪声柱避免读取未就绪边角区块导致空现场。
-            if (!LakeBedPieceHelper.checkWaterDepthByNoise(level, generator,
-                    this.boundingBox.minX(), this.boundingBox.minZ(), WIDTH, DEPTH, 14, 7)) {
+            int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(level, generator,
+                    this.boundingBox.minX(), this.boundingBox.minZ(), WIDTH, DEPTH);
+            if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
                 this.rejected = true;
-                return false;  // 落旱地,取消整座结构生成
+                return false;
+            }
+            this.oceanFloorY = floorY;
+
+            if (!LakeBedPieceHelper.checkWaterDepthByBaseHeight(level, generator,
+                    this.boundingBox.minX(), this.boundingBox.minZ(), WIDTH, DEPTH, 25, 21)) {
+                this.rejected = true;
+                return false;
             }
 
             this.boundingBox.move(0, this.oceanFloorY - this.boundingBox.minY() - 1, 0);
@@ -142,32 +150,67 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                                 ChunkGenerator generator, RandomSource random, BoundingBox box,
                                 ChunkPos chunkPos, BlockPos pos) {
             if (!this.adjustToLakeFloor(level, box, generator)) {
-                return;  // 水深校验失败或等待更多区块生成
+                return;
+            }
+            box = LakeBedPieceHelper.intersection(box, this.boundingBox);
+            if (box == null) {
+                return;
             }
 
             BlockState bricks = ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState();
-            BlockState stone = ModBlocks.MIRROR_STONE.get().defaultBlockState();
             BlockState rune = ModBlocks.TIDE_RUNE.get().defaultBlockState();
             BlockState pillar = ModBlocks.TIDE_PILLAR.get().defaultBlockState();
             BlockState altar = ModBlocks.TIDE_CORE_ALTAR.get().defaultBlockState();
+            BlockState water = Blocks.WATER.defaultBlockState();
 
-            buildTempleShell(level, random, box, bricks, stone, rune);
+            // 先清掉足印内的自然地形并回填水，避免湖床山丘穿进 Boss 场地。
+            this.generateBox(level, box, 1, 1, 1, WIDTH - 2, HEIGHT - 2, DEPTH - 2,
+                    water, water, false);
+
+            buildTempleShell(level, random, box, bricks, rune);
             buildSurfaceTower(level, box, bricks, rune);
             buildBubbleCorridor(level, random, box, bricks);
             buildTidePillarCourt(level, box, bricks, pillar, altar);
             buildWatcherArena(level, box, random, bricks, rune);
             buildRevisitReservoir(level, box, random, bricks);
+            buildMonumentFrame(level, random, box);
+
+            placeSubmergedStructureSpawner(level, random, box, 10, 1, 40,
+                    ModEntities.WATER_SHADOW.get(), bricks, bricks);
+            for (int[] node : SUNKEN_TEMPLE_MIRROR_NODES) {
+                this.placeBlock(level, ModBlocks.MIRROR_STONE.get().defaultBlockState(),
+                        node[0], 0, node[1], box);
+            }
             spawnWatcher(level, box);
         }
 
+        private void buildMonumentFrame(WorldGenLevel level, RandomSource random, BoundingBox box) {
+            BlockState reef = ModBlocks.REEF_LIMESTONE_BRICKS.get().defaultBlockState();
+            BlockState worn = ModBlocks.TIDEWORN_REEFSTONE.get().defaultBlockState();
+            BlockState light = ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState();
+            architecturalRing(level, box, CENTER_X, 1, CENTER_Z, 30, worn);
+            buildCircularColonnade(level, box, CENTER_X, 2, CENTER_Z, 28, 20, 12,
+                    reef, light, worn);
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                buildCardinalGateway(level, box, CENTER_X, 2, CENTER_Z, 30, direction,
+                        4, 10, reef, light);
+            }
+            for (int radius : new int[]{18, 24}) {
+                architecturalRing(level, box, CENTER_X, 3 + radius / 6, CENTER_Z,
+                        radius, ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
+            }
+            scatterArchitecturalDebris(level, random, box, CENTER_X, 2, CENTER_Z,
+                    25, 30, 46, worn, reef);
+        }
+
         private void buildTempleShell(WorldGenLevel level, RandomSource random, BoundingBox box,
-                                      BlockState bricks, BlockState stone, BlockState rune) {
+                                      BlockState bricks, BlockState rune) {
             for (int x = 0; x < WIDTH; x++) {
                 for (int z = 0; z < DEPTH; z++) {
-                    this.placeBlock(level, random.nextFloat() < 0.3F ? stone : bricks, x, 0, z, box);
+                    this.placeBlock(level, bricks, x, 0, z, box);
                 }
             }
-            for (int y = 1; y <= 12; y++) {
+            for (int y = 1; y <= 20; y++) {
                 for (int x = 0; x < WIDTH; x++) {
                     if (!isDoorway(x, WIDTH) || y > 5) {
                         maybeWall(level, box, random, bricks, x, y, 0);
@@ -211,7 +254,7 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                     this.placeBlock(level, bricks, x, 1, z, box);
                 }
                 if (z % 6 == 0) {
-                    // 气泡柱必须坐在灵魂沙上:砖面上的 BUBBLE_COLUMN 首次方块更新就退化成普通水
+
                     this.placeBlock(level, net.minecraft.world.level.block.Blocks.SOUL_SAND.defaultBlockState(),
                             CENTER_X, 1, z, box);
                     this.placeBlock(level, net.minecraft.world.level.block.Blocks.BUBBLE_COLUMN.defaultBlockState(),
@@ -246,12 +289,36 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                     this.placeBlock(level, edge ? rune : bricks, x, edge ? 2 : 1, z, box);
                 }
             }
+            int arenaZ = CENTER_Z + 16;
+
+            BlockState reef = ModBlocks.REEF_LIMESTONE_BRICKS.get().defaultBlockState();
+            BlockState worn = ModBlocks.TIDEWORN_REEFSTONE.get().defaultBlockState();
+            BlockState light = ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState();
+            buildRibbedVaultHall(level, box, CENTER_X, 2, CENTER_Z + 6, Footprint.of(16, 26), 14, 6, bricks, reef, worn, light);
+            buildTwinTowerFacade(level, box, CENTER_X, 2, 6,
+                    21, 4, 18, reef, worn, light);
+            buildArcadedWing(level, box, 10, 2, CENTER_Z + 5, Footprint.of(6, 14), 11, 4, bricks, reef, worn, light);
+            buildArcadedWing(level, box, WIDTH - 11, 2, CENTER_Z + 5, Footprint.of(6, 14), 11, 4, bricks, reef, worn, light);
+            buildBossApse(level, box, CENTER_X, 2, CENTER_Z + 23,
+                    Direction.SOUTH, 7, 12, bricks, reef, worn, light);
+            // 必须加穹顶:镜湖神殿也用拱厅+镜塔配方,穹顶是唯一区分点。
+            buildDomedRotunda(level, box, CENTER_X, 2, CENTER_Z + 6,
+                    18, 14, bricks, reef, worn,
+                    ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState());
+
+            buildBossArenaMandala(level, box, CENTER_X, 1, arenaZ, r - 1,
+                    ModBlocks.TIDE_RUNE.get().defaultBlockState(),
+                    ModBlocks.TIDE_SMOOTH_STONE.get().defaultBlockState(),
+                    ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState());
             for (int dx : new int[]{-10, 10}) {
                 this.placeBlock(level, net.minecraft.world.level.block.Blocks.SOUL_SAND.defaultBlockState(),
-                        CENTER_X + dx, 1, CENTER_Z + 16, box);
+                        CENTER_X + dx, 1, arenaZ, box);
                 this.placeBlock(level, net.minecraft.world.level.block.Blocks.BUBBLE_COLUMN.defaultBlockState(),
-                        CENTER_X + dx, 2, CENTER_Z + 16, box);
+                        CENTER_X + dx, 2, arenaZ, box);
             }
+            buildArenaLightRing(level, box, CENTER_X, 3, arenaZ, r - 2, 12, 11, reef, ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState());
+            buildStairCornice(level, box, CENTER_X, 17, CENTER_Z + 6, Footprint.of(16, 26), ModBlocks.REEF_LIMESTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.REEF_LIMESTONE_BRICK_SLAB.get().defaultBlockState(), true);
+            buildParapet(level, box, CENTER_X, 18, CENTER_Z + 6, Footprint.of(16, 26), 7, ModBlocks.REEF_LIMESTONE_BRICK_WALL.get().defaultBlockState(), worn);
             buildAccessibleChest(level, random, box, CENTER_X - 7, 2, CENTER_Z + 22,
                     ModLootTables.T5_MINIBOSS_REPEAT);
         }
@@ -271,25 +338,35 @@ public class SunkenTempleStructure extends SinglePieceStructure {
             int bossZ = this.getWorldZ(CENTER_X, CENTER_Z + 16);
             int bossY = this.getWorldY(4);
             BlockPos bossPos = new BlockPos(bossX, bossY, bossZ);
-            if (!this.spawnedBoss && box.isInside(bossPos)) {
+            BlockPos altarPos = new BlockPos(this.getWorldX(CENTER_X, CENTER_Z),
+                    this.getWorldY(2), this.getWorldZ(CENTER_X, CENTER_Z));
+            if (box.isInside(bossPos)) {
+                this.bossSpawnChunkVisited = true;
+            }
+            if (box.isInside(altarPos)
+                    && level.getBlockState(altarPos).is(ModBlocks.TIDE_CORE_ALTAR.get())) {
+                this.altarChunkVisited = true;
+            }
+            if (!this.spawnedBoss && this.bossSpawnChunkVisited && this.altarChunkVisited) {
                 AbyssWatcher boss = ModEntities.ABYSS_WATCHER.get().create(level.getLevel());
                 if (boss != null) {
                     boss.moveTo(bossX + 0.5D, bossY, bossZ + 0.5D, 0.0F, 0.0F);
                     boss.setPersistenceRequired();
+                    boss.bindRechallengeArena(altarPos, bossPos);
                     if (level.addFreshEntity(boss)) {
                         this.spawnedBoss = true;
+                    } else {
+                        boss.discard();
                     }
                 }
             }
         }
 
-        /** 每面墙正中 3 格为拱门口。 */
         private static boolean isDoorway(int coord, int span) {
             int mid = span / 2;
             return coord >= mid - 1 && coord <= mid + 1;
         }
 
-        /** 残缺墙体:大部分保留,留出蚀空感。 */
         private void maybeWall(WorldGenLevel level, BoundingBox box, RandomSource random,
                                BlockState bricks, int x, int y, int z) {
             if (random.nextFloat() < 0.85F) {

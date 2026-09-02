@@ -1,0 +1,4 @@
+{
+  "parent": "unknown_echoes:block/deep_provision_brazier_base",
+  "textures": { "core": "unknown_echoes:block/deep_provision_brazier_idle" }
+}

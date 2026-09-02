@@ -3,7 +3,6 @@ package cn.kurt6.unknown_echoes.block.puzzle;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -15,10 +14,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
-/**
- * 谜题核心:保存符文顺序谜题的进度(BlockEntity)。
- * 全部四根顺序符文柱按正确顺序点亮后激活,清除周围的封印石。
- */
+/** 谜题核心:保存符文顺序谜题的进度(BlockEntity)。 */
 public class PuzzleCoreBlock extends BaseEntityBlock {
     public static final MapCodec<PuzzleCoreBlock> CODEC = simpleCodec(PuzzleCoreBlock::new);
     public static final BooleanProperty ACTIVE = BooleanProperty.create("active");
@@ -53,14 +49,6 @@ public class PuzzleCoreBlock extends BaseEntityBlock {
                                                Player player, BlockHitResult hitResult) {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
-        }
-        if (state.getValue(ACTIVE)) {
-            player.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.puzzle_core.solved"), true);
-        } else if (level.getBlockEntity(pos) instanceof PuzzleCoreBlockEntity core) {
-            player.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.puzzle_core.progress",
-                            core.getProgress(), core.getSequenceLength()), true);
         }
         return InteractionResult.CONSUME;
     }

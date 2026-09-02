@@ -27,7 +27,7 @@ public class ModAttachments {
                             .copyOnDeath()
                             .build());
 
-    /** 神器与回响能量(V0.6D):神器本体是玩家数据,物品只是凭据(12.2)。 */
+    /** 神器与回响能量:神器本体是玩家数据,物品只是凭据。 */
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ArtifactData>> ARTIFACT_DATA =
             ATTACHMENT_TYPES.register("artifact_data",
                     () -> AttachmentType.builder(ArtifactData::new)

@@ -7,8 +7,12 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.artifact.ArtifactData;
 import cn.kurt6.unknown_echoes.artifact.ArtifactManager;
 import cn.kurt6.unknown_echoes.artifact.ArtifactType;
+import cn.kurt6.unknown_echoes.block.beacon.DeepEchoTeleporter;
+import cn.kurt6.unknown_echoes.block.deep.WorldResonanceAltarBlock;
+import cn.kurt6.unknown_echoes.block.deep.WorldResonanceAltarBlockEntity;
 import cn.kurt6.unknown_echoes.journal.EchoCompletionManager;
 import cn.kurt6.unknown_echoes.journal.JournalManager;
+import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.research.EchoResearchManager;
 import com.mojang.brigadier.CommandDispatcher;
@@ -18,21 +22,19 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * /echoes admin query|grant|revoke|repair <玩家> [<进度项>](V0.6D,权限等级 2)。
- * 多人服个人回响进度的查询与修复入口。只操作既有数据写入口
- * (EchoAbilityManager / ArtifactManager / JournalManager),不直接写客户端状态。
- * 进度项格式:ability:<id> / boss:<path> / beacon:<ns:path> / dimension:<ns:path>
- *           / artifact:<id> / research:<line>:<点数> / mechanism:<key> / t7:<state>
- */
+/** /echoes admin query|grant|revoke|repair|activate_world_echo <玩家> [<进度项>](权限等级 2)。 */
 public class EchoAdminCommands {
+    private static final int WORLD_ECHO_ALTAR_SEARCH_RADIUS = 16;
 
     private static final SuggestionProvider<CommandSourceStack> PROGRESS_SUGGESTIONS =
             (context, builder) -> {
@@ -90,10 +92,15 @@ public class EchoAdminCommands {
                         .then(Commands.literal("repair")
                                 .then(Commands.argument("target", EntityArgument.player())
                                         .executes(ctx -> repair(ctx.getSource(),
+                                                EntityArgument.getPlayer(ctx, "target")))))
+                        .then(Commands.literal("activate_world_echo")
+                                .executes(ctx -> activateWorldEcho(ctx.getSource(),
+                                        ctx.getSource().getPlayerOrException()))
+                                .then(Commands.argument("target", EntityArgument.player())
+                                        .executes(ctx -> activateWorldEcho(ctx.getSource(),
                                                 EntityArgument.getPlayer(ctx, "target")))))));
     }
 
-    /** query:汇总该玩家全部个人回响进度(能力/信标/Boss/维度/研究/神器/能量/日志)。 */
     private static int query(CommandSourceStack source, ServerPlayer target) {
         EchoAbilityData ability = EchoAbilityManager.getData(target);
         ArtifactData artifacts = ArtifactManager.getData(target);
@@ -129,14 +136,13 @@ public class EchoAdminCommands {
         source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.artifacts",
                 artifactsOut), false);
         source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.energy",
-                ArtifactManager.getEnergy(target), ArtifactManager.getMaxEnergy()), false);
+                ArtifactManager.getEnergy(target), ArtifactManager.getMaxEnergy(target)), false);
         source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.inspect.journal",
                 journal.getStructures().size(), journal.getBiomes().size(), journal.getMobs().size(),
                 journal.getPages().size(), journal.getClues().size()), false);
         return 1;
     }
 
-    /** grant/revoke:解析进度项并调用对应 Manager 写入口。 */
     private static int modify(CommandSourceStack source, ServerPlayer target, String progress, boolean grant) {
         String[] parts = progress.split(":", 2);
         if (parts.length < 2) {
@@ -208,7 +214,7 @@ public class EchoAdminCommands {
                 yield true;
             }
             case "research" -> {
-                // research:<line>:<点数>;revoke 不支持负向回收(残页来源无法区分),提示改用 query 核对
+
                 String[] sub = value.split(":", 2);
                 EchoResearchLine line = EchoResearchLine.byId(sub[0]);
                 if (line == null || !grant) {
@@ -233,7 +239,7 @@ public class EchoAdminCommands {
                     EchoAbilityManager.deactivateMechanism(target, value);
                     changed = true;
                 }
-                // 仪式记录(resonance_ritual:*)派生进同步包,补一次同步防客户端面板陈旧
+
                 if (changed) {
                     EchoAbilityManager.syncToClient(target);
                 }
@@ -258,11 +264,70 @@ public class EchoAdminCommands {
 
     /** repair:全量重推同步包 + 配方解锁核对 + 能量惰性结算,修复卡档的客户端状态。 */
     private static int repair(CommandSourceStack source, ServerPlayer target) {
-        EchoAbilityManager.syncToClient(target); // 内部顺带核对配方解锁链
+        EchoAbilityManager.syncToClient(target);
         JournalManager.syncJournal(target);
-        ArtifactManager.syncToClient(target);    // 内部完成能量惰性结算
+        ArtifactManager.syncToClient(target);
         source.sendSuccess(() -> Component.translatable("command.unknown_echoes.admin.repaired",
                 target.getGameProfile().getName()), true);
         return 1;
+    }
+
+    /** 测试入口：直接填满目标附近祭坛的五种共鸣，但仍走正式召唤仪式与 Boss 绑定流程。 */
+    private static int activateWorldEcho(CommandSourceStack source, ServerPlayer target) {
+        if (target.isSpectator()) {
+            source.sendFailure(Component.translatable(
+                    "command.unknown_echoes.admin.world_echo.spectator"));
+            return 0;
+        }
+        if (!target.level().dimension().equals(DeepEchoTeleporter.DEEP_ECHOES)) {
+            source.sendFailure(Component.translatable(
+                    "command.unknown_echoes.admin.world_echo.wrong_dimension"));
+            return 0;
+        }
+
+        ServerLevel level = target.serverLevel();
+        BlockPos center = BlockPos.containing(target.position());
+        BlockPos altarPos = findNearestWorldEchoAltar(level, center);
+        if (altarPos == null) {
+            source.sendFailure(Component.translatable(
+                    "command.unknown_echoes.admin.world_echo.no_altar",
+                    WORLD_ECHO_ALTAR_SEARCH_RADIUS));
+            return 0;
+        }
+
+        WorldResonanceAltarBlockEntity altar = WorldResonanceAltarBlock.getOrCreateAltar(
+                level, altarPos, level.getBlockState(altarPos));
+        if (!altar.beginAdminTestStarting(level, target.getUUID())) {
+            source.sendFailure(Component.translatable(
+                    "command.unknown_echoes.admin.world_echo.busy"));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable(
+                "command.unknown_echoes.admin.world_echo.started", altarPos.toShortString()), true);
+        return 1;
+    }
+
+    @Nullable
+    private static BlockPos findNearestWorldEchoAltar(ServerLevel level, BlockPos center) {
+        BlockPos nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
+        int radius = WORLD_ECHO_ALTAR_SEARCH_RADIUS;
+        BlockPos min = center.offset(-radius, -radius, -radius);
+        BlockPos max = center.offset(radius, radius, radius);
+        for (BlockPos mutable : BlockPos.betweenClosed(min, max)) {
+            if (!level.getBlockState(mutable).is(ModBlocks.WORLD_RESONANCE_ALTAR.get())) {
+                continue;
+            }
+            BlockPos candidate = mutable.immutable();
+            double dx = candidate.getX() - center.getX();
+            double dy = candidate.getY() - center.getY();
+            double dz = candidate.getZ() - center.getZ();
+            double distance = dx * dx + dy * dy + dz * dz;
+            if (distance < nearestDistance) {
+                nearest = candidate;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
     }
 }

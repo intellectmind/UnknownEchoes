@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "unknown_echoes:tide_crossbow"
+    "unknown_echoes:tide_crossbow",
+    "unknown_echoes:ash_script_crossbow"
   ]
 }

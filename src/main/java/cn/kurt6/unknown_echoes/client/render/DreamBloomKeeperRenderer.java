@@ -10,8 +10,8 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 public class DreamBloomKeeperRenderer extends GeoEntityRenderer<DreamBloomKeeper> {
     public DreamBloomKeeperRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("dream_bloom_keeper"), true));
-        this.shadowRadius = 0.65F;
-        this.withScale(1.15F);
+        this.shadowRadius = 1.2F;
+        this.withScale(2.27F);
         addRenderLayer(new EchoGlowLayer<>(this,
                 ResourceLocation.fromNamespaceAndPath(UnknownEchoes.MODID,
                         "textures/entity/dream_bloom_keeper_glowing.png")));

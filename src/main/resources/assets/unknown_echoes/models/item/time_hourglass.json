@@ -1,4 +1,15 @@
 {
   "parent": "minecraft:item/generated",
-  "textures": { "layer0": "unknown_echoes:item/time_hourglass" }
+  "textures": {
+    "layer0": "unknown_echoes:item/time_hourglass"
+  },
+  "display": {
+    "gui": {
+      "scale": [
+        0.88,
+        0.88,
+        0.88
+      ]
+    }
+  }
 }

@@ -1,19 +1,5 @@
 {
   "type": "minecraft:entity",
-  "pools": [
-    {
-      "rolls": 1,
-      "entries": [
-        { "type": "minecraft:item", "name": "unknown_echoes:void_rift_shard", "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 3 } } ] }
-      ]
-    },
-    {
-      "rolls": 1,
-      "conditions": [ { "condition": "minecraft:random_chance", "chance": 0.75 } ],
-      "entries": [
-        { "type": "minecraft:item", "name": "unknown_echoes:space_anchor_shard" }
-      ]
-    }
-  ],
+  "pools": [],
   "random_sequence": "unknown_echoes:entities/rift_warden"
 }

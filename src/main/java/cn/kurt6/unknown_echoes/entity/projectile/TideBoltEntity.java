@@ -3,40 +3,35 @@ package cn.kurt6.unknown_echoes.entity.projectile;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
+import cn.kurt6.unknown_echoes.config.ServerConfig;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.Tags;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * 潮汐弩矢(V0.6B,V0.6C 强化):潮汐弩发射的弹射物。
- * 武器特性只随武器/材料线存在,不读取玩家能力研究:
- * - 水下弹道无衰减(getWaterInertia 0.99,原版箭 0.6)。
- * - 潮爆:命中生物或方块时水压炸裂,敌人受 50% 弩伤并被冲开。
- * - 对身处水中的目标,直击伤害 +25%。
- * - 命中生物时,若附近存在水下符文,向射手铺一道指向符文的粒子轨迹(冷却 12 秒/人)。
- * 注:直接继承 AbstractArrow(Arrow 的便捷构造写死了 ARROW 类型),药水箭装填后按普通弩矢处理。
- */
+/** 潮汐弩矢( 强化):潮汐弩发射的弹射物。 */
 public class TideBoltEntity extends AbstractArrow {
 
-    /** 符文方向搜索冷却(tick/玩家):设定基线 12 秒。瞬态表现层数据,不入存档。 */
-    private static final int MARK_COOLDOWN_TICKS = 240;
-    private static final int RUNE_SEARCH_RADIUS = 16;
+    /** 每名玩家的符文方向搜索冷却；仅用于瞬态表现，不写入存档。 */
     private static final Map<UUID, Long> NEXT_MARK_SEARCH = new HashMap<>();
 
     public static void clearMarkCooldown(UUID playerId) {
@@ -49,10 +44,6 @@ public class TideBoltEntity extends AbstractArrow {
     }
 
     /** 潮爆半径与伤害系数(相对直击伤害)。 */
-    private static final double BURST_RADIUS = 2.5;
-    private static final float BURST_DAMAGE_FACTOR = 0.5F;
-    /** 水中目标直击增伤。 */
-    private static final float WET_BONUS = 1.25F;
 
     /** 潮爆只结算一次(命中实体后弹体仍可能再撞方块)。 */
     private boolean burstDone = false;
@@ -75,19 +66,19 @@ public class TideBoltEntity extends AbstractArrow {
         return new ItemStack(Items.ARROW);
     }
 
-    /** 潮汐弩矢:水下弹道无衰减(原版箭 0.6)。 */
+    /** 水中减速系数走服务端配置，不用原版的固定 0.6。 */
     @Override
     protected float getWaterInertia() {
-        return 0.99F;
+        return ServerConfig.TIDE_BOLT_WATER_INERTIA.get().floatValue();
     }
 
     @Override
     protected void onHitEntity(net.minecraft.world.phys.EntityHitResult result) {
         double impactSpeed = this.getDeltaMovement().length();
-        // 潮汐弩武器特性:水中目标直击 +25%。
+
         double originalBaseDamage = this.getBaseDamage();
         if (result.getEntity().isInWater()) {
-            this.setBaseDamage(originalBaseDamage * WET_BONUS);
+            this.setBaseDamage(originalBaseDamage * ServerConfig.TIDE_BOLT_WET_DAMAGE_MULTIPLIER.get());
         }
         super.onHitEntity(result);
         this.setBaseDamage(originalBaseDamage);
@@ -97,31 +88,36 @@ public class TideBoltEntity extends AbstractArrow {
 
     @Override
     protected void onHitBlock(net.minecraft.world.phys.BlockHitResult result) {
-        // 命中速度必须在 super 前取:super.onHitBlock 会把 deltaMovement 改写成命中点偏移量
+
         double impactSpeed = this.getDeltaMovement().length();
         super.onHitBlock(result);
         this.tideBurst(result.getLocation(), null, impactSpeed);
     }
 
-    /** 潮爆(V0.6C):命中点水压炸裂,范围伤害 + 径向冲开 + 水花环演出。 */
+    /** 潮爆:命中点水压炸裂,范围伤害 + 径向冲开 + 水花环演出。 */
     private void tideBurst(Vec3 center, @Nullable net.minecraft.world.entity.Entity directHit,
                            double impactSpeed) {
         if (this.burstDone || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
         this.burstDone = true;
-        double burstRadius = BURST_RADIUS;
-        float burstDamage = (float) (this.getBaseDamage() * impactSpeed * BURST_DAMAGE_FACTOR);
+        double burstRadius = ServerConfig.TIDE_BOLT_BURST_RADIUS.get();
+        float burstDamage = (float) (this.getBaseDamage() * impactSpeed
+                * ServerConfig.TIDE_BOLT_BURST_DAMAGE_FACTOR.get());
         burstDamage = Math.max(2.0F, Math.min(burstDamage, 6.5F));
         var owner = this.getOwner();
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 new net.minecraft.world.phys.AABB(center, center).inflate(burstRadius),
                 e -> e != owner && e != directHit && e instanceof Enemy && e.isAlive()
+                        && e.distanceToSqr(center) <= burstRadius * burstRadius
                         && !(owner instanceof LivingEntity living && e.isAlliedTo(living)))) {
-            victim.hurt(owner instanceof LivingEntity living
+            boolean hurt = victim.hurt(owner instanceof LivingEntity living
                             ? this.damageSources().mobProjectile(this, living)
                             : this.damageSources().generic(),
                     burstDamage);
+            if (!hurt || isBoss(victim)) {
+                continue;
+            }
             Vec3 away = victim.position().subtract(center).multiply(1, 0, 1);
             if (away.lengthSqr() > 1.0E-4) {
                 Vec3 dir = away.normalize();
@@ -129,7 +125,7 @@ public class TideBoltEntity extends AbstractArrow {
                 victim.hurtMarked = true;
             }
         }
-        // 潮爆演出:水花穹顶 + 扩散气泡环 + 一声闷响
+
         serverLevel.sendParticles(ParticleTypes.SPLASH,
                 center.x, center.y, center.z, 30, 0.8, 0.5, 0.8, 0.2);
         for (int i = 0; i < 16; i++) {
@@ -152,27 +148,33 @@ public class TideBoltEntity extends AbstractArrow {
     @Override
     protected void doPostHurtEffects(LivingEntity target) {
         super.doPostHurtEffects(target);
+        applyAmmoEffects(target);
         if (!(this.level() instanceof ServerLevel serverLevel)
                 || !(this.getOwner() instanceof ServerPlayer player)
                 || !(target instanceof Enemy)
-                || target.getType().is(ModEntityTags.ECHO_BOSSES)) {
+                || isBoss(target)) {
             return;
         }
         long now = serverLevel.getGameTime();
         Long nextSearch = NEXT_MARK_SEARCH.get(player.getUUID());
+        long cooldown = ServerConfig.TIDE_BOLT_MARK_COOLDOWN_TICKS.get();
+        long maximumNextSearch = now > Long.MAX_VALUE - cooldown
+                ? Long.MAX_VALUE : now + cooldown;
+        if (nextSearch != null && nextSearch > maximumNextSearch) {
+            nextSearch = maximumNextSearch;
+            NEXT_MARK_SEARCH.put(player.getUUID(), nextSearch);
+        }
         if (nextSearch != null && now < nextSearch) {
             return;
         }
-        NEXT_MARK_SEARCH.put(player.getUUID(),
-                now > Long.MAX_VALUE - MARK_COOLDOWN_TICKS
-                        ? Long.MAX_VALUE : now + MARK_COOLDOWN_TICKS);
-        BlockPos.findClosestMatch(target.blockPosition(), RUNE_SEARCH_RADIUS, 8,
+        NEXT_MARK_SEARCH.put(player.getUUID(), maximumNextSearch);
+        BlockPos.findClosestMatch(target.blockPosition(), ServerConfig.TIDE_BOLT_RUNE_SEARCH_RADIUS.get(), 8,
                 pos -> serverLevel.isLoaded(pos)
                         && serverLevel.getBlockState(pos).is(ModBlocks.TIDE_RUNE.get()))
                 .ifPresent(runePos -> {
                     Vec3 from = target.position().add(0, target.getBbHeight() * 0.5, 0);
                     Vec3 dir = Vec3.atCenterOf(runePos).subtract(from).normalize();
-                    // 聆听者 2 件:线索显示时间延长(11.3)——轨迹更长更密
+
                     int steps = cn.kurt6.unknown_echoes.ability.EchoArmorSets
                             .hasListenerClueBonus(player) ? 14 : 8;
                     for (int i = 1; i <= steps; i++) {
@@ -180,9 +182,35 @@ public class TideBoltEntity extends AbstractArrow {
                         serverLevel.sendParticles(ParticleTypes.GLOW,
                                 p.x, p.y, p.z, 2, 0.05, 0.05, 0.05, 0.0);
                     }
-                    player.displayClientMessage(Component.translatable(
-                            "message.unknown_echoes.tide_crossbow.marked"), true);
                 });
+    }
+
+    private void applyAmmoEffects(LivingEntity target) {
+        ItemStack ammo = this.getPickupItemStackOrigin();
+        if (ammo.is(Items.SPECTRAL_ARROW)) {
+            target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 200, 0),
+                    this.getEffectSource());
+        }
+
+        PotionContents potionContents = ammo.getOrDefault(
+                DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+        potionContents.potion().ifPresent(potion -> {
+            for (MobEffectInstance effect : potion.value().getEffects()) {
+                target.addEffect(new MobEffectInstance(
+                                effect.getEffect(),
+                                Math.max(effect.mapDuration(duration -> duration / 8), 1),
+                                effect.getAmplifier(), effect.isAmbient(), effect.isVisible()),
+                        this.getEffectSource());
+            }
+        });
+        for (MobEffectInstance effect : potionContents.customEffects()) {
+            target.addEffect(effect, this.getEffectSource());
+        }
+    }
+
+    private static boolean isBoss(LivingEntity target) {
+        return target.getType().is(ModEntityTags.ECHO_BOSSES)
+                || target.getType().is(Tags.EntityTypes.BOSSES);
     }
 
     @Override

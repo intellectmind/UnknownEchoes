@@ -17,6 +17,12 @@
                 "min": 1,
                 "max": 1
               }
+            },
+            {
+              "function": "minecraft:enchanted_count_increase",
+              "enchantment": "minecraft:looting",
+              "count": { "type": "minecraft:uniform", "min": 0.0, "max": 1.0 },
+              "limit": 3
             }
           ]
         }
@@ -29,7 +35,7 @@
         {
           "type": "minecraft:item",
           "name": "unknown_echoes:mirror_scale",
-          "weight": 20,
+          "weight": 35,
           "functions": [
             {
               "function": "minecraft:set_count",
@@ -38,6 +44,12 @@
                 "min": 1,
                 "max": 2
               }
+            },
+            {
+              "function": "minecraft:enchanted_count_increase",
+              "enchantment": "minecraft:looting",
+              "count": { "type": "minecraft:uniform", "min": 0.0, "max": 1.0 },
+              "limit": 4
             }
           ]
         },
@@ -48,7 +60,7 @@
         },
         {
           "type": "minecraft:empty",
-          "weight": 75
+          "weight": 60
         }
       ]
     }

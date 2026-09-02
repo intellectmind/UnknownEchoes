@@ -8,6 +8,9 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:sky_lamp_glass"
         }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

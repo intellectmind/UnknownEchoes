@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.block.deep;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import cn.kurt6.unknown_echoes.block.beacon.DeepEchoTeleporter;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -80,7 +81,7 @@ public class SpaceAnchorBlock extends Block {
         }
         if (EchoPermission.hasVoidRouteReady(serverPlayer)) {
             serverPlayer.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.space_anchor.route_ready"), true);
+                    "message.unknown_echoes.space_anchor.completed"), true);
             return InteractionResult.CONSUME;
         }
 
@@ -103,6 +104,9 @@ public class SpaceAnchorBlock extends Block {
         }
         int activated = countActivatedNearby(serverPlayer, level, pos);
         EchoAbilityManager.syncToClient(serverPlayer);
+        if (completed) {
+            ModAdvancements.award(serverPlayer, ModAdvancements.SPACE_ANCHORS);
+        }
         playFeedback(serverLevel, pos, completed);
         Component message = completed
                 ? Component.translatable("message.unknown_echoes.space_anchor.completed")
@@ -130,7 +134,8 @@ public class SpaceAnchorBlock extends Block {
                     x = rotatedX;
                 }
                 BlockPos candidate = corePos.offset(x, 0, z);
-                if (level.getBlockState(candidate).getBlock() instanceof SpaceAnchorBlock) {
+                if (level.hasChunkAt(candidate)
+                        && level.getBlockState(candidate).getBlock() instanceof SpaceAnchorBlock) {
                     anchors.add(candidate);
                 }
             }
@@ -143,7 +148,7 @@ public class SpaceAnchorBlock extends Block {
 
     private static int countActivatedNearby(ServerPlayer player, Level level, BlockPos center) {
         int best = 1;
-        // 当前节点可能对应结构中的任一锚点，枚举四种结构旋转并校验完整三角布局。
+
         for (int rotation = 0; rotation < 4; rotation++) {
             for (int[] origin : ANCHOR_OFFSETS) {
                 int count = 0;
@@ -156,7 +161,8 @@ public class SpaceAnchorBlock extends Block {
                         x = rotatedX;
                     }
                     BlockPos cursor = center.offset(x, 0, z);
-                    if (level.getBlockState(cursor).getBlock() instanceof SpaceAnchorBlock
+                    if (level.hasChunkAt(cursor)
+                            && level.getBlockState(cursor).getBlock() instanceof SpaceAnchorBlock
                             && EchoAbilityManager.hasActivatedMechanism(player, mechanismKey(level, cursor))) {
                         count++;
                     }

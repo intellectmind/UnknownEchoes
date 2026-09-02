@@ -21,10 +21,7 @@ import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 import net.minecraft.util.RandomSource;
 
-/**
- * 第 10 章群系结构补齐:用单 piece 代码生成小结构、连接结构和主线外场。
- * 关键奖励仍由服务端能力/终端/Boss 逻辑结算,这里仅提供可定位、可探索的结构实体。
- */
+/** 群系结构补齐:用单 piece 代码生成小结构、连接结构和主线外场。 */
 public class RegionSiteStructure extends SinglePieceStructure {
     public static final MapCodec<RegionSiteStructure> MEMORY_PILLAR_COURTYARD_CODEC = codec(Kind.MEMORY_PILLAR_COURTYARD);
     public static final MapCodec<RegionSiteStructure> LOST_CAMP_CODEC = codec(Kind.LOST_CAMP);
@@ -61,15 +58,24 @@ public class RegionSiteStructure extends SinglePieceStructure {
         if (!kind.underwater) {
             return super.findGenerationPoint(context);
         }
-        // 湖底场点:SinglePieceStructure 默认拒绝水下(gotcha #16)——五点高度图预判后直接锚湖床
+
         int centerDepth = kind == Kind.LAKEBED_LIGHTHOUSE_RUINS ? 4 : kind == Kind.REEF_HUT ? 3 : 2;
         int edgeDepth = kind == Kind.LAKEBED_LIGHTHOUSE_RUINS ? 2 : 1;
-        if (!LakeBedPlacement.hasSubmergedFootprint(context, kind.size, centerDepth, edgeDepth)) {
+        Piece piece = new Piece(kind, context.random(),
+                context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ());
+        BoundingBox footprint = piece.getBoundingBox();
+        if (!LakeBedPlacement.hasSubmergedFootprint(context,
+                footprint.minX(), footprint.minZ(), kind.size, centerDepth, edgeDepth)) {
             return java.util.Optional.empty();
         }
+        int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(
+                context, footprint.minX(), footprint.minZ(), kind.size, kind.size);
+        if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
+            return java.util.Optional.empty();
+        }
+        piece.anchorToLakeFloor(floorY);
         return onTopOfChunkCenter(context, net.minecraft.world.level.levelgen.Heightmap.Types.OCEAN_FLOOR_WG,
-                builder -> builder.addPiece(new Piece(kind, context.random(),
-                        context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ())));
+                builder -> builder.addPiece(piece));
     }
 
     @Override
@@ -97,24 +103,24 @@ public class RegionSiteStructure extends SinglePieceStructure {
     }
 
     public enum Kind {
-        MEMORY_PILLAR_COURTYARD("memory_pillar_courtyard", 61, 16),
-        LOST_CAMP("lost_camp", 19, 8),
-        OVERWORLD_LOST_CAMP("overworld_lost_camp", 19, 8),
-        WIND_ERODED_STEPS("wind_eroded_steps", 25, 16),
-        WIND_RUNE_STONE_CIRCLE("wind_rune_stone_circle", 21, 10),
-        REFLECTION_WELL("reflection_well", 17, 10),
-        MIRROR_LAKE_CACHE("mirror_lake_cache", 15, 8),
-        TIDE_BUOY_ARRAY("tide_buoy_array", 21, 8, true),
-        REEF_HUT("reef_hut", 17, 9, true),
-        LAKEBED_LIGHTHOUSE_RUINS("lakebed_lighthouse_ruins", 23, 14, true),
-        ILLUSION_WALL_CHAMBER("illusion_wall_chamber", 21, 9),
-        MOSSBACK_TURTLE_NEST("mossback_turtle_nest", 17, 7),
-        UNDERGROUND_GREENHOUSE("underground_greenhouse", 27, 12),
-        BROKEN_BELL_HUT("broken_bell_hut", 17, 9),
-        BROKEN_BELL_STELE("broken_bell_stele", 13, 12),
-        ARCHIVE_REMNANT_HALL("archive_remnant_hall", 23, 11),
-        CLIFF_BRIDGE("cliff_bridge", 31, 9),
-        ARCHIVE_GATE("archive_gate", 25, 18);
+        MEMORY_PILLAR_COURTYARD("memory_pillar_courtyard", 73, 28),
+        LOST_CAMP("lost_camp", 31, 14),
+        OVERWORLD_LOST_CAMP("overworld_lost_camp", 31, 14),
+        WIND_ERODED_STEPS("wind_eroded_steps", 35, 22),
+        WIND_RUNE_STONE_CIRCLE("wind_rune_stone_circle", 33, 16),
+        REFLECTION_WELL("reflection_well", 29, 18),
+        MIRROR_LAKE_CACHE("mirror_lake_cache", 27, 14),
+        TIDE_BUOY_ARRAY("tide_buoy_array", 29, 12, true),
+        REEF_HUT("reef_hut", 25, 14, true),
+        LAKEBED_LIGHTHOUSE_RUINS("lakebed_lighthouse_ruins", 31, 20, true),
+        ILLUSION_WALL_CHAMBER("illusion_wall_chamber", 35, 16),
+        MOSSBACK_TURTLE_NEST("mossback_turtle_nest", 29, 12),
+        UNDERGROUND_GREENHOUSE("underground_greenhouse", 39, 20),
+        BROKEN_BELL_HUT("broken_bell_hut", 31, 16),
+        BROKEN_BELL_STELE("broken_bell_stele", 25, 24),
+        ARCHIVE_REMNANT_HALL("archive_remnant_hall", 37, 20),
+        CLIFF_BRIDGE("cliff_bridge", 45, 18),
+        ARCHIVE_GATE("archive_gate", 41, 28);
 
         final String id;
         final int size;
@@ -144,6 +150,16 @@ public class RegionSiteStructure extends SinglePieceStructure {
     }
 
     public static class Piece extends EchoStructurePiece {
+        private static final int[][] REFLECTION_WELL_MIRROR_NODES = {
+                {-3, -3}, {3, -3}, {-3, 3}, {3, 3}
+        };
+        private static final int[][] BROKEN_STELE_ORE_NODES = {
+                {0, 0}, {-3, 0}, {3, 0}, {0, -3}, {0, 3}
+        };
+        private static final int[][] GREENHOUSE_GEODE_NODES = {
+                {-9, -1}, {-9, 6}, {-3, -9}, {3, -9},
+                {9, -6}, {9, 1}, {-4, 9}, {4, 9}
+        };
         private Kind kind;
         private boolean spawnedMainBoss = false;
 
@@ -159,18 +175,37 @@ public class RegionSiteStructure extends SinglePieceStructure {
             this.spawnedMainBoss = tag.getBoolean("SpawnedMainBoss");
         }
 
+        public void anchorToLakeFloor(int floorY) {
+            if (this.heightPosition >= 0) {
+                return;
+            }
+            this.heightPosition = floorY;
+            this.boundingBox.move(0, floorY - this.boundingBox.minY() - 1, 0);
+        }
+
+        @Override
+        protected int siteFootprint() {
+            return kind.size;
+        }
+
         @Override
         public void postProcess(WorldGenLevel level, StructureManager structureManager,
                                 ChunkGenerator generator, RandomSource random, BoundingBox box,
                                 ChunkPos chunkPos, BlockPos pos) {
             boolean anchored = kind.underwater
-                    ? this.updateLakeFloorHeight(level, box)
+                    ? this.updateLakeFloorHeight(level, box, generator)
                     : this.updateAverageGroundHeight(level, box, 0);
             if (!anchored) {
                 return;
             }
+            if (kind.underwater) {
+                box = LakeBedPieceHelper.intersection(box, this.boundingBox);
+                if (box == null) {
+                    return;
+                }
+            }
             if (!kind.underwater) {
-                // 水下场点不清空体积——那会在湖里挖出一个空气盒
+
                 clearPlayableVolume(level, box);
             }
             int c = kind.size / 2;
@@ -194,30 +229,345 @@ public class RegionSiteStructure extends SinglePieceStructure {
                 case CLIFF_BRIDGE -> cliffBridge(level, random, box, c);
                 case ARCHIVE_GATE -> archiveGate(level, random, box, c);
             }
+            buildRegionalFrame(level, random, box, c);
+            addThemedEncounter(level, random, box);
+            placeBudgetedResourceNodes(level, box, c);
+        }
+
+        /**
+         * 按群系主题给据点补普通遭遇(小型点位、谜题环与龟巢保持安静): 迷雾营地闹回响流浪者,风蚀阶闹哨兵,
+         * 湖底废墟潜水影,残钟屋守卫巡逻。
+         */
+        private void addThemedEncounter(WorldGenLevel level, RandomSource random, BoundingBox box) {
+            BlockState bricks = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
+            BlockState rune = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
+            BlockState reef = ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState();
+            BlockState worn = ModBlocks.TIDEWORN_REEFSTONE.get().defaultBlockState();
+            switch (kind) {
+                case MEMORY_PILLAR_COURTYARD -> placeStructureSpawner(level, random, box, 17, 1, 43,
+                        ModEntities.ECHO_WANDERER.get(), bricks, rune);
+                case LOST_CAMP -> placeStructureSpawner(level, random, box, 7, 1, 17,
+                        ModEntities.ECHO_WANDERER.get(), bricks, rune);
+                case OVERWORLD_LOST_CAMP -> placeStructureSpawner(level, random, box, 21, 1, 21,
+                        ModEntities.ECHO_REMNANT.get(), bricks, rune);
+                case WIND_ERODED_STEPS -> placeStructureSpawner(level, random, box, 6, 1, 6,
+                        ModEntities.WIND_ERODED_SENTINEL.get(), bricks, rune);
+                case TIDE_BUOY_ARRAY -> placeSubmergedStructureSpawner(level, random, box, 14, 1, 7,
+                        ModEntities.WATER_SHADOW.get(), reef, worn);
+                case LAKEBED_LIGHTHOUSE_RUINS -> placeSubmergedStructureSpawner(level, random, box, 22, 1, 20,
+                        ModEntities.WATER_SHADOW.get(), reef, worn);
+                case ILLUSION_WALL_CHAMBER -> placeStructureSpawner(level, random, box, 27, 1, 25,
+                        ModEntities.MIRROR_DUST_DECOY.get(), reef, rune);
+                case UNDERGROUND_GREENHOUSE -> placeStructureSpawner(level, random, box, 13, 1, 13,
+                        ModEntities.ECHO_WANDERER.get(), bricks, rune);
+                case BROKEN_BELL_HUT -> placeStructureSpawner(level, random, box, 5, 1, 20,
+                        ModEntities.BROKEN_BELL_GUARD.get(), bricks, rune);
+                case ARCHIVE_REMNANT_HALL -> placeStructureSpawner(level, random, box, 23, 1, 27,
+                        ModEntities.LOST_RECORDER.get(), bricks, rune);
+                case CLIFF_BRIDGE -> placeStructureSpawner(level, random, box, 10, 1, 22,
+                        ModEntities.WIND_ERODED_SENTINEL.get(), bricks, rune);
+                case ARCHIVE_GATE -> placeStructureSpawner(level, random, box, 13, 1, 31,
+                        ModEntities.ECHO_REMNANT.get(), bricks, rune);
+                default -> { }
+            }
+        }
+
+        private void buildRegionalFrame(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
+            switch (kind) {
+                case MEMORY_PILLAR_COURTYARD -> {
+                    BlockState brick = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
+                    BlockState rune = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
+                    buildCircularColonnade(level, box, c, 1, c, 32, 16, 9,
+                            brick, rune, ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState());
+                    for (Direction direction : Direction.Plane.HORIZONTAL) {
+                        buildCardinalGateway(level, box, c, 1, c, 32, direction,
+                                3, 8, brick, rune);
+                    }
+                    buildRuneCauseway(level, box, c, 1, c, Direction.SOUTH,
+                            24, 35, 2, brick, ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState(), rune);
+                    buildStairCornice(level, box, c, 10, c, Footprint.square(32), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildParapet(level, box, c, 1, c, Footprint.square(33), 6, ModBlocks.ECHO_STONE_BRICK_WALL.get().defaultBlockState(), rune);
+                }
+                case LOST_CAMP -> {
+                    // 与主世界失落营地共用 helper,必须靠材质分层区分,否则读成同一处。
+                    buildCampPerimeter(level, random, box, c, true);
+                    buildRuinedShell(level, box, c, 1, c, 7, 7, 5,
+                            ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState(),
+                            ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState(),
+                            ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState(),
+                            ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState());
+                    buildParapet(level, box, c, 1, c, Footprint.square(7), 4, ModBlocks.ECHO_STONE_BRICK_WALL.get().defaultBlockState(), ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState());
+                    buildStairCornice(level, box, c, 6, c, Footprint.square(7), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildCornice(level, box, c, 5, c, Footprint.square(7), ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState(), ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState());
+                }
+                case OVERWORLD_LOST_CAMP -> {
+                    buildCampPerimeter(level, random, box, c, false);
+                    buildCourtyardCloister(level, box, c, 1, c, Footprint.square(8), 5, 2, ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState(), ModBlocks.WHISPERING_TIMBER_FRAME.get().defaultBlockState(), ModBlocks.ECHO_PLANKS.get().defaultBlockState(), ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState());
+                    buildParapet(level, box, c, 1, c, Footprint.square(7), 4, ModBlocks.WHISPERING_TIMBER_WALL.get().defaultBlockState(), ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState());
+                    // 木构收边:回声境域营地用砖石收边,两处必须区分。
+                    buildStairCornice(level, box, c, 6, c, Footprint.square(8), ModBlocks.WHISPERING_TIMBER_STAIRS.get().defaultBlockState(), ModBlocks.WHISPERING_TIMBER_SLAB.get().defaultBlockState(), true);
+                    buildSpireFinial(level, box, c, 7, c, 2, 4,
+                            ModBlocks.WHISPERING_TIMBER_FRAME.get().defaultBlockState(),
+                            ModBlocks.ECHO_PLANKS.get().defaultBlockState(),
+                            ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState());
+                }
+                case WIND_ERODED_STEPS -> {
+                    BlockState wind = ModBlocks.WIND_ETCHED_STONE.get().defaultBlockState();
+                    BlockState chiseled = ModBlocks.WIND_CHISELED_STONE.get().defaultBlockState();
+                    BlockState light = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
+                    buildTwinTowerFacade(level, box, c, 1, c - 11,
+                            8, 2, 12, wind, chiseled, light);
+                    buildGabledPavilion(level, box, c + 5, 10, c + 5, Footprint.of(5, 4), 5, 3, wind, wind, chiseled, light);
+                    buildRuneCauseway(level, box, c, 1, c, Direction.NORTH,
+                            8, 15, 2, wind, chiseled, light);
+                    // 收边必须用风蚀岩砖族:借用青色回响石砖会与浅灰风蚀岩撞色。
+                    buildStairCornice(level, box, c, 13, c - 11, Footprint.of(8, 2), ModBlocks.WIND_ETCHED_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.WIND_ETCHED_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildStairCornice(level, box, c + 5, 15, c + 5, Footprint.of(5, 4), ModBlocks.WIND_ETCHED_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.WIND_ETCHED_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildParapet(level, box, c + 5, 16, c + 5, Footprint.of(6, 5), 4, ModBlocks.WIND_ETCHED_BRICK_WALL.get().defaultBlockState(), chiseled);
+                    for (int towerX : new int[]{c - 8, c + 8}) {
+                        buildSpireFinial(level, box, towerX, 14, c - 11, 2, 4,
+                                wind, chiseled, light);
+                    }
+                }
+                case WIND_RUNE_STONE_CIRCLE -> {
+                    BlockState wind = ModBlocks.WIND_ETCHED_STONE.get().defaultBlockState();
+                    BlockState chiseled = ModBlocks.WIND_CHISELED_STONE.get().defaultBlockState();
+                    BlockState light = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
+
+                    buildCircularColonnade(level, box, c, 1, c, 11, 12, 7,
+                            wind, light, chiseled);
+                    for (Direction direction : Direction.Plane.HORIZONTAL) {
+                        buildCardinalGateway(level, box, c, 1, c, 12, direction,
+                                2, 7, wind, chiseled);
+                    }
+                    buildTieredTower(level, box, c - 11, 1, c - 11,
+                            2, 9, wind, chiseled, light);
+                    buildTieredTower(level, box, c + 11, 1, c - 11,
+                            2, 9, wind, chiseled, light);
+                    buildStairCornice(level, box, c, 8, c, Footprint.square(11), ModBlocks.WIND_ETCHED_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.WIND_ETCHED_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildParapet(level, box, c, 1, c, Footprint.square(13), 5, ModBlocks.WIND_ETCHED_BRICK_WALL.get().defaultBlockState(), chiseled);
+                    for (int towerX : new int[]{c - 11, c + 11}) {
+                        buildSpireFinial(level, box, towerX, 11, c - 11,
+                                1, 3, wind, chiseled, light);
+                    }
+                }
+                case REFLECTION_WELL -> {
+                    BlockState mirror = ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState();
+                    BlockState fractured = ModBlocks.FRACTURED_MIRROR_TILE.get().defaultBlockState();
+                    BlockState light = ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState();
+                    // 倒影井必须用围合中庭:永恒灯塔已占用镜石族亭殿剪影。
+                    buildCourtyardCloister(level, box, c, 1, c, Footprint.square(9), 7, 3, fractured, mirror, fractured, light);
+                    buildCardinalGateway(level, box, c, 1, c, 9, Direction.SOUTH,
+                            3, 8, mirror, ModBlocks.MIRROR_DUST_BRICKS.get().defaultBlockState());
+                    buildStairCornice(level, box, c, 7, c, Footprint.square(7), ModBlocks.MIRROR_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.MIRROR_STONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildParapet(level, box, c, 1, c, Footprint.square(9), 4, ModBlocks.MIRROR_STONE_BRICK_WALL.get().defaultBlockState(), fractured);
+                }
+                case MIRROR_LAKE_CACHE -> {
+                    BlockState mirror = ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState();
+                    BlockState dust = ModBlocks.MIRROR_DUST_BRICKS.get().defaultBlockState();
+                    BlockState light = ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState();
+                    buildGabledPavilion(level, box, c, 1, c, Footprint.of(6, 5), 5, 3, dust, mirror, dust, light);
+                    buildTieredTower(level, box, c - 8, 1, c,
+                            2, 9, mirror, dust, light);
+                    buildTieredTower(level, box, c + 8, 1, c,
+                            2, 9, mirror, dust, light);
+                    buildStairCornice(level, box, c, 6, c, Footprint.of(6, 5), ModBlocks.MIRROR_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.MIRROR_STONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    for (int towerX : new int[]{c - 8, c + 8}) {
+                        buildSpireFinial(level, box, towerX, 11, c, 2, 4, mirror, dust, light);
+                    }
+                    buildCornice(level, box, c, 5, c, Footprint.of(6, 5), mirror, dust);
+                    buildParapet(level, box, c, 7, c, Footprint.of(7, 6), 4, ModBlocks.MIRROR_STONE_BRICK_WALL.get().defaultBlockState(), dust);
+                }
+                case ILLUSION_WALL_CHAMBER -> {
+                    BlockState mirror = ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState();
+                    BlockState fractured = ModBlocks.FRACTURED_MIRROR_TILE.get().defaultBlockState();
+                    BlockState light = ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState();
+                    buildGabledPavilion(level, box, c, 1, c, Footprint.square(9), 8, 4, fractured, mirror, fractured, light);
+                    buildTwinTowerFacade(level, box, c, 1, c - 10,
+                            8, 2, 12, mirror, fractured, light);
+                    buildStairCornice(level, box, c, 9, c, Footprint.square(9), ModBlocks.MIRROR_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.MIRROR_STONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildStairCornice(level, box, c, 13, c - 10, Footprint.of(8, 2), ModBlocks.MIRROR_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.MIRROR_STONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildParapet(level, box, c, 10, c, Footprint.square(10), 5, ModBlocks.MIRROR_STONE_BRICK_WALL.get().defaultBlockState(), fractured);
+                    buildCornice(level, box, c, 9, c, Footprint.square(9), mirror, fractured);
+                    for (int towerX : new int[]{c - 8, c + 8}) {
+                        buildSpireFinial(level, box, towerX, 14, c - 10, 2, 4,
+                                mirror, fractured, light);
+                    }
+                }
+                case TIDE_BUOY_ARRAY -> {
+                    BlockState reef = ModBlocks.REEF_LIMESTONE_BRICKS.get().defaultBlockState();
+                    BlockState worn = ModBlocks.TIDEWORN_REEFSTONE.get().defaultBlockState();
+                    buildCantileverTerraces(level, box, c, 1, c,
+                            Direction.SOUTH, 3, 7, 3, worn, reef, worn,
+                            ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState());
+                    buildRuneCauseway(level, box, c, 0, c, Direction.SOUTH,
+                            8, 13, 2, reef, worn,
+                            ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState());
+                    buildStairCornice(level, box, c, 6, c, Footprint.square(8), ModBlocks.REEF_LIMESTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.REEF_LIMESTONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildParapet(level, box, c, 1, c, Footprint.square(10), 5, ModBlocks.REEF_LIMESTONE_BRICK_WALL.get().defaultBlockState(), worn);
+                    buildCornice(level, box, c, 2, c, Footprint.square(9), ModBlocks.TIDEWOOD_PLANKS.get().defaultBlockState(), ModBlocks.PEARL_CORAL_BLOCK.get().defaultBlockState());
+                }
+                case REEF_HUT -> {
+                    BlockState reef = ModBlocks.REEF_LIMESTONE_BRICKS.get().defaultBlockState();
+                    BlockState wood = ModBlocks.TIDEWOOD_PLANKS.get().defaultBlockState();
+                    BlockState light = ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState();
+                    buildGabledPavilion(level, box, c, 1, c, Footprint.of(8, 7), 6, 4, reef, wood, reef, light);
+                    buildArcadedWing(level, box, c, 1, c + 7, Footprint.of(8, 3), 4, 4, reef, wood, reef, light);
+                    buildStairCornice(level, box, c, 7, c, Footprint.of(8, 7), ModBlocks.REEF_LIMESTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.REEF_LIMESTONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildParapet(level, box, c, 1, c + 7, Footprint.of(8, 3), 4, ModBlocks.REEF_LIMESTONE_BRICK_WALL.get().defaultBlockState(), reef);
+                    buildCornice(level, box, c, 6, c, Footprint.of(8, 7), reef, wood);
+                }
+                case LAKEBED_LIGHTHOUSE_RUINS -> {
+                    BlockState reef = ModBlocks.REEF_LIMESTONE_BRICKS.get().defaultBlockState();
+                    BlockState worn = ModBlocks.TIDEWORN_REEFSTONE.get().defaultBlockState();
+                    BlockState light = ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState();
+                    buildRadialButtresses(level, box, c, 1, c,
+                            6, 11, 8, reef, worn);
+                    buildArcadedWing(level, box, c, 1, c + 8, Footprint.of(10, 3), 5, 5, worn, reef, worn, light);
+                    buildCardinalGateway(level, box, c, 1, c, 12, Direction.SOUTH,
+                            3, 7, reef, worn);
+                    buildStairCornice(level, box, c, 9, c, Footprint.square(11), ModBlocks.REEF_LIMESTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.REEF_LIMESTONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildParapet(level, box, c, 1, c, Footprint.square(12), 5, ModBlocks.REEF_LIMESTONE_BRICK_WALL.get().defaultBlockState(), worn);
+                    buildCornice(level, box, c, 2, c, Footprint.square(11), ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState(), ModBlocks.TIDEWOOD_PLANKS.get().defaultBlockState());
+                }
+                case MOSSBACK_TURTLE_NEST -> {
+                    BlockState mud = ModBlocks.SILENT_MUDSTONE_BRICKS.get().defaultBlockState();
+                    BlockState root = ModBlocks.ROOTBOUND_MUDSTONE.get().defaultBlockState();
+                    BlockState light = ModBlocks.BOGLIGHT_STONE.get().defaultBlockState();
+                    buildArcadedWing(level, box, c, 1, c, Footprint.of(9, 7), 5, 3, root, mud, root, light);
+                    buildRadialButtresses(level, box, c, 1, c,
+                            8, 12, 5, mud, light);
+                    buildStairCornice(level, box, c, 6, c, Footprint.of(9, 7), ModBlocks.SILENT_MUDSTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.SILENT_MUDSTONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildParapet(level, box, c, 1, c, Footprint.square(12), 5, ModBlocks.SILENT_MUDSTONE_BRICK_WALL.get().defaultBlockState(), root);
+                    buildCornice(level, box, c, 2, c, Footprint.square(11), mud, root);
+                }
+                case UNDERGROUND_GREENHOUSE -> {
+                    BlockState song = ModBlocks.SONGSTONE_BRICKS.get().defaultBlockState();
+                    BlockState glass = Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState();
+                    BlockState chiseled = ModBlocks.CHISELED_SONGSTONE.get().defaultBlockState();
+                    buildGabledPavilion(level, box, c, 0, c, Footprint.of(12, 14), 8, 4, song, chiseled, glass, ModBlocks.HUSH_LANTERN_GLASS.get().defaultBlockState());
+                    buildTieredTower(level, box, c - 14, 1, c,
+                            3, 13, song, chiseled, glass);
+                    buildTieredTower(level, box, c + 14, 1, c,
+                            3, 13, song, chiseled, glass);
+                    buildStairCornice(level, box, c, 9, c, Footprint.of(12, 14), ModBlocks.SONGSTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.SONGSTONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    for (int towerX : new int[]{c - 14, c + 14}) {
+                        buildSpireFinial(level, box, towerX, 15, c, 3, 5, song, chiseled,
+                                ModBlocks.HUSH_LANTERN_GLASS.get().defaultBlockState());
+                    }
+                    buildParapet(level, box, c, 1, c, Footprint.square(16), 6, ModBlocks.SONGSTONE_BRICK_WALL.get().defaultBlockState(), chiseled);
+                    buildCornice(level, box, c, 12, c, Footprint.square(15), song, chiseled);
+                }
+                case BROKEN_BELL_HUT -> {
+                    BlockState ashen = ModBlocks.ASHEN_BELLSTONE_BRICKS.get().defaultBlockState();
+                    BlockState rusted = ModBlocks.RUSTED_BELLSTONE.get().defaultBlockState();
+                    BlockState scrap = ModBlocks.CLOCKWORK_SCRAP_BLOCK.get().defaultBlockState();
+                    BlockState candle = ModBlocks.RESONANCE_CANDLE.get().defaultBlockState();
+                    buildGabledPavilion(level, box, c, 1, c, Footprint.of(8, 7), 6, 4, rusted, ashen, rusted, candle);
+                    buildTieredTower(level, box, c + 10, 1, c - 7,
+                            2, 12, ashen, rusted, candle);
+                    buildStairCornice(level, box, c, 7, c, Footprint.of(8, 7), ModBlocks.ASHEN_BELLSTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ASHEN_BELLSTONE_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildCornice(level, box, c, 8, c, Footprint.of(8, 7), ashen, scrap);
+                    buildParapet(level, box, c, 9, c, Footprint.of(9, 8), 4, ModBlocks.ASHEN_BELLSTONE_BRICK_WALL.get().defaultBlockState(), rusted);
+                }
+                case BROKEN_BELL_STELE -> {
+                    BlockState ashen = ModBlocks.ASHEN_BELLSTONE_BRICKS.get().defaultBlockState();
+                    BlockState rusted = ModBlocks.RUSTED_BELLSTONE.get().defaultBlockState();
+                    BlockState scrap = ModBlocks.CLOCKWORK_SCRAP_BLOCK.get().defaultBlockState();
+
+                    // 残钟碑必须用退台碑座:本文件已有五处柱环,再加一处就撞形。
+                    buildSteppedZiggurat(level, box, c, 1, c, 9, 3, 3, 0,
+                            ashen, rusted,
+                            ModBlocks.ASHEN_BELLSTONE_BRICK_STAIRS.get().defaultBlockState(),
+                            ModBlocks.BELL_LANTERN_GLASS.get().defaultBlockState());
+                    buildCardinalGateway(level, box, c, 1, c, 10, Direction.SOUTH,
+                            2, 9, ashen, rusted);
+                    buildCornice(level, box, c, 1, c, Footprint.square(9), ashen, scrap);
+                    buildStairCornice(level, box, c, 10, c, Footprint.square(6), ModBlocks.ASHEN_BELLSTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ASHEN_BELLSTONE_BRICK_SLAB.get().defaultBlockState(), true);
+                }
+                case ARCHIVE_REMNANT_HALL -> {
+                    BlockState strata = ModBlocks.ECHO_STRATA_BRICKS.get().defaultBlockState();
+                    BlockState chiseled = ModBlocks.CHISELED_ECHO_STRATA.get().defaultBlockState();
+                    BlockState mosaic = ModBlocks.ARCHIVE_MOSAIC.get().defaultBlockState();
+
+                    BlockState lamp = ModBlocks.RESONANT_CLIFF_CRYSTAL.get().defaultBlockState();
+                    buildRibbedVaultHall(level, box, c, 1, c, Footprint.of(9, 13), 8, 4, strata, strata, chiseled, lamp);
+                    buildTwinTowerFacade(level, box, c, 1, c - 13,
+                            7, 2, 12, strata, chiseled, lamp);
+                    buildStairCornice(level, box, c, 10, c, Footprint.of(9, 13), ModBlocks.ECHO_STRATA_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STRATA_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildCornice(level, box, c, 11, c, Footprint.of(9, 13), chiseled, mosaic);
+                    buildParapet(level, box, c, 12, c, Footprint.of(9, 13), 5, ModBlocks.ECHO_STRATA_BRICK_WALL.get().defaultBlockState(), chiseled);
+                    illuminateInterior(level, box, c, c, 8, 8, 12, 5, ModBlocks.ARCHIVE_LANTERN_GLASS.get().defaultBlockState());
+                }
+                case CLIFF_BRIDGE -> {
+                    // 桥面/桥墩/腰线必须分三种材质,同材质长桥在侧视里是一条等厚板。
+                    BlockState strata = ModBlocks.ECHO_STRATA_BRICKS.get().defaultBlockState();
+                    BlockState chiseled = ModBlocks.CHISELED_ECHO_STRATA.get().defaultBlockState();
+                    BlockState mosaic = ModBlocks.ARCHIVE_MOSAIC.get().defaultBlockState();
+                    buildMonumentalBridge(level, box, c, 2, c, Direction.SOUTH,
+                            16, 3, 7, strata,
+                            ModBlocks.ECHO_CLIFF_STONE.get().defaultBlockState(),
+                            chiseled, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState());
+                    buildParapet(level, box, c, 3, c, Footprint.of(16, 3), 5, ModBlocks.ECHO_STRATA_BRICK_WALL.get().defaultBlockState(), chiseled);
+                    buildStairCornice(level, box, c, 2, c, Footprint.of(16, 3), ModBlocks.ECHO_STRATA_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STRATA_BRICK_SLAB.get().defaultBlockState(), true);
+                    buildCornice(level, box, c, 1, c, Footprint.of(16, 3), chiseled, mosaic);
+                }
+                case ARCHIVE_GATE -> {
+                    BlockState strata = ModBlocks.ECHO_STRATA_BRICKS.get().defaultBlockState();
+                    BlockState chiseled = ModBlocks.CHISELED_ECHO_STRATA.get().defaultBlockState();
+                    BlockState mosaic = ModBlocks.ARCHIVE_MOSAIC.get().defaultBlockState();
+                    BlockState lamp = ModBlocks.RESONANT_CLIFF_CRYSTAL.get().defaultBlockState();
+                    buildTwinTowerFacade(level, box, c, 1, c,
+                            9, 3, 19, strata, chiseled, lamp);
+                    buildArcadedWing(level, box, c, 1, c + 9, Footprint.of(12, 5), 7, 4, strata, strata, chiseled, lamp);
+                    buildRuneCauseway(level, box, c, 0, c, Direction.SOUTH,
+                            5, 18, 2, strata, chiseled, mosaic);
+                    for (int towerOffset : new int[]{-9, 9}) {
+                        buildStairCornice(level, box, c + towerOffset, 20, c, Footprint.square(3), ModBlocks.ECHO_STRATA_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STRATA_BRICK_SLAB.get().defaultBlockState(), true);
+                        buildSpireFinial(level, box, c + towerOffset, 21, c,
+                                3, 5, strata, chiseled, lamp);
+                    }
+                    buildCornice(level, box, c, 3, c, Footprint.square(14), ModBlocks.ECHO_STRATA.get().defaultBlockState(), ModBlocks.ARCHIVE_MOSAIC.get().defaultBlockState());
+                }
+            }
+        }
+
+        private void buildCampPerimeter(WorldGenLevel level, RandomSource random, BoundingBox box,
+                                        int c, boolean echoRealm) {
+            BlockState wall = echoRealm
+                    ? ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState()
+                    : Blocks.MOSSY_COBBLESTONE.defaultBlockState();
+            BlockState post = echoRealm
+                    ? ModBlocks.ECHO_LOG.get().defaultBlockState()
+                    : Blocks.STRIPPED_SPRUCE_LOG.defaultBlockState();
+            BlockState accent = echoRealm
+                    ? ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState()
+                    : Blocks.CHISELED_STONE_BRICKS.defaultBlockState();
+            architecturalRing(level, box, c, 0, c, 13, wall);
+            int[][] towers = {{c - 11, c - 9}, {c + 11, c - 9}, {c - 11, c + 9}, {c + 11, c + 9}};
+            for (int[] tower : towers) {
+                int height = 5 + random.nextInt(3);
+                architecturalPillar(level, box, tower[0], 1, tower[1], height, post);
+                this.placeBlock(level, accent, tower[0], height + 1, tower[1], box);
+            }
+            buildRuneCauseway(level, box, c, 0, c, Direction.SOUTH,
+                    6, 14, 1, Blocks.COARSE_DIRT.defaultBlockState(), wall, accent);
+            scatterArchitecturalDebris(level, random, box, c, 1, c,
+                    9, 13, 18, wall, accent);
         }
 
         /** 水下场点锚湖床(OCEAN_FLOOR):沿用父类 heightPosition 的一次性调整协议。 */
-        private boolean updateLakeFloorHeight(WorldGenLevel level, BoundingBox bounds) {
+        private boolean updateLakeFloorHeight(WorldGenLevel level, BoundingBox bounds,
+                                              ChunkGenerator generator) {
             if (this.heightPosition >= 0) {
                 return true;
             }
-            int total = 0;
-            int count = 0;
-            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-            for (int z = this.boundingBox.minZ(); z <= this.boundingBox.maxZ(); z++) {
-                for (int x = this.boundingBox.minX(); x <= this.boundingBox.maxX(); x++) {
-                    cursor.set(x, 64, z);
-                    if (bounds.isInside(cursor)) {
-                        total += level.getHeight(
-                                net.minecraft.world.level.levelgen.Heightmap.Types.OCEAN_FLOOR_WG, x, z);
-                        count++;
-                    }
-                }
-            }
-            if (count == 0) {
+            int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(level, generator,
+                    this.boundingBox.minX(), this.boundingBox.minZ(), kind.size, kind.size);
+            if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
                 return false;
             }
-            this.heightPosition = total / count;
+            this.heightPosition = floorY;
             this.boundingBox.move(0, this.heightPosition - this.boundingBox.minY() - 1, 0);
             return true;
         }
@@ -226,19 +576,23 @@ public class RegionSiteStructure extends SinglePieceStructure {
             BlockState moss = ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState();
             BlockState brick = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
             disk(level, box, c, 0, c, 30, moss);
-            buildGuidedEntrance(level, box, c, brick);
+            buildSiteGuidedEntrance(level, box, c, brick);
             buildMemoryOuterSteles(level, random, box, c);
             buildMemoryBossArena(level, random, box, c);
             buildMemoryRetryShortcut(level, box, c);
             buildMemoryRevisitVault(level, random, box, c);
             BlockPos bossPos = new BlockPos(this.getWorldX(c, c), this.getWorldY(2), this.getWorldZ(c, c));
+            BlockPos altarPos = new BlockPos(this.getWorldX(c, c - 8), this.getWorldY(2), this.getWorldZ(c, c - 8));
             if (!this.spawnedMainBoss && box.isInside(bossPos)) {
                 var boss = ModEntities.FORGOTTEN_COLOSSUS.get().create(level.getLevel());
                 if (boss != null) {
                     boss.moveTo(bossPos.getX() + 0.5D, bossPos.getY(), bossPos.getZ() + 0.5D, 0.0F, 0.0F);
                     boss.setPersistenceRequired();
+                    boss.bindRechallengeArena(altarPos, bossPos);
                     if (level.addFreshEntity(boss)) {
                         this.spawnedMainBoss = true;
+                    } else {
+                        boss.discard();
                     }
                 }
             }
@@ -258,15 +612,38 @@ public class RegionSiteStructure extends SinglePieceStructure {
         private void buildMemoryBossArena(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
             BlockState brick = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
             BlockState rune = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
+            BlockState cracked = ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState();
+            BlockState chiseled = ModBlocks.CHISELED_ECHO_STRATA.get().defaultBlockState();
             ring(level, box, c, 1, c, 24, brick);
-            ring(level, box, c, 2, c, 13, ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState());
+            ring(level, box, c, 2, c, 13, cracked);
             for (int d : new int[]{-14, 14}) {
                 memoryPillar(level, box, c + d, c + d);
                 memoryPillar(level, box, c + d, c - d);
             }
+
+            buildRibbedVaultHall(level, box, c, 2, c, Footprint.of(17, 27), 13, 6, brick, brick, cracked, rune);
+            buildTwinTowerFacade(level, box, c, 2, c - 28,
+                    22, 4, 20, brick, cracked, rune);
+            buildArcadedWing(level, box, c - 24, 2, c, Footprint.of(6, 17), 10, 4, brick, cracked, chiseled, rune);
+            buildArcadedWing(level, box, c + 24, 2, c, Footprint.of(6, 17), 10, 4, brick, cracked, chiseled, rune);
+            buildBossApse(level, box, c, 2, c + 25, Direction.SOUTH,
+                    8, 11, brick, brick, cracked, rune);
+            // 必须补半塌残壳外墙:另外三座场地也用肋拱厅配方,废墟感是唯一区分点。
+            buildRuinedShell(level, box, c, 2, c, 30, 30, 9,
+                    cracked, ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState(),
+                    brick, rune);
+
             disk(level, box, c, 1, c, 12, rune);
-            pillar(level, box, c - 2, 2, c, 4, ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState());
-            pillar(level, box, c + 2, 2, c, 3, ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState());
+            buildBossArenaMandala(level, box, c, 1, c, 12,
+                    cracked, brick, chiseled);
+            BlockState lamp = ModBlocks.ARCHIVE_LANTERN_GLASS.get().defaultBlockState();
+            buildArenaLightRing(level, box, c, 3, c, 14, 12, 9, brick, ModBlocks.ARCHIVE_LANTERN_GLASS.get().defaultBlockState());
+            illuminateInterior(level, box, c, c, 18, 15, 24, 6, ModBlocks.ARCHIVE_LANTERN_GLASS.get().defaultBlockState());
+            buildStairCornice(level, box, c, 15, c, Footprint.of(17, 27), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_SLAB.get().defaultBlockState(), true);
+            buildCornice(level, box, c, 16, c, Footprint.of(17, 27), brick, cracked);
+            buildParapet(level, box, c, 17, c, Footprint.of(17, 27), 8, ModBlocks.ECHO_STONE_BRICK_WALL.get().defaultBlockState(), cracked);
+            pillar(level, box, c - 2, 2, c, 4, cracked);
+            pillar(level, box, c + 2, 2, c, 3, cracked);
             this.placeBlock(level, ModBlocks.REWARD_ALTAR.get().defaultBlockState(), c, 2, c - 8, box);
             this.placeBlock(level, ModBlocks.ARTIFACT_RECORD_TABLE.get().defaultBlockState(), c, 2, c + 8, box);
             buildAccessibleChest(level, random, box, c - 6, 2, c - 7,
@@ -287,48 +664,57 @@ public class RegionSiteStructure extends SinglePieceStructure {
         private void buildMemoryRevisitVault(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
             platform(level, box, c + 18, 1, c + 16, 9, ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState());
             this.placeBlock(level, ModBlocks.TRUE_SIGHT_STELE.get().defaultBlockState(), c + 20, 2, c + 18, box);
-            buildHiddenReward(level, random, box, c + 22, 2, c + 22, ModLootTables.TRUE_SIGHT_VAULT);
+            buildSiteHiddenReward(level, random, box, c + 22, 2, c + 22);
         }
 
         private void lostCamp(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
             platform(level, box, c - 6, 0, c - 5, 13, Blocks.COARSE_DIRT.defaultBlockState());
-            buildGuidedEntrance(level, box, c, Blocks.COARSE_DIRT.defaultBlockState());
+            buildSiteGuidedEntrance(level, box, c, Blocks.COARSE_DIRT.defaultBlockState());
             for (int i = -5; i <= 5; i += 5) {
                 pillar(level, box, c + i, 1, c - 4, 4, Blocks.STRIPPED_SPRUCE_LOG.defaultBlockState());
                 platform(level, box, c + i - 2, 4, c - 5, 5, Blocks.BROWN_WOOL.defaultBlockState());
             }
             this.placeBlock(level, Blocks.CAMPFIRE.defaultBlockState(), c, 1, c, box);
+
+            buildSealedManor(level, box, c - 7, 1, c + 6, 4, 4, 1, 5,
+                    ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState(),
+                    ModBlocks.ECHO_LOG.get().defaultBlockState(),
+                    ModBlocks.ECHO_PLANKS.get().defaultBlockState(),
+                    ModBlocks.ARCHIVE_LANTERN_GLASS.get().defaultBlockState(),
+                    ModBlocks.ARCHIVE_LANTERN_GLASS.get().defaultBlockState());
             this.placeBlock(level, ModBlocks.ECHO_ARCHIVE_TERMINAL.get().defaultBlockState(), c + 4, 1, c + 3, box);
-            buildBranchReward(level, random, box, c - 4, 1, c + 3, ModLootTables.T2_RUIN);
-            buildHiddenReward(level, random, box, c + 5, 1, c + 5, ModLootTables.TRUE_SIGHT_VAULT);
+            buildSiteBranchReward(level, random, box, c - 4, 1, c + 3, ModLootTables.T2_RUIN);
+            buildSiteHiddenReward(level, random, box, c + 5, 1, c + 5);
         }
 
-        /**
-         * 主世界失落营地(文档 4.2.1):先行探索者残留的营地——篝火、行囊(木桶+宝箱)、
-         * 普通残页与偶见的潦草地图(由 OVERWORLD_LOST_CAMP_CHEST 战利品提供)。
-         * 与回声境域的 lostCamp 不同:不放 ECHO_ARCHIVE_TERMINAL(那是境域科技),只留先行者风味。
-         */
+        /** 主世界失落营地：包含篝火、行囊、普通残页和可能出现的潦草地图。 */
         private void overworldLostCamp(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
             platform(level, box, c - 6, 0, c - 5, 13, Blocks.COARSE_DIRT.defaultBlockState());
-            buildGuidedEntrance(level, box, c, Blocks.COARSE_DIRT.defaultBlockState());
-            // 简易帐篷:云杉立柱 + 棕色羊毛顶
+            buildSiteGuidedEntrance(level, box, c, Blocks.COARSE_DIRT.defaultBlockState());
+
             for (int i = -5; i <= 5; i += 5) {
                 pillar(level, box, c + i, 1, c - 4, 4, Blocks.STRIPPED_SPRUCE_LOG.defaultBlockState());
                 platform(level, box, c + i - 2, 4, c - 5, 5, Blocks.BROWN_WOOL.defaultBlockState());
             }
-            // 篝火 + 床铺(羊毛)+ 行囊木桶,先行者落脚痕迹
+
             this.placeBlock(level, Blocks.CAMPFIRE.defaultBlockState(), c, 1, c, box);
             this.placeBlock(level, Blocks.RED_WOOL.defaultBlockState(), c - 3, 1, c - 3, box);
             this.placeBlock(level, Blocks.WHITE_WOOL.defaultBlockState(), c - 3, 1, c - 2, box);
             this.placeBlock(level, Blocks.BARREL.defaultBlockState(), c + 3, 1, c - 3, box);
             this.placeBlock(level, Blocks.CRAFTING_TABLE.defaultBlockState(), c + 4, 1, c + 2, box);
-            // 行囊宝箱:普通材料 + 普通残页 + 偶见潦草地图(指向最近遗迹)
-            buildBranchReward(level, random, box, c - 4, 1, c + 3, ModLootTables.OVERWORLD_LOST_CAMP_CHEST);
+
+            buildSealedManor(level, box, c - 7, 1, c + 6, 4, 4, 1, 5,
+                    Blocks.MOSSY_COBBLESTONE.defaultBlockState(),
+                    Blocks.STRIPPED_SPRUCE_LOG.defaultBlockState(),
+                    Blocks.SPRUCE_PLANKS.defaultBlockState(),
+                    Blocks.GLASS.defaultBlockState(),
+                    Blocks.LANTERN.defaultBlockState());
+
+            buildSiteBranchReward(level, random, box, c - 4, 1, c + 3, ModLootTables.OVERWORLD_LOST_CAMP_CHEST);
         }
 
-
         private void windSteps(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.SKY_OBSERVATORY_CHEST);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.SKY_OBSERVATORY_CHEST);
             for (int i = 0; i < 10; i++) {
                 platform(level, box, c - 4 + i, i, c - 8 + i, 8, ModBlocks.WIND_ETCHED_STONE.get().defaultBlockState());
                 if (i % 3 == 0) {
@@ -339,12 +725,12 @@ public class RegionSiteStructure extends SinglePieceStructure {
         }
 
         private void windCircle(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.T3_PUZZLE);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.T3_PUZZLE);
             disk(level, box, c, 0, c, 9, ModBlocks.WIND_CHISELED_STONE.get().defaultBlockState());
-            // 谜题布局跨区块一致:从包围盒坐标派生确定性随机(gotchas #15)
+
             RandomSource puzzleRandom = RandomSource.create(
                     this.boundingBox.minX() * 341873128712L ^ this.boundingBox.minZ() * 132897987541L);
-            // 八根环形柱,柱顶嵌顺序符文(点数 orders[i]):右键把点数报给中心谜题核心
+
             int[] orders = shuffledOrders(puzzleRandom, 8);
             for (int i = 0; i < 8; i++) {
                 double a = i * Math.PI / 4.0;
@@ -355,15 +741,15 @@ public class RegionSiteStructure extends SinglePieceStructure {
                         .setValue(cn.kurt6.unknown_echoes.block.puzzle.SequenceRuneBlock.ORDER, orders[i]),
                         px, 4, pz, box);
             }
-            // 中心谜题核心 + 激活序列(八点数乱序取前五,落选两根为干扰柱)
+
             this.placeBlock(level, ModBlocks.PUZZLE_CORE.get().defaultBlockState(), c, 1, c, box);
             int[] sequence = java.util.Arrays.copyOf(shuffledOrders(puzzleRandom, 8), 5);
             BlockPos corePos = new BlockPos(this.getWorldX(c, c), this.getWorldY(1), this.getWorldZ(c, c));
-            if (level.getBlockEntity(corePos)
+            if (box.isInside(corePos) && level.getBlockEntity(corePos)
                     instanceof cn.kurt6.unknown_echoes.block.puzzle.PuzzleCoreBlockEntity coreEntity) {
                 coreEntity.setSequence(sequence);
             }
-            // 北侧提示墙:常亮顺序符文 = 激活顺序(不参与判定,触错重置不灭)
+
             BlockState wall = ModBlocks.WIND_CHISELED_STONE.get().defaultBlockState();
             for (int x = c - 3; x <= c + 3; x++) {
                 for (int y = 1; y <= 4; y++) {
@@ -376,7 +762,7 @@ public class RegionSiteStructure extends SinglePieceStructure {
                         .setValue(cn.kurt6.unknown_echoes.block.puzzle.SequenceRuneBlock.LIT, Boolean.TRUE),
                         c - 2 + i, 4, c - 8, box);
             }
-            // 解谜奖励:封印石室,解开后由谜题核心清除半径内封印石(PuzzleCore EFFECT_RADIUS=10)
+
             buildSealedReward(level, random, box, c + 5, 1, c, ModLootTables.T3_PUZZLE);
         }
 
@@ -385,7 +771,8 @@ public class RegionSiteStructure extends SinglePieceStructure {
                                        int x, int y, int z,
                                        net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> loot) {
             BlockState sealed = ModBlocks.SEALED_STONE.get().defaultBlockState();
-            this.placeBlock(level, ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState(), x, y - 1, z, box);
+
+            this.placeBlock(level, ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState(), x, y - 1, z, box);
             this.createChest(level, box, random, x, y, z, loot); // audit-ok: puzzle core clears sealed stones before chest access
             this.placeBlock(level, sealed, x, y + 1, z, box);
             this.placeBlock(level, sealed, x + 1, y, z, box);
@@ -394,7 +781,6 @@ public class RegionSiteStructure extends SinglePieceStructure {
             this.placeBlock(level, sealed, x, y, z - 1, box);
         }
 
-        /** 0..size-1 的乱序排列(Fisher-Yates);用确定性 random 保证跨区块布局一致。 */
         private static int[] shuffledOrders(RandomSource random, int size) {
             int[] arr = new int[size];
             for (int i = 0; i < size; i++) {
@@ -410,18 +796,24 @@ public class RegionSiteStructure extends SinglePieceStructure {
         }
 
         private void reflectionWell(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.MIRROR_LAKE_CACHE);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.MIRROR_LAKE_CACHE);
             disk(level, box, c, 0, c, 7, ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
             for (int y = 1; y <= 5; y++) {
-                ring(level, box, c, y, c, 4, y % 2 == 0 ? Blocks.GLASS.defaultBlockState() : ModBlocks.MIRROR_STONE.get().defaultBlockState());
+                ring(level, box, c, y, c, 4, y % 2 == 0
+                        ? Blocks.GLASS.defaultBlockState()
+                        : ModBlocks.CRACKED_MIRROR_BRICKS.get().defaultBlockState());
             }
             disk(level, box, c, 1, c, 3, Blocks.WATER.defaultBlockState());
             this.placeBlock(level, ModBlocks.TRUE_SIGHT_STELE.get().defaultBlockState(), c, 2, c - 5, box);
             buildAccessibleChest(level, random, box, c + 4, 1, c, ModLootTables.MIRROR_LAKE_CACHE);
+            for (int[] node : REFLECTION_WELL_MIRROR_NODES) {
+                this.placeBlock(level, ModBlocks.MIRROR_STONE.get().defaultBlockState(),
+                        c + node[0], 1, c + node[1], box);
+            }
         }
 
         private void mirrorCache(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.MIRROR_LAKE_CACHE);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.MIRROR_LAKE_CACHE);
             platform(level, box, c - 5, 0, c - 5, 11, ModBlocks.MIRROR_SAND.get().defaultBlockState());
             platform(level, box, c - 3, 1, c - 3, 7, ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
             this.placeBlock(level, ModBlocks.TRUE_SIGHT_CHEST.get().defaultBlockState(), c, 2, c, box);
@@ -430,7 +822,7 @@ public class RegionSiteStructure extends SinglePieceStructure {
         }
 
         private void tideBuoys(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.TIDE_LIGHTHOUSE_REEF_CHEST);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.TIDE_LIGHTHOUSE_REEF_CHEST);
             disk(level, box, c, 0, c, 9, ModBlocks.TIDE_SMOOTH_STONE.get().defaultBlockState());
             for (int i = 0; i < 6; i++) {
                 double a = i * Math.PI / 3.0;
@@ -441,7 +833,7 @@ public class RegionSiteStructure extends SinglePieceStructure {
         }
 
         private void reefHut(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.T4_REGION_CORE);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.T4_REGION_CORE);
             disk(level, box, c, 0, c, 7, ModBlocks.PEARL_CORAL_BLOCK.get().defaultBlockState());
             hut(level, box, c, ModBlocks.TIDEWOOD_PLANKS.get().defaultBlockState(), ModBlocks.TIDEWOOD_LOG.get().defaultBlockState());
             this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState(), c + 3, 1, c, box);
@@ -449,32 +841,49 @@ public class RegionSiteStructure extends SinglePieceStructure {
         }
 
         private void lakebedLighthouse(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.TIDE_LIGHTHOUSE_REEF_CHEST);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.TIDE_LIGHTHOUSE_REEF_CHEST);
             disk(level, box, c, 0, c, 10, ModBlocks.TIDE_SMOOTH_STONE.get().defaultBlockState());
             for (int y = 1; y <= 10; y++) {
                 ring(level, box, c, y, c, Math.max(3, 6 - y / 3), y % 3 == 0 ? Blocks.SEA_LANTERN.defaultBlockState() : ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
             }
-            // 潮汐柱必须成对出现:无柱祭坛会把机关判定为已完成,绕过共鸣机关(V0.6E 修复的旁路)
+
             this.placeBlock(level, ModBlocks.TIDE_PILLAR.get().defaultBlockState(), c - 4, 1, c - 4, box);
             this.placeBlock(level, ModBlocks.TIDE_PILLAR.get().defaultBlockState(), c + 4, 1, c - 4, box);
             this.placeBlock(level, ModBlocks.TIDE_PILLAR.get().defaultBlockState(), c, 1, c + 5, box);
             this.placeBlock(level, ModBlocks.TIDE_CORE_ALTAR.get().defaultBlockState(), c, 1, c, box);
             buildAccessibleChest(level, random, box, c + 5, 1, c, ModLootTables.TIDE_LIGHTHOUSE_REEF_CHEST);
+            buildAccessibleChest(level, random, box, c - 5, 1, c, ModLootTables.T4_REGION_CORE);
         }
 
         private void illusionChamber(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.T3_PUZZLE);
-            platform(level, box, c - 8, 0, c - 8, 17, ModBlocks.CRACKED_MIRROR_BRICKS.get().defaultBlockState());
-            wall(level, box, c - 8, 1, c - 8, 17, 7, ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
+            addSiteRewardLoop(level, random, box, c, ModLootTables.T3_PUZZLE);
+            platform(level, box, c - 10, 0, c - 10, 21,
+                    ModBlocks.CRACKED_MIRROR_BRICKS.get().defaultBlockState());
+            BlockState mirror = ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState();
+            BlockState hidden = ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState();
+            for (int lane = -1; lane <= 1; lane++) {
+                int screenX = c + lane * 6;
+                int openingZ = c + lane * 4;
+                for (int z = c - 7; z <= c + 7; z++) {
+                    boolean opening = Math.abs(z - openingZ) <= 1;
+                    for (int y = 1; y <= 5; y++) {
+                        if (!opening || y >= 4) {
+                            this.placeBlock(level, y == 4 && Math.floorMod(z - c, 3) == 0
+                                            ? hidden : mirror,
+                                    screenX, y, z, box);
+                        }
+                    }
+                }
+            }
             for (int x = c - 5; x <= c + 5; x += 5) {
                 this.placeBlock(level, ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState(), x, 1, c, box);
                 this.placeBlock(level, ModBlocks.MIRROR_SIGIL.get().defaultBlockState(), x, 1, c + 4, box);
             }
-            buildHiddenReward(level, random, box, c, 1, c - 5, ModLootTables.TRUE_SIGHT_VAULT);
+            buildSiteHiddenReward(level, random, box, c, 1, c - 5);
         }
 
         private void turtleNest(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.SILENT_HUT_CHEST);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.SILENT_HUT_CHEST);
             disk(level, box, c, 0, c, 7, ModBlocks.MUFFLE_MOSS.get().defaultBlockState());
             for (int i = 0; i < 5; i++) {
                 disk(level, box, c - 4 + i * 2, 1, c + random.nextInt(7) - 3, 2, Blocks.MOSSY_COBBLESTONE.defaultBlockState());
@@ -483,19 +892,42 @@ public class RegionSiteStructure extends SinglePieceStructure {
         }
 
         private void greenhouse(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.T4_REGION_CORE);
-            platform(level, box, c - 10, 0, c - 10, 21, Blocks.MOSS_BLOCK.defaultBlockState());
-            wall(level, box, c - 10, 1, c - 10, 21, 6, Blocks.GLASS.defaultBlockState());
-            for (int x = c - 7; x <= c + 7; x += 2) {
-                this.placeBlock(level, ModBlocks.DREAM_FLOWER.get().defaultBlockState(), x, 1, c - 3, box);
-                this.placeBlock(level, ModBlocks.DREAM_MIST_VINE.get().defaultBlockState(), x, 1, c + 3, box);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.T4_REGION_CORE);
+            BlockState moss = Blocks.MOSS_BLOCK.defaultBlockState();
+            BlockState frame = ModBlocks.SONGSTONE_BRICKS.get().defaultBlockState();
+            for (int x = c - 12; x <= c + 12; x++) {
+                for (int z = c - 14; z <= c + 14; z++) {
+                    boolean border = Math.abs(x - c) == 12 || Math.abs(z - c) == 14;
+                    boolean channel = Math.abs(x - c) == 2 && Math.abs(z - c) < 11;
+                    this.placeBlock(level, border ? frame : channel
+                                    ? Blocks.WATER.defaultBlockState() : moss,
+                            x, 0, z, box);
+                }
+            }
+            for (int z = c - 10; z <= c + 10; z += 4) {
+                for (int x = c - 9; x <= c + 9; x += 3) {
+                    BlockState plant = Math.floorMod(x + z, 2) == 0
+                            ? ModBlocks.DREAM_FLOWER.get().defaultBlockState()
+                            : ModBlocks.DREAM_MIST_VINE.get().defaultBlockState();
+                    this.placeBlock(level, plant, x, 1, z, box);
+                }
             }
             this.placeBlock(level, ModBlocks.RESONANCE_CANDLE.get().defaultBlockState(), c, 1, c, box);
             buildAccessibleChest(level, random, box, c, 1, c + 6, ModLootTables.T4_REGION_CORE);
         }
 
+        private void placeBudgetedResourceNodes(WorldGenLevel level, BoundingBox box, int c) {
+            if (kind != Kind.UNDERGROUND_GREENHOUSE) {
+                return;
+            }
+            for (int[] node : GREENHOUSE_GEODE_NODES) {
+                this.placeBlock(level, ModBlocks.RESONANT_GEODE.get().defaultBlockState(),
+                        c + node[0], 1, c + node[1], box);
+            }
+        }
+
         private void brokenHut(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.BROKEN_ARCHIVE_CHEST);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.BROKEN_ARCHIVE_CHEST);
             platform(level, box, c - 6, 0, c - 6, 13, Blocks.MUD_BRICKS.defaultBlockState());
             hut(level, box, c, Blocks.COPPER_BLOCK.defaultBlockState(), Blocks.DARK_OAK_LOG.defaultBlockState());
             this.placeBlock(level, Blocks.COARSE_DIRT.defaultBlockState(), c + 4, 0, c - 3, box);
@@ -504,15 +936,19 @@ public class RegionSiteStructure extends SinglePieceStructure {
         }
 
         private void brokenStele(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.BROKEN_ARCHIVE_CHEST);
-            disk(level, box, c, 0, c, 5, ModBlocks.BROKEN_BELL_ORE.get().defaultBlockState());
+            addSiteRewardLoop(level, random, box, c, ModLootTables.BROKEN_ARCHIVE_CHEST);
+            disk(level, box, c, 0, c, 5, ModBlocks.RUSTED_BELLSTONE.get().defaultBlockState());
+            for (int[] node : BROKEN_STELE_ORE_NODES) {
+                this.placeBlock(level, ModBlocks.BROKEN_BELL_ORE.get().defaultBlockState(),
+                        c + node[0], 0, c + node[1], box);
+            }
             pillar(level, box, c, 1, c, 9, Blocks.COPPER_BLOCK.defaultBlockState());
             this.placeBlock(level, Blocks.GOLD_BLOCK.defaultBlockState(), c, 10, c, box);
             this.placeBlock(level, ModBlocks.ECHO_ARCHIVE_TERMINAL.get().defaultBlockState(), c, 1, c - 4, box);
         }
 
         private void archiveHall(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.T5_MINIBOSS_REPEAT);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.T5_MINIBOSS_REPEAT);
             platform(level, box, c - 8, 0, c - 8, 17, ModBlocks.ECHO_CLIFF_STONE.get().defaultBlockState());
             for (int x = c - 7; x <= c + 7; x += 3) {
                 pillar(level, box, x, 1, c - 6, 6, Blocks.CHISELED_BOOKSHELF.defaultBlockState());
@@ -522,7 +958,7 @@ public class RegionSiteStructure extends SinglePieceStructure {
         }
 
         private void cliffBridge(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.T4_REGION_CORE);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.T4_REGION_CORE);
             for (int z = c - 14; z <= c + 14; z++) {
                 for (int x = c - 2; x <= c + 2; x++) {
                     this.placeBlock(level, ModBlocks.ECHO_CLIFF_STONE.get().defaultBlockState(), x, 2, z, box);
@@ -536,7 +972,7 @@ public class RegionSiteStructure extends SinglePieceStructure {
         }
 
         private void archiveGate(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
-            addSiteExplorationLoop(level, random, box, c, ModLootTables.T4_REGION_CORE);
+            addSiteRewardLoop(level, random, box, c, ModLootTables.T4_REGION_CORE);
             platform(level, box, c - 10, 0, c - 4, 21, ModBlocks.ECHO_CLIFF_STONE.get().defaultBlockState());
             for (int y = 1; y <= 15; y++) {
                 pillar(level, box, c - 8, y, c, 1, ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState());
@@ -567,7 +1003,9 @@ public class RegionSiteStructure extends SinglePieceStructure {
             this.placeBlock(level, ModBlocks.MEMORY_PILLAR.get().defaultBlockState(), x, 4, z, box);
         }
 
-        private void buildGuidedEntrance(WorldGenLevel level, BoundingBox box, int c, BlockState state) {
+        @Override
+        protected void buildSiteGuidedEntrance(WorldGenLevel level, BoundingBox box, int c,
+                                               BlockState state) {
             for (int z = c + 4; z <= kind.size - 2; z++) {
                 for (int x = c - 1; x <= c + 1; x++) {
                     this.placeBlock(level, state, x, 1, z, box);
@@ -579,122 +1017,46 @@ public class RegionSiteStructure extends SinglePieceStructure {
             }
         }
 
-        private void buildBranchReward(WorldGenLevel level, RandomSource random, BoundingBox box,
-                                       int x, int y, int z, net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> loot) {
-            BlockState floor = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
-            BlockState accent = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
-            int floorY = Math.max(0, y - 1);
-            platform(level, box, x - 2, floorY, z - 2, 5, floor);
-            clearChestPocket(level, box, x, y, z);
-            pillar(level, box, x - 2, y, z - 2, 2, accent);
-            pillar(level, box, x + 2, y, z - 2, 2, accent);
-            pillar(level, box, x - 2, y, z + 2, 2, accent);
-            pillar(level, box, x + 2, y, z + 2, 2, accent);
-            this.placeBlock(level, accent, x, y, z - 1, box);
-            buildAccessibleChest(level, random, box, x, y, z, loot);
-        }
-
-        private void buildHiddenReward(WorldGenLevel level, RandomSource random, BoundingBox box,
-                                       int x, int y, int z, net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> loot) {
-            buildTrueSightVaultNiche(level, random, box, x, y, z, vaultEntrance(x, z));
-        }
-
-        private Direction vaultEntrance(int x, int z) {
-            if (x >= kind.size - 5) {
-                return Direction.WEST;
-            }
-            if (x <= 4) {
-                return Direction.EAST;
-            }
-            if (z >= kind.size - 5) {
-                return Direction.NORTH;
-            }
-            return Direction.SOUTH;
-        }
-
-        private void configureTrueSightVault(WorldGenLevel level, BoundingBox box, RandomSource random,
-                                             int x, int y, int z) {
-            BlockPos vaultPos = new BlockPos(this.getWorldX(x, z), this.getWorldY(y), this.getWorldZ(x, z));
-            if (box.isInside(vaultPos) && level.getBlockEntity(vaultPos)
-                    instanceof cn.kurt6.unknown_echoes.block.truesight.TrueSightChestBlockEntity vault) {
-                vault.setLootTable(ModLootTables.TRUE_SIGHT_VAULT, random.nextLong());
-            }
-        }
-
-        private void addSiteExplorationLoop(WorldGenLevel level, RandomSource random, BoundingBox box,
-                                            int c, net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> loot) {
-            buildGuidedEntrance(level, box, c, ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState());
-            buildBranchReward(level, random, box, Math.max(2, c - 4), 1, Math.min(kind.size - 3, c + 3), loot);
-            buildHiddenReward(level, random, box, Math.min(kind.size - 3, c + 4), 1,
-                    Math.max(2, c - 4), ModLootTables.TRUE_SIGHT_VAULT);
-        }
-
-        private void clearChestPocket(WorldGenLevel level, BoundingBox box, int x, int y, int z) {
-            BlockState air = Blocks.AIR.defaultBlockState();
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dz = -1; dz <= 1; dz++) {
-                    if (dx == 0 && dz == 0) {
-                        continue;
-                    }
-                    this.placeBlock(level, air, x + dx, y, z + dz, box);
-                }
-            }
-            for (int dy = 1; dy <= 2; dy++) {
-                this.placeBlock(level, air, x, y + dy, z, box);
-            }
-        }
-
-        private void buildHiddenVaultNiche(WorldGenLevel level, BoundingBox box, int x, int y, int z) {
-            BlockState anchored = ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState();
-            BlockState hidden = ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState();
-            BlockState air = Blocks.AIR.defaultBlockState();
-            int minX = x - 2;
-            int maxX = x + 2;
-            int minZ = z - 2;
-            int maxZ = z + 2;
-            int roofY = y + 3;
-            sealHiddenNiche(level, box, anchored, minX, maxX, minZ, maxZ, y - 1, roofY);
-            this.generateBox(level, box, x - 1, y, z - 1, x + 1, y + 2, z + 1, air, air, false);
-            boolean openWest = x >= kind.size - 5;
-            boolean openEast = x <= 4;
-            boolean openNorth = z >= kind.size - 5;
-            boolean openSouth = !openWest && !openEast && !openNorth;
-            for (int yy = y; yy <= y + 2; yy++) {
-                for (int xx = x - 1; xx <= x + 1; xx++) {
-                    this.placeBlock(level, openNorth ? hidden : anchored, xx, yy, minZ, box);
-                    this.placeBlock(level, openSouth ? hidden : anchored, xx, yy, maxZ, box);
-                }
-                for (int zz = z - 1; zz <= z + 1; zz++) {
-                    this.placeBlock(level, openWest ? hidden : anchored, minX, yy, zz, box);
-                    this.placeBlock(level, openEast ? hidden : anchored, maxX, yy, zz, box);
-                }
-            }
-            clearChestPocket(level, box, x, y, z);
-        }
-
-        private void sealHiddenNiche(WorldGenLevel level, BoundingBox box, BlockState anchored,
-                                     int minX, int maxX, int minZ, int maxZ, int floorY, int roofY) {
-            for (int xx = minX; xx <= maxX; xx++) {
-                for (int zz = minZ; zz <= maxZ; zz++) {
-                    this.placeBlock(level, anchored, xx, floorY, zz, box);
-                    this.placeBlock(level, anchored, xx, roofY, zz, box);
-                    for (int yy = floorY - 2; yy < floorY; yy++) {
-                        this.placeBlock(level, anchored, xx, yy, zz, box);
-                    }
-                }
-            }
-        }
-
         private void hut(WorldGenLevel level, BoundingBox box, int c, BlockState wall, BlockState post) {
+            BlockState air = Blocks.AIR.defaultBlockState();
             platform(level, box, c - 4, 1, c - 4, 9, wall);
-            for (int x = c - 4; x <= c + 4; x += 8) {
-                for (int z = c - 4; z <= c + 4; z += 8) {
-                    pillar(level, box, x, 2, z, 4, post);
+
+            this.generateBox(level, box, c - 3, 2, c - 3, c + 3, 4, c + 3, air, air, false);
+
+            for (int y = 2; y <= 4; y++) {
+                for (int offset = -4; offset <= 4; offset++) {
+                    boolean windowBand = y == 3 && Math.floorMod(offset + 4, 3) == 1;
+                    BlockState north = windowBand ? ModBlocks.ARCHIVE_LANTERN_GLASS.get().defaultBlockState() : wall;
+
+                    this.placeBlock(level, Math.abs(offset) == 4 ? post : north,
+                            c + offset, y, c - 4, box);
+                    this.placeBlock(level, Math.abs(offset) == 4 ? post : north,
+                            c + offset, y, c + 4, box);
+                    this.placeBlock(level, Math.abs(offset) == 4 ? post : north,
+                            c - 4, y, c + offset, box);
+                    this.placeBlock(level, Math.abs(offset) == 4 ? post : north,
+                            c + 4, y, c + offset, box);
                 }
             }
+
+            for (int x = c - 3; x <= c + 3; x++) {
+                for (int y = 2; y <= 4; y++) {
+                    boolean doorway = Math.abs(x - c) <= 1 && y <= 3;
+                    this.placeBlock(level, doorway ? air : (y == 4 ? post : wall), x, y, c + 1, box);
+                }
+            }
+
             platform(level, box, c - 5, 5, c - 5, 11, Blocks.SPRUCE_PLANKS.defaultBlockState());
-            this.placeBlock(level, Blocks.AIR.defaultBlockState(), c, 2, c - 4, box);
-            this.placeBlock(level, Blocks.AIR.defaultBlockState(), c, 3, c - 4, box);
+
+            this.placeBlock(level, air, c, 2, c - 4, box);
+            this.placeBlock(level, air, c, 3, c - 4, box);
+
+            this.placeBlock(level, Blocks.BARREL.defaultBlockState(), c - 3, 2, c - 3, box);
+            this.placeBlock(level, Blocks.CRAFTING_TABLE.defaultBlockState(), c + 3, 2, c - 3, box);
+            this.placeBlock(level, Blocks.LIGHT_GRAY_WOOL.defaultBlockState(), c - 3, 2, c + 3, box);
+            this.placeBlock(level, Blocks.WHITE_WOOL.defaultBlockState(), c - 2, 2, c + 3, box);
+            this.placeBlock(level, ModBlocks.ARCHIVE_LANTERN_GLASS.get().defaultBlockState(), c, 4, c - 2, box);
+            this.placeBlock(level, ModBlocks.ARCHIVE_LANTERN_GLASS.get().defaultBlockState(), c, 4, c + 3, box);
         }
 
         private void wall(WorldGenLevel level, BoundingBox box, int x0, int y0, int z0, int size, int height, BlockState state) {

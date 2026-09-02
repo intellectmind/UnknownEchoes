@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/bow",
+  "textures": {
+    "layer0": "unknown_echoes:item/gravity_inversion_bow_pulling_2"
+  }
+}

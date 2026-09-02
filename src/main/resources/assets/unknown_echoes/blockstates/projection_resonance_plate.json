@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "active=false": { "model": "unknown_echoes:block/projection_resonance_plate" },
+    "active=true": { "model": "unknown_echoes:block/projection_resonance_plate_active" }
+  }
+}

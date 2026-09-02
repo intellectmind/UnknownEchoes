@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "open=false": { "model": "unknown_echoes:block/projection_resonance_door" },
+    "open=true": { "model": "unknown_echoes:block/projection_resonance_door_open" }
+  }
+}

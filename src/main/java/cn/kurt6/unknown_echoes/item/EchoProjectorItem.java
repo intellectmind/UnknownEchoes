@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.item;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.entity.projection.EchoProjectionEntity;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
+import cn.kurt6.unknown_echoes.world.EntitySpawnSafety;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -17,11 +18,9 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 
 import java.util.List;
+import java.util.UUID;
 
-/**
- * 回响投影器:对地面使用,召唤一个回响投影(可踩压力板等机关,30 秒消散)。
- * 需要玩家已聆听过任意回响能力;每名玩家同时只存在一个投影。
- */
+/** 回响投影器:对地面使用,召唤一个回响投影(可踩压力板等机关,30 秒消散)。 */
 public class EchoProjectorItem extends Item {
     private static final int COOLDOWN_TICKS = 60;
     private static final String PROJECTION_ID_KEY = "ue_projection_id";
@@ -40,6 +39,10 @@ public class EchoProjectorItem extends Item {
             return InteractionResult.CONSUME;
         }
 
+        if (player.getCooldowns().isOnCooldown(this)) {
+            return InteractionResult.CONSUME;
+        }
+
         if (EchoAbilityManager.getData(player).getUnlockedAbilities().isEmpty()) {
             player.displayClientMessage(
                     Component.translatable("message.unknown_echoes.projector.no_ability"), true);
@@ -48,7 +51,6 @@ public class EchoProjectorItem extends Item {
             return InteractionResult.CONSUME;
         }
 
-        // 旧投影按记录的 UUID 直取(跨维度可收),不做 128 格实体大扫描
         java.util.UUID previousId = player.getPersistentData().hasUUID(PROJECTION_ID_KEY)
                 ? player.getPersistentData().getUUID(PROJECTION_ID_KEY) : null;
 
@@ -60,7 +62,12 @@ public class EchoProjectorItem extends Item {
         projection.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5,
                 player.getYRot(), 0.0F);
         projection.setOwner(player.getUUID());
+        if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, projection)) {
+            projection.discard();
+            return InteractionResult.CONSUME;
+        }
         if (!level.addFreshEntity(projection)) {
+            projection.discard();
             return InteractionResult.CONSUME;
         }
         if (previousId != null) {
@@ -79,10 +86,22 @@ public class EchoProjectorItem extends Item {
         return InteractionResult.CONSUME;
     }
 
+    public static boolean isCurrentProjection(ServerPlayer player, UUID projectionId) {
+        return player.getPersistentData().hasUUID(PROJECTION_ID_KEY)
+                && projectionId.equals(player.getPersistentData().getUUID(PROJECTION_ID_KEY));
+    }
+
+    public static void clearCurrentProjection(ServerPlayer player, UUID projectionId) {
+        if (isCurrentProjection(player, projectionId)) {
+            player.getPersistentData().remove(PROJECTION_ID_KEY);
+        }
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.echo_projector")
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.echo_projector",
+                        Component.keybind("key.use"))
                 .withStyle(ChatFormatting.GRAY));
         super.appendHoverText(stack, context, tooltip, flag);
     }

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 3, "max": 5 },
+      "entries": [
+        { "type": "minecraft:item", "name": "unknown_echoes:record_tracing_paper", "weight": 6, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 4 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:prismatic_canopy_tart", "weight": 5, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:dream_nectar_tart", "weight": 6, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:moss_honey_stew", "weight": 6, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 2 } }] },
+        { "type": "minecraft:item", "name": "unknown_echoes:echo_shard", "weight": 6, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 6 } }] },
+        { "type": "minecraft:item", "name": "minecraft:glow_berries", "weight": 5, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 6 } }] },
+        { "type": "minecraft:item", "name": "minecraft:bone_meal", "weight": 5, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 3, "max": 9 } }] },
+        { "type": "minecraft:item", "name": "minecraft:glass_bottle", "weight": 4, "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 5 } }] }
+      ]
+    }
+  ],
+  "random_sequence": "unknown_echoes:chests/landmarks/prismatic_canopy_cache"
+}

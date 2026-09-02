@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.nbt.CompoundTag;
@@ -9,6 +10,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
@@ -40,12 +42,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
 
-/**
- * 苔背龟:失语沼泽浅水被动生物(生命 20,高护甲)。
- * 被攻击时缩壳(短时间停止移动并大幅减伤,服务端判定);
- * 背甲苔藓可用剪刀无伤采集噤声苔(有冷却,走 ServerConfig)。
- * 设定:静默派曾把要紧的话刻在龟甲内侧——苔藓越厚,沉默越久。
- */
+/** 苔背龟:失语沼泽浅水被动生物(生命 20,高护甲)。 */
 public class MossBackTurtle extends Animal implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.moss_back_turtle.idle");
@@ -58,7 +55,7 @@ public class MossBackTurtle extends Animal implements GeoEntity {
     private static final EntityDataAccessor<Boolean> HIDING =
             SynchedEntityData.defineId(MossBackTurtle.class, EntityDataSerializers.BOOLEAN);
 
-    /** 缩壳持续时间与减伤系数。 */
+    /** 缩壳持续时间(tick)。 */
     private static final int HIDE_TICKS = 100;
     private static final float HIDING_DAMAGE_FACTOR = 0.3F;
 
@@ -87,9 +84,14 @@ public class MossBackTurtle extends Animal implements GeoEntity {
         builder.define(HIDING, false);
     }
 
+    /**
+     * 不加 PanicGoal:受击后的正解是缩壳减伤(见 hurt),逃跑会与 hideTicks 期间的 stop 导航打架。
+     * 躲避只在还没被打到时生效:缩壳中 hideTicks 每 tick stop 导航,躲避拿不到路径自然让位。
+     */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new FleeThreatGoal(this, 8.0D, 0.9D, 1.1D));
         this.goalSelector.addGoal(2, new BreedGoal(this, 1.0D));
         this.goalSelector.addGoal(3, new TemptGoal(this, 1.0D,
                 stack -> stack.is(Items.SEAGRASS), false));
@@ -105,7 +107,7 @@ public class MossBackTurtle extends Animal implements GeoEntity {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        // 缩壳期间大幅减伤;任何一次受击都会(重新)缩壳
+
         if (!this.level().isClientSide && this.isHiding()) {
             amount *= HIDING_DAMAGE_FACTOR;
         }
@@ -136,9 +138,7 @@ public class MossBackTurtle extends Animal implements GeoEntity {
         }
     }
 
-    /**
-     * 剪刀采集噤声苔:冷却就绪时无伤掉落噤声苔×1;冷却中只给含蓄提示。
-     */
+    /** 剪刀采集噤声苔:冷却就绪时无伤掉落噤声苔×1;冷却中只给含蓄提示。 */
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
@@ -187,24 +187,20 @@ public class MossBackTurtle extends Animal implements GeoEntity {
         return ModEntities.MOSS_BACK_TURTLE.get().create(level);
     }
 
-    // ---- 声音 ----
-
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.TURTLE_AMBIENT_LAND;
+        return ModSounds.MOSS_BACK_TURTLE_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.TURTLE_HURT;
+        return ModSounds.MOSS_BACK_TURTLE_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.TURTLE_DEATH;
+        return ModSounds.MOSS_BACK_TURTLE_DEATH.get();
     }
-
-    // ---- GeckoLib 动画 ----
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {

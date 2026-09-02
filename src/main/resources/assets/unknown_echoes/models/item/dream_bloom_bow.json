@@ -24,5 +24,14 @@
       },
       "model": "unknown_echoes:item/dream_bloom_bow_pulling_2"
     }
-  ]
+  ],
+  "display": {
+    "gui": {
+      "scale": [
+        0.88,
+        0.88,
+        0.88
+      ]
+    }
+  }
 }

@@ -1,4 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": { "all": "unknown_echoes:block/sequence_rune_0" }
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "unknown_echoes:block/sequence_rune_side",
+    "side": "unknown_echoes:block/sequence_rune_0"
+  }
 }

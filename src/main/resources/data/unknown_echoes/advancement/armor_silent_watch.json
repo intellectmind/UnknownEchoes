@@ -1,0 +1,47 @@
+{
+  "parent": "unknown_echoes:echo_traveler_armor",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:silent_watch_chestplate"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.armor_silent_watch.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.armor_silent_watch.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "full_set": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:silent_watch_helmet"
+            ]
+          },
+          {
+            "items": [
+              "unknown_echoes:silent_watch_chestplate"
+            ]
+          },
+          {
+            "items": [
+              "unknown_echoes:silent_watch_leggings"
+            ]
+          },
+          {
+            "items": [
+              "unknown_echoes:silent_watch_boots"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

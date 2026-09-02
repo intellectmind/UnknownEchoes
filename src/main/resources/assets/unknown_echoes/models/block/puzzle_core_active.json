@@ -1,8 +1,8 @@
 {
   "parent": "unknown_echoes:block/puzzle_core",
   "textures": {
-    "1": "unknown_echoes:block/puzzle_core_active",
-    "2": "unknown_echoes:block/puzzle_core_active",
-    "particle": "unknown_echoes:block/puzzle_core_active"
+    "2": "unknown_echoes:block/puzzle_core_rune_active",
+    "3": "unknown_echoes:block/puzzle_core_flux_active",
+    "particle": "unknown_echoes:block/puzzle_core_flux_active"
   }
 }

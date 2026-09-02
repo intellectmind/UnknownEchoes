@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "unknown_echoes:block/fold_lantern_glass"
+  }
+}

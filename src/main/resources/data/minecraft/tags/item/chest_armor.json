@@ -2,6 +2,15 @@
   "replace": false,
   "values": [
     "unknown_echoes:explorer_chestplate",
-    "unknown_echoes:listener_chestplate"
+    "unknown_echoes:listener_chestplate",
+    "unknown_echoes:echo_traveler_chestplate",
+    "unknown_echoes:wind_walker_chestplate",
+    "unknown_echoes:tide_stalker_chestplate",
+    "unknown_echoes:true_sight_shadow_chestplate",
+    "unknown_echoes:silent_watch_chestplate",
+    "unknown_echoes:echo_oath_chestplate",
+    "unknown_echoes:abyss_walker_chestplate",
+    "unknown_echoes:resonator_chestplate",
+    "unknown_echoes:world_echo_wings"
   ]
 }

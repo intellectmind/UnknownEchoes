@@ -1,41 +1,40 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import cn.kurt6.unknown_echoes.network.BossImpactPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Boss / Mini Boss 攻击演出特效工具:把"更炫"的通用粒子组合收敛到一处,
- * 各 Boss 在攻击命中/蓄力/挥出的关键帧调用即可,避免每个攻击各写一套且风格不一。
- *
- * 纯表现层(只发粒子,不做伤害/判定),全部 server 端 {@code sendParticles}。
- * theme 参数传入对应 Boss 的主题粒子(END_ROD / SONIC_BOOM / SOUL_FIRE_FLAME / ...)上色。
+ * Boss 与 Mini Boss 的攻击演出特效工具:通用粒子组合收敛在这里,
+ * 各 Boss 只在命中、蓄力与挥出的关键帧调用,避免每个攻击各写一套导致风格不一。
  */
 public final class BossFx {
     private static final double TAU = Math.PI * 2;
+    /** 粒子环每帧最多发送的独立广播包：采样数不随半径无限增长。 */
+    private static final int MAX_RING_POINTS = 32;
+    private static final int MAX_IMPACT_RING_POINTS = 18;
 
     private BossFx() {
     }
 
-    /**
-     * 水主题粒子选择:BUBBLE/BUBBLE_COLUMN_UP 离水当 tick 即自毁,岸上/水面以上完全不可见。
-     * 位置在水中返回气泡(水下观感最好),否则回退到任意环境可渲染的水花。
-     */
+    /** 水主题粒子选择:BUBBLE/BUBBLE_COLUMN_UP 离水当 tick 即自毁,岸上/水面以上完全不可见。 */
     public static ParticleOptions waterBubbleOr(ServerLevel level, Vec3 pos, ParticleOptions airFallback) {
         return level.getFluidState(BlockPos.containing(pos)).is(FluidTags.WATER)
                 ? ParticleTypes.BUBBLE_COLUMN_UP : airFallback;
     }
 
-    /** 命中迸发:中心闪光 + 多层扩散光环 + 主题火花上冲。攻击落地/命中时调用。 */
     public static void impactBurst(ServerLevel level, Vec3 c, ParticleOptions theme) {
         level.sendParticles(ParticleTypes.FLASH, c.x, c.y + 0.4, c.z, 1, 0, 0, 0, 0);
-        level.sendParticles(theme, c.x, c.y + 0.55, c.z, 20, 0.35, 0.45, 0.35, 0.16);
-        level.sendParticles(ParticleTypes.GLOW, c.x, c.y + 0.75, c.z, 10, 0.25, 0.35, 0.25, 0.06);
+        level.sendParticles(theme, c.x, c.y + 0.55, c.z, 14, 0.35, 0.45, 0.35, 0.16);
+        level.sendParticles(ParticleTypes.GLOW, c.x, c.y + 0.75, c.z, 6, 0.25, 0.35, 0.25, 0.06);
         for (int ring = 1; ring <= 4; ring++) {
-            int pts = 12 + ring * 6;
+            int pts = Math.min(12 + ring * 6, MAX_IMPACT_RING_POINTS);
             double r = ring * 0.95;
             for (int i = 0; i < pts; i++) {
                 double a = TAU * i / pts + ring * 0.3;
@@ -48,8 +47,8 @@ public final class BossFx {
                 }
             }
         }
-        level.sendParticles(ParticleTypes.END_ROD, c.x, c.y + 0.65, c.z, 28, 0.45, 0.75, 0.45, 0.18);
-        level.sendParticles(ParticleTypes.POOF, c.x, c.y + 0.2, c.z, 12, 0.55, 0.2, 0.55, 0.05);
+        level.sendParticles(ParticleTypes.END_ROD, c.x, c.y + 0.65, c.z, 16, 0.45, 0.75, 0.45, 0.18);
+        level.sendParticles(ParticleTypes.POOF, c.x, c.y + 0.2, c.z, 8, 0.55, 0.2, 0.55, 0.05);
     }
 
     /** 多落点攻击使用的紧凑爆发，避免为每个落点重复发送完整命中演出的粒子包。 */
@@ -66,8 +65,8 @@ public final class BossFx {
     }
 
     /**
-     * 蓄力螺旋:绕中心上升的双臂螺旋柱。调用方可每 tick 调用，内部交错采样高度层，
-     * 在保持 20 TPS 动态轮廓的同时把逐点粒子广播包减半。t 用 tickCount 传入。
+     * 蓄力螺旋:绕中心上升的双臂螺旋柱,t 用 tickCount 传入。
+     * 可以每 tick 调用:内部交错采样高度层,在保持 20 TPS 轮廓的同时把逐点粒子广播包减半。
      */
     public static void chargeSpiral(ServerLevel level, Vec3 c, double t, ParticleOptions theme) {
         int heightParity = (int) (level.getGameTime() & 1L);
@@ -85,7 +84,6 @@ public final class BossFx {
         }
     }
 
-    /** 定向火花扇:沿攻击方向铺一条发亮粒子轨迹(挥击/光束的"刃光")。 */
     public static void sparkSpray(ServerLevel level, Vec3 origin, Vec3 dir, double length, ParticleOptions theme) {
         Vec3 d = dir.lengthSqr() < 1.0E-4 ? new Vec3(0, 0, 1) : dir.normalize();
         Vec3 side = Math.abs(d.y) > 0.92 ? new Vec3(1, 0, 0) : new Vec3(-d.z, 0, d.x).normalize();
@@ -104,10 +102,13 @@ public final class BossFx {
         }
     }
 
-    /** 扩散冲击环:单层、可指定半径与高度的水平光环(配合 AoE 的边缘提示)。 */
     public static void ring(ServerLevel level, Vec3 c, double radius, int points, double y, ParticleOptions theme) {
-        for (int i = 0; i < points; i++) {
-            double a = TAU * i / points;
+        int samples = Math.min(points, MAX_RING_POINTS);
+        if (samples <= 0) {
+            return;
+        }
+        for (int i = 0; i < samples; i++) {
+            double a = TAU * i / samples;
             level.sendParticles(theme, c.x + Math.cos(a) * radius, c.y + y, c.z + Math.sin(a) * radius,
                     1, 0.0, 0.0, 0.0, 0.0);
             if (i % 4 == 0) {
@@ -122,14 +123,11 @@ public final class BossFx {
         guidanceFlow(level, from, to, ParticleTypes.GLOW, theme, level.getGameTime());
     }
 
-    /**
-     * 流动引导线:亮色骨架保证光影下可读,脉冲沿起点向终点移动以明确方向。
-     * 适合每 5 tick 调用;age 传实体 tickCount 或世界时间,避免额外保存动画状态。
-     */
+    /** 流动引导线:亮色骨架保证光影下可读,脉冲沿起点向终点移动以明确方向。 */
     public static void guidanceFlow(ServerLevel level, Vec3 from, Vec3 to,
                                     ParticleOptions trail, ParticleOptions pulse, long age) {
         Vec3 delta = to.subtract(from);
-        int steps = Math.max(4, Math.min(10, (int) Math.ceil(delta.length() / 2.6D)));
+        int steps = Math.max(4, Math.min(8, (int) Math.ceil(delta.length() / 3.0D)));
         for (int i = 0; i <= steps; i++) {
             Vec3 point = from.add(delta.scale(i / (double) steps));
             level.sendParticles(trail, point.x, point.y, point.z,
@@ -161,7 +159,71 @@ public final class BossFx {
         }
     }
 
-    /** 地面冲击波:用于踏地/爆环/落地,提供读得清的外圈边缘与中心尘浪。 */
+    /** 关键释放帧的客户端反馈：范围内玩家自行按距离衰减镜头和屏幕边缘脉冲。 */
+    public static void cinematicImpact(ServerLevel level, Vec3 center, double radius,
+                                       float strength, int durationTicks, int color) {
+        double safeRadius = Mth.clamp(radius, 4.0D, 64.0D);
+        float safeStrength = Mth.clamp(strength, 0.05F, 1.0F);
+        int safeDuration = Mth.clamp(durationTicks, 2, 16);
+        PacketDistributor.sendToPlayersNear(level, null, center.x, center.y, center.z, safeRadius,
+                new BossImpactPayload(center.x, center.y, center.z, (float) safeRadius,
+                        safeStrength, safeDuration, color & 0xFFFFFF));
+    }
+
+    public static void lockSigil(ServerLevel level, Vec3 center, double radius,
+                                 double progress, long age, ParticleOptions theme) {
+        double charge = Math.max(0.0D, Math.min(1.0D, progress));
+        double outer = radius * (1.08D - charge * 0.18D);
+        double inner = radius * (0.32D + charge * 0.16D);
+        double phase = age * 0.16D;
+        int points = Math.max(16, Math.min(28, (int) Math.ceil(radius * 3.0D)));
+        for (int i = 0; i < points; i++) {
+            double angle = TAU * i / points + phase;
+            double y = center.y + 0.12D + ((i & 1) == 0 ? 0.04D : 0.0D);
+            level.sendParticles(theme,
+                    center.x + Math.cos(angle) * outer, y,
+                    center.z + Math.sin(angle) * outer,
+                    1, 0.0D, 0.0D, 0.0D, 0.0D);
+        }
+        for (int arm = 0; arm < 4; arm++) {
+            double angle = phase * -0.45D + arm * (TAU / 4.0D);
+            for (int step = 0; step < 3; step++) {
+                double distance = inner + (outer - inner) * step / 3.0D;
+                Vec3 point = center.add(Math.cos(angle) * distance, 0.18D,
+                        Math.sin(angle) * distance);
+                level.sendParticles(step == 0 ? ParticleTypes.END_ROD : ParticleTypes.GLOW,
+                        point.x, point.y, point.z, 1, 0.02D, 0.02D, 0.02D, 0.0D);
+            }
+        }
+        level.sendParticles(theme, center.x, center.y + 0.25D, center.z,
+                3, 0.04D, 0.42D + charge * 0.35D, 0.04D, 0.0D);
+    }
+
+    /** 三股短尾迹标明 Boss 的实际飞行方向，不沿整条历史路径持续堆积粒子。 */
+    public static void flightTrail(ServerLevel level, Vec3 center, Vec3 velocity,
+                                   double spread, ParticleOptions theme) {
+        if (velocity.lengthSqr() < 1.0E-4D) {
+            return;
+        }
+        Vec3 backward = velocity.normalize().scale(-1.0D);
+        Vec3 side = Math.abs(backward.y) > 0.92D
+                ? new Vec3(1.0D, 0.0D, 0.0D)
+                : new Vec3(-backward.z, 0.0D, backward.x).normalize();
+        for (int lane = -1; lane <= 1; lane++) {
+            for (int step = 1; step <= 4; step++) {
+                double distance = step * 0.72D;
+                double laneWidth = lane * spread * (1.0D - step * 0.1D);
+                Vec3 point = center.add(backward.scale(distance)).add(side.scale(laneWidth));
+                level.sendParticles(theme, point.x, point.y, point.z,
+                        1, 0.04D, 0.04D, 0.04D, 0.0D);
+                if (lane == 0) {
+                    level.sendParticles(ParticleTypes.GLOW, point.x, point.y, point.z,
+                            1, 0.03D, 0.03D, 0.03D, 0.0D);
+                }
+            }
+        }
+    }
+
     public static void groundShockwave(ServerLevel level, Vec3 c, double radius, ParticleOptions theme) {
         ring(level, c, radius, Math.max(16, (int) (radius * 8)), 0.12, theme);
         ring(level, c, radius * 0.65, Math.max(12, (int) (radius * 6)), 0.28, ParticleTypes.CLOUD);
@@ -184,10 +246,14 @@ public final class BossFx {
     }
 
     /**
-     * 吸聚环:圆周上的粒子带着朝中心的初速飞入(sendParticles count=0 时偏移量作为速度向量),
-     * 表现"能量被拽向 Boss"的蓄力阶段。适合每 2-4 tick 调用一次。
+     * 吸聚环:圆周上的粒子带着朝中心的初速飞入,表现能量被拽向 Boss 的蓄力阶段。
+     * 靠 sendParticles count=0 时偏移量当速度向量实现;适合每 2-4 tick 调用一次。
      */
     public static void converge(ServerLevel level, Vec3 c, double radius, int points, ParticleOptions theme) {
+        points = Math.min(points, 24);
+        if (points <= 0) {
+            return;
+        }
         for (int i = 0; i < points; i++) {
             double a = TAU * i / points + radius * 0.7;
             double px = c.x + Math.cos(a) * radius;
@@ -201,7 +267,6 @@ public final class BossFx {
         }
     }
 
-    /** 双螺旋:沿 from→to 缠绕两条主题粒子链,骨架加 GLOW,用于光束/长矛的"能量缠绕"。 */
     public static void helix(ServerLevel level, Vec3 from, Vec3 to, double radius, ParticleOptions theme) {
         Vec3 delta = to.subtract(from);
         double length = delta.length();
@@ -211,7 +276,9 @@ public final class BossFx {
         Vec3 d = delta.scale(1.0 / length);
         Vec3 side = Math.abs(d.y) > 0.92 ? new Vec3(1, 0, 0) : new Vec3(-d.z, 0, d.x).normalize();
         Vec3 up = d.cross(side);
-        for (double s = 0.0; s <= length; s += 0.55) {
+        int samples = Math.max(4, Math.min(28, (int) Math.ceil(length / 0.7D)));
+        for (int sample = 0; sample <= samples; sample++) {
+            double s = length * sample / samples;
             double a = s * 1.35;
             Vec3 axis = from.add(d.scale(s));
             for (int arm = 0; arm < 2; arm++) {
@@ -219,13 +286,12 @@ public final class BossFx {
                 Vec3 p = axis.add(side.scale(Math.cos(phase) * radius)).add(up.scale(Math.sin(phase) * radius));
                 level.sendParticles(theme, p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0.0);
             }
-            if (((int) (s / 0.55)) % 3 == 0) {
+            if (sample % 3 == 0) {
                 level.sendParticles(ParticleTypes.GLOW, axis.x, axis.y, axis.z, 1, 0.04, 0.04, 0.04, 0.0);
             }
         }
     }
 
-    /** 冲天光柱:落点/释放点向上喷发的能量柱,顶端加闪光,用于砸击、相变与新星。 */
     public static void pillar(ServerLevel level, Vec3 c, double height, ParticleOptions theme) {
         for (double h = 0.2; h <= height; h += 0.6) {
             double r = 0.55 * (1.0 - h / (height * 1.6));
@@ -239,8 +305,8 @@ public final class BossFx {
     }
 
     /**
-     * 坠星轨迹:从高空指向落点的倾斜彗尾,progress ∈ [0,1] 表示当前坠落进度,
-     * 预警阶段按帧推进 progress 即可获得"正在坠落"的读法。
+     * 坠星轨迹:从高空指向落点的倾斜彗尾。progress 取 [0,1] 表示坠落进度,
+     * 预警阶段按帧推进它就能读成"正在坠落"。
      */
     public static void comet(ServerLevel level, Vec3 impact, double height, double progress, ParticleOptions theme) {
         Vec3 start = impact.add(height * 0.45, height, height * 0.3);

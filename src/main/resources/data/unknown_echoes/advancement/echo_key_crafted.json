@@ -1,0 +1,32 @@
+{
+  "parent": "unknown_echoes:root",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_key"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.echo_key_crafted.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.echo_key_crafted.desc"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_item": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:echo_key"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

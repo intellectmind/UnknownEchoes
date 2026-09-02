@@ -1,7 +1,10 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
+import cn.kurt6.unknown_echoes.entity.ai.KeepDistanceGoal;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
@@ -10,7 +13,12 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.ZombieAttackGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -21,10 +29,7 @@ import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * 风蚀哨兵:漂浮群岛的普通敌怪。
- * 风刃只造成普通伤害与击退,风之能力和结构权限仍由服务端进度系统判定。
- */
+/** 风蚀哨兵:漂浮群岛的普通敌怪。 */
 public class WindErodedSentinel extends Zombie implements GeoEntity {
     private static final int WIND_SLASH_COOLDOWN = 70;
     private static final double MIN_SLASH_DISTANCE = 3.0D;
@@ -67,6 +72,20 @@ public class WindErodedSentinel extends Zombie implements GeoEntity {
         return false;
     }
 
+    /**
+     * 覆写 Zombie 的行为组:去掉村庄穿行(本 Mod 无村民),补后撤与同族拉群。
+     * 后撤距离必须小于 MIN_SLASH_DISTANCE,否则退开就立刻满足风刃条件,来回抽搐。
+     */
+    @Override
+    protected void addBehaviourGoals() {
+        this.goalSelector.addGoal(1, new KeepDistanceGoal(this, MIN_SLASH_DISTANCE - 0.5D, 1.05D));
+        this.goalSelector.addGoal(2, new ZombieAttackGoal(this, 1.0D, false));
+        this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.0D));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(3, new AlertPackGoal(this, 16.0D));
+    }
+
     @Override
     public void aiStep() {
         super.aiStep();
@@ -78,12 +97,15 @@ public class WindErodedSentinel extends Zombie implements GeoEntity {
             return;
         }
         LivingEntity target = this.getTarget();
-        if (target != null && target.isAlive() && this.hasLineOfSight(target)) {
-            double distance = this.distanceTo(target);
-            if (distance >= MIN_SLASH_DISTANCE && distance <= MAX_SLASH_DISTANCE) {
-                performWindSlash(target);
-                this.windSlashCooldown = WIND_SLASH_COOLDOWN + this.getRandom().nextInt(25);
-            }
+        if (target == null || !target.isAlive()) {
+            return;
+        }
+        double distanceSqr = this.distanceToSqr(target);
+        if (distanceSqr >= MIN_SLASH_DISTANCE * MIN_SLASH_DISTANCE
+                && distanceSqr <= MAX_SLASH_DISTANCE * MAX_SLASH_DISTANCE
+                && this.hasLineOfSight(target)) {
+            performWindSlash(target);
+            this.windSlashCooldown = WIND_SLASH_COOLDOWN + this.getRandom().nextInt(25);
         }
     }
 
@@ -103,8 +125,9 @@ public class WindErodedSentinel extends Zombie implements GeoEntity {
 
     private void performWindSlash(LivingEntity target) {
         this.getLookControl().setLookAt(target, 30.0F, 30.0F);
-        target.hurt(this.damageSources().mobAttack(this), 4.0F);
-        target.knockback(0.70D, this.getX() - target.getX(), this.getZ() - target.getZ());
+        if (target.hurt(this.damageSources().mobAttack(this), 4.0F)) {
+            target.knockback(0.70D, this.getX() - target.getX(), this.getZ() - target.getZ());
+        }
         ServerLevel serverLevel = (ServerLevel) this.level();
         double midX = (this.getX() + target.getX()) * 0.5D;
         double midY = target.getY() + target.getBbHeight() * 0.55D;
@@ -115,23 +138,24 @@ public class WindErodedSentinel extends Zombie implements GeoEntity {
         serverLevel.sendParticles(ParticleTypes.SWEEP_ATTACK,
                 target.getX(), target.getY() + target.getBbHeight() * 0.55D, target.getZ(),
                 2, 0.25D, 0.12D, 0.25D, 0.0D);
-        this.playSound(SoundEvents.PHANTOM_FLAP, 0.9F, 0.85F + this.getRandom().nextFloat() * 0.2F);
+        this.playSound(ModSounds.WIND_ERODED_SENTINEL_SLASH.get(), 0.9F,
+                0.85F + this.getRandom().nextFloat() * 0.2F);
         this.triggerAnim("attack_controller", "attack");
     }
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.PHANTOM_AMBIENT;
+        return ModSounds.WIND_ERODED_SENTINEL_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.DEEPSLATE_HIT;
+        return ModSounds.WIND_ERODED_SENTINEL_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.DEEPSLATE_BREAK;
+        return ModSounds.WIND_ERODED_SENTINEL_DEATH.get();
     }
 
     @Override

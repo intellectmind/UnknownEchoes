@@ -5,8 +5,8 @@
   "biome_tags": [
     "unknown_echoes:has_sky_rift"
   ],
-  "spacing": 120,
-  "separation": 40,
+  "spacing": 144,
+  "separation": 48,
   "salt": 702505,
   "allow_multiple": true,
   "priority": 2,

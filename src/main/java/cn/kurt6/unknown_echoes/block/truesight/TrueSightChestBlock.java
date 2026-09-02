@@ -25,12 +25,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * 真视宝箱(V0.6E,5.4"打开真视宝箱"权限落地):交互前置真视权限校验的包装容器。
- * 服务端判定——无真视回响时只看到一只"轮廓模糊的箱影",打不开(透视/自由视角 Mod 绕不过,
- * 因为校验的是玩家能力数据);内容为强化材料与研究拓片(true_sight_vault 战利品表)。
- * 藏于隐藏暗室与倒影井;方块本体不可破坏(critical_blocks),箱内物品照常取出。
- */
+/** 真视宝箱：交互前置执行真视权限校验。 */
 public class TrueSightChestBlock extends BaseEntityBlock {
     public static final MapCodec<TrueSightChestBlock> CODEC = simpleCodec(TrueSightChestBlock::new);
 

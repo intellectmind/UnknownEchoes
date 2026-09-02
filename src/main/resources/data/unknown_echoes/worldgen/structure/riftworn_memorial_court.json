@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:riftworn_memorial_court",
+  "biomes": "#unknown_echoes:has_riftworn_memorial_court",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.world.structure;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlockEntity;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModLootTables;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
 import com.mojang.serialization.MapCodec;
@@ -22,15 +23,11 @@ import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-/**
- * 破钟档案馆:残钟荒原中型遗迹。
- * 半塌的书架室 + 断桥 + 残钟看守场地,普通 loot 与个人 Boss 结算分离。
- */
 public class BrokenArchiveStructure extends SinglePieceStructure {
     public static final MapCodec<BrokenArchiveStructure> CODEC = simpleCodec(BrokenArchiveStructure::new);
 
-    private static final int SIZE = 25;
-    private static final int HEIGHT = 14;
+    private static final int SIZE = 65;
+    private static final int HEIGHT = 42;
 
     public BrokenArchiveStructure(StructureSettings settings) {
         super(Piece::new, SIZE, SIZE, settings);
@@ -42,6 +39,10 @@ public class BrokenArchiveStructure extends SinglePieceStructure {
     }
 
     public static class Piece extends EchoStructurePiece {
+        private static final int[][] BROKEN_ARCHIVE_ORE_NODES = {
+                {-10, 0}, {-8, -6}, {-5, -9}, {0, -10}, {5, -9}, {8, -6},
+                {10, 0}, {8, 6}, {5, 9}, {0, 10}, {-5, 9}, {-8, 6}
+        };
 
         public Piece(RandomSource random, int x, int z) {
             super(ModStructures.BROKEN_ARCHIVE_PIECE.get(), x, 64, z,
@@ -59,16 +60,15 @@ public class BrokenArchiveStructure extends SinglePieceStructure {
             if (!this.updateAverageGroundHeight(level, box, 0)) {
                 return;
             }
-            BlockState bellOre = ModBlocks.BROKEN_BELL_ORE.get().defaultBlockState();
-            BlockState stone = ModBlocks.ECHO_CLIFF_STONE.get().defaultBlockState();
-            BlockState bricks = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
-            BlockState cracked = ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState();
+            BlockState rusted = ModBlocks.RUSTED_BELLSTONE.get().defaultBlockState();
+            BlockState stone = ModBlocks.ASHEN_BELLSTONE.get().defaultBlockState();
+            BlockState bricks = ModBlocks.ASHEN_BELLSTONE_BRICKS.get().defaultBlockState();
+            BlockState cracked = ModBlocks.CLOCKWORK_SCRAP_BLOCK.get().defaultBlockState();
             BlockState shelf = Blocks.CHISELED_BOOKSHELF.defaultBlockState();
             BlockState rune = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
-            int c = SIZE / 2; // 12
+            int c = SIZE / 2;
 
-            // 残钟荒原地基:半径 6/9/11 三层碎石台,支撑中型档案馆与战斗场。
-            int[] radii = {6, 9, 11};
+            int[] radii = {26, 28, 30};
             for (int y = 0; y < radii.length; y++) {
                 int r = radii[y];
                 for (int x = 0; x < SIZE; x++) {
@@ -77,14 +77,23 @@ public class BrokenArchiveStructure extends SinglePieceStructure {
                         int dz = z - c;
                         if (dx * dx + dz * dz <= r * r) {
                             this.placeBlock(level,
-                                    random.nextFloat() < 0.3F ? bellOre : stone, x, y, z, box);
+                                    random.nextFloat() < 0.3F ? rusted : stone, x, y, z, box);
                         }
                     }
                 }
             }
-            int top = radii.length; // y=3
+            int top = radii.length;
 
-            // 入口碎路和左右侧室,让玩家能读到"档案室 -> 断桥 -> 看守场"的路线。
+            buildRibbedVaultHall(level, box, c, top + 1, c, Footprint.of(16, 25), 14, 6, stone, bricks, rusted, rune);
+            buildTwinTowerFacade(level, box, c, top + 1, c - 27,
+                    22, 4, 26, bricks, rusted, rune);
+            buildArcadedWing(level, box, c - 23, top + 1, c, Footprint.of(7, 16), 11, 4, stone, bricks, cracked, rune);
+            buildArcadedWing(level, box, c + 23, top + 1, c, Footprint.of(7, 16), 11, 4, stone, bricks, cracked, rune);
+            buildBossApse(level, box, c, top + 1, c + 23,
+                    Direction.SOUTH, 8, 12, stone, bricks, rusted, rune);
+            buildTieredTower(level, box, c + 24, top + 1, c + 17,
+                    5, 26, bricks, rusted, ModBlocks.RESONANCE_CANDLE.get().defaultBlockState());
+
             for (int z = c - 11; z <= c - 4; z++) {
                 this.placeBlock(level, rune, c, top, z, box);
                 if (z % 3 == 0) {
@@ -93,7 +102,6 @@ public class BrokenArchiveStructure extends SinglePieceStructure {
                 }
             }
 
-            // 档案室:15x15 残墙(2~4 高的断壁)
             for (int x = c - 7; x <= c + 7; x++) {
                 for (int z = c - 7; z <= c + 7; z++) {
                     boolean wall = x == c - 7 || x == c + 7 || z == c - 7 || z == c + 7;
@@ -107,11 +115,10 @@ public class BrokenArchiveStructure extends SinglePieceStructure {
                     }
                 }
             }
-            // 南墙留门洞
+
             this.placeBlock(level, Blocks.AIR.defaultBlockState(), c, top, c - 7, box);
             this.placeBlock(level, Blocks.AIR.defaultBlockState(), c, top + 1, c - 7, box);
 
-            // 室内:残存书架一排 + 北墙符文砖标记
             for (int x = c - 5; x <= c + 5; x++) {
                 if (random.nextFloat() < 0.7F) {
                     this.placeBlock(level, shelf, x, top, c + 5, box);
@@ -119,24 +126,59 @@ public class BrokenArchiveStructure extends SinglePieceStructure {
             }
             this.placeBlock(level, rune, c, top + 1, c + 6, box);
 
-            // 残页宝箱、侧室补给和真视回访奖励分离。
             buildAccessibleChest(level, random, box, c - 2, top, c, ModLootTables.BROKEN_ARCHIVE_CHEST);
             buildAccessibleChest(level, random, box, c + 5, top, c - 2, ModLootTables.T4_REGION_CORE);
             buildTrueSightVaultNiche(level, random, box, c - 6, top, c + 2, Direction.EAST);
 
-            // 残钟看守:玩家接近时由服务端计时器生成,击败后走个人 Mini Boss 结算。
             this.placeBlock(level, ModBlocks.MINIBOSS_SPAWNER.get().defaultBlockState(), c, top, c + 4, box);
             BlockPos spawnerPos = new BlockPos(this.getWorldX(c, c + 4), this.getWorldY(top), this.getWorldZ(c, c + 4));
             if (box.isInside(spawnerPos)
                     && level.getBlockEntity(spawnerPos) instanceof MiniBossSpawnerBlockEntity spawner) {
                 spawner.configure(UnknownEchoes.id("broken_bell_keeper"), 3);
             }
+            // 肋拱厅的柱列会插进 13 格战斗半径,建筑摆完后统一清出净空。
+            clearArenaVolume(level, box, c, top, c + 4, 13, 1, 6);
+            buildBossArenaMandala(level, box, c, top, c + 4, 13,
+                    rusted, cracked, rune);
+            BlockState candle = ModBlocks.RESONANCE_CANDLE.get().defaultBlockState();
+            // 批量照明必须用不可破坏的琉璃:共鸣烛可打碎,当唯一光源会让战斗区失明。
+            BlockState bellLamp = ModBlocks.BELL_LANTERN_GLASS.get().defaultBlockState();
+            buildArenaLightRing(level, box, c, top + 2, c + 4, 11, 12, 10, bricks, bellLamp);
+            illuminateInterior(level, box, c, c, top + 18, 14, 22, 6, bellLamp);
+            buildStairCornice(level, box, c, top + 15, c, Footprint.of(16, 25), ModBlocks.ASHEN_BELLSTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ASHEN_BELLSTONE_BRICK_SLAB.get().defaultBlockState(), true);
+            buildCornice(level, box, c, top + 16, c, Footprint.of(16, 25), bricks, rusted);
+            buildParapet(level, box, c, top + 17, c, Footprint.of(16, 25), 8, ModBlocks.ASHEN_BELLSTONE_BRICK_WALL.get().defaultBlockState(), rusted);
 
-            // 断桥:从东墙向外延伸到战斗边界,越远越破碎。
             for (int i = 1; i <= 8; i++) {
                 if (random.nextFloat() < 1.0F - i * 0.2F) {
                     this.placeBlock(level, i < 4 ? bricks : cracked, c + 7 + i, top - 1, c, box);
                 }
+            }
+
+            architecturalRing(level, box, c, top - 1, c, 17, rusted);
+
+            buildCircularColonnade(level, box, c, top, c, 15, 12, 9,
+                    bricks, candle, cracked);
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                buildCardinalGateway(level, box, c, top, c, 17, direction,
+                        3, 8, bricks, ModBlocks.CHISELED_ECHO_STRATA.get().defaultBlockState());
+            }
+            for (int[] tower : new int[][]{{c - 15, c - 15}, {c + 15, c - 15},
+                    {c - 15, c + 15}, {c + 15, c + 15}}) {
+                architecturalPillar(level, box, tower[0], top, tower[1], 14, bricks);
+                this.placeBlock(level, ModBlocks.RESONANCE_CANDLE.get().defaultBlockState(),
+                        tower[0], top + 14, tower[1], box);
+            }
+            buildRuneCauseway(level, box, c, top, c, Direction.SOUTH,
+                    8, 19, 2, stone, rusted, rune);
+            scatterArchitecturalDebris(level, random, box, c, top, c,
+                    12, 19, 32, cracked, rusted);
+
+            placeStructureSpawner(level, random, box, c - 10, top, c + 8,
+                    ModEntities.BROKEN_BELL_GUARD.get(), stone, cracked);
+            for (int[] node : BROKEN_ARCHIVE_ORE_NODES) {
+                this.placeBlock(level, ModBlocks.BROKEN_BELL_ORE.get().defaultBlockState(),
+                        c + node[0], top - 1, c + node[1], box);
             }
         }
 

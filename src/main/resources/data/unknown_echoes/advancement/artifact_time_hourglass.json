@@ -1,0 +1,23 @@
+{
+  "parent": "unknown_echoes:first_artifact",
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:time_hourglass"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.artifact_time_hourglass.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.artifact_time_hourglass.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

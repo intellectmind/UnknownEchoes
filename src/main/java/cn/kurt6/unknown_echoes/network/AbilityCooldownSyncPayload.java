@@ -6,7 +6,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-/** 服务端到客户端的重力/虚空回响冷却展示快照。 */
 public record AbilityCooldownSyncPayload(long gravityEnd, int gravityDuration,
                                          long voidEnd, int voidDuration, long gameTime)
         implements CustomPacketPayload {

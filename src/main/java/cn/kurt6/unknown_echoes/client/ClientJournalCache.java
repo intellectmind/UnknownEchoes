@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.client;
 
+import cn.kurt6.unknown_echoes.journal.ExplorationClue;
 import cn.kurt6.unknown_echoes.network.JournalSyncPayload;
 
 import java.util.ArrayList;
@@ -8,21 +9,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * 客户端探索日志缓存:书本 UI 的数据源(服务端 JournalSyncPayload 同步)。
- * 纯展示;真实进度永远以服务端 Data Attachment 为准。
- */
 public class ClientJournalCache {
     private static final Set<String> STRUCTURES = new HashSet<>();
     private static final Set<String> BIOMES = new HashSet<>();
     private static final Set<String> MOBS = new HashSet<>();
     private static final Set<String> BOSSES = new HashSet<>();
     private static final List<Integer> PAGES = new ArrayList<>();
+    private static final List<ExplorationClue> CLUES = new ArrayList<>();
     private static final Set<String> STRUCTURES_VIEW = Collections.unmodifiableSet(STRUCTURES);
     private static final Set<String> BIOMES_VIEW = Collections.unmodifiableSet(BIOMES);
     private static final Set<String> MOBS_VIEW = Collections.unmodifiableSet(MOBS);
     private static final Set<String> BOSSES_VIEW = Collections.unmodifiableSet(BOSSES);
     private static final List<Integer> PAGES_VIEW = Collections.unmodifiableList(PAGES);
+    private static final List<ExplorationClue> CLUES_VIEW = Collections.unmodifiableList(CLUES);
     private static int totalStructures;
     private static int totalBiomes;
     private static int totalMobs;
@@ -41,6 +40,13 @@ public class ClientJournalCache {
         PAGES.clear();
         PAGES.addAll(payload.pages());
         PAGES.sort(Integer::compareTo);
+        CLUES.clear();
+        for (String encoded : payload.clues()) {
+            ExplorationClue clue = ExplorationClue.decode(encoded);
+            if (clue != null) {
+                CLUES.add(clue);
+            }
+        }
         List<Integer> totals = payload.totals();
         totalStructures = totals.size() > 0 ? totals.get(0) : 0;
         totalBiomes = totals.size() > 1 ? totals.get(1) : 0;
@@ -69,6 +75,10 @@ public class ClientJournalCache {
         return PAGES_VIEW;
     }
 
+    public static List<ExplorationClue> clues() {
+        return CLUES_VIEW;
+    }
+
     public static int totalStructures() {
         return totalStructures;
     }
@@ -95,6 +105,7 @@ public class ClientJournalCache {
         MOBS.clear();
         BOSSES.clear();
         PAGES.clear();
+        CLUES.clear();
         totalStructures = totalBiomes = totalMobs = totalBosses = knownPages = 0;
     }
 }

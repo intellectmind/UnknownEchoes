@@ -1,0 +1,4042 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "unknown_echoes:block/realm_service_plinth_stone",
+    "base": "unknown_echoes:block/realm_service_plinth_stone",
+    "core": "unknown_echoes:block/realm_service_plinth_wayfarer",
+    "focus": "unknown_echoes:block/realm_service_plinth_focus",
+    "stone": "unknown_echoes:block/realm_service_plinth_stone",
+    "frame": "unknown_echoes:block/realm_service_plinth_frame"
+  },
+  "elements": [
+    {
+      "name": "base_shape_plinth_foot",
+      "from": [
+        0.6,
+        0,
+        0.6
+      ],
+      "to": [
+        15.4,
+        1.1,
+        15.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "cullface": "down",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        }
+      }
+    },
+    {
+      "name": "base_shape_plinth_foot_trim",
+      "from": [
+        1.3,
+        1,
+        1.3
+      ],
+      "to": [
+        14.7,
+        1.9,
+        14.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
+        }
+      }
+    },
+    {
+      "name": "base_shape_plinth_lower_diamond",
+      "from": [
+        2.8,
+        1.6,
+        2.8
+      ],
+      "to": [
+        13.2,
+        3.1,
+        13.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          2.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "base_shape_plinth_lower_collar",
+      "from": [
+        4.2,
+        2.7,
+        4.2
+      ],
+      "to": [
+        11.8,
+        3.8,
+        11.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          3.1,
+          8
+        ]
+      }
+    },
+    {
+      "name": "base_shape_plinth_waist",
+      "from": [
+        5.35,
+        3.2,
+        5.35
+      ],
+      "to": [
+        10.65,
+        7.9,
+        10.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          5.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "base_shape_plinth_waist_band",
+      "from": [
+        4.75,
+        6.9,
+        4.75
+      ],
+      "to": [
+        11.25,
+        8.25,
+        11.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          7.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "base_shape_plinth_upper_socket",
+      "from": [
+        5.45,
+        7.7,
+        5.45
+      ],
+      "to": [
+        10.55,
+        9.9,
+        10.55
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          8.6,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_anchor_nw",
+      "from": [
+        1.7,
+        2,
+        1.7
+      ],
+      "to": [
+        4.3,
+        5.2,
+        4.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          3,
+          3,
+          3
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_anchor_ne",
+      "from": [
+        11.7,
+        2,
+        1.7
+      ],
+      "to": [
+        14.3,
+        5.2,
+        4.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13,
+          3,
+          3
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_anchor_sw",
+      "from": [
+        1.7,
+        2,
+        11.7
+      ],
+      "to": [
+        4.3,
+        5.2,
+        14.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          3,
+          3,
+          13
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_anchor_se",
+      "from": [
+        11.7,
+        2,
+        11.7
+      ],
+      "to": [
+        14.3,
+        5.2,
+        14.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13,
+          3,
+          13
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_anchor_cap_nw",
+      "from": [
+        2.15,
+        4.5,
+        2.15
+      ],
+      "to": [
+        3.85,
+        6.3,
+        3.85
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          3,
+          4.9,
+          3
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_anchor_cap_ne",
+      "from": [
+        12.15,
+        4.5,
+        2.15
+      ],
+      "to": [
+        13.85,
+        6.3,
+        3.85
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13,
+          4.9,
+          3
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_anchor_cap_sw",
+      "from": [
+        2.15,
+        4.5,
+        12.15
+      ],
+      "to": [
+        3.85,
+        6.3,
+        13.85
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          3,
+          4.9,
+          13
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_anchor_cap_se",
+      "from": [
+        12.15,
+        4.5,
+        12.15
+      ],
+      "to": [
+        13.85,
+        6.3,
+        13.85
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          13,
+          4.9,
+          13
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_buttress_n",
+      "from": [
+        6.35,
+        3.2,
+        1.25
+      ],
+      "to": [
+        9.65,
+        8.6,
+        3.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          3.8,
+          3.6
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_buttress_s",
+      "from": [
+        6.35,
+        3.2,
+        12.35
+      ],
+      "to": [
+        9.65,
+        8.6,
+        14.75
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          3.8,
+          12.4
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_buttress_w",
+      "from": [
+        1.25,
+        3.2,
+        6.35
+      ],
+      "to": [
+        3.65,
+        8.6,
+        9.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          3.6,
+          3.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_buttress_e",
+      "from": [
+        12.35,
+        3.2,
+        6.35
+      ],
+      "to": [
+        14.75,
+        8.6,
+        9.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          12.4,
+          3.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_buttress_trim_n",
+      "from": [
+        7.05,
+        4.1,
+        1
+      ],
+      "to": [
+        8.95,
+        8.25,
+        2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          4.1,
+          2.2
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_buttress_trim_s",
+      "from": [
+        7.05,
+        4.1,
+        14
+      ],
+      "to": [
+        8.95,
+        8.25,
+        15
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          4.1,
+          13.8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_buttress_trim_w",
+      "from": [
+        1,
+        4.1,
+        7.05
+      ],
+      "to": [
+        2,
+        8.25,
+        8.95
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          2.2,
+          4.1,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_buttress_trim_e",
+      "from": [
+        14,
+        4.1,
+        7.05
+      ],
+      "to": [
+        15,
+        8.25,
+        8.95
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          13.8,
+          4.1,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_channel_n",
+      "from": [
+        7.45,
+        4.65,
+        0.72
+      ],
+      "to": [
+        8.55,
+        7.7,
+        1.25
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          4.7,
+          1.7
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_channel_s",
+      "from": [
+        7.45,
+        4.65,
+        14.75
+      ],
+      "to": [
+        8.55,
+        7.7,
+        15.28
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          4.7,
+          14.3
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_channel_w",
+      "from": [
+        0.72,
+        4.65,
+        7.45
+      ],
+      "to": [
+        1.25,
+        7.7,
+        8.55
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          1.7,
+          4.7,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_channel_e",
+      "from": [
+        14.75,
+        4.65,
+        7.45
+      ],
+      "to": [
+        15.28,
+        7.7,
+        8.55
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          14.3,
+          4.7,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_rail_n",
+      "from": [
+        5.2,
+        9,
+        2.6
+      ],
+      "to": [
+        10.8,
+        10.35,
+        4.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          9.2,
+          4.2
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_rail_s",
+      "from": [
+        5.2,
+        9,
+        11.8
+      ],
+      "to": [
+        10.8,
+        10.35,
+        13.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          9.2,
+          11.8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_rail_w",
+      "from": [
+        2.6,
+        9,
+        5.2
+      ],
+      "to": [
+        4.2,
+        10.35,
+        10.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          4.2,
+          9.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_rail_e",
+      "from": [
+        11.8,
+        9,
+        5.2
+      ],
+      "to": [
+        13.4,
+        10.35,
+        10.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11.8,
+          9.2,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_claw_lower_n",
+      "from": [
+        6.95,
+        9.6,
+        3.45
+      ],
+      "to": [
+        9.05,
+        13.1,
+        5.35
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          10.1,
+          5.2
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_claw_lower_s",
+      "from": [
+        6.95,
+        9.6,
+        10.65
+      ],
+      "to": [
+        9.05,
+        13.1,
+        12.55
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          10.1,
+          10.8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_claw_lower_w",
+      "from": [
+        3.45,
+        9.6,
+        6.95
+      ],
+      "to": [
+        5.35,
+        13.1,
+        9.05
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5.2,
+          10.1,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_claw_lower_e",
+      "from": [
+        10.65,
+        9.6,
+        6.95
+      ],
+      "to": [
+        12.55,
+        13.1,
+        9.05
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          10.8,
+          10.1,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_claw_tip_n",
+      "from": [
+        7.3,
+        12.2,
+        3.9
+      ],
+      "to": [
+        8.7,
+        15.75,
+        5.25
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          12.5,
+          5.2
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_claw_tip_s",
+      "from": [
+        7.3,
+        12.2,
+        10.75
+      ],
+      "to": [
+        8.7,
+        15.75,
+        12.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          12.5,
+          10.8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_claw_tip_w",
+      "from": [
+        3.9,
+        12.2,
+        7.3
+      ],
+      "to": [
+        5.25,
+        15.75,
+        8.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5.2,
+          12.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_crown_claw_tip_e",
+      "from": [
+        10.75,
+        12.2,
+        7.3
+      ],
+      "to": [
+        12.1,
+        15.75,
+        8.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          10.8,
+          12.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_node_n",
+      "from": [
+        7.05,
+        11.1,
+        3.2
+      ],
+      "to": [
+        8.95,
+        13.1,
+        4.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#core",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          12,
+          4
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_node_s",
+      "from": [
+        7.05,
+        11.1,
+        11.3
+      ],
+      "to": [
+        8.95,
+        13.1,
+        12.8
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#core",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          12,
+          12
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_node_w",
+      "from": [
+        3.2,
+        11.1,
+        7.05
+      ],
+      "to": [
+        4.7,
+        13.1,
+        8.95
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#core",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          4,
+          12,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_node_e",
+      "from": [
+        11.3,
+        11.1,
+        7.05
+      ],
+      "to": [
+        12.8,
+        13.1,
+        8.95
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#core",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#base",
+          "uv": [
+            8,
+            8,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          12,
+          12,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_focus_lower",
+      "from": [
+        6.4,
+        14,
+        6.4
+      ],
+      "to": [
+        9.6,
+        17.25,
+        9.6
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 15,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          15.4,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_focus_mid",
+      "from": [
+        6.85,
+        16.6,
+        6.85
+      ],
+      "to": [
+        9.15,
+        19.55,
+        9.15
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 15,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          17.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_focus_tip",
+      "from": [
+        7.3,
+        19.05,
+        7.3
+      ],
+      "to": [
+        8.7,
+        21.65,
+        8.7
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 15,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          20,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_focus_wing_n",
+      "from": [
+        7.25,
+        15.1,
+        5.35
+      ],
+      "to": [
+        8.75,
+        17.15,
+        7.1
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          8,
+          16,
+          7
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_focus_wing_s",
+      "from": [
+        7.25,
+        15.1,
+        8.9
+      ],
+      "to": [
+        8.75,
+        17.15,
+        10.65
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 45,
+        "axis": "x",
+        "origin": [
+          8,
+          16,
+          9
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_focus_wing_w",
+      "from": [
+        5.35,
+        15.1,
+        7.25
+      ],
+      "to": [
+        7.1,
+        17.15,
+        8.75
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          7,
+          16,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_focus_wing_e",
+      "from": [
+        8.9,
+        15.1,
+        7.25
+      ],
+      "to": [
+        10.65,
+        17.15,
+        8.75
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": -45,
+        "axis": "z",
+        "origin": [
+          9,
+          16,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_3d_item_upgrade_plinth_focus_heart",
+      "from": [
+        7.1,
+        16.15,
+        7.1
+      ],
+      "to": [
+        8.9,
+        18.15,
+        8.9
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#focus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      },
+      "light_emission": 15,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          17,
+          8
+        ]
+      }
+    }
+  ]
+}

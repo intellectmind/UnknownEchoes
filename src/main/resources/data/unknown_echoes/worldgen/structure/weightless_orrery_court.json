@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:weightless_orrery_court",
+  "biomes": "#unknown_echoes:has_weightless_orrery_court",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

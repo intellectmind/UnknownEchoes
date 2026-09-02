@@ -83,6 +83,15 @@
             -10,
             0,
             6
+          ]
+        },
+        {
+          "name": "head_anim",
+          "parent": "head",
+          "pivot": [
+            0,
+            14,
+            -1
           ],
           "cubes": [
             {

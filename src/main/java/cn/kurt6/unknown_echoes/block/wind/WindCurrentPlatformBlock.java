@@ -31,13 +31,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nullable;
 
-/**
- * 风流平台(V0.6E,5.2 权限目标落地):漂浮群岛机关方块。
- * 持风之回响右键激活(服务端校验 EchoPermission),产生限时上升气流柱——
- * 滑翔/坠落进入气流获得抬升;时长与柱高走 ServerConfig。
- * 边界(5.2/设计红线 #1):气流只是表现 + 运动效果,不做进度门槛;
- * 任何实体都能被已激活的气流抬升,但激活本身必须有风之权限。
- */
 public class WindCurrentPlatformBlock extends BaseEntityBlock {
     public static final MapCodec<WindCurrentPlatformBlock> CODEC = simpleCodec(WindCurrentPlatformBlock::new);
     public static final BooleanProperty ACTIVE = BooleanProperty.create("active");
@@ -103,15 +96,13 @@ public class WindCurrentPlatformBlock extends BaseEntityBlock {
             EchoAbilityManager.recordFailure(serverPlayer, EchoAbilityType.WIND_ECHO, "platform_locked");
             return InteractionResult.CONSUME;
         }
-        // 重复激活 = 重置时长(稳定气流的回访交互,不另设冷却)
+
         if (level.getBlockEntity(pos) instanceof WindCurrentPlatformBlockEntity platform) {
             platform.activate(ServerConfig.WIND_PLATFORM_ACTIVE_TICKS.get());
             if (!state.getValue(ACTIVE)) {
                 level.setBlock(pos, state.setValue(ACTIVE, Boolean.TRUE), 3);
             }
             level.playSound(null, pos, SoundEvents.BREEZE_IDLE_AIR, SoundSource.BLOCKS, 1.2F, 0.9F);
-            serverPlayer.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.wind_platform.activated"), true);
         }
         return InteractionResult.CONSUME;
     }

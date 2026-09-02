@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
+import cn.kurt6.unknown_echoes.entity.ai.FlankTargetGoal;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -8,7 +10,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.ZombieAttackGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -19,11 +26,7 @@ import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * 回响游荡者:回响森林基础敌对生物。近战攻击,低概率掉落回响碎片(见战利品表)。
- * 不怕阳光(回声境域是永恒黄昏),不会在水中转化。
- * 模型与动画由 GeckoLib 驱动(Blockbench 制作,见 model/echo_wanderer.bbmodel)。
- */
+/** 回响游荡者:回响森林基础敌对生物。近战攻击,低概率掉落回响碎片(见战利品表)。 */
 public class EchoWanderer extends Zombie implements GeoEntity {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.echo_wanderer.idle");
@@ -61,7 +64,19 @@ public class EchoWanderer extends Zombie implements GeoEntity {
         return false;
     }
 
-    // ---- 自定义音效(替换僵尸音) ----
+    /**
+     * 覆写 Zombie 的行为组:去掉村庄穿行(本 Mod 无村民),补侧翼包夹与同族拉群。
+     * 战术 Goal 的优先级数必须小于近战,MOVE 只能被更小的数抢走。
+     */
+    @Override
+    protected void addBehaviourGoals() {
+        this.goalSelector.addGoal(1, new FlankTargetGoal(this, 1.1D));
+        this.goalSelector.addGoal(2, new ZombieAttackGoal(this, 1.0D, false));
+        this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.0D));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(3, new AlertPackGoal(this, 14.0D));
+    }
 
     @Override
     protected SoundEvent getAmbientSound() {
@@ -82,8 +97,6 @@ public class EchoWanderer extends Zombie implements GeoEntity {
     protected SoundEvent getStepSound() {
         return SoundEvents.MOSS_STEP;
     }
-
-    // ---- GeckoLib 动画 ----
 
     @Override
     public boolean doHurtTarget(Entity target) {

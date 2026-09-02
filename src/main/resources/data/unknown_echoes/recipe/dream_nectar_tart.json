@@ -5,9 +5,11 @@
     { "item": "minecraft:wheat" },
     { "item": "minecraft:sugar" },
     { "item": "unknown_echoes:dream_nectar" },
-    { "item": "unknown_echoes:echo_amber" }
+    { "item": "unknown_echoes:echo_amber" },
+    { "item": "unknown_echoes:dream_mist_vine" }
   ],
   "result": {
-    "id": "unknown_echoes:dream_nectar_tart"
+    "id": "unknown_echoes:dream_nectar_tart",
+    "count": 2
   }
 }

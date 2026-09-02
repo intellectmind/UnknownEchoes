@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.block.truesight;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.world.MainBossRechallengeData;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -10,7 +11,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -22,21 +26,11 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-/**
- * 真视核心祭坛:真视回响的发放入口(设计红线 #2,只写玩家数据)。
- * 服务端判定,双条件(设计文档 5.4:击败镜像守护者 + 完成神殿核心机关):
- *  1. 已击败镜像守护者(个人进度);
- *  2. 已亲自激活本神殿全部真镜像符印(个人进度,见 MirrorSigilBlock)。
- * 散件摆放(周围无符印)时只查 Boss 击败。
- */
+/** 真视核心祭坛：真视回响的发放入口，只写入玩家数据。 */
 public class TrueSightAltarBlock extends Block {
     public static final MapCodec<TrueSightAltarBlock> CODEC = simpleCodec(TrueSightAltarBlock::new);
-
-    /** 符印扫描半径:必须从祭坛(北端高台)覆盖整座 23×23 神殿,含南墙符印
-     *  (V0.6B 修复:原 12 扫不到南墙,真符印落在南墙时祭坛校验会漏掉它)。 */
-    private static final int SIGIL_RANGE_H = 22;
-    private static final int SIGIL_RANGE_V = 6;
 
     private static final VoxelShape SHAPE = Shapes.or(
             Block.box(1, 0, 1, 15, 4, 15),
@@ -60,6 +54,19 @@ public class TrueSightAltarBlock extends Block {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                Player player, BlockHitResult hitResult) {
+        return interact(state, level, pos, player, hitResult);
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level,
+                                              BlockPos pos, Player player, InteractionHand hand,
+                                              BlockHitResult hitResult) {
+        interact(state, level, pos, player, hitResult);
+        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    private InteractionResult interact(BlockState state, Level level, BlockPos pos,
+                                       Player player, BlockHitResult hitResult) {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
@@ -68,17 +75,37 @@ public class TrueSightAltarBlock extends Block {
         }
 
         if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO)) {
-            serverPlayer.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.altar.claimed"), true);
+            MainBossRechallengeData.trySummon(serverPlayer, pos,
+                    MainBossRechallengeData.BossKind.MIRROR_GUARDIAN);
             return InteractionResult.CONSUME;
         }
 
         boolean bossDefeated = EchoAbilityManager.hasDefeatedBoss(serverPlayer, EchoPermission.MIRROR_GUARDIAN_ID);
-        List<BlockPos> realSigils = findRealSigils(level, pos);
-        boolean mechanismDone = realSigils.isEmpty() || allSigilsActivated(serverPlayer, level, realSigils);
-        if (bossDefeated && mechanismDone) {
-            // 共鸣信物仪式(V0.6E,5.1.1):双记录齐全后还需持信物领取(消耗 + 吸收演出);
-            // 散件摆放(无符印)保持直接发放,兼容管理员/数据包布景
+        if (!bossDefeated) {
+            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
+            serverPlayer.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.truesight_altar.locked"), true);
+            return InteractionResult.CONSUME;
+        }
+        if (!isSigilRangeLoaded(level, pos)) {
+            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
+            serverPlayer.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.altar.area_loading"), true);
+            return InteractionResult.CONSUME;
+        }
+        Optional<List<BlockPos>> realSigilResult = findRealSigils(level, pos);
+        if (realSigilResult.isEmpty()) {
+            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
+            serverPlayer.displayClientMessage(
+                    Component.translatable("message.unknown_echoes.truesight_altar.need_sigils"), true);
+            return InteractionResult.CONSUME;
+        }
+        List<BlockPos> realSigils = realSigilResult.get();
+        boolean mechanismDone = realSigils.isEmpty()
+                || realSigils.size() >= MirrorSigilBlock.REQUIRED_REAL_SIGILS
+                && allSigilsActivated(serverPlayer, level, realSigils);
+        if (mechanismDone) {
+
             if (!realSigils.isEmpty()) {
                 if (!cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.hasValidToken(
                         serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO)) {
@@ -96,9 +123,8 @@ public class TrueSightAltarBlock extends Block {
         }
 
         level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
-        serverPlayer.displayClientMessage(Component.translatable(
-                bossDefeated ? "message.unknown_echoes.truesight_altar.need_sigils"
-                             : "message.unknown_echoes.truesight_altar.locked"), true);
+        serverPlayer.displayClientMessage(
+                Component.translatable("message.unknown_echoes.truesight_altar.need_sigils"), true);
         return InteractionResult.CONSUME;
     }
 
@@ -112,20 +138,27 @@ public class TrueSightAltarBlock extends Block {
         return true;
     }
 
-    private List<BlockPos> findRealSigils(Level level, BlockPos center) {
+    private Optional<List<BlockPos>> findRealSigils(Level level, BlockPos center) {
         List<BlockPos> result = new ArrayList<>();
         if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
-            return result;
+            return Optional.empty();
         }
-        for (BlockPos pos : BlockPos.betweenClosed(
-                center.offset(-SIGIL_RANGE_H, -SIGIL_RANGE_V, -SIGIL_RANGE_H),
-                center.offset(SIGIL_RANGE_H, SIGIL_RANGE_V, SIGIL_RANGE_H))) {
-            BlockState state = level.getBlockState(pos);
-            if (state.getBlock() instanceof MirrorSigilBlock
-                    && MirrorSigilBlockEntity.isReal(serverLevel, pos)) {
+        if (!MirrorSigilBlockEntity.isClusterLoaded(serverLevel, center)) {
+            return Optional.empty();
+        }
+        for (BlockPos pos : MirrorSigilBlockEntity.findCluster(serverLevel, center)) {
+            if (!MirrorSigilBlockEntity.ensureInitialized(serverLevel, pos)) {
+                return Optional.empty();
+            }
+            if (MirrorSigilBlockEntity.isReal(serverLevel, pos)) {
                 result.add(pos.immutable());
             }
         }
-        return result;
+        return Optional.of(result);
+    }
+
+    private static boolean isSigilRangeLoaded(Level level, BlockPos center) {
+        return level instanceof net.minecraft.server.level.ServerLevel serverLevel
+                && MirrorSigilBlockEntity.isClusterLoaded(serverLevel, center);
     }
 }

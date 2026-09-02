@@ -4,35 +4,52 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.block.wind.WindCurrentPlatformBlock;
 import cn.kurt6.unknown_echoes.config.ClientConfig;
+import cn.kurt6.unknown_echoes.event.WorldEchoWingsEvents;
+import cn.kurt6.unknown_echoes.item.tool.AreaMiningSupport;
 import cn.kurt6.unknown_echoes.network.DoubleJumpPayload;
+import cn.kurt6.unknown_echoes.network.ToolSkillStatePayload;
+import cn.kurt6.unknown_echoes.network.WorldEchoFlightPayload;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
+import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForgeMod;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @EventBusSubscriber(modid = UnknownEchoes.MODID, value = Dist.CLIENT)
 public class ClientGameEvents {
     private static boolean usedDoubleJump = false;
     private static boolean wasGrounded = true;
-    /** 风之第三跳滑翔剩余 tick(>0 = 滑翔中)。 */
     private static int glideTicks = 0;
+    private static final int WORLD_ECHO_FLIGHT_TOGGLE_WINDOW_TICKS = 7;
+    private static boolean worldEchoFlightActive = false;
+    private static int worldEchoFlightToggleTicks = 0;
+    private static boolean echoToolSkillKeyActive = false;
     /** 用竖直速度区分"这一下是地面起跳"还是"已经被地形/气流带离地后的空中跳"。 */
     private static final double TAKEOFF_JUMP_VERTICAL_SPEED = 0.2D;
+    /** 单 tick 内最多承认的跳跃按下次数，避免异常输入放大成连续切换。 */
+    private static final int MAX_JUMP_PRESSES_PER_TICK = 4;
+    /** 自行统计的跳跃按下边沿数：KeyMapping.consumeClick 会把 GLFW REPEAT 也算成点击。 */
+    private static int jumpPressCount = 0;
     private static final int WIND_PLATFORM_TAKEOFF_CHECK_HEIGHT = 24;
     private static BossMusicSound bossMusic = null;
     private static int bossMusicScanCooldown = 0;
@@ -48,7 +65,6 @@ public class ClientGameEvents {
     private static net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> trueSightCacheDimension = null;
     private static int trueSightCacheRange = -1;
 
-    /** HUD 表现层查询。 */
     public static boolean isDoubleJumpUsed() {
         return usedDoubleJump;
     }
@@ -57,7 +73,11 @@ public class ClientGameEvents {
         return glideTicks > 0;
     }
 
-    /** 服务端拒绝滑翔(V0.6E 能量/冷却/状态校验):取消滑翔表现并显示含蓄提示。 */
+    public static boolean isWorldEchoFlying() {
+        return worldEchoFlightActive;
+    }
+
+    /** 服务端拒绝滑翔请求时清理表现并显示提示。 */
     public static void onGlideDenied(String reason) {
         glideTicks = 0;
         Minecraft mc = Minecraft.getInstance();
@@ -69,99 +89,74 @@ public class ClientGameEvents {
     }
 
     @SubscribeEvent
+    public static void onKeyInput(InputEvent.Key event) {
+        if (event.getAction() != InputConstants.PRESS) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null || mc.getOverlay() != null || mc.player == null) {
+            return;
+        }
+        if (mc.options.keyJump.matches(event.getKey(), event.getScanCode())) {
+            jumpPressCount = Math.min(jumpPressCount + 1, MAX_JUMP_PRESSES_PER_TICK);
+        }
+    }
+
+    /** 跳跃键可被改绑到鼠标键；鼠标路径没有 REPEAT，但仍需并入同一计数来源。 */
+    @SubscribeEvent
+    public static void onMouseInput(InputEvent.MouseButton.Post event) {
+        if (event.getAction() != InputConstants.PRESS) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null || mc.getOverlay() != null || mc.player == null) {
+            return;
+        }
+        if (mc.options.keyJump.matchesMouse(event.getButton())) {
+            jumpPressCount = Math.min(jumpPressCount + 1, MAX_JUMP_PRESSES_PER_TICK);
+        }
+    }
+
+    @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
+        migrateLegacyArtifactKeyBinding();
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         if (player == null) {
             usedDoubleJump = false;
             wasGrounded = true;
             glideTicks = 0;
+            worldEchoFlightActive = false;
+            worldEchoFlightToggleTicks = 0;
+            echoToolSkillKeyActive = false;
+            jumpPressCount = 0;
+            drainVanillaJumpClicks(mc);
             return;
         }
         if (mc.isPaused()) {
-            // 暂停只挂起处理,不清空中状态——清了会让"空中按 Esc 再回来"白赚一次二段跳
+
             return;
         }
 
-        // 回响总览(5.8 统一入口壳):只保留 K 作为 GUI 总入口,子页由界面内导航进入。
-        while (ClientModEvents.OPEN_ECHO_OVERVIEW.consumeClick()) {
-            if (mc.screen == null) {
-                mc.setScreen(new cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen(
-                        cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.ModulePage.OVERVIEW));
-            }
-        }
-
-        // 武器战技键:客户端只发请求(主手优先),冷却与结算全在服务端
-        while (ClientModEvents.WEAPON_SKILL.consumeClick()) {
-            if (mc.screen != null || player.isSpectator()) {
-                continue;
-            }
-            var main = player.getMainHandItem();
-            var off = player.getOffhandItem();
-            if (main.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill
-                    && !player.getCooldowns().isOnCooldown(main.getItem())) {
-                PacketDistributor.sendToServer(cn.kurt6.unknown_echoes.network.WeaponSkillPayload.MAIN);
-            } else if (off.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill
-                    && !player.getCooldowns().isOnCooldown(off.getItem())) {
-                PacketDistributor.sendToServer(cn.kurt6.unknown_echoes.network.WeaponSkillPayload.OFF);
-            }
-        }
-
-        // 副战技使用独立可改键；客户端只筛选支持双战技的武器，结算仍由服务端完成。
-        while (ClientModEvents.WEAPON_SECONDARY_SKILL.consumeClick()) {
-            if (mc.screen != null || player.isSpectator()) {
-                continue;
-            }
-            var main = player.getMainHandItem();
-            var off = player.getOffhandItem();
-            if (main.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill skill
-                    && skill.hasSecondarySkill()
-                    && !player.getCooldowns().isOnCooldown(main.getItem())) {
-                PacketDistributor.sendToServer(
-                        cn.kurt6.unknown_echoes.network.SecondaryWeaponSkillPayload.MAIN);
-            } else if (off.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill skill
-                    && skill.hasSecondarySkill()
-                    && !player.getCooldowns().isOnCooldown(off.getItem())) {
-                PacketDistributor.sendToServer(
-                        cn.kurt6.unknown_echoes.network.SecondaryWeaponSkillPayload.OFF);
-            }
-        }
-
-        while (ClientModEvents.GRAVITY_ATTUNE.consumeClick()) {
-            if (mc.screen == null && !player.isSpectator()
-                    && ClientAbilityCache.hasAbility(EchoAbilityType.GRAVITY_ECHO)) {
-                PacketDistributor.sendToServer(
-                        cn.kurt6.unknown_echoes.network.EchoAbilityActionPayload.GRAVITY_ATTUNE);
-            }
-        }
-        while (ClientModEvents.VOID_STEP.consumeClick()) {
-            if (mc.screen == null && !player.isSpectator()
-                    && ClientAbilityCache.hasAbility(EchoAbilityType.VOID_ECHO)) {
-                PacketDistributor.sendToServer(
-                        cn.kurt6.unknown_echoes.network.EchoAbilityActionPayload.VOID_STEP);
-            }
-        }
-
-        while (ClientModEvents.ARTIFACT_USE.consumeClick()) {
-            if (mc.screen != null || player.isSpectator()) {
-                continue;
-            }
-            net.minecraft.world.InteractionHand hand = artifactHand(player);
-            if (hand != null) {
-                PacketDistributor.sendToServer(new cn.kurt6.unknown_echoes.network.ArtifactUsePayload(
-                        hand == net.minecraft.world.InteractionHand.OFF_HAND));
-            }
-        }
+        handleOpenEchoOverviewKey(mc, player);
+        handleWeaponSkillKey(mc, player);
+        handleWeaponSecondarySkillKey(mc, player);
+        handleGravityAttuneKey(mc, player);
+        handleVoidStepKey(mc, player);
+        handleItemActiveSkillKey(mc, player);
+        handleItemAlternateSkillKey(mc, player);
+        handleArtifactUseKey(mc, player);
 
         tickBossMusic(mc, player);
         tickTrueSightShimmer(player);
         tickTrueSightIllusionPulse(player);
+        tickEchoToolSkillKey(mc, player);
 
-        // 二段跳:用 consumeClick(按键事件计数)而不是 isDown 逐 tick 采样,
-        // 否则快速双击时第二下落在两个 tick 之间会被漏掉(实测发生过)。
-        int jumpClicks = 0;
-        while (mc.options.keyJump.consumeClick()) {
-            jumpClicks++;
+        int jumpClicks = jumpPressCount;
+        jumpPressCount = 0;
+        drainVanillaJumpClicks(mc);
+        if (tickWorldEchoFlight(player, jumpClicks)) {
+            jumpClicks = 0;
         }
         boolean grounded = player.onGround() || player.isInWater() || player.isInLava()
                 || player.getAbilities().flying || player.onClimbable();
@@ -170,7 +165,7 @@ public class ClientGameEvents {
             usedDoubleJump = false;
             glideTicks = 0;
         } else if (airClicks > 0 && !usedDoubleJump
-                && !player.getAbilities().mayfly      // 避免与创造飞行双击跳冲突
+                && !player.getAbilities().mayfly
                 && !player.isFallFlying() && !player.isPassenger()
                 && ClientAbilityCache.hasAbility(EchoAbilityType.WIND_ECHO)) {
             Vec3 motion = player.getDeltaMovement();
@@ -193,14 +188,266 @@ public class ClientGameEvents {
                 && !player.isFallFlying() && !player.isPassenger()
                 && ClientAbilityCache.hasAbility(EchoAbilityType.WIND_ECHO)
                 && ClientAbilityCache.getResearchLevel(EchoAbilityType.WIND_ECHO) >= 1) {
-            // 第三跳:短距离滑翔。研究等级延长滑翔时间(风之研究强化);
-            // 聆听者 4 件再 +20 tick(11.3,客户端读自己装备做手感,服务端权威同步加成)。
+
             glideTicks = windGlideDuration()
-                    + (cn.kurt6.unknown_echoes.ability.EchoArmorSets.hasListenerAbilityBonus(player) ? 20 : 0);
+                    + (cn.kurt6.unknown_echoes.ability.EchoArmorSets.hasListenerAbilityBonus(player) ? 20 : 0)
+                    + (cn.kurt6.unknown_echoes.ability.EchoArmorSets.hasResonatorAbilityBonus(player) ? 10 : 0);
             PacketDistributor.sendToServer(DoubleJumpPayload.GLIDE_START);
         }
         tickGlide(player);
         wasGrounded = grounded;
+    }
+
+    private static void handleOpenEchoOverviewKey(Minecraft mc, LocalPlayer player) {
+        while (ClientModEvents.OPEN_ECHO_OVERVIEW.consumeClick()) {
+        if (mc.screen == null) {
+            mc.setScreen(new cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen(
+                    cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.ModulePage.OVERVIEW));
+        }
+        }
+    }
+
+    private static void handleWeaponSkillKey(Minecraft mc, LocalPlayer player) {
+        while (ClientModEvents.WEAPON_SKILL.consumeClick()) {
+        if (mc.screen != null || player.isSpectator()) {
+            continue;
+        }
+        var main = player.getMainHandItem();
+        var off = player.getOffhandItem();
+        if (main.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill
+                && !player.getCooldowns().isOnCooldown(main.getItem())) {
+            PacketDistributor.sendToServer(cn.kurt6.unknown_echoes.network.WeaponSkillPayload.MAIN);
+        } else if (off.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill
+                && !player.getCooldowns().isOnCooldown(off.getItem())) {
+            PacketDistributor.sendToServer(cn.kurt6.unknown_echoes.network.WeaponSkillPayload.OFF);
+        }
+        }
+    }
+
+    private static void handleWeaponSecondarySkillKey(Minecraft mc, LocalPlayer player) {
+        while (ClientModEvents.WEAPON_SECONDARY_SKILL.consumeClick()) {
+        if (mc.screen != null || player.isSpectator()) {
+            continue;
+        }
+        var main = player.getMainHandItem();
+        var off = player.getOffhandItem();
+        if (main.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill skill
+                && skill.hasSecondarySkill()
+                && !player.getCooldowns().isOnCooldown(main.getItem())) {
+            PacketDistributor.sendToServer(
+                    cn.kurt6.unknown_echoes.network.SecondaryWeaponSkillPayload.MAIN);
+        } else if (off.getItem() instanceof cn.kurt6.unknown_echoes.item.weapon.WeaponSkill skill
+                && skill.hasSecondarySkill()
+                && !player.getCooldowns().isOnCooldown(off.getItem())) {
+            PacketDistributor.sendToServer(
+                    cn.kurt6.unknown_echoes.network.SecondaryWeaponSkillPayload.OFF);
+        }
+        }
+    }
+
+    private static void handleGravityAttuneKey(Minecraft mc, LocalPlayer player) {
+        while (ClientModEvents.GRAVITY_ATTUNE.consumeClick()) {
+        if (mc.screen == null && !player.isSpectator()
+                && ClientAbilityCache.hasAbility(EchoAbilityType.GRAVITY_ECHO)) {
+            PacketDistributor.sendToServer(
+                    cn.kurt6.unknown_echoes.network.EchoAbilityActionPayload.GRAVITY_ATTUNE);
+        }
+        }
+    }
+
+    private static void handleVoidStepKey(Minecraft mc, LocalPlayer player) {
+        while (ClientModEvents.VOID_STEP.consumeClick()) {
+        if (mc.screen == null && !player.isSpectator()
+                && ClientAbilityCache.hasAbility(EchoAbilityType.VOID_ECHO)) {
+            PacketDistributor.sendToServer(
+                    cn.kurt6.unknown_echoes.network.EchoAbilityActionPayload.VOID_STEP);
+        }
+        }
+    }
+
+    private static void handleItemActiveSkillKey(Minecraft mc, LocalPlayer player) {
+        while (ClientModEvents.ITEM_ACTIVE_SKILL.consumeClick()) {
+        if (mc.screen != null || player.isSpectator()) {
+            continue;
+        }
+        sendItemActiveSkill(player, false);
+        }
+    }
+
+    private static void handleItemAlternateSkillKey(Minecraft mc, LocalPlayer player) {
+        while (ClientModEvents.ITEM_ALTERNATE_SKILL.consumeClick()) {
+        if (mc.screen != null || player.isSpectator()) {
+            continue;
+        }
+        sendItemActiveSkill(player, true);
+        }
+    }
+
+    private static void handleArtifactUseKey(Minecraft mc, LocalPlayer player) {
+        while (ClientModEvents.ARTIFACT_USE.consumeClick()) {
+        if (mc.screen != null || player.isSpectator()) {
+            continue;
+        }
+        net.minecraft.world.InteractionHand hand = artifactHand(player);
+        if (hand != null) {
+            PacketDistributor.sendToServer(new cn.kurt6.unknown_echoes.network.ArtifactUsePayload(
+                    hand == net.minecraft.world.InteractionHand.OFF_HAND, false));
+        }
+        }
+    }
+
+    /** 旧版神器键默认未绑定；只迁移一次，保留玩家之后的自定义按键选择。 */
+    private static void migrateLegacyArtifactKeyBinding() {
+        if (ClientConfig.ARTIFACT_USE_KEY_MIGRATED.get()) {
+            return;
+        }
+        if (ClientModEvents.ARTIFACT_USE.isUnbound()) {
+            ClientModEvents.ARTIFACT_USE.setKey(ClientModEvents.ARTIFACT_USE.getDefaultKey());
+        }
+        ClientConfig.ARTIFACT_USE_KEY_MIGRATED.set(true);
+    }
+
+    /** 原版跳跃只读 isDown，从不消费 clickCount；这里清空它，避免计数长期堆积。 */
+    private static void drainVanillaJumpClicks(Minecraft mc) {
+        if (mc.options == null) {
+            return;
+        }
+        while (mc.options.keyJump.consumeClick()) {
+
+        }
+    }
+
+    /** 技能键作为采集修饰键；只在状态变化时发包，避免每 tick 产生网络流量。 */
+    private static void tickEchoToolSkillKey(Minecraft mc, LocalPlayer player) {
+        boolean supportedTool = AreaMiningSupport.usesToolSkillKey(player.getMainHandItem());
+        boolean active = mc.screen == null && player.isAlive() && !player.isSpectator()
+                && supportedTool && ClientModEvents.ECHO_TOOL_SKILL.isDown();
+        if (active == echoToolSkillKeyActive) {
+            return;
+        }
+        echoToolSkillKeyActive = active;
+        PacketDistributor.sendToServer(new ToolSkillStatePayload(active));
+    }
+
+    /** 双击跳跃切换翼装飞行；本地先预测，服务端随后校验胸甲与玩家状态。 */
+    private static boolean tickWorldEchoFlight(LocalPlayer player, int jumpClicks) {
+        var chest = player.getItemBySlot(EquipmentSlot.CHEST);
+        boolean equipped = chest.is(ModItems.WORLD_ECHO_WINGS.get());
+        boolean wingsUsable = equipped;
+        boolean customFlightAvailable = wingsUsable && !hasExternalFlightAccess(player)
+                && player.isAlive() && !player.isSpectator() && !player.isPassenger();
+        if (!customFlightAvailable) {
+            worldEchoFlightToggleTicks = 0;
+            if (worldEchoFlightActive) {
+                setWorldEchoFlight(player, false, true);
+            }
+            return wingsUsable;
+        }
+
+        if (worldEchoFlightToggleTicks > 0) {
+            worldEchoFlightToggleTicks--;
+        }
+        for (int i = 0; i < jumpClicks; i++) {
+            if (worldEchoFlightToggleTicks > 0) {
+                setWorldEchoFlight(player, !worldEchoFlightActive, true);
+                worldEchoFlightToggleTicks = 0;
+            } else {
+                worldEchoFlightToggleTicks = WORLD_ECHO_FLIGHT_TOGGLE_WINDOW_TICKS;
+            }
+        }
+
+        if (worldEchoFlightActive) {
+            player.getAbilities().flying = true;
+            player.fallDistance = 0.0F;
+            glideTicks = 0;
+            if (ClientConfig.ENABLE_ECHO_PARTICLES.get() && player.tickCount % 4 == 0) {
+                player.level().addParticle(ParticleTypes.CLOUD,
+                        player.getX() + (player.getRandom().nextDouble() - 0.5D) * 0.8D,
+                        player.getY() + 0.2D,
+                        player.getZ() + (player.getRandom().nextDouble() - 0.5D) * 0.8D,
+                        0.0D, -0.02D, 0.0D);
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasExternalFlightAccess(LocalPlayer player) {
+        if (player.getAbilities().mayfly) {
+            return true;
+        }
+        var flightAttribute = player.getAttribute(NeoForgeMod.CREATIVE_FLIGHT);
+        if (flightAttribute == null) {
+            return false;
+        }
+        return flightAttribute.getBaseValue() > 0.0D
+                || flightAttribute.getModifiers().stream().anyMatch(modifier ->
+                        !modifier.id().equals(WorldEchoWingsEvents.FLIGHT_ATTRIBUTE_MODIFIER_ID)
+                                && modifier.amount() > 0.0D);
+    }
+
+    private static void setWorldEchoFlight(LocalPlayer player, boolean flying, boolean notifyServer) {
+        worldEchoFlightActive = flying;
+        if (flying) {
+            player.getAbilities().flying = true;
+            Vec3 motion = player.getDeltaMovement();
+            player.setDeltaMovement(motion.x, Math.max(motion.y, 0.42D), motion.z);
+            player.fallDistance = 0.0F;
+            glideTicks = 0;
+        } else if (!hasExternalFlightAccess(player)) {
+            player.getAbilities().flying = false;
+        }
+        if (notifyServer) {
+            PacketDistributor.sendToServer(flying
+                    ? WorldEchoFlightPayload.START
+                    : WorldEchoFlightPayload.STOP);
+        }
+    }
+
+    /** 接收服务端确认；拒绝起飞或强制收翼时撤销客户端预测。 */
+    public static void onWorldEchoFlightState(UUID playerId, boolean flying) {
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || !player.getUUID().equals(playerId)) {
+            return;
+        }
+        if (flying) {
+            worldEchoFlightActive = true;
+            player.getAbilities().flying = true;
+            player.fallDistance = 0.0F;
+        } else {
+            worldEchoFlightActive = false;
+            worldEchoFlightToggleTicks = 0;
+            if (!hasExternalFlightAccess(player)) {
+                player.getAbilities().flying = false;
+            }
+        }
+    }
+
+    /** 主手优先派发物品主动技能；副功能只发给声明支持的物品。 */
+    private static void sendItemActiveSkill(LocalPlayer player, boolean alternate) {
+        var main = player.getMainHandItem();
+        var off = player.getOffhandItem();
+        if (supportsItemSkill(main, alternate) && (alternate || !isArtifactItem(main))) {
+            PacketDistributor.sendToServer(alternate
+                    ? cn.kurt6.unknown_echoes.network.ItemActiveSkillPayload.MAIN_ALTERNATE
+                    : cn.kurt6.unknown_echoes.network.ItemActiveSkillPayload.MAIN);
+        } else if (supportsItemSkill(off, alternate) && (alternate || !isArtifactItem(off))) {
+            PacketDistributor.sendToServer(alternate
+                    ? cn.kurt6.unknown_echoes.network.ItemActiveSkillPayload.OFF_ALTERNATE
+                    : cn.kurt6.unknown_echoes.network.ItemActiveSkillPayload.OFF);
+        }
+    }
+
+    /** 神器主技能走独立可改绑键；副功能仍复用物品副功能键以兼容罗盘与锚点。 */
+    private static boolean isArtifactItem(net.minecraft.world.item.ItemStack stack) {
+        return stack.getItem() instanceof cn.kurt6.unknown_echoes.item.GenericArtifactItem
+                || stack.is(ModItems.STORM_COMPASS.get());
+    }
+
+    private static boolean supportsItemSkill(net.minecraft.world.item.ItemStack stack,
+                                             boolean alternate) {
+        return stack.getItem() instanceof cn.kurt6.unknown_echoes.item.ItemActiveSkill skill
+                && (!alternate || skill.hasAlternateItemSkill());
     }
 
     private static net.minecraft.world.InteractionHand artifactHand(LocalPlayer player) {
@@ -222,9 +469,7 @@ public class ClientGameEvents {
         if (jumpClicks <= 0) {
             return 0;
         }
-        // 本事件在玩家 tick 之后触发:地面起跳那一 tick 玩家已离地,第一下点击属于起跳本身。
-        // 但走下边缘、被风流平台抬起后再按跳,也会出现 wasGrounded=true 且本 tick 离地;
-        // 此时若竖直速度不是一次正常跳跃的上冲,就应把这一下算作空中跳。
+
         boolean justJumpedFromGround = wasGrounded && !grounded
                 && player.getDeltaMovement().y > TAKEOFF_JUMP_VERTICAL_SPEED
                 && !isInActiveWindCurrentColumn(player);
@@ -359,8 +604,7 @@ public class ClientGameEvents {
         trueSightCacheRange = -1;
     }
 
-    /** 真视研究 1:幻象类敌人每 6 秒短暂显出镜边微光。
-     *  只对客户端已同步实体打粒子,不携带机关答案或真假坐标数据。 */
+    /** 真视研究 1:幻象类敌人每 6 秒短暂显出镜边微光。 */
     private static void tickTrueSightIllusionPulse(LocalPlayer player) {
         if (!ClientAbilityCache.hasAbility(EchoAbilityType.TRUE_SIGHT_ECHO)
                 || !ClientConfig.ENABLE_ECHO_PARTICLES.get()) {
@@ -420,7 +664,7 @@ public class ClientGameEvents {
         if (bossMusic != null && !mc.getSoundManager().isActive(bossMusic)) {
             bossMusic = null;
         }
-        // 静默领域(沉默祭司):领域内音乐被刻意压低/掐断——表现与机制一致(10.4.2)
+
         if (--silenceDomainScanCooldown <= 0) {
             silenceDomainScanCooldown = 10;
             silenceDomainActive = !player.level().getEntitiesOfClass(
@@ -437,8 +681,7 @@ public class ClientGameEvents {
             return;
         }
         if (bossMusic != null) {
-            // Boss 战期间持续压制原版背景音乐:原版 MusicManager 会在战斗中随机插曲,
-            // 只在开播时停一次不够,必须每 tick 掐掉(无曲目播放时本调用是空操作)
+
             mc.getMusicManager().stopPlaying();
         }
         if (--bossMusicScanCooldown > 0 || bossMusic != null
@@ -479,7 +722,7 @@ public class ClientGameEvents {
         } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher) {
             startBossMusic(mc, new BossMusicSound(selected, ModSounds.ABYSS_WATCHER_MUSIC.get()));
         } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian) {
-            // 真假身份不同步客户端；假身不会活过真身，任一存活即可锚定 BGM。
+
             startBossMusic(mc, new BossMusicSound(selected, ModSounds.MIRROR_GUARDIAN_MUSIC.get()));
         }
     }
@@ -500,9 +743,15 @@ public class ClientGameEvents {
         ClientArtifactCache.clear();
         ClientJournalCache.clear();
         ClientTradeCache.clearSession();
+        ClientWorldEchoFlightCache.clear();
+        cn.kurt6.unknown_echoes.client.gui.EchoBossBarOverlay.clearCaches();
         usedDoubleJump = false;
         wasGrounded = true;
         glideTicks = 0;
+        worldEchoFlightActive = false;
+        worldEchoFlightToggleTicks = 0;
+        echoToolSkillKeyActive = false;
+        jumpPressCount = 0;
         bossMusic = null;
         bossMusicScanCooldown = 0;
         bossMusicDimension = null;

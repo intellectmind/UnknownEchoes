@@ -80,6 +80,18 @@
         "weight": 24,
         "minCount": 2,
         "maxCount": 5
+      },
+      {
+        "type": "unknown_echoes:echo_cuttlefish",
+        "weight": 26,
+        "minCount": 1,
+        "maxCount": 4
+      },
+      {
+        "type": "unknown_echoes:pearlback_ray",
+        "weight": 16,
+        "minCount": 1,
+        "maxCount": 2
       }
     ],
     "misc": []

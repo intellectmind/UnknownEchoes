@@ -3,8 +3,8 @@ package cn.kurt6.unknown_echoes.entity.boss;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
+import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -40,32 +40,25 @@ import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * 晶歌守谱者:晶歌大乐厅 Mini Boss(晶歌林地,设计文档 10.5 / 7.4 节奏谜题)。
- *
- * 机制(音柱节奏调音破防,设计红线 #4):
- * - 失衡破防:默认受护(未破防,伤害被压);只有完成"按序调音"进入失衡窗口才吃全额伤害。
- * - 节奏演示(Simon):守谱者按顺序逐根点亮场地音柱(CRYSTAL_SONG_CLUSTER,光束 + 升调编钟);
- *   玩家照演示顺序"调音"(右键音柱 / 谱杖音波命中音柱)复现;全对 → 失衡 8 秒 + 打断大音波;错 → 重演。
- *   顺序只存服务端字段,演示靠粒子表现(本就该被看见),不泄露隐藏数据。
- * - 音波环(soundwave):贴身扩散环 AoE,击退 + 低伤。
- * - 共振充能 → 大音波(charge → bigwave):长读条蓄力,完成调音(失衡)可打断;
- *   未被打断则轰出覆盖全场的大音波(重伤 + 减速)。
- * - 谱杖近战(attack):命中触发挥击。
- * 结算沿用 MiniBossEntity 个人首杀/重复发放(MiniBossRewardTable)。
- */
 public class CrystalSongkeeper extends MiniBossEntity {
     public static final ResourceLocation MINIBOSS_ID = UnknownEchoes.id("crystal_songkeeper");
     private static final int ARENA_RADIUS = 14;
     private static final int CHARGE_TICKS = 70;
-    /** 完成调音后的失衡窗口(tick,= 文档 7.4 的"失衡 8 秒")。 */
+    /** 完成调音后的失衡窗口（tick）。 */
     private static final int STAGGER_TICKS = 160;
+    /** 声波近身判定半径。演出环画在这个值上，改了要同步 castSoundwave 的两处引用。 */
+    private static final double SOUNDWAVE_RADIUS = 5.0D;
+    /** 蓄力汇聚环的起始半径。纯表现，与任何判定无关。 */
+    private static final double CHARGE_CONVERGE_RADIUS = 3.0D;
     /** 调音音柱搜索范围(覆盖整座大乐厅,半径 14)。 */
     private static final int PILLAR_SCAN_RADIUS = 14;
     private static final int PILLAR_SCAN_HEIGHT = 8;
     /** 节奏演示:单根亮持续 / 单步总时长(亮 + 间隔)。 */
     private static final int DEMO_LIT_TICKS = 14;
     private static final int DEMO_STEP_TICKS = 22;
+    /** 演示与输入回馈的光柱高度(格)。演示柱更高，让"听"和"答"能分辨。 */
+    private static final double DEMO_BEAM_HEIGHT = 5.0D;
+    private static final double INPUT_BEAM_HEIGHT = 2.9D;
     /** 序列长度:从场地音柱里取这么多步(不足则用实际数量)。 */
     private static final int SEQUENCE_LENGTH = 4;
     /** 调音生效范围:玩家右键/谱杖命中的音柱必须在守谱者这个范围内。 */
@@ -84,7 +77,6 @@ public class CrystalSongkeeper extends MiniBossEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    // 节奏谜题(Simon)状态:演示→复现→失衡。staggerTicks 入档,Simon 进度瞬态不入档。
     private enum TunePhase { IDLE, DEMO, INPUT }
     private TunePhase tunePhase = TunePhase.IDLE;
     private final java.util.List<BlockPos> orderedPillars = new java.util.ArrayList<>();
@@ -94,12 +86,12 @@ public class CrystalSongkeeper extends MiniBossEntity {
     private int inputProgress = 0;
     /** 音柱不足时的重扫退避(tick)。 */
     private int pillarRescanCooldown = 0;
-    private int staggerTicks = 0;           // >0 = 失衡窗口(可被全额伤害)
+    private int staggerTicks = 0;
 
     private int soundwaveCooldown = 100;
     private int chargeCooldown = 200;
     private int noteBoltCooldown = 50;
-    private int chargeTicks = 0;            // >0 = 正在蓄力大音波
+    private int chargeTicks = 0;
 
     public CrystalSongkeeper(EntityType<? extends Monster> type, Level level) {
         super(type, level, BossEvent.BossBarColor.PURPLE);
@@ -152,29 +144,32 @@ public class CrystalSongkeeper extends MiniBossEntity {
             return;
         }
         Vec3 core = this.position().add(0, 1.2, 0);
-        // 只引导本轮序列涉及的音柱(演示阶段已公开),野生晶簇不标记也不刷包
+        long age = level.getGameTime();
         for (int index : this.tuneSequence) {
             if (index < 0 || index >= this.orderedPillars.size()) {
                 continue;
             }
             Vec3 pillar = Vec3.atCenterOf(this.orderedPillars.get(index)).add(0, 0.7, 0);
-            BossFx.guidanceMarker(level, pillar, ParticleTypes.ENCHANT);
-            BossFx.guidanceLink(level, pillar, core, ParticleTypes.GLOW);
+            MiniBossFx.objectiveMarker(level, pillar, this.fxTheme(), age);
+            MiniBossFx.objectiveLink(level, pillar, core, this.fxTheme(), age);
         }
     }
 
     @Override
-    protected void grantSettlement(ServerPlayer player, boolean firstKill) {
-        MiniBossRewardTable.grantCrystalSongkeeper(this, player, firstKill);
+    protected void grantSettlement(boolean firstKill) {
+        MiniBossRewardTable.grantCrystalSongkeeper(this, firstKill);
     }
 
     @Override
     public void aiStep() {
         super.aiStep();
+        if (this.isSpawnerBindingPaused()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
-        // 失衡窗口倒计时:结束后重新受护
+
         if (this.staggerTicks > 0) {
             this.staggerTicks--;
             if (this.staggerTicks == 0) {
@@ -185,7 +180,6 @@ public class CrystalSongkeeper extends MiniBossEntity {
         if (this.chargeCooldown > 0) this.chargeCooldown--;
         if (this.noteBoltCooldown > 0) this.noteBoltCooldown--;
 
-        // 节奏谜题:未失衡时驱动"演示→复现"循环(失衡期间暂停)
         if (this.staggerTicks <= 0) {
             this.tickTuneTrial(serverLevel);
         }
@@ -199,7 +193,7 @@ public class CrystalSongkeeper extends MiniBossEntity {
         if (target == null || !target.isAlive()) {
             return;
         }
-        // 大音波只在未失衡时开始(失衡时把节奏让给玩家输出)
+
         if (this.chargeCooldown <= 0 && this.staggerTicks <= 0) {
             this.startCharge(serverLevel);
         } else if (this.soundwaveCooldown <= 0 && this.distanceToSqr(target) <= 100.0) {
@@ -209,29 +203,23 @@ public class CrystalSongkeeper extends MiniBossEntity {
         }
     }
 
-    /** 音符弹:远程直击,沿弹道铺音符轨迹,命中造成远程伤害 + 缓速(补齐守谱者的远程手段)。 */
     private void castNoteBolt(ServerLevel serverLevel, LivingEntity target) {
         this.noteBoltCooldown = 80;
         this.triggerAnim("attack_controller", "attack");
-        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_ATTACK.get(), 1.0F, 1.5F);
-        double ex = this.getX(), ey = this.getEyeY(), ez = this.getZ();
-        double tx = target.getX(), ty = target.getY() + target.getBbHeight() * 0.5, tz = target.getZ();
-        int steps = 14;
-        for (int i = 1; i <= steps; i++) {
-            double f = i / (double) steps;
-            serverLevel.sendParticles(ParticleTypes.NOTE,
-                    ex + (tx - ex) * f, ey + (ty - ey) * f, ez + (tz - ez) * f, 1, 0.05, 0.05, 0.05, 0.8);
-        }
+        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_NOTE_BOLT.get(), 1.0F, 1.0F);
+        Vec3 origin = this.position().add(0.0D, this.getEyeHeight(), 0.0D);
+        Vec3 waist = target.position().add(0.0D, target.getBbHeight() * 0.5D, 0.0D);
+        Vec3 delta = waist.subtract(origin);
+        MiniBossFx.pierceBeam(serverLevel, origin, delta, this.fxTheme(), delta.length());
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.6F;
-        target.hurt(this.damageSources().mobAttack(this), damage);
-        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0), this);
-        BossFx.sparkSpray(serverLevel, this.position().add(0, this.getEyeHeight(), 0),
-                target.position().subtract(this.position()), 6.0, ParticleTypes.END_ROD);
+        if (target.hurt(this.damageSources().mobAttack(this), damage)) {
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0), this);
+            MiniBossFx.hitMark(serverLevel, target, this.fxTheme());
+        }
+        BossFx.cinematicImpact(serverLevel, waist, 18.0D, 0.22F, 4,
+                this.combatImpactColor());
     }
 
-    // ---- 节奏谜题(Simon)----
-
-    /** 服务端 tick:场地内有玩家时跑"演示→复现"循环。 */
     private void tickTuneTrial(ServerLevel level) {
         if (this.tunePhase != TunePhase.IDLE && this.tickCount % 40 == 0 && !hasArenaPlayer(level)) {
             this.tunePhase = TunePhase.IDLE;
@@ -247,20 +235,23 @@ public class CrystalSongkeeper extends MiniBossEntity {
                 }
             }
             case DEMO -> tickDemo(level);
-            case INPUT -> markTunedPillars(level); // 已调对的音柱保持微光,提示进度
+            case INPUT -> markTunedPillars(level);
         }
     }
 
     private void startTuneRound(ServerLevel level) {
+        if (!isScanAreaLoaded(level, this.arenaAnchor(), PILLAR_SCAN_RADIUS)) {
+            return;
+        }
         java.util.List<BlockPos> pillars = scanPillars(level);
         if (pillars.size() < 2) {
-            // 音柱不足:退避,避免每秒重复上万方块扫描
+
             this.tunePhase = TunePhase.IDLE;
             this.pillarRescanCooldown = 600;
             return;
         }
         BlockPos center = this.blockPosition();
-        // 按绕守谱者的角度排序,演示顺时针可读
+
         pillars.sort(java.util.Comparator.comparingDouble(
                 p -> Math.atan2(p.getZ() - center.getZ(), p.getX() - center.getX())));
         this.orderedPillars.clear();
@@ -287,11 +278,10 @@ public class CrystalSongkeeper extends MiniBossEntity {
         }
         BlockPos pillar = this.orderedPillars.get(this.tuneSequence[this.demoStep]);
         if (this.demoTimer == 0) {
-            litBeam(level, pillar, ParticleTypes.END_ROD, 28);
-            this.playSound(ModSounds.CRYSTAL_SONGKEEPER_AMBIENT.get(), 1.0F, 0.7F + 0.12F * this.demoStep);
+            MiniBossFx.pillarBeam(level, pillarTop(pillar), this.fxTheme(), DEMO_BEAM_HEIGHT);
+            this.playSound(ModSounds.CRYSTAL_SONGKEEPER_TUNE_DEMO.get(), 1.0F, 0.7F + 0.12F * this.demoStep);
         } else if (this.demoTimer == DEMO_LIT_TICKS) {
-            level.sendParticles(ParticleTypes.GLOW,
-                    pillar.getX() + 0.5, pillar.getY() + 1.0, pillar.getZ() + 0.5, 2, 0.1, 0.1, 0.1, 0.0);
+            MiniBossFx.solvedMark(level, pillarTop(pillar), this.fxTheme());
         }
         if (++this.demoTimer >= DEMO_STEP_TICKS) {
             this.demoTimer = 0;
@@ -299,7 +289,6 @@ public class CrystalSongkeeper extends MiniBossEntity {
         }
     }
 
-    /** 玩家调音(右键音柱 / 谱杖音波命中音柱)时调用。 */
     public void onTonePillarClicked(BlockPos pos, ServerPlayer player) {
         if (this.level().isClientSide || this.staggerTicks > 0
                 || !(this.level() instanceof ServerLevel level)) {
@@ -307,7 +296,7 @@ public class CrystalSongkeeper extends MiniBossEntity {
         }
             BossNbtData.addParticipant(this.participants, player.getUUID());
         if (this.tunePhase != TunePhase.INPUT) {
-            // 还没到复现阶段:点柱即提示"先听演示"(IDLE + 有目标时顺便开一轮)
+
             if (this.tunePhase == TunePhase.IDLE && this.getTarget() != null) {
                 startTuneRound(level);
             }
@@ -321,16 +310,16 @@ public class CrystalSongkeeper extends MiniBossEntity {
         }
         if (idx == this.tuneSequence[this.inputProgress]) {
             this.inputProgress++;
-            litBeam(level, pos, ParticleTypes.NOTE, 16);
-            this.playSound(ModSounds.CRYSTAL_SONGKEEPER_AMBIENT.get(),
+            MiniBossFx.pillarBeam(level, pillarTop(pos), this.fxTheme(), INPUT_BEAM_HEIGHT);
+            this.playSound(ModSounds.CRYSTAL_SONGKEEPER_TUNE_INPUT.get(),
                     1.1F, 0.8F + 0.12F * this.inputProgress);
             if (this.inputProgress >= this.tuneSequence.length) {
                 enterStagger(level);
             }
         } else {
-            // 调错:重演
+
             this.inputProgress = 0;
-            this.playSound(ModSounds.CRYSTAL_SONGKEEPER_HURT.get(), 1.0F, 0.6F);
+            this.playSound(ModSounds.CRYSTAL_SONGKEEPER_TUNE_FAIL.get(), 1.0F, 1.0F);
             broadcastHint(level, "message.unknown_echoes.crystal_songkeeper.tune_wrong");
             this.demoStep = 0;
             this.demoTimer = 0;
@@ -338,49 +327,39 @@ public class CrystalSongkeeper extends MiniBossEntity {
         }
     }
 
-    /** 完成调音 → 失衡窗口(全额伤害)+ 打断大音波。 */
     private void enterStagger(ServerLevel level) {
         this.staggerTicks = STAGGER_TICKS;
         this.tunePhase = TunePhase.IDLE;
         this.inputProgress = 0;
-        this.chargeTicks = 0; // 打断大音波
-        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_HURT.get(), 1.4F, 1.3F);
-        BossFx.impactBurst(level, this.position().add(0, 1.2, 0), ParticleTypes.END_ROD);
+        this.chargeTicks = 0;
+        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_STAGGER.get(), 1.4F, 1.0F);
+        MiniBossFx.groundRing(level, this.position(), this.fxTheme(), SOUNDWAVE_RADIUS);
+        BossFx.cinematicImpact(level, this.position().add(0, 1.0, 0),
+                28.0D, 0.6F, 8, this.combatImpactColor());
         broadcastHint(level, "message.unknown_echoes.crystal_songkeeper.staggered");
     }
 
-    /** 复现阶段:已调对的音柱每 10 tick 冒一颗音符,提示当前进度。 */
     private void markTunedPillars(ServerLevel level) {
         if (this.tickCount % 10 != 0) {
             return;
         }
         for (int i = 0; i < this.inputProgress && i < this.tuneSequence.length; i++) {
             BlockPos pillar = this.orderedPillars.get(this.tuneSequence[i]);
-            level.sendParticles(ParticleTypes.NOTE,
-                    pillar.getX() + 0.5, pillar.getY() + 1.2, pillar.getZ() + 0.5, 1, 0.1, 0.1, 0.1, 0.6);
+            MiniBossFx.solvedMark(level, pillarTop(pillar), this.fxTheme());
         }
     }
 
-    /** 音柱发光:从柱顶向上打一道粒子光束,远处可读。 */
-    private void litBeam(ServerLevel level, BlockPos pillar,
-                         net.minecraft.core.particles.SimpleParticleType particle, int count) {
-        for (int i = 0; i < count; i++) {
-            level.sendParticles(particle,
-                    pillar.getX() + 0.5, pillar.getY() + 1.0 + i * 0.18, pillar.getZ() + 0.5,
-                    1, 0.06, 0.0, 0.06, 0.0);
-        }
-        level.sendParticles(ParticleTypes.GLOW,
-                pillar.getX() + 0.5, pillar.getY() + 1.0, pillar.getZ() + 0.5, 6, 0.2, 0.3, 0.2, 0.02);
+    /** 音柱顶面中心。演出一律从这里起算，不要各处自己拼 +0.5/+1.0。 */
+    private static Vec3 pillarTop(BlockPos pillar) {
+        return new Vec3(pillar.getX() + 0.5D, pillar.getY() + 1.0D, pillar.getZ() + 0.5D);
     }
 
     private boolean hasArenaPlayer(ServerLevel level) {
         double radius = settlementRadius();
-        for (ServerPlayer p : level.players()) {
-            if (!p.isSpectator() && p.isAlive() && p.distanceToSqr(this) <= radius * radius) {
-                return true;
-            }
-        }
-        return false;
+        return !level.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(radius),
+                player -> !player.isSpectator() && player.isAlive()
+                        && player.distanceToSqr(this) <= radius * radius).isEmpty();
     }
 
     private java.util.List<BlockPos> scanPillars(ServerLevel level) {
@@ -394,6 +373,10 @@ public class CrystalSongkeeper extends MiniBossEntity {
             }
         }
         return result;
+    }
+
+    private static boolean isScanAreaLoaded(ServerLevel level, BlockPos center, int radius) {
+        return LoadedAreaCheck.horizontalRadiusLoaded(level, center, radius);
     }
 
     /** 0..size-1 的乱序;演示会公开顺序,用实体随机即可。 */
@@ -411,78 +394,67 @@ public class CrystalSongkeeper extends MiniBossEntity {
         return arr;
     }
 
-    /** 音波环:贴身扩散环 AoE,击退 + 低伤。 */
     private void castSoundwave(ServerLevel serverLevel) {
         this.soundwaveCooldown = 140;
         this.triggerAnim("attack_controller", "soundwave");
-        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_ATTACK.get(), 1.3F, 0.9F);
+        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_WAVE.get(), 1.3F, 1.0F);
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.55F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                this.getBoundingBox().inflate(5.0, 2.0, 5.0),
+                this.getBoundingBox().inflate(SOUNDWAVE_RADIUS, 2.0, SOUNDWAVE_RADIUS),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            double dx = victim.getX() - this.getX();
-            double dz = victim.getZ() - this.getZ();
-            victim.knockback(0.6D, -dx, -dz);
-        }
-        for (int ring = 1; ring <= 5; ring++) {
-            for (int i = 0; i < 16; i++) {
-                double a = Math.PI * 2 * i / 16;
-                serverLevel.sendParticles(ParticleTypes.NOTE,
-                        this.getX() + Math.cos(a) * ring, this.getY() + 1.0, this.getZ() + Math.sin(a) * ring,
-                        1, 0.0, 0.0, 0.0, 1.0);
+            Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
+            if (away.lengthSqr() > SOUNDWAVE_RADIUS * SOUNDWAVE_RADIUS) {
+                continue;
+            }
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                double dx = victim.getX() - this.getX();
+                double dz = victim.getZ() - this.getZ();
+                victim.knockback(0.6D, -dx, -dz);
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
             }
         }
-        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.8, 0), 5.0, ParticleTypes.NOTE);
+        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), SOUNDWAVE_RADIUS);
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                24.0D, 0.42F, 6, this.combatImpactColor());
     }
 
-    /** 共振充能:开始蓄力大音波(可被敲音柱打断)。 */
     private void startCharge(ServerLevel serverLevel) {
         this.chargeTicks = CHARGE_TICKS;
         this.chargeCooldown = 360;
         this.triggerAnim("attack_controller", "charge");
-        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_AMBIENT.get(), 1.6F, 0.5F);
+        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_CHARGE.get(), 1.6F, 1.0F);
         this.broadcastHint(serverLevel, "message.unknown_echoes.crystal_songkeeper.charging");
     }
 
     private void tickCharge(ServerLevel serverLevel) {
-        // 充能演出:头顶共振音环聚拢
-        BossFx.chargeSpiral(serverLevel, this.position().add(0, 0.8, 0), this.tickCount, ParticleTypes.INSTANT_EFFECT);
-        double spin = this.chargeTicks * 0.3;
-        for (int i = 0; i < 8; i++) {
-            double a = spin + Math.PI * 2 * i / 8;
-            double r = 0.5 + 2.5 * this.chargeTicks / CHARGE_TICKS;
-            serverLevel.sendParticles(ParticleTypes.INSTANT_EFFECT,
-                    this.getX() + Math.cos(a) * r, this.getY() + 2.2, this.getZ() + Math.sin(a) * r,
-                    1, 0.0, 0.0, 0.0, 0.0);
-        }
-        // 完成调音(失衡)会直接清零 chargeTicks 打断;此处只推进读条
+        double progress = 1.0D - this.chargeTicks / (double) CHARGE_TICKS;
+        MiniBossFx.chargeConverge(serverLevel, this.position(), this.fxTheme(),
+                CHARGE_CONVERGE_RADIUS, progress);
         if (--this.chargeTicks <= 0) {
             this.castBigWave(serverLevel);
         }
     }
 
-    /** 大音波:覆盖全场的重伤波 + 减速。 */
     private void castBigWave(ServerLevel serverLevel) {
         this.triggerAnim("attack_controller", "bigwave");
-        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_ATTACK.get(), 2.0F, 0.6F);
+        this.playSound(ModSounds.CRYSTAL_SONGKEEPER_BIG_WAVE.get(), 2.0F, 1.0F);
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.1F;
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(ARENA_RADIUS, 4.0, ARENA_RADIUS),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
-            victim.hurt(this.damageSources().mobAttack(this), damage);
-            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1), this);
-        }
-        for (int ring = 1; ring <= ARENA_RADIUS; ring += 1) {
-            for (int i = 0; i < 24; i++) {
-                double a = Math.PI * 2 * i / 24;
-                serverLevel.sendParticles(ParticleTypes.SONIC_BOOM,
-                        this.getX() + Math.cos(a) * ring, this.getY() + 1.0, this.getZ() + Math.sin(a) * ring,
-                        0, 0.0, 0.0, 0.0, 0.0);
+            Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
+            if (away.lengthSqr() > ARENA_RADIUS * ARENA_RADIUS) {
+                continue;
+            }
+            if (victim.hurt(this.damageSources().mobAttack(this), damage)) {
+                victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1), this);
+                MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
             }
         }
-        BossFx.groundShockwave(serverLevel, this.position().add(0, 0.8, 0), 8.0, ParticleTypes.SONIC_BOOM);
-        BossFx.impactBurst(serverLevel, this.position().add(0, 1.2, 0), ParticleTypes.END_ROD);
+        // 环画在结算半径上：画小了玩家会站在环外仍然吃满伤害。
+        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), ARENA_RADIUS);
+        BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
+                36.0D, 0.86F, 11, this.combatImpactColor());
     }
 
     @Override
@@ -491,20 +463,16 @@ public class CrystalSongkeeper extends MiniBossEntity {
         if (hit && !this.level().isClientSide) {
             this.triggerAnim("attack_controller", "attack");
             this.playSound(ModSounds.CRYSTAL_SONGKEEPER_ATTACK.get(), 1.1F, 1.0F);
-            if (this.level() instanceof ServerLevel serverLevel) {
-                BossFx.impactBurst(serverLevel,
-                        target.position().add(0, target.getBbHeight() * 0.5, 0), ParticleTypes.NOTE);
-            }
         }
         return hit;
     }
 
     private void broadcastHint(ServerLevel serverLevel, String key) {
         double radius = settlementRadius();
-        for (ServerPlayer player : serverLevel.players()) {
-            if (player.distanceToSqr(this) <= radius * radius) {
-                player.displayClientMessage(Component.translatable(key), true);
-            }
+        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(radius),
+                candidate -> candidate.distanceToSqr(this) <= radius * radius)) {
+            player.displayClientMessage(Component.translatable(key), true);
         }
     }
 
@@ -535,6 +503,9 @@ public class CrystalSongkeeper extends MiniBossEntity {
         super.readAdditionalSaveData(tag);
         this.chargeTicks = BossNbtData.clampTimer(tag.getInt("ChargeTicks"), CHARGE_TICKS);
         this.staggerTicks = BossNbtData.clampTimer(tag.getInt("StaggerTicks"), STAGGER_TICKS);
+        if (this.staggerTicks > 0) {
+            this.chargeTicks = 0;
+        }
     }
 
     @Override

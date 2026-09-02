@@ -2,1330 +2,2648 @@
   "format_version": "1.21.11",
   "credit": "Made with Blockbench",
   "textures": {
-    "0": "unknown_echoes:block/mirror_stone_bricks",
-    "1": "unknown_echoes:block/tide_pillar",
-    "2": "unknown_echoes:block/sky_lamp_glass",
-    "particle": "unknown_echoes:block/mirror_stone_bricks"
+    "porcelain": "unknown_echoes:block/tide_pillar_porcelain",
+    "bronze": "unknown_echoes:block/tide_pillar_bronze",
+    "scale": "unknown_echoes:block/tide_pillar_scale",
+    "water": "unknown_echoes:block/tide_pillar_water",
+    "particle": "unknown_echoes:block/tide_pillar_porcelain"
   },
   "elements": [
     {
-      "name": "foot",
+      "name": "art_tide_gauge_foot",
       "from": [
-        2,
-        0,
-        2
+        2.0,
+        -0.5,
+        2.0
       ],
       "to": [
-        14,
-        2,
-        14
+        14.0,
+        1.0,
+        14.0
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            12,
-            2
+            2.0,
+            6.0,
+            14.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#bronze"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            12,
-            2
+            2.0,
+            6.0,
+            14.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#bronze"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            12,
-            2
+            2.0,
+            6.0,
+            14.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#bronze"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            12,
-            2
+            2.0,
+            6.0,
+            14.0,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#bronze"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            12,
-            12
+            2.0,
+            2.0,
+            14.0,
+            14.0
           ],
-          "texture": "#0"
+          "texture": "#bronze"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            12,
-            12
+            2.0,
+            2.0,
+            14.0,
+            14.0
           ],
-          "texture": "#0"
+          "texture": "#bronze",
+          "cullface": "down"
         }
       }
     },
     {
-      "name": "plinth",
+      "name": "art_tide_gauge_lower_plinth",
       "from": [
-        3,
-        2,
-        3
+        3.2,
+        0.7,
+        3.2
       ],
       "to": [
-        13,
-        4,
-        13
+        12.8,
+        2.4,
+        12.8
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            10,
-            2
+            3.2,
+            6.0,
+            12.8,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#porcelain"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            10,
-            2
+            3.2,
+            6.0,
+            12.8,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#porcelain"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            10,
-            2
+            3.2,
+            6.0,
+            12.8,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#porcelain"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            10,
-            2
+            3.2,
+            6.0,
+            12.8,
+            10.0
           ],
-          "texture": "#0"
+          "texture": "#porcelain"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            10,
-            10
+            3.2,
+            3.2,
+            12.8,
+            12.8
           ],
-          "texture": "#0"
+          "texture": "#porcelain"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            10,
-            10
+            3.2,
+            3.2,
+            12.8,
+            12.8
           ],
-          "texture": "#0"
+          "texture": "#porcelain"
         }
-      }
-    },
-    {
-      "name": "shaft",
-      "from": [
-        5,
-        4,
-        5
-      ],
-      "to": [
-        11,
-        13,
-        11
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            6,
-            9
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            6,
-            9
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            6,
-            9
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            6,
-            9
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            6,
-            6
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            6,
-            6
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "collar_lower",
-      "from": [
-        4,
-        5,
-        4
-      ],
-      "to": [
-        12,
-        6,
-        12
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            8,
-            8
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            8,
-            8
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "collar_upper",
-      "from": [
-        4,
-        11,
-        4
-      ],
-      "to": [
-        12,
-        12,
-        12
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            8,
-            1
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            8,
-            8
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            8,
-            8
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "cap",
-      "from": [
-        3.5,
-        13,
-        3.5
-      ],
-      "to": [
-        12.5,
-        14.5,
-        12.5
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            9,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            9,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            9,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            9,
-            1.5
-          ],
-          "texture": "#0"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            9,
-            9
-          ],
-          "texture": "#0"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            9,
-            9
-          ],
-          "texture": "#0"
-        }
-      }
-    },
-    {
-      "name": "current_spine",
-      "from": [
-        6,
-        4,
-        4.5
-      ],
-      "to": [
-        10,
-        13,
-        11.5
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4,
-            9
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            7,
-            9
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4,
-            9
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            7,
-            9
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4,
-            7
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4,
-            7
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "fin_n",
-      "from": [
-        6,
-        8.5,
-        2.5
-      ],
-      "to": [
-        10,
-        10.5,
-        6
-      ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          9.5,
-          6
-        ]
       },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4,
-            3.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "fin_s",
-      "from": [
-        6,
-        8.5,
-        10
-      ],
-      "to": [
-        10,
-        10.5,
-        13.5
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "x",
-        "origin": [
-          8,
-          9.5,
-          10
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            4,
-            3.5
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            4,
-            3.5
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "fin_w",
-      "from": [
-        2.5,
-        8.5,
-        6
-      ],
-      "to": [
-        6,
-        10.5,
-        10
-      ],
-      "rotation": {
-        "angle": -22.5,
-        "axis": "z",
-        "origin": [
-          6,
-          9.5,
-          8
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            4
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            4
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "fin_e",
-      "from": [
-        10,
-        8.5,
-        6
-      ],
-      "to": [
-        13.5,
-        10.5,
-        10
-      ],
-      "rotation": {
-        "angle": 22.5,
-        "axis": "z",
-        "origin": [
-          10,
-          9.5,
-          8
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            2
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            4,
-            2
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            4
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            3.5,
-            4
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "water_band",
-      "from": [
-        4.5,
-        7.25,
-        4.5
-      ],
-      "to": [
-        11.5,
-        8.25,
-        11.5
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            7,
-            1
-          ],
-          "texture": "#1"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            7,
-            1
-          ],
-          "texture": "#1"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            7,
-            1
-          ],
-          "texture": "#1"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            7,
-            1
-          ],
-          "texture": "#1"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            7,
-            7
-          ],
-          "texture": "#1"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            7,
-            7
-          ],
-          "texture": "#1"
-        }
-      }
-    },
-    {
-      "name": "tide_lamp",
-      "from": [
-        5.5,
-        13,
-        5.5
-      ],
-      "to": [
-        10.5,
-        16,
-        10.5
-      ],
       "rotation": {
         "angle": 45,
         "axis": "y",
         "origin": [
           8,
-          14.5,
+          1.5,
           8
         ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            5,
-            3
-          ],
-          "texture": "#2"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            5,
-            3
-          ],
-          "texture": "#2"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            5,
-            3
-          ],
-          "texture": "#2"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            5,
-            3
-          ],
-          "texture": "#2"
-        },
-        "up": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            5,
-            5
-          ],
-          "texture": "#2"
-        }
       }
     },
     {
-      "name": "water_axis",
+      "name": "art_tide_gauge_lower_collar",
       "from": [
-        7,
-        5,
-        7
+        4.2,
+        2.0,
+        4.2
       ],
       "to": [
-        9,
-        15,
-        9
+        11.8,
+        3.3,
+        11.8
       ],
+      "shade": true,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            2,
-            10
+            4.2,
+            6.0,
+            11.8,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#bronze"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            2,
-            10
+            4.2,
+            6.0,
+            11.8,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#bronze"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            2,
-            10
+            4.2,
+            6.0,
+            11.8,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#bronze"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            2,
-            10
+            4.2,
+            6.0,
+            11.8,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            4.2,
+            4.2,
+            11.8,
+            11.8
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            4.2,
+            4.2,
+            11.8,
+            11.8
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          2.6,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_shaft_low",
+      "from": [
+        5.1,
+        2.7,
+        5.1
+      ],
+      "to": [
+        10.9,
+        8.0,
+        10.9
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.1,
+            5.35,
+            10.9,
+            10.65
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            5.1,
+            5.35,
+            10.9,
+            10.65
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            5.1,
+            5.35,
+            10.9,
+            10.65
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            5.1,
+            5.35,
+            10.9,
+            10.65
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            5.1,
+            5.1,
+            10.9,
+            10.9
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            5.1,
+            5.1,
+            10.9,
+            10.9
+          ],
+          "texture": "#porcelain"
+        }
+      }
+    },
+    {
+      "name": "art_tide_gauge_shaft_mid",
+      "from": [
+        5.6,
+        7.6,
+        5.6
+      ],
+      "to": [
+        10.4,
+        13.0,
+        10.4
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.6,
+            5.3,
+            10.4,
+            10.7
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            5.6,
+            5.3,
+            10.4,
+            10.7
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            5.6,
+            5.3,
+            10.4,
+            10.7
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            5.6,
+            5.3,
+            10.4,
+            10.7
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            5.6,
+            5.6,
+            10.4,
+            10.4
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            5.6,
+            5.6,
+            10.4,
+            10.4
+          ],
+          "texture": "#porcelain"
+        }
+      }
+    },
+    {
+      "name": "art_tide_gauge_shaft_high",
+      "from": [
+        5.0,
+        12.5,
+        5.0
+      ],
+      "to": [
+        11.0,
+        17.0,
+        11.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.0,
+            5.75,
+            11.0,
+            10.25
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            5.0,
+            5.75,
+            11.0,
+            10.25
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            5.0,
+            5.75,
+            11.0,
+            10.25
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            5.0,
+            5.75,
+            11.0,
+            10.25
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            5.0,
+            5.0,
+            11.0,
+            11.0
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            5.0,
+            5.0,
+            11.0,
+            11.0
+          ],
+          "texture": "#porcelain"
+        }
+      }
+    },
+    {
+      "name": "art_tide_gauge_mid_collar",
+      "from": [
+        4.4,
+        7.3,
+        4.4
+      ],
+      "to": [
+        11.6,
+        8.7,
+        11.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            4.4,
+            6.0,
+            11.6,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            4.4,
+            4.4,
+            11.6,
+            11.6
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            4.4,
+            4.4,
+            11.6,
+            11.6
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_upper_collar",
+      "from": [
+        4.2,
+        12.1,
+        4.2
+      ],
+      "to": [
+        11.8,
+        13.5,
+        11.8
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            4.2,
+            6.0,
+            11.8,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            4.2,
+            4.2,
+            11.8,
+            11.8
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            4.2,
+            4.2,
+            11.8,
+            11.8
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          12.8,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_cap",
+      "from": [
+        3.9,
+        16.2,
+        3.9
+      ],
+      "to": [
+        12.1,
+        17.8,
+        12.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.9,
+            6.0,
+            12.1,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            3.9,
+            6.0,
+            12.1,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            3.9,
+            6.0,
+            12.1,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            3.9,
+            6.0,
+            12.1,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            3.9,
+            3.9,
+            12.1,
+            12.1
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            3.9,
+            3.9,
+            12.1,
+            12.1
+          ],
+          "texture": "#porcelain"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          17,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_beacon_pearl",
+      "from": [
+        6.4,
+        17.2,
+        6.4
+      ],
+      "to": [
+        9.6,
+        20.4,
+        9.6
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
         },
         "up": {
           "uv": [
             0,
             0,
-            2,
-            2
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#water"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            2,
-            2
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#water"
         }
+      },
+      "light_emission": 13,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          18.8,
+          8
+        ]
       }
     },
     {
-      "name": "lens_n",
+      "name": "art_tide_gauge_gauge_n",
       "from": [
-        7,
-        6.5,
+        6.0,
+        3.3,
         4.5
       ],
       "to": [
-        9,
-        8.5,
-        5.25
+        10.0,
+        16.1,
+        5.15
       ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
             0,
             0,
-            2,
-            2
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            1.6,
+            10.0,
+            14.4
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            2,
-            2
+            6.0,
+            1.6,
+            10.0,
+            14.4
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            1.6,
+            10.0,
+            14.4
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            2,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            2,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#scale"
         }
-      }
+      },
+      "light_emission": 4
     },
     {
-      "name": "lens_s",
+      "name": "art_tide_gauge_water_tube_n",
       "from": [
-        7,
-        6.5,
-        10.75
+        6.7,
+        3.6999999999999997,
+        4.3
       ],
       "to": [
-        9,
-        8.5,
+        9.3,
+        15.400000000000002,
+        5.3500000000000005
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#water"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        }
+      },
+      "light_emission": 8
+    },
+    {
+      "name": "art_tide_gauge_gauge_s",
+      "from": [
+        6.0,
+        3.3,
+        10.85
+      ],
+      "to": [
+        10.0,
+        16.1,
         11.5
       ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            2,
-            2
+            6.0,
+            1.6,
+            10.0,
+            14.4
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            1.6,
+            10.0,
+            14.4
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "south": {
           "uv": [
             0,
             0,
-            2,
-            2
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            1.6,
+            10.0,
+            14.4
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            2,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            2,
-            0.75
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#scale"
         }
-      }
+      },
+      "light_emission": 4
     },
     {
-      "name": "lens_w",
+      "name": "art_tide_gauge_water_tube_s",
       "from": [
-        4.5,
-        6.5,
-        7
+        6.7,
+        3.6999999999999997,
+        10.65
       ],
       "to": [
-        5.25,
-        8.5,
-        9
+        9.3,
+        15.400000000000002,
+        11.7
       ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            2.15,
+            10.0,
+            13.85
           ],
-          "texture": "#2"
+          "texture": "#water"
         },
         "east": {
           "uv": [
-            0,
-            0,
-            2,
-            2
+            6.0,
+            2.15,
+            10.0,
+            13.85
           ],
-          "texture": "#2"
+          "texture": "#water"
         },
         "south": {
           "uv": [
             0,
             0,
-            0.75,
-            2
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#water"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        }
+      },
+      "light_emission": 8
+    },
+    {
+      "name": "art_tide_gauge_gauge_w",
+      "from": [
+        4.5,
+        3.3,
+        6.0
+      ],
+      "to": [
+        5.15,
+        16.1,
+        10.0
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            1.6,
+            10.0,
+            14.4
+          ],
+          "texture": "#scale"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            1.6,
+            10.0,
+            14.4
+          ],
+          "texture": "#scale"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            1.6,
+            10.0,
+            14.4
+          ],
+          "texture": "#scale"
         },
         "west": {
           "uv": [
             0,
             0,
-            2,
-            2
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#scale"
         }
-      }
+      },
+      "light_emission": 4
     },
     {
-      "name": "lens_e",
+      "name": "art_tide_gauge_water_tube_w",
       "from": [
-        10.75,
-        6.5,
-        7
+        4.3,
+        3.6999999999999997,
+        6.7
+      ],
+      "to": [
+        5.3500000000000005,
+        15.400000000000002,
+        9.3
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#water"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        }
+      },
+      "light_emission": 8
+    },
+    {
+      "name": "art_tide_gauge_gauge_e",
+      "from": [
+        10.85,
+        3.3,
+        6.0
       ],
       "to": [
         11.5,
-        8.5,
-        9
+        16.1,
+        10.0
       ],
+      "shade": false,
       "faces": {
         "north": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            1.6,
+            10.0,
+            14.4
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "east": {
           "uv": [
             0,
             0,
-            2,
-            2
+            16,
+            16
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            1.6,
+            10.0,
+            14.4
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "west": {
           "uv": [
-            0,
-            0,
-            2,
-            2
+            6.0,
+            1.6,
+            10.0,
+            14.4
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#scale"
         },
         "down": {
           "uv": [
-            0,
-            0,
-            0.75,
-            2
+            6.0,
+            6.0,
+            10.0,
+            10.0
           ],
-          "texture": "#2"
+          "texture": "#scale"
         }
+      },
+      "light_emission": 4
+    },
+    {
+      "name": "art_tide_gauge_water_tube_e",
+      "from": [
+        10.65,
+        3.6999999999999997,
+        6.7
+      ],
+      "to": [
+        11.7,
+        15.400000000000002,
+        9.3
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#water"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            2.15,
+            10.0,
+            13.85
+          ],
+          "texture": "#water"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#water"
+        }
+      },
+      "light_emission": 8
+    },
+    {
+      "name": "art_tide_gauge_balance_fin_n",
+      "from": [
+        6.0,
+        8.1,
+        1.4
+      ],
+      "to": [
+        10.0,
+        8.9,
+        5.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.5,
+          5
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_fin_tip_n",
+      "from": [
+        6.55,
+        8.35,
+        1.95
+      ],
+      "to": [
+        9.45,
+        9.18,
+        4.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.5,
+          5
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_balance_fin_s",
+      "from": [
+        6.0,
+        8.1,
+        10.8
+      ],
+      "to": [
+        10.0,
+        8.9,
+        14.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.5,
+          11
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_fin_tip_s",
+      "from": [
+        6.55,
+        8.35,
+        11.350000000000001
+      ],
+      "to": [
+        9.45,
+        9.18,
+        14.049999999999999
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          8.5,
+          11
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_balance_fin_w",
+      "from": [
+        1.4,
+        8.1,
+        6.0
+      ],
+      "to": [
+        5.2,
+        8.9,
+        10.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5,
+          8.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_fin_tip_w",
+      "from": [
+        1.95,
+        8.35,
+        6.55
+      ],
+      "to": [
+        4.65,
+        9.18,
+        9.45
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          5,
+          8.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_balance_fin_e",
+      "from": [
+        10.8,
+        8.1,
+        6.0
+      ],
+      "to": [
+        14.6,
+        8.9,
+        10.0
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11,
+          8.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_fin_tip_e",
+      "from": [
+        11.350000000000001,
+        8.35,
+        6.55
+      ],
+      "to": [
+        14.049999999999999,
+        9.18,
+        9.45
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          11,
+          8.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_anchor_nw",
+      "from": [
+        3.1,
+        1.4,
+        3.1
+      ],
+      "to": [
+        5.7,
+        5.2,
+        5.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          4.4,
+          3.2,
+          4.4
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_anchor_cap_nw",
+      "from": [
+        3.45,
+        4.6,
+        3.45
+      ],
+      "to": [
+        5.35,
+        6.0,
+        5.35
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          4.4,
+          5.3,
+          4.4
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_anchor_ne",
+      "from": [
+        10.3,
+        1.4,
+        3.1
+      ],
+      "to": [
+        12.9,
+        5.2,
+        5.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          11.600000000000001,
+          3.2,
+          4.4
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_anchor_cap_ne",
+      "from": [
+        10.65,
+        4.6,
+        3.45
+      ],
+      "to": [
+        12.55,
+        6.0,
+        5.35
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          11.600000000000001,
+          5.3,
+          4.4
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_anchor_sw",
+      "from": [
+        3.1,
+        1.4,
+        10.3
+      ],
+      "to": [
+        5.7,
+        5.2,
+        12.9
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          4.4,
+          3.2,
+          11.600000000000001
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_anchor_cap_sw",
+      "from": [
+        3.45,
+        4.6,
+        10.65
+      ],
+      "to": [
+        5.35,
+        6.0,
+        12.55
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          4.4,
+          5.3,
+          11.600000000000001
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_anchor_se",
+      "from": [
+        10.3,
+        1.4,
+        10.3
+      ],
+      "to": [
+        12.9,
+        5.2,
+        12.9
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#bronze"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          11.600000000000001,
+          3.2,
+          11.600000000000001
+        ]
+      }
+    },
+    {
+      "name": "art_tide_gauge_anchor_cap_se",
+      "from": [
+        10.65,
+        4.6,
+        10.65
+      ],
+      "to": [
+        12.55,
+        6.0,
+        12.55
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#porcelain"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          11.600000000000001,
+          5.3,
+          11.600000000000001
+        ]
       }
     }
   ],
   "groups": [
     {
-      "name": "root",
+      "name": "art_tide_gauge",
       "origin": [
         8,
-        8,
+        0,
         8
       ],
       "scope": 0,
-      "color": 0,
-      "shade": false,
-      "children": []
-    },
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    17
+      "color": 1,
+      "children": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33
+      ]
+    }
   ]
 }

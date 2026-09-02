@@ -1,0 +1,706 @@
+{
+  "ambientocclusion": false,
+  "gui_light": "front",
+  "textures": {
+    "particle": "unknown_echoes:block/world_resonance_altar_alloy",
+    "alloy": "unknown_echoes:block/world_resonance_altar_alloy",
+    "rune": "unknown_echoes:block/world_resonance_altar_rune",
+    "core": "unknown_echoes:block/world_resonance_core",
+    "wind": "unknown_echoes:block/world_resonance_wind",
+    "tide": "unknown_echoes:block/world_resonance_tide",
+    "true_sight": "unknown_echoes:block/world_resonance_true_sight",
+    "gravity": "unknown_echoes:block/world_resonance_gravity",
+    "void": "unknown_echoes:block/world_resonance_void"
+  },
+  "elements": [
+    {
+      "name": "kinetic_wind_keel",
+      "from": [
+        7.62,
+        10.85,
+        -4.0
+      ],
+      "to": [
+        8.38,
+        18.2,
+        -2.0
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      }
+    },
+    {
+      "name": "kinetic_wind_keel_tip",
+      "from": [
+        7.82,
+        17.4,
+        -4.45
+      ],
+      "to": [
+        8.18,
+        21.0,
+        -1.55
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 13,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          17.8,
+          -3
+        ]
+      }
+    },
+    {
+      "name": "kinetic_wind_wing_w_outer",
+      "from": [
+        4.45,
+        11.75,
+        -3.65
+      ],
+      "to": [
+        5.55,
+        17.4,
+        -2.35
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          8,
+          11.75,
+          -3
+        ]
+      }
+    },
+    {
+      "name": "kinetic_wind_wing_w_inner",
+      "from": [
+        5.75,
+        12.05,
+        -3.55
+      ],
+      "to": [
+        6.65,
+        17.8,
+        -2.45
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 10,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          8,
+          12.05,
+          -3
+        ]
+      }
+    },
+    {
+      "name": "kinetic_wind_wing_e_inner",
+      "from": [
+        9.35,
+        12.05,
+        -3.55
+      ],
+      "to": [
+        10.25,
+        17.8,
+        -2.45
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 10,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          8,
+          12.05,
+          -3
+        ]
+      }
+    },
+    {
+      "name": "kinetic_wind_wing_e_outer",
+      "from": [
+        10.45,
+        11.75,
+        -3.65
+      ],
+      "to": [
+        11.55,
+        17.4,
+        -2.35
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 10,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          8,
+          11.75,
+          -3
+        ]
+      }
+    },
+    {
+      "name": "kinetic_wind_halo_w",
+      "from": [
+        4.8,
+        17.7,
+        -3.45
+      ],
+      "to": [
+        7.25,
+        18.3,
+        -2.55
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "light_emission": 8
+    },
+    {
+      "name": "kinetic_wind_halo_e",
+      "from": [
+        8.75,
+        17.7,
+        -3.45
+      ],
+      "to": [
+        11.2,
+        18.3,
+        -2.55
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#rune"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "light_emission": 8
+    },
+    {
+      "name": "kinetic_wind_needle",
+      "from": [
+        7.65,
+        18,
+        -3.35
+      ],
+      "to": [
+        8.35,
+        21.6,
+        -2.65
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#wind"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#alloy"
+        }
+      },
+      "shade": false,
+      "light_emission": 15,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          19.6,
+          -3
+        ]
+      }
+    }
+  ]
+}

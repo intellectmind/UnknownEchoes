@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.world.structure;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlockEntity;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModLootTables;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
 import com.mojang.serialization.MapCodec;
@@ -25,17 +26,11 @@ import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSeriali
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 沉默祭坛:失语沼泽区域守护者场地(V0.6A,设计文档 10.4.2 沉默祭司)。
- * 圆形苔石平台 + 中央祭坛高台 + 四角共鸣烛柱 + 残缺石环。
- * 共鸣烛是机制方块(战斗中打碎缩短静默领域),刻意可破坏;
- * 场地重开时由 MiniBossSpawnerBlockEntity 按登记位置补回。
- */
 public class SilentAltarStructure extends SinglePieceStructure {
     public static final MapCodec<SilentAltarStructure> CODEC = simpleCodec(SilentAltarStructure::new);
 
-    private static final int SIZE = 19;
-    private static final int HEIGHT = 8;
+    private static final int SIZE = 65;
+    private static final int HEIGHT = 40;
 
     public SilentAltarStructure(StructureSettings settings) {
         super(Piece::new, SIZE, SIZE, settings);
@@ -65,35 +60,57 @@ public class SilentAltarStructure extends SinglePieceStructure {
                 return;
             }
 
-            BlockState mossy = Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
-            BlockState bricks = Blocks.STONE_BRICKS.defaultBlockState();
-            BlockState chiseled = Blocks.CHISELED_STONE_BRICKS.defaultBlockState();
+            BlockState mossy = ModBlocks.ROOTBOUND_MUDSTONE.get().defaultBlockState();
+            BlockState bricks = ModBlocks.SILENT_MUDSTONE_BRICKS.get().defaultBlockState();
+            BlockState chiseled = ModBlocks.BOGLIGHT_STONE.get().defaultBlockState();
             BlockState moss = ModBlocks.MUFFLE_MOSS.get().defaultBlockState();
             BlockState candle = ModBlocks.RESONANCE_CANDLE.get().defaultBlockState();
-            int c = SIZE / 2; // 9
+            int c = SIZE / 2;
 
-            // 圆形平台(半径 8):苔石混杂,边缘大片噤声苔——沼泽里的一块"无声空地"
             for (int x = 0; x < SIZE; x++) {
                 for (int z = 0; z < SIZE; z++) {
                     int dx = x - c;
                     int dz = z - c;
                     int distSq = dx * dx + dz * dz;
-                    if (distSq <= 64) {
-                        BlockState floor = distSq >= 44 && random.nextFloat() < 0.5F ? moss
+                    if (distSq <= 900) {
+                        BlockState floor = distSq >= 784 && random.nextFloat() < 0.5F ? moss
                                 : (random.nextFloat() < 0.4F ? mossy : bricks);
                         this.placeBlock(level, floor, x, 0, z, box);
                     }
                 }
             }
 
-            // 中央祭坛高台:3x3 抬升一层 + 中心凿制祭坛(守护者出生于其上)
+            buildRibbedVaultHall(level, box, c, 1, c + 3, Footprint.of(16, 25), 13, 6, bricks, mossy, chiseled, chiseled);
+            buildTwinTowerFacade(level, box, c, 1, c - 27,
+                    22, 4, 28, bricks, chiseled, chiseled);
+            buildArcadedWing(level, box, c - 23, 1, c + 2, Footprint.of(7, 17), 11, 4, moss, bricks, mossy, chiseled);
+            buildArcadedWing(level, box, c + 23, 1, c + 2, Footprint.of(7, 17), 11, 4, moss, bricks, mossy, chiseled);
+            buildBossApse(level, box, c, 1, c + 24,
+                    Direction.SOUTH, 8, 12, bricks, mossy, chiseled, chiseled);
+            buildTieredTower(level, box, c - 24, 1, c + 18,
+                    5, 27, bricks, chiseled, chiseled);
+            // coreRadius=16 必须大于场地战斗半径 15,否则退台会收进走位区。
+            buildSteppedZiggurat(level, box, c, 1, c, 27, 3, 3, 16,
+                    bricks, mossy,
+                    ModBlocks.SILENT_MUDSTONE_BRICK_STAIRS.get().defaultBlockState(),
+                    ModBlocks.HUSH_LANTERN_GLASS.get().defaultBlockState());
+
+            // 肋拱厅的柱列会插进 15 格战斗半径,建筑摆完后统一清出净空。
+            clearArenaVolume(level, box, c, 1, c, 15, 1, 5);
+            buildBossArenaMandala(level, box, c, 0, c, 15,
+                    bricks, mossy, chiseled);
+
+            buildArenaLightRing(level, box, c, 3, c, 13, 12, 10, bricks, ModBlocks.HUSH_LANTERN_GLASS.get().defaultBlockState());
+            illuminateInterior(level, box, c, c + 3, 18, 14, 22, 6, ModBlocks.HUSH_LANTERN_GLASS.get().defaultBlockState());
+            buildStairCornice(level, box, c, 15, c + 3, Footprint.of(16, 25), ModBlocks.SILENT_MUDSTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.SILENT_MUDSTONE_BRICK_SLAB.get().defaultBlockState(), true);
+            buildParapet(level, box, c, 16, c + 3, Footprint.of(16, 25), 8, ModBlocks.SILENT_MUDSTONE_BRICK_WALL.get().defaultBlockState(), mossy);
+
             for (int x = c - 1; x <= c + 1; x++) {
                 for (int z = c - 1; z <= c + 1; z++) {
                     this.placeBlock(level, x == c && z == c ? chiseled : mossy, x, 1, z, box);
                 }
             }
 
-            // 四角共鸣烛柱:双层石柱 + 顶端共鸣烛(打碎缩短静默领域,可破坏不进保护)
             List<BlockPos> candlePositions = new ArrayList<>();
             for (int[] corner : new int[][]{{c - 5, c - 5}, {c + 5, c - 5}, {c - 5, c + 5}, {c + 5, c + 5}}) {
                 this.placeBlock(level, bricks, corner[0], 1, corner[1], box);
@@ -105,13 +122,12 @@ public class SilentAltarStructure extends SinglePieceStructure {
                         this.getWorldZ(corner[0], corner[1])));
             }
 
-            // 残缺石环:外圈零散立柱与断拱,给走位提供掩体但不封死场地
             for (int i = 0; i < 12; i++) {
                 double angle = Math.PI * 2 * i / 12;
                 int x = c + (int) Math.round(Math.cos(angle) * 7.5);
                 int z = c + (int) Math.round(Math.sin(angle) * 7.5);
                 if (Math.abs(x - c) == 5 && Math.abs(z - c) == 5) {
-                    continue; // 不挤占烛柱位
+                    continue;
                 }
                 if (random.nextFloat() < 0.6F) {
                     int height = 1 + random.nextInt(3);
@@ -121,7 +137,6 @@ public class SilentAltarStructure extends SinglePieceStructure {
                 }
             }
 
-            // 守护者场地计时器:埋在祭坛正下方;首次生成与击败后重开都由它驱动
             this.placeBlock(level, ModBlocks.MINIBOSS_SPAWNER.get().defaultBlockState(), c, 0, c, box);
             BlockPos spawnerPos = new BlockPos(this.getWorldX(c, c), this.getWorldY(0), this.getWorldZ(c, c));
             if (box.isInside(spawnerPos)
@@ -130,9 +145,27 @@ public class SilentAltarStructure extends SinglePieceStructure {
                 spawner.setResetBlocks(UnknownEchoes.id("resonance_candle"), candlePositions);
             }
 
-            // 重试入口与回访奖励:公共箱只放材料/补给,真视箱提供非主线回访价值。
             buildAccessibleChest(level, random, box, c, 1, c - 7, ModLootTables.T5_MINIBOSS_REPEAT);
             buildTrueSightVaultNiche(level, random, box, c + 6, 1, c + 2, Direction.WEST);
+
+            architecturalRing(level, box, c, 1, c, 29,
+                    ModBlocks.SILENT_MUDSTONE.get().defaultBlockState());
+            buildCircularColonnade(level, box, c, 1, c, 17, 16, 9,
+                    bricks, chiseled, mossy);
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                buildCardinalGateway(level, box, c, 1, c, 29, direction,
+                        3, 8, bricks, chiseled);
+            }
+            buildRuneCauseway(level, box, c, 0, c, Direction.NORTH,
+                    18, 31, 3, moss, mossy, chiseled);
+            scatterArchitecturalDebris(level, random, box, c, 1, c,
+                    24, 30, 52, mossy, ModBlocks.SILENT_MUDSTONE.get().defaultBlockState());
+
+            placeStructureSpawner(level, random, box, c - 10, 1, c - 9,
+                    ModEntities.SILENT_WALKER.get(), mossy, chiseled);
+
+            buildStepPathSanctum(level, random, box, c - 12, 1, c + 2, Direction.SOUTH,
+                    bricks, mossy, chiseled, ModLootTables.T3_PUZZLE);
         }
 
         @Override

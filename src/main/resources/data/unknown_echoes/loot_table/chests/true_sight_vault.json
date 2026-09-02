@@ -8,7 +8,7 @@
         {
           "type": "minecraft:item",
           "name": "unknown_echoes:true_sight_research_rubbing",
-          "weight": 6
+          "weight": 1
         },
         {
           "type": "minecraft:item",
@@ -19,6 +19,10 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:inscription_rubbing_paper",
           "weight": 2
+        },
+        {
+          "type": "minecraft:empty",
+          "weight": 5
         }
       ]
     },
@@ -226,7 +230,7 @@
       "conditions": [
         {
           "condition": "minecraft:random_chance",
-          "chance": 0.25
+          "chance": 0.125
         }
       ]
     },

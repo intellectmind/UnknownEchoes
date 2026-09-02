@@ -6,11 +6,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-/**
- * 客户端 → 服务端:风之回响空中动作(二段跳 / 滑翔开始 / 滑翔保持)。
- * 服务端校验能力后重置摔落距离并按 mode 播放对应音效;
- * mode 只区分表现,能力判定不变,伪造包最多白听一声风。
- */
+/** 客户端 → 服务端:风之回响空中动作(二段跳 / 滑翔开始 / 滑翔保持)。 */
 public record DoubleJumpPayload(byte mode) implements CustomPacketPayload {
 
     public static final byte MODE_JUMP = 0;

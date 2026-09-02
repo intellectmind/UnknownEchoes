@@ -8,12 +8,7 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
 
-/**
- * 套装件数判定(11.3):客户端可读自己的装备做提示/手感,实际效果全部由服务端事件层施加。
- * 实现约定(11.3 套装实现建议):穿戴件数触发;1 件=部位小属性(盔甲值自带),
- * 2/4 件=探索便利,4/4 件=主题强化;不做每 tick 高成本全局扫描——
- * 调用方一律在低频检查点(40 tick 周期 / 事件回调 / 滑翔包入口)取件数。
- */
+/** 套装件数判定:客户端可读自己的装备做提示/手感,实际效果全部由服务端事件层施加。 */
 public final class EchoArmorSets {
     private static final EquipmentSlot[] ARMOR_SLOTS = {
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
@@ -22,12 +17,10 @@ public final class EchoArmorSets {
     private EchoArmorSets() {
     }
 
-    /** 探索者套装件数(0-4)。 */
     public static int explorerPieces(Player player) {
         return countPieces(player, ModArmorMaterials.EXPLORER);
     }
 
-    /** 聆听者套装件数(0-4)。 */
     public static int listenerPieces(Player player) {
         return countPieces(player, ModArmorMaterials.LISTENER);
     }
@@ -68,6 +61,14 @@ public final class EchoArmorSets {
 
     public static int abyssWalkerPieces(Player player) {
         return countPieces(player, ModArmorMaterials.ABYSS_WALKER);
+    }
+
+    public static int resonatorPieces(Player player) {
+        return countPieces(player, ModArmorMaterials.RESONATOR);
+    }
+
+    public static boolean hasResonatorAbilityBonus(Player player) {
+        return resonatorPieces(player) >= 4;
     }
 
     private static int countPieces(Player player, Holder<ArmorMaterial> material) {

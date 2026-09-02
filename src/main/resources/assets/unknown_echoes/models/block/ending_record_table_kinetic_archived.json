@@ -1,0 +1,1792 @@
+{
+  "ambientocclusion": false,
+  "gui_light": "front",
+  "textures": {
+    "particle": "unknown_echoes:block/ending_record_table_alloy",
+    "alloy": "unknown_echoes:block/ending_record_table_alloy",
+    "gilt": "unknown_echoes:block/ending_record_table_gilt",
+    "script": "unknown_echoes:block/ending_record_table_script",
+    "flux": "unknown_echoes:block/ending_record_table_flux"
+  },
+  "elements": [
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_codex_body",
+      "from": [
+        3.0,
+        15.0,
+        4.1
+      ],
+      "to": [
+        13.0,
+        17.2,
+        11.9
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#script"
+        },
+        "east": {
+          "uv": [
+            4.1,
+            6.0,
+            11.9,
+            10.0
+          ],
+          "texture": "#script"
+        },
+        "south": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#script"
+        },
+        "west": {
+          "uv": [
+            4.1,
+            6.0,
+            11.9,
+            10.0
+          ],
+          "texture": "#script"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#script"
+        },
+        "down": {
+          "uv": [
+            3.0,
+            4.1,
+            13.0,
+            11.9
+          ],
+          "texture": "#script"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          15.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_codex_spine",
+      "from": [
+        7.25,
+        14.6,
+        3.7
+      ],
+      "to": [
+        8.75,
+        18.5,
+        12.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            3.7,
+            6.0,
+            12.3,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            3.7,
+            6.0,
+            12.3,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            3.7,
+            10.0,
+            12.3
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.7,
+            10.0,
+            12.3
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          15.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_codex_corner_nw",
+      "from": [
+        2.6,
+        15.0,
+        3.7
+      ],
+      "to": [
+        4.2,
+        17.8,
+        5.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          15.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_codex_corner_ne",
+      "from": [
+        11.8,
+        15.0,
+        3.7
+      ],
+      "to": [
+        13.4,
+        17.8,
+        5.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          15.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_codex_corner_sw",
+      "from": [
+        2.6,
+        15.0,
+        10.7
+      ],
+      "to": [
+        4.2,
+        17.8,
+        12.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          15.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_codex_corner_se",
+      "from": [
+        11.8,
+        15.0,
+        10.7
+      ],
+      "to": [
+        13.4,
+        17.8,
+        12.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          15.3,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_wing_w_inner",
+      "from": [
+        -1.8,
+        17.0,
+        6.8
+      ],
+      "to": [
+        3.0,
+        18.7,
+        9.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          2.8,
+          17.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_wing_w_outer",
+      "from": [
+        -5.0,
+        19.0,
+        6.9
+      ],
+      "to": [
+        0.5,
+        20.5,
+        9.1
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            5.25,
+            6.0,
+            10.75,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            5.25,
+            6.0,
+            10.75,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            5.25,
+            6.0,
+            10.75,
+            10.0
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          0.2,
+          19.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_wing_e_inner",
+      "from": [
+        13.0,
+        17.0,
+        6.8
+      ],
+      "to": [
+        17.8,
+        18.7,
+        9.2
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            5.6,
+            6.0,
+            10.4,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          13.2,
+          17.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_wing_e_outer",
+      "from": [
+        15.5,
+        19.0,
+        6.9
+      ],
+      "to": [
+        21.0,
+        20.5,
+        9.1
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            5.25,
+            6.0,
+            10.75,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            5.25,
+            6.0,
+            10.75,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            5.25,
+            6.0,
+            10.75,
+            10.0
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 12,
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          15.8,
+          19.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_memory_axis",
+      "from": [
+        7.35,
+        17.0,
+        7.35
+      ],
+      "to": [
+        8.65,
+        28.6,
+        8.65
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            2.2,
+            10.0,
+            13.8
+          ],
+          "texture": "#alloy"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            2.2,
+            10.0,
+            13.8
+          ],
+          "texture": "#alloy"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            2.2,
+            10.0,
+            13.8
+          ],
+          "texture": "#alloy"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            2.2,
+            10.0,
+            13.8
+          ],
+          "texture": "#alloy"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#alloy"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#alloy"
+        }
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_memory_prism",
+      "from": [
+        6.0,
+        20.0,
+        6.0
+      ],
+      "to": [
+        10.0,
+        24.0,
+        10.0
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 15,
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          22.0,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_prism_collar_low",
+      "from": [
+        5.3,
+        19.1,
+        5.3
+      ],
+      "to": [
+        10.7,
+        20.2,
+        10.7
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.3,
+            6.0,
+            10.7,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            5.3,
+            6.0,
+            10.7,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            5.3,
+            6.0,
+            10.7,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            5.3,
+            6.0,
+            10.7,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            5.3,
+            5.3,
+            10.7,
+            10.7
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            5.3,
+            5.3,
+            10.7,
+            10.7
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          19.7,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_prism_collar_high",
+      "from": [
+        5.7,
+        24.0,
+        5.7
+      ],
+      "to": [
+        10.3,
+        25.0,
+        10.3
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.7,
+            6.0,
+            10.3,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            5.7,
+            6.0,
+            10.3,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            5.7,
+            6.0,
+            10.3,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            5.7,
+            6.0,
+            10.3,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            5.7,
+            5.7,
+            10.3,
+            10.3
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            5.7,
+            5.7,
+            10.3,
+            10.3
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          24.5,
+          8
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_halo_n",
+      "from": [
+        3.0,
+        27.0,
+        2.5
+      ],
+      "to": [
+        13.0,
+        28.0,
+        3.8
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 13
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_halo_s",
+      "from": [
+        3.0,
+        27.0,
+        12.2
+      ],
+      "to": [
+        13.0,
+        28.0,
+        13.5
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            3.0,
+            6.0,
+            13.0,
+            10.0
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 13
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_halo_w",
+      "from": [
+        2.5,
+        27.0,
+        3.8
+      ],
+      "to": [
+        3.8,
+        28.0,
+        12.2
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            3.8,
+            6.0,
+            12.2,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.8,
+            10.0,
+            12.2
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 13
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_halo_e",
+      "from": [
+        12.2,
+        27.0,
+        3.8
+      ],
+      "to": [
+        13.5,
+        28.0,
+        12.2
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "west": {
+          "uv": [
+            3.8,
+            6.0,
+            12.2,
+            10.0
+          ],
+          "texture": "#flux"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#flux"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            3.8,
+            10.0,
+            12.2
+          ],
+          "texture": "#flux"
+        }
+      },
+      "light_emission": 13
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_halo_clasp_nw",
+      "from": [
+        2.4,
+        26.5,
+        2.4
+      ],
+      "to": [
+        4.1,
+        28.5,
+        4.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          3.25,
+          27.5,
+          3.25
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_halo_clasp_ne",
+      "from": [
+        11.9,
+        26.5,
+        2.4
+      ],
+      "to": [
+        13.6,
+        28.5,
+        4.1
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          12.75,
+          27.5,
+          3.25
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_halo_clasp_sw",
+      "from": [
+        2.4,
+        26.5,
+        11.9
+      ],
+      "to": [
+        4.1,
+        28.5,
+        13.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          3.25,
+          27.5,
+          12.75
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_halo_clasp_se",
+      "from": [
+        11.9,
+        26.5,
+        11.9
+      ],
+      "to": [
+        13.6,
+        28.5,
+        13.6
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "south": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "up": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        },
+        "down": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#gilt"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          12.75,
+          27.5,
+          12.75
+        ]
+      }
+    },
+    {
+      "name": "art_ending_record_table_final_archive_kinetic_archived_halo_crown",
+      "from": [
+        5.2,
+        29.0,
+        7.25
+      ],
+      "to": [
+        10.8,
+        30.3,
+        8.75
+      ],
+      "shade": true,
+      "faces": {
+        "north": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#script"
+        },
+        "east": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#script"
+        },
+        "south": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#script"
+        },
+        "west": {
+          "uv": [
+            6.0,
+            6.0,
+            10.0,
+            10.0
+          ],
+          "texture": "#script"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#script"
+        },
+        "down": {
+          "uv": [
+            5.2,
+            6.0,
+            10.8,
+            10.0
+          ],
+          "texture": "#script"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "y",
+        "origin": [
+          8,
+          29.65,
+          8
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "PPP",
+    "DDD",
+    "R R"
+  ],
+  "key": {
+    "P": { "item": "unknown_echoes:orrery_prism_core" },
+    "D": { "item": "unknown_echoes:deep_alloy_ingot" },
+    "R": { "item": "unknown_echoes:space_anchor_rod" }
+  },
+  "result": { "id": "unknown_echoes:orrery_calibrator" }
+}

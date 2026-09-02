@@ -2,6 +2,14 @@
   "replace": false,
   "values": [
     "unknown_echoes:explorer_leggings",
-    "unknown_echoes:listener_leggings"
+    "unknown_echoes:listener_leggings",
+    "unknown_echoes:echo_traveler_leggings",
+    "unknown_echoes:wind_walker_leggings",
+    "unknown_echoes:tide_stalker_leggings",
+    "unknown_echoes:true_sight_shadow_leggings",
+    "unknown_echoes:silent_watch_leggings",
+    "unknown_echoes:echo_oath_leggings",
+    "unknown_echoes:abyss_walker_leggings",
+    "unknown_echoes:resonator_leggings"
   ]
 }

@@ -1,11 +1,13 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.entity.boss.TideLanternKeeper;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
+import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
@@ -32,11 +34,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.UUID;
 
-/**
- * 水影:潮汐执灯者的灯光召唤物(V0.6C,设计文档 10.4.2)。
- * 小型水中添加物:追击被灯光标记的玩家;脱离执灯者(死亡/距离过远)或寿命耗尽后
- * 逐渐消散——不留尸潮、不掉落、无经验,场地重开时自然清理。
- */
+/** 水影:潮汐执灯者的灯光召唤物。 */
 public class TideWaterShade extends Monster implements GeoEntity {
 
     private static final RawAnimation SWIM_ANIM =
@@ -46,8 +44,8 @@ public class TideWaterShade extends Monster implements GeoEntity {
 
     /** 寿命:15 秒后自行消散。 */
     private static final int LIFESPAN_TICKS = 300;
-    /** 离执灯者多远算"脱离灯光范围"。 */
-    private static final double TETHER_RANGE = 24.0D;
+    /** 离执灯者多远算"脱离灯光范围"；Boss 侧用同一范围统计并清理所属水影。 */
+    public static final double OWNER_TETHER_RANGE = 24.0D;
 
     private UUID ownerUuid = null;
     private int lifeTicks = LIFESPAN_TICKS;
@@ -70,6 +68,10 @@ public class TideWaterShade extends Monster implements GeoEntity {
 
     public void bindOwner(TideLanternKeeper owner) {
         this.ownerUuid = owner.getUUID();
+    }
+
+    public boolean isOwnedBy(TideLanternKeeper owner) {
+        return owner != null && owner.getUUID().equals(this.ownerUuid);
     }
 
     /** 开始消散(执灯者死亡 / 寿命耗尽):短暂淡出后移除。 */
@@ -117,7 +119,7 @@ public class TideWaterShade extends Monster implements GeoEntity {
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
-        // 消散推进:墨影散成泡沫
+
         if (this.fadeTicks >= 0) {
             serverLevel.sendParticles(ParticleTypes.SQUID_INK,
                     this.getX(), this.getY() + 0.6, this.getZ(), 2, 0.2, 0.3, 0.2, 0.01);
@@ -130,16 +132,18 @@ public class TideWaterShade extends Monster implements GeoEntity {
             this.beginFade();
             return;
         }
-        // 脱离灯光范围后逐渐消散(10.4.2):锚定执灯者
+
         if (this.tickCount % 20 == 0) {
             TideLanternKeeper owner = this.findOwner(serverLevel);
-            if (owner == null || !owner.isAlive()
-                    || this.distanceToSqr(owner) > TETHER_RANGE * TETHER_RANGE) {
+            boolean ownerDefinitelyMissing = owner == null
+                    && (this.ownerUuid == null || this.isOwnerResolutionAreaLoaded(serverLevel));
+            if (ownerDefinitelyMissing || owner != null && (!owner.isAlive()
+                    || this.distanceToSqr(owner) > OWNER_TETHER_RANGE * OWNER_TETHER_RANGE)) {
                 this.beginFade();
             }
         }
         if (this.tickCount % 6 == 0) {
-            // 游动拖尾:细碎气泡(墨汁粒子是大块黑斑,只留给消散演出);上岸追击时回退水花
+
             serverLevel.sendParticles(
                     cn.kurt6.unknown_echoes.entity.boss.BossFx.waterBubbleOr(
                             serverLevel, this.position(), ParticleTypes.SPLASH),
@@ -152,6 +156,11 @@ public class TideWaterShade extends Monster implements GeoEntity {
             return null;
         }
         return level.getEntity(this.ownerUuid) instanceof TideLanternKeeper keeper ? keeper : null;
+    }
+
+    private boolean isOwnerResolutionAreaLoaded(ServerLevel level) {
+        return LoadedAreaCheck.horizontalRadiusLoaded(level, this.blockPosition(),
+                (int) Math.ceil(OWNER_TETHER_RANGE) + 2);
     }
 
     @Override
@@ -171,12 +180,12 @@ public class TideWaterShade extends Monster implements GeoEntity {
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.DROWNED_HURT_WATER;
+        return ModSounds.TIDE_WATER_SHADE_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.DROWNED_DEATH_WATER;
+        return ModSounds.TIDE_WATER_SHADE_DEATH.get();
     }
 
     @Override

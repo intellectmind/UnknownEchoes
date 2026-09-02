@@ -3,6 +3,9 @@
   "textures": {
     "1": "unknown_echoes:block/tide_rune_seat_off",
     "2": "unknown_echoes:block/tide_rune_seat_off",
-    "particle": "unknown_echoes:block/tide_rune_seat_off"
+    "particle": "unknown_echoes:block/tide_rune_seat_shell",
+    "3": "unknown_echoes:block/tide_rune_seat_inlay_off",
+    "4": "unknown_echoes:block/tide_rune_seat_gilt",
+    "5": "unknown_echoes:block/tide_rune_seat_pearl"
   }
 }

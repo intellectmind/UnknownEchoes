@@ -1,0 +1,13 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:sunken_temple", "weight": 1 },
+    { "structure": "unknown_echoes:mirror_temple", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 128,
+    "separation": 64,
+    "salt": 2038471194,
+    "frequency": 1.0
+  }
+}

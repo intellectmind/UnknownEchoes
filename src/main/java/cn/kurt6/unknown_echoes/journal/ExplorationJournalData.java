@@ -9,12 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * 玩家个人探索日志(Data Attachment 持久化,copyOnDeath)。
- * 自动记录:发现过的遗迹、击败过的回响生物、踏入过的回响群系、读过的远古残页。
- * Boss/能力/维度进度直接读 EchoAbilityData,不重复存。
- * 默认个人独立(设计红线 #3);团队共享留待配置系统扩展。
- */
 public class ExplorationJournalData {
     public static final int CURRENT_DATA_VERSION = 2;
     public static final int MAX_CLUES = 64;
@@ -43,8 +37,7 @@ public class ExplorationJournalData {
     private final Set<String> mobs = new HashSet<>();
     private final Set<String> biomes = new HashSet<>();
     private final Set<Integer> pages = new HashSet<>();
-    /** 探索线索(V0.6D,dataVersion 2):ExplorationClue 编码行,旧档缺失按无线索处理。
-     *  有序保留写入顺序,超出上限时由 JournalManager 淘汰最旧的已踏入线索。 */
+    /** 探索线索编码数据；缺失数据按无线索处理。 */
     private final List<String> clues = new ArrayList<>();
 
     public ExplorationJournalData() {
@@ -85,20 +78,60 @@ public class ExplorationJournalData {
         return structures;
     }
 
+    /** 记录结构发现，保持运行时写入与附件 Codec 上限一致。 */
+    public boolean addStructure(String structureId) {
+        return addResourceId(structures, structureId, MAX_DISCOVERIES);
+    }
+
     public Set<String> getMobs() {
         return mobs;
+    }
+
+    public boolean addMob(String mobId) {
+        return addResourceId(mobs, mobId, MAX_DISCOVERIES);
     }
 
     public Set<String> getBiomes() {
         return biomes;
     }
 
+    public boolean addBiome(String biomeId) {
+        return addResourceId(biomes, biomeId, MAX_DISCOVERIES);
+    }
+
     public Set<Integer> getPages() {
         return pages;
+    }
+
+    public boolean addPage(int pageId) {
+        if (pageId <= 0 || pageId > 10000 || pages.contains(pageId)
+                || pages.size() >= MAX_PAGES) {
+            return false;
+        }
+        return pages.add(pageId);
     }
 
     /** 探索线索原始行(编码格式见 ExplorationClue);读写统一走 JournalManager。 */
     public List<String> getClues() {
         return clues;
+    }
+
+    /** 线索编码必须满足附件单条字符串上限，避免运行时数据在保存时失败。 */
+    public boolean canStoreClue(String encodedClue) {
+        if (encodedClue == null || encodedClue.length() > MAX_CLUE_LENGTH) {
+            return false;
+        }
+        ExplorationClue clue = ExplorationClue.decode(encodedClue);
+        return clue != null && ResourceLocation.tryParse(clue.structureId()) != null
+                && ResourceLocation.tryParse(clue.dimension()) != null;
+    }
+
+    private static boolean addResourceId(Set<String> target, String id, int maxEntries) {
+        if (id == null || id.length() > MAX_ID_LENGTH
+                || ResourceLocation.tryParse(id) == null
+                || target.contains(id) || target.size() >= maxEntries) {
+            return false;
+        }
+        return target.add(id);
     }
 }

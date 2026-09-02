@@ -8,6 +8,9 @@
           "type": "minecraft:item",
           "name": "unknown_echoes:mirror_sand"
         }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
       ]
     }
   ]

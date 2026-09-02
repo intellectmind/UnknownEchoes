@@ -21,18 +21,13 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * 晶歌法杖:在通用近战基础上实现设计文档(重设计 §武器技能)规定的"音波远程"——
- * 右键发射一道瞬发音波,命中首个敌怪造成远程伤害 + 缓速,沿途音符轨迹与晶钟音。
- * 近战命中仍保留父类的减速+晶钟效果(CommonEvents 按 EchoMeleeWeaponItem 触发,子类同样命中)。
- *
- * 注:不绕过 Boss 破防/权限/机关(红线 §703)。音波命中晶歌音柱(CRYSTAL_SONG_CLUSTER)时,
- * 由就近的晶歌守谱者在服务端按节奏谜题判定"远程调音"(见 CrystalSongkeeper.onTonePillarClicked)。
- */
+/** 晶歌法杖：右键发射音波，命中首个敌怪造成远程伤害与缓速。 */
 public class CrystalSongStaffItem extends EchoMeleeWeaponItem implements WeaponSkill {
-    private static final int COOLDOWN_TICKS = 22;
+    private static final int COOLDOWN_TICKS = 40;
+    private static final int SECONDARY_COOLDOWN_TICKS = 220;
     private static final double RANGE = 14.0;
-    private static final float BOLT_DAMAGE = 5.0F;
+    private static final float BOLT_DAMAGE = 12.0F;
+    private static final float SECONDARY_DAMAGE = 11.0F;
 
     public CrystalSongStaffItem(double damage, double speed, String tooltipKey, Properties properties) {
         super(damage, speed, tooltipKey, properties);
@@ -49,12 +44,43 @@ public class CrystalSongStaffItem extends EchoMeleeWeaponItem implements WeaponS
 
     @Override
     public boolean activateSkill(ServerLevel level, ServerPlayer player, ItemStack stack, InteractionHand hand) {
-        if (player.getCooldowns().isOnCooldown(this)) {
+        if (!WeaponSkillSupport.begin(player,
+                "ue_weapon_skill_crystal_song_staff_primary_until", COOLDOWN_TICKS, 0)) {
             return false;
         }
-        player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
         fireSonicWave(level, player);
-        player.swing(hand, true);
+        WeaponSkillSupport.finish(player, stack, hand, 1);
+        return true;
+    }
+
+    @Override
+    public boolean hasSecondarySkill() {
+        return true;
+    }
+
+    @Override
+    public boolean activateSecondarySkill(ServerLevel level, ServerPlayer player,
+                                          ItemStack stack, InteractionHand hand) {
+        if (!WeaponSkillSupport.begin(player,
+                "ue_weapon_skill_crystal_song_staff_secondary_until", SECONDARY_COOLDOWN_TICKS, 0)) {
+            return false;
+        }
+        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 7.0D, 8)) {
+            if (!WeaponSkillSupport.hurt(player, target, SECONDARY_DAMAGE)) {
+                continue;
+            }
+            if (!isBoss(target)) {
+                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
+                        100, 1, true, false, true));
+                target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,
+                        60, 0, true, false, true));
+            }
+            WeaponFx.hitMark(level, target, WeaponFxTheme.CRYSTAL_SONG_STAFF);
+        }
+        WeaponFx.groundRing(level, player, WeaponFxTheme.CRYSTAL_SONG_STAFF, 7.0D);
+        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE,
+                SoundSource.PLAYERS, 1.1F, 0.8F);
+        WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
     }
 
@@ -67,7 +93,6 @@ public class CrystalSongStaffItem extends EchoMeleeWeaponItem implements WeaponS
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         double reach = block.getType() == HitResult.Type.MISS ? RANGE : eye.distanceTo(block.getLocation());
 
-        // 远程调音:音波命中晶歌音柱 → 就近守谱者按节奏谜题判定(实现文档 §7.4/§5.3 的"远程调音")
         if (block.getType() == HitResult.Type.BLOCK
                 && level.getBlockState(block.getBlockPos())
                         .is(cn.kurt6.unknown_echoes.registry.ModBlocks.CRYSTAL_SONG_CLUSTER.get())) {
@@ -81,18 +106,14 @@ public class CrystalSongStaffItem extends EchoMeleeWeaponItem implements WeaponS
             }
         }
 
-        // 音符轨迹
-        for (double d = 1.0; d <= reach; d += 0.6) {
-            Vec3 p = eye.add(dir.scale(d));
-            level.sendParticles(ParticleTypes.NOTE, p.x, p.y, p.z, 1, 0.06, 0.06, 0.06, 0.6);
-        }
+        WeaponFx.pierceBeam(level, player, WeaponFxTheme.CRYSTAL_SONG_STAFF, eye, dir, reach);
 
-        // 沿射线找最近的敌怪
         LivingEntity hit = null;
         double bestAlong = reach;
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
                 new AABB(eye, end).inflate(1.0),
-                e -> e != player && e.isAlive() && e instanceof Enemy)) {
+                e -> e != player && e.isAlive() && e instanceof Enemy
+                        && !e.isAlliedTo(player))) {
             Vec3 toEntity = entity.getBoundingBox().getCenter().subtract(eye);
             double along = toEntity.dot(dir);
             if (along < 0.5 || along > reach) {
@@ -110,13 +131,20 @@ public class CrystalSongStaffItem extends EchoMeleeWeaponItem implements WeaponS
         Vec3 impact = eye.add(dir.scale(Math.min(bestAlong, reach)));
         if (hit != null) {
             LivingEntity victim = hit;
-            // WeaponEffectGuard:避免远程音波再触发法杖自身的近战命中事件(递归)
+
+            boolean[] hurt = {false};
             WeaponEffectGuard.run(player,
-                    () -> victim.hurt(player.damageSources().playerAttack(player), BOLT_DAMAGE));
-            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50, 0, true, false, true));
+                    () -> hurt[0] = victim.hurt(
+                            player.damageSources().playerAttack(player), BOLT_DAMAGE));
+            if (hurt[0]) {
+                WeaponFx.hitMark(level, victim, WeaponFxTheme.CRYSTAL_SONG_STAFF);
+                if (!isBoss(victim)) {
+                    victim.addEffect(new MobEffectInstance(
+                            MobEffects.MOVEMENT_SLOWDOWN, 50, 0, true, false, true));
+                }
+            }
         }
         level.sendParticles(ParticleTypes.SONIC_BOOM, impact.x, impact.y, impact.z, 1, 0, 0, 0, 0);
-        level.sendParticles(ParticleTypes.NOTE, impact.x, impact.y, impact.z, 8, 0.3, 0.3, 0.3, 0.8);
         level.playSound(null, BlockPos.containing(impact),
                 SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, 1.0F, 1.5F);
     }

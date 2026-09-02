@@ -8,10 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 import java.util.List;
 
-/**
- * 服务端 → 客户端:下发迷途旅者交易表(已按玩家阶段过滤)并打开总览交易页。
- * 行格式 "costItem,costCount,resultItem,resultCount,usesLeft"(纯展示;成交校验在服务端)。
- */
+/** 服务端 → 客户端:下发迷途旅者交易表(已按玩家阶段过滤)并打开总览交易页。 */
 public record TradeListPayload(int entityId, List<String> trades) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<TradeListPayload> TYPE =

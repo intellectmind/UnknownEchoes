@@ -11,10 +11,6 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 
-/**
- * 回响套装的客户端厚甲模型。
- * 仍继承 HumanoidModel 以保留原版动作,但使用额外几何做外扩头盔、肩甲和分段腿甲。
- */
 public class EchoArmorModel<T extends LivingEntity> extends HumanoidModel<T> {
     private static final float TEXTURE_SCALE = 0.5F;
 

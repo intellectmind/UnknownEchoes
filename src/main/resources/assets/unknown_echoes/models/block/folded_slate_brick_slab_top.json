@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab_top",
+  "textures": {
+    "bottom": "unknown_echoes:block/folded_slate_bricks",
+    "top": "unknown_echoes:block/folded_slate_bricks",
+    "side": "unknown_echoes:block/folded_slate_bricks"
+  }
+}

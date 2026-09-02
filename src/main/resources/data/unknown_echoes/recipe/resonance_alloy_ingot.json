@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:deep_alloy_ingot" },
+    { "item": "unknown_echoes:deep_alloy_ingot" },
+    { "item": "unknown_echoes:world_echo_residue" },
+    { "tag": "unknown_echoes:resonance_catalysts" },
+    { "item": "unknown_echoes:void_rift_shard" }
+  ],
+  "result": { "id": "unknown_echoes:resonance_alloy_ingot", "count": 4 }
+}

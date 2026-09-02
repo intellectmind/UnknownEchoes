@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:hushed_cathedral",
+  "biomes": "#unknown_echoes:has_hushed_cathedral",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " A ",
+    "CSC",
+    " E "
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "S": {
+      "item": "minecraft:spyglass"
+    },
+    "E": {
+      "item": "unknown_echoes:echo_metal_ingot"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:realm_field_lens"
+  }
+}

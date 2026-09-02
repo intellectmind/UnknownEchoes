@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:echo_stone_brick_slab",
+    "unknown_echoes:echo_strata_brick_slab",
+    "unknown_echoes:songstone_brick_slab",
+    "unknown_echoes:ashen_bellstone_brick_slab",
+    "unknown_echoes:reef_limestone_brick_slab",
+    "unknown_echoes:silent_mudstone_brick_slab",
+    "unknown_echoes:mirror_stone_brick_slab",
+    "unknown_echoes:mirror_dust_brick_slab",
+    "unknown_echoes:folded_slate_brick_slab",
+    "unknown_echoes:gravity_shale_brick_slab",
+    "unknown_echoes:abyssal_stone_brick_slab",
+    "unknown_echoes:wind_etched_brick_slab",
+    "unknown_echoes:whispering_timber_slab"
+  ]
+}

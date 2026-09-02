@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "item": "unknown_echoes:whispering_timber_frame"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:whispering_timber_slab",
+    "count": 6
+  }
+}

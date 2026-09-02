@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:prism_dust_cluster" },
+    { "item": "unknown_echoes:prism_dust_cluster" },
+    { "item": "unknown_echoes:prism_dust_cluster" },
+    { "item": "unknown_echoes:prism_dust_cluster" }
+  ],
+  "result": {
+    "id": "unknown_echoes:illusion_dust"
+  }
+}

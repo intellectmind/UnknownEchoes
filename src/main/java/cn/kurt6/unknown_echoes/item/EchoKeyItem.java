@@ -14,10 +14,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.List;
 
-/**
- * 回声境域钥匙:用回响碎片与核心合成,消耗后唤醒残响信标。
- * 维度入口状态仍记录在玩家数据中,不是依赖物品携带的通行证。
- */
+/** 回声境域钥匙:用回响碎片与核心合成,消耗后唤醒残响信标。 */
 public class EchoKeyItem extends Item {
 
     public EchoKeyItem(Properties properties) {

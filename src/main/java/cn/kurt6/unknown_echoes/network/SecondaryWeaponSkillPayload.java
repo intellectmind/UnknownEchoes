@@ -6,7 +6,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-/** 客户端到服务端：使用独立可改键触发手持武器的副战技。 */
 public record SecondaryWeaponSkillPayload(byte hand) implements CustomPacketPayload {
     public static final byte HAND_MAIN = 0;
     public static final byte HAND_OFF = 1;

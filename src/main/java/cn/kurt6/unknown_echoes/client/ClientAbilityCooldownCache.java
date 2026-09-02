@@ -4,7 +4,6 @@ import cn.kurt6.unknown_echoes.network.AbilityCooldownSyncPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 
-/** 回响能力冷却的客户端只读表现缓存。 */
 public final class ClientAbilityCooldownCache {
     private static long gravityEnd;
     private static int gravityDuration;
@@ -46,7 +45,8 @@ public final class ClientAbilityCooldownCache {
         if (duration <= 0) {
             return 1.0F;
         }
-        long remaining = Math.max(0L, end - currentGameTime());
+        long now = currentGameTime();
+        long remaining = end > now ? end - now : 0L;
         return Mth.clamp(1.0F - (float) remaining / duration, 0.0F, 1.0F);
     }
 
@@ -55,7 +55,10 @@ public final class ClientAbilityCooldownCache {
         if (level == null) {
             return syncGameTime;
         }
-        return syncGameTime + Math.max(0L, level.getGameTime() - localGameTimeAtSync);
+        long base = Math.max(0L, syncGameTime);
+        long localNow = level.getGameTime();
+        long elapsed = localNow >= localGameTimeAtSync ? localNow - localGameTimeAtSync : 0L;
+        return base > Long.MAX_VALUE - elapsed ? Long.MAX_VALUE : base + elapsed;
     }
 
     public static void clear() {

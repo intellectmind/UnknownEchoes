@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.block.deep;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import cn.kurt6.unknown_echoes.block.beacon.DeepEchoTeleporter;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -95,9 +96,11 @@ public class DeepRouteNodeBlock extends Block {
         }
         EchoAbilityManager.syncToClient(serverPlayer);
         playFeedback((ServerLevel) level, pos, route, completedHall);
-        serverPlayer.displayClientMessage(Component.translatable(completedHall
-                ? "message.unknown_echoes.deep_route.hall_complete"
-                : "message.unknown_echoes.deep_route.completed_" + route.getSerializedName()), true);
+        if (completedHall) {
+            ModAdvancements.award(serverPlayer, ModAdvancements.FRACTURE_HALL);
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.deep_route.hall_complete"), true);
+        }
         return InteractionResult.CONSUME;
     }
 

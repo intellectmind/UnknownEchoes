@@ -16,7 +16,7 @@
     "background": "minecraft:textures/block/deepslate_tiles.png"
   },
   "criteria": {
-    "has_shard": {
+    "has_item": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [

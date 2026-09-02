@@ -25,9 +25,9 @@ import java.util.Arrays;
 import java.util.Collection;
 
 /**
- * /unknownechoes 命令:
- * journal —— 查看自己的探索日志(所有玩家可用)
- * ability grant|revoke|list、artifact grant、realm tp、deep tp —— 调试用(权限等级 2)
+ * /unknownechoes 命令。
+ * journal 所有玩家可用,查看自己的探索日志;
+ * ability grant|revoke|list、artifact grant、realm tp、deep tp 需要权限等级 2。
  */
 public class EchoCommands {
 

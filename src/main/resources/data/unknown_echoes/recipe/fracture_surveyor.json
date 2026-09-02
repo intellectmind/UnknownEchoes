@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "PIP",
+    "SCS",
+    " D "
+  ],
+  "key": {
+    "P": { "item": "unknown_echoes:polished_mirror_dust" },
+    "I": { "item": "unknown_echoes:illusion_prism" },
+    "S": { "item": "unknown_echoes:space_anchor_shard" },
+    "C": { "item": "minecraft:compass" },
+    "D": { "item": "unknown_echoes:deep_alloy_ingot" }
+  },
+  "result": { "id": "unknown_echoes:fracture_surveyor" }
+}

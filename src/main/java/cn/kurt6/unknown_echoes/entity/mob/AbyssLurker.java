@@ -1,7 +1,10 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
+import cn.kurt6.unknown_echoes.entity.ai.FlankTargetGoal;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -43,6 +46,7 @@ public class AbyssLurker extends Monster implements GeoEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private int pounceCooldown;
+    private boolean exposedToLight;
 
     public AbyssLurker(EntityType<? extends Monster> type, Level level) {
         super(type, level);
@@ -57,14 +61,17 @@ public class AbyssLurker extends Monster implements GeoEntity {
                 .add(Attributes.FOLLOW_RANGE, 26.0D);
     }
 
+    /** 战术 Goal 必须排在近战之前:MOVE 只能被更小的优先级数抢走,排在后面等于永不触发。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.15D, true));
-        this.goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 0.8D));
-        this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 10.0F));
-        this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.goalSelector.addGoal(1, new FlankTargetGoal(this, 1.2D));
+        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.15D, true));
+        this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 10.0F));
+        this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
+        this.targetSelector.addGoal(3, new AlertPackGoal(this, 12.0D));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true) {
             @Override
             public boolean canUse() {
@@ -86,20 +93,35 @@ public class AbyssLurker extends Monster implements GeoEntity {
         if (this.pounceCooldown > 0) {
             this.pounceCooldown--;
         }
-        if (!this.level().isClientSide && this.tickCount % 20 == 0
-                && this.level().getMaxLocalRawBrightness(this.blockPosition()) > 0) {
-            this.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
-                    30, 0, true, false, false));
+        if (!this.level().isClientSide) {
+            int brightness = this.level().getMaxLocalRawBrightness(this.blockPosition());
+            boolean nowExposed = brightness > 0;
+            if (nowExposed != this.exposedToLight) {
+                this.exposedToLight = nowExposed;
+                ServerLevel level = (ServerLevel) this.level();
+                level.sendParticles(nowExposed ? ParticleTypes.SMOKE : ParticleTypes.SCULK_SOUL,
+                        this.getX(), this.getY() + 0.35D, this.getZ(),
+                        nowExposed ? 12 : 8, 0.28D, 0.18D, 0.28D, 0.02D);
+                level.playSound(null, this.blockPosition(),
+                        nowExposed ? SoundEvents.AMETHYST_BLOCK_CHIME : SoundEvents.WARDEN_HEARTBEAT,
+                        SoundSource.HOSTILE, nowExposed ? 0.45F : 0.35F,
+                        nowExposed ? 1.7F : 0.65F);
+            }
+            if (this.tickCount % 20 == 0 && nowExposed) {
+                this.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
+                        30, 0, true, false, false));
+            }
         }
         if (this.level().isClientSide || this.pounceCooldown > 0 || !this.onGround()) {
             return;
         }
         LivingEntity target = this.getTarget();
-        if (target == null || !target.isAlive() || !this.getSensing().hasLineOfSight(target)) {
+        if (target == null || !target.isAlive()) {
             return;
         }
         double distanceSqr = this.distanceToSqr(target);
-        if (distanceSqr < 9.0D || distanceSqr > 64.0D) {
+        if (distanceSqr < 9.0D || distanceSqr > 64.0D
+                || !this.getSensing().hasLineOfSight(target)) {
             return;
         }
 
@@ -112,23 +134,23 @@ public class AbyssLurker extends Monster implements GeoEntity {
         level.sendParticles(ParticleTypes.SCULK_SOUL,
                 this.getX(), this.getY() + 0.2D, this.getZ(),
                 10, 0.35D, 0.1D, 0.35D, 0.02D);
-        level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_CHARGE,
-                SoundSource.HOSTILE, 0.65F, 1.6F);
+        level.playSound(null, this.blockPosition(), ModSounds.ABYSS_LURKER_POUNCE.get(),
+                SoundSource.HOSTILE, 0.65F, 1.0F);
     }
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.WARDEN_HEARTBEAT;
+        return ModSounds.ABYSS_LURKER_AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.WARDEN_HURT;
+        return ModSounds.ABYSS_LURKER_HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.WARDEN_DEATH;
+        return ModSounds.ABYSS_LURKER_DEATH.get();
     }
 
     @Override

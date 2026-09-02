@@ -10,9 +10,35 @@ final class EchoTooltips {
     }
 
     static void add(List<Component> tooltip, String key) {
+        add(tooltip, key, new Object[0]);
+    }
+
+    static void addWithSkillKeyOnly(List<Component> tooltip, String key) {
+        add(tooltip, key, Component.keybind("key.unknown_echoes.echo_tool_skill"));
+    }
+
+    static void addWithSkillKey(List<Component> tooltip, String key) {
+        add(tooltip, key, Component.keybind("key.unknown_echoes.echo_tool_skill"));
+    }
+
+    static void addRoleOnly(List<Component> tooltip, String key) {
         tooltip.add(Component.translatable("tooltip.unknown_echoes.tool." + key + ".role")
                 .withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.translatable("tooltip.unknown_echoes.tool." + key + ".trigger")
+    }
+
+    static void addTriggerOnly(List<Component> tooltip, String key) {
+        addTrigger(tooltip, key);
+    }
+
+    private static void add(List<Component> tooltip, String key, Object... triggerArgs) {
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.tool." + key + ".role")
+                .withStyle(ChatFormatting.AQUA));
+        addTrigger(tooltip, key, triggerArgs);
+    }
+
+    private static void addTrigger(List<Component> tooltip, String key, Object... triggerArgs) {
+        tooltip.add(Component.translatable(
+                        "tooltip.unknown_echoes.tool." + key + ".trigger", triggerArgs)
                 .withStyle(ChatFormatting.GRAY));
     }
 }

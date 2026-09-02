@@ -1,0 +1,12 @@
+{
+  "structures": [
+    { "structure": "unknown_echoes:weightless_orrery_court", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 56,
+    "separation": 20,
+    "salt": 726493851,
+    "frequency": 0.0
+  }
+}

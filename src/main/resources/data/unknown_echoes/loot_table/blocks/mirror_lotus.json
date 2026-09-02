@@ -6,8 +6,35 @@
       "bonus_rolls": 0,
       "entries": [
         {
-          "type": "minecraft:item",
-          "name": "unknown_echoes:mirror_lotus"
+          "type": "minecraft:alternatives",
+          "children": [
+            {
+              "type": "minecraft:item",
+              "name": "unknown_echoes:mirror_lotus",
+              "conditions": [
+                {
+                  "condition": "minecraft:match_tool",
+                  "predicate": {
+                    "items": ["minecraft:shears", "unknown_echoes:echo_shears"]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "unknown_echoes:mirror_lotus_root",
+              "functions": [
+                {
+                  "function": "minecraft:set_count",
+                  "count": {
+                    "type": "minecraft:uniform",
+                    "min": 1,
+                    "max": 2
+                  }
+                }
+              ]
+            }
+          ]
         }
       ],
       "conditions": [

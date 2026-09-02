@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "unknown_echoes:inverted_bow_limb" },
+    { "item": "unknown_echoes:inverted_bow_limb" }
+  ],
+  "result": {
+    "id": "unknown_echoes:deep_alloy_ingot"
+  }
+}

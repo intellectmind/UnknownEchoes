@@ -21,6 +21,7 @@ import cn.kurt6.unknown_echoes.world.structure.SpatialRiftStructure;
 import cn.kurt6.unknown_echoes.world.structure.SubmergedRecordRoomStructure;
 import cn.kurt6.unknown_echoes.world.structure.SunkenTempleStructure;
 import cn.kurt6.unknown_echoes.world.structure.TideLighthouseReefStructure;
+import cn.kurt6.unknown_echoes.world.structure.ThreeRealmLandmarkStructure;
 import cn.kurt6.unknown_echoes.world.structure.WindErodedTowerStructure;
 import cn.kurt6.unknown_echoes.world.structure.WorldWonderStructure;
 import net.minecraft.core.registries.Registries;
@@ -106,6 +107,46 @@ public class ModStructures {
     public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> SEVERED_ARCHIVE_VAULT =
             STRUCTURE_TYPES.register("severed_archive_vault",
                     () -> () -> DeepRegionStructure.SEVERED_ARCHIVE_VAULT_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> RESONANCE_FOUNDRY =
+            STRUCTURE_TYPES.register("resonance_foundry",
+                    () -> () -> DeepRegionStructure.RESONANCE_FOUNDRY_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> GRAVITY_CROWN_OBSERVATORY =
+            STRUCTURE_TYPES.register("gravity_crown_observatory",
+                    () -> () -> DeepRegionStructure.GRAVITY_CROWN_OBSERVATORY_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> VOIDSCAR_BASTION =
+            STRUCTURE_TYPES.register("voidscar_bastion",
+                    () -> () -> DeepRegionStructure.VOIDSCAR_BASTION_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> SHATTERED_CODEX_VAULT =
+            STRUCTURE_TYPES.register("shattered_codex_vault",
+                    () -> () -> DeepRegionStructure.SHATTERED_CODEX_VAULT_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> WEIGHTLESS_ORRERY_COURT =
+            STRUCTURE_TYPES.register("weightless_orrery_court",
+                    () -> () -> DeepRegionStructure.WEIGHTLESS_ORRERY_COURT_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> HUSHED_CATHEDRAL =
+            STRUCTURE_TYPES.register("hushed_cathedral",
+                    () -> () -> DeepRegionStructure.HUSHED_CATHEDRAL_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> RIFTGLASS_CITADEL =
+            STRUCTURE_TYPES.register("riftglass_citadel",
+                    () -> () -> DeepRegionStructure.RIFTGLASS_CITADEL_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> FOLDED_CELESTIAL_ARCHIVE =
+            STRUCTURE_TYPES.register("folded_celestial_archive",
+                    () -> () -> DeepRegionStructure.FOLDED_CELESTIAL_ARCHIVE_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> INVERTED_PENDULUM_PALACE =
+            STRUCTURE_TYPES.register("inverted_pendulum_palace",
+                    () -> () -> DeepRegionStructure.INVERTED_PENDULUM_PALACE_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<DeepRegionStructure>> RIFTWORN_MEMORIAL_COURT =
+            STRUCTURE_TYPES.register("riftworn_memorial_court",
+                    () -> () -> DeepRegionStructure.RIFTWORN_MEMORIAL_COURT_CODEC);
 
     public static final DeferredHolder<StructureType<?>, StructureType<RunePuzzleRoomStructure>> RUNE_PUZZLE_ROOM =
             STRUCTURE_TYPES.register("rune_puzzle_room", () -> () -> RunePuzzleRoomStructure.CODEC);
@@ -236,6 +277,30 @@ public class ModStructures {
     public static final DeferredHolder<StructureType<?>, StructureType<WorldWonderStructure>> BROKEN_BELL_TOWER =
             STRUCTURE_TYPES.register("broken_bell_tower", () -> () -> WorldWonderStructure.BROKEN_BELL_TOWER_CODEC);
 
+    public static final DeferredHolder<StructureType<?>, StructureType<ThreeRealmLandmarkStructure>>
+            FAR_ECHO_CARTOGRAPHY_COURT = STRUCTURE_TYPES.register("far_echo_cartography_court",
+                    () -> () -> ThreeRealmLandmarkStructure.FAR_ECHO_CARTOGRAPHY_COURT_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<ThreeRealmLandmarkStructure>>
+            CHORUS_CONFLUENCE_COURT = STRUCTURE_TYPES.register("chorus_confluence_court",
+                    () -> () -> ThreeRealmLandmarkStructure.CHORUS_CONFLUENCE_COURT_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<ThreeRealmLandmarkStructure>>
+            PALIMPSEST_ECOLOGY_DOME = STRUCTURE_TYPES.register("palimpsest_ecology_dome",
+                    () -> () -> ThreeRealmLandmarkStructure.PALIMPSEST_ECOLOGY_DOME_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<ThreeRealmLandmarkStructure>>
+            FAR_BELL_WAYFARER_HARBOR = STRUCTURE_TYPES.register("far_bell_wayfarer_harbor",
+                    () -> () -> ThreeRealmLandmarkStructure.FAR_BELL_WAYFARER_HARBOR_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<ThreeRealmLandmarkStructure>>
+            PRISMATIC_CANOPY_CONSERVATORY = STRUCTURE_TYPES.register("prismatic_canopy_conservatory",
+                    () -> () -> ThreeRealmLandmarkStructure.PRISMATIC_CANOPY_CONSERVATORY_CODEC);
+
+    public static final DeferredHolder<StructureType<?>, StructureType<ThreeRealmLandmarkStructure>>
+            INTERLAYER_EXPEDITION_RING = STRUCTURE_TYPES.register("interlayer_expedition_ring",
+                    () -> () -> ThreeRealmLandmarkStructure.INTERLAYER_EXPEDITION_RING_CODEC);
+
     public static final DeferredHolder<StructurePieceType, StructurePieceType> SMALL_ECHO_RUIN_PIECE =
             STRUCTURE_PIECE_TYPES.register("small_echo_ruin_piece",
                     () -> (StructurePieceType.ContextlessType) SmallEchoRuinStructure.Piece::new);
@@ -323,4 +388,8 @@ public class ModStructures {
     public static final DeferredHolder<StructurePieceType, StructurePieceType> REGION_SITE_PIECE =
             STRUCTURE_PIECE_TYPES.register("region_site_piece",
                     () -> (StructurePieceType.ContextlessType) RegionSiteStructure.Piece::new);
+
+    public static final DeferredHolder<StructurePieceType, StructurePieceType> THREE_REALM_LANDMARK_PIECE =
+            STRUCTURE_PIECE_TYPES.register("three_realm_landmark_piece",
+                    () -> (StructurePieceType.ContextlessType) ThreeRealmLandmarkStructure.Piece::new);
 }

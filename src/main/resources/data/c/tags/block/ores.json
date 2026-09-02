@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:sky_quartz_ore",
+    "unknown_echoes:echo_amber_ore",
+    "unknown_echoes:broken_bell_ore",
+    "unknown_echoes:tide_salt_ore"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "type": "unknown_echoes:gravity_crown_observatory",
+  "biomes": "#unknown_echoes:has_gravity_crown_observatory",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin"
+}

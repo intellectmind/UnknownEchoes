@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.client;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.item.ClueMapItem;
 import cn.kurt6.unknown_echoes.registry.ModDataComponents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -32,7 +33,8 @@ public class ClientTooltipEvents {
                     .withStyle(ChatFormatting.GRAY));
         }
         String clueStructure = event.getItemStack().get(ModDataComponents.CLUE_STRUCTURE.get());
-        if (clueStructure != null && !clueStructure.isBlank()) {
+        if (!(event.getItemStack().getItem() instanceof ClueMapItem)
+                && clueStructure != null && !clueStructure.isBlank()) {
             ResourceLocation structureId = ResourceLocation.tryParse(clueStructure);
             String path = structureId == null ? clueStructure : structureId.getPath();
             event.getToolTip().add(Component.translatable("tooltip.unknown_echoes.clue_map.target",
