@@ -1,6 +1,6 @@
 # 未知回响
 
-**其他语言版本: [English](README.md) ｜ [中文](README_zh.md)**
+**其他语言版本: [English](README.md) ｜ [中文](README_ZH.md)**
 
 **下载: [Modrinth](https://modrinth.com/mod/unknown-echoes) ｜ [Curseforge](https://www.curseforge.com/minecraft/mc-mods/unknown-echoes)**
 
