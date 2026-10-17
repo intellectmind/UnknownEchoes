@@ -1,6 +1,6 @@
 # Unknown Echoes
 
-**Other languages: [English](README.md) ｜ [中文](README_zh.md)**
+**Other languages: [English](README.md) ｜ [中文](README_ZH.md)**
 
 **Download: [Modrinth](https://modrinth.com/mod/unknown-echoes) ｜ [Curseforge](https://www.curseforge.com/minecraft/mc-mods/unknown-echoes)**
 
