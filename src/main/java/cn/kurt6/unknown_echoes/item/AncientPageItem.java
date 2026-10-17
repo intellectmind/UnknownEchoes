@@ -45,6 +45,9 @@ public class AncientPageItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+        if (!stack.is(this)) {
+            return InteractionResultHolder.fail(stack);
+        }
         if (level.isClientSide) {
 
             cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.openAncientPage(pageId(stack));
@@ -57,15 +60,16 @@ public class AncientPageItem extends Item {
                 return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
             }
             if (JournalManager.getData(serverPlayer).getPages().contains(id)) {
-                JournalManager.retryAllPagesReward(serverPlayer);
                 if (!serverPlayer.getAbilities().instabuild) {
                     recycleDuplicate(serverPlayer, stack);
                 }
+                JournalManager.retryAllPagesReward(serverPlayer);
             } else {
                 JournalManager.recordPage(serverPlayer, id);
             }
         }
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+        // 回收物可能已进入耗尽的手持槽，不能让原版再用旧空栈清掉它。
+        return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
     }
 
     private static void recycleDuplicate(ServerPlayer player, ItemStack pageStack) {

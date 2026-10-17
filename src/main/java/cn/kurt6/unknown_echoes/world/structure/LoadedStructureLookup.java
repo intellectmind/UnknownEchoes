@@ -11,7 +11,9 @@ import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructurePiece;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -22,6 +24,35 @@ public final class LoadedStructureLookup {
     private LoadedStructureLookup() {
     }
 
+    public record Site(Structure structure, BoundingBox bounds) { }
+
+    // 同一起点的本地区块和引用只记一次，返回实际几何快照而非玩家脚下坐标。
+    public static List<Site> sitesAt(ServerLevel level, BlockPos pos, Predicate<Structure> filter) {
+        LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        if (chunk == null) return List.of();
+        Set<StructureStart> seen = new HashSet<>();
+        List<Site> sites = new ArrayList<>();
+        for (var entry : chunk.getAllStarts().entrySet()) {
+            if (filter.test(entry.getKey())) {
+                addSite(sites, seen, entry.getKey(), entry.getValue(), pos);
+            }
+        }
+        for (var entry : chunk.getAllReferences().entrySet()) {
+            if (!filter.test(entry.getKey())) continue;
+            for (long reference : entry.getValue()) {
+                addSite(sites, seen, entry.getKey(), getLoadedStart(level, entry.getKey(), reference), pos);
+            }
+        }
+        return List.copyOf(sites);
+    }
+
+    private static void addSite(List<Site> sites, Set<StructureStart> seen, Structure structure,
+                                StructureStart start, BlockPos pos) {
+        if (start != null && seen.add(start) && containsPiece(start, pos)) {
+            sites.add(new Site(structure, currentBounds(start)));
+        }
+    }
+
     /** 返回包围盒实际包含目标位置的结构类型，不因查询加载新的起点区块。 */
     public static Set<Structure> structuresAt(ServerLevel level, BlockPos pos,
                                               Predicate<Structure> filter) {
@@ -30,11 +61,21 @@ public final class LoadedStructureLookup {
             return Set.of();
         }
 
+        var references = chunk.getAllReferences();
+        if (references.isEmpty() && chunk.getAllStarts().isEmpty()) {
+            return Set.of();
+        }
         Set<Structure> structures = new HashSet<>();
+        for (var entry : chunk.getAllStarts().entrySet()) {
+            StructureStart start = entry.getValue();
+            if (filter.test(entry.getKey()) && start != null && containsPiece(start, pos)) {
+                structures.add(entry.getKey());
+            }
+        }
         for (Map.Entry<Structure, it.unimi.dsi.fastutil.longs.LongSet> entry
-                : chunk.getAllReferences().entrySet()) {
+                : references.entrySet()) {
             Structure structure = entry.getKey();
-            if (!filter.test(structure)) {
+            if (structures.contains(structure) || !filter.test(structure)) {
                 continue;
             }
             for (long reference : entry.getValue()) {
@@ -61,8 +102,12 @@ public final class LoadedStructureLookup {
                 return start;
             }
         }
+        var references = chunk.getAllReferences();
+        if (references.isEmpty()) {
+            return null;
+        }
         for (Map.Entry<Structure, it.unimi.dsi.fastutil.longs.LongSet> entry
-                : chunk.getAllReferences().entrySet()) {
+                : references.entrySet()) {
             if (!filter.test(entry.getKey())) {
                 continue;
             }
@@ -83,9 +128,7 @@ public final class LoadedStructureLookup {
         if (start == null) {
             return null;
         }
-        return BoundingBox.encapsulatingBoxes(start.getPieces().stream()
-                .map(StructurePiece::getBoundingBox)
-                .toList()).orElse(null);
+        return currentBounds(start);
     }
 
     /**
@@ -99,8 +142,18 @@ public final class LoadedStructureLookup {
             return true;
         }
 
+        for (Map.Entry<Structure, StructureStart> entry : chunk.getAllStarts().entrySet()) {
+            if (filter.test(entry.getKey()) && containsCurrentBounds(entry.getValue(), pos)) {
+                return true;
+            }
+        }
+
+        var references = chunk.getAllReferences();
+        if (references.isEmpty()) {
+            return false;
+        }
         for (Map.Entry<Structure, it.unimi.dsi.fastutil.longs.LongSet> entry
-                : chunk.getAllReferences().entrySet()) {
+                : references.entrySet()) {
             Structure structure = entry.getKey();
             if (!filter.test(structure)) {
                 continue;
@@ -112,7 +165,7 @@ public final class LoadedStructureLookup {
                     return true;
                 }
                 StructureStart start = startChunk.getStartForStructure(structure);
-                if (start != null && start.isValid() && start.getBoundingBox().isInside(pos)) {
+                if (containsCurrentBounds(start, pos)) {
                     return true;
                 }
             }
@@ -120,30 +173,33 @@ public final class LoadedStructureLookup {
         return false;
     }
 
+    private static boolean containsCurrentBounds(StructureStart start, BlockPos pos) {
+        if (start == null || !start.isValid()) {
+            return false;
+        }
+        BoundingBox bounds = currentBounds(start);
+        return bounds != null && bounds.isInside(pos);
+    }
+
+    public static BoundingBox currentBounds(StructureStart start) {
+        BoundingBox bounds = null;
+        for (StructurePiece piece : start.getPieces()) {
+            BoundingBox next = piece.getBoundingBox();
+            if (bounds == null) {
+                bounds = new BoundingBox(next.minX(), next.minY(), next.minZ(),
+                        next.maxX(), next.maxY(), next.maxZ());
+            } else {
+                bounds.encapsulate(next);
+            }
+        }
+        return bounds;
+    }
+
     /** 等价于 StructureManager#getStructureWithPieceAt 的只读已加载区块版本。 */
     public static boolean hasStructurePieceAt(ServerLevel level, BlockPos pos,
                                                TagKey<Structure> tag) {
-        LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
-        if (chunk == null) {
-            return false;
-        }
-
         var registry = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
-        for (Map.Entry<Structure, it.unimi.dsi.fastutil.longs.LongSet> entry
-                : chunk.getAllReferences().entrySet()) {
-            Structure structure = entry.getKey();
-            if (!registry.wrapAsHolder(structure).is(tag)) {
-                continue;
-            }
-            for (long reference : entry.getValue()) {
-                StructureStart start = getLoadedStart(level, structure, reference);
-                if (start != null && start.getPieces().stream()
-                        .anyMatch(piece -> piece.getBoundingBox().isInside(pos))) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return loadedStructureStartAt(level, pos, structure -> registry.wrapAsHolder(structure).is(tag)) != null;
     }
 
     private static StructureStart getLoadedStart(ServerLevel level, Structure structure, long reference) {

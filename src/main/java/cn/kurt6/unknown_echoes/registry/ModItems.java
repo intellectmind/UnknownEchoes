@@ -12,6 +12,7 @@ import cn.kurt6.unknown_echoes.item.EchoRealmCoreItem;
 import cn.kurt6.unknown_echoes.item.EchoSetArmorItem;
 import cn.kurt6.unknown_echoes.item.EchoUtilityConsumableItem;
 import cn.kurt6.unknown_echoes.item.EquipmentBlueprintItem;
+import cn.kurt6.unknown_echoes.item.FieldTrickItem;
 import cn.kurt6.unknown_echoes.item.FractureSurveyorItem;
 import cn.kurt6.unknown_echoes.item.GenericArtifactItem;
 import cn.kurt6.unknown_echoes.item.HushedPilgrimageBellItem;
@@ -52,7 +53,6 @@ import cn.kurt6.unknown_echoes.item.weapon.TrueSightBladeItem;
 import cn.kurt6.unknown_echoes.item.weapon.WindSpearItem;
 import cn.kurt6.unknown_echoes.item.weapon.WorldEchoWeaponItem;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.food.FoodProperties;
@@ -61,18 +61,28 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.DiggerItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.MobBucketItem;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.ShearsItem;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.item.component.Unbreakable;
-import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(UnknownEchoes.MODID);
+
+    public static final DeferredItem<BlockItem> PARTICLE_ENCHANTING_TABLE = ITEMS.registerSimpleBlockItem("particle_enchanting_table", ModBlocks.PARTICLE_ENCHANTING_TABLE);
+    public static final DeferredItem<Item> PARTICLE_CORE = ITEMS.register("particle_core", () -> new Item(valuableProperties(Rarity.EPIC)));
+    public static final DeferredItem<Item> FIRE_PARTICLE_CRYSTAL = ITEMS.register("fire_particle_crystal", () -> new Item(valuableProperties(Rarity.RARE)));
+    public static final DeferredItem<Item> FROST_PARTICLE_CRYSTAL = ITEMS.register("frost_particle_crystal", () -> new Item(valuableProperties(Rarity.EPIC)));
+    public static final DeferredItem<Item> VENOM_PARTICLE_CRYSTAL = ITEMS.register("venom_particle_crystal", () -> new Item(valuableProperties(Rarity.RARE)));
+    public static final DeferredItem<Item> THUNDER_PARTICLE_CRYSTAL = ITEMS.register("thunder_particle_crystal", () -> new Item(valuableProperties(Rarity.EPIC)));
+    public static final DeferredItem<Item> VOID_PARTICLE_CRYSTAL = ITEMS.register("void_particle_crystal", () -> new Item(valuableProperties(Rarity.EPIC)));
+    public static final DeferredItem<Item> HOLY_PARTICLE_CRYSTAL = ITEMS.register("holy_particle_crystal", () -> new Item(valuableProperties(Rarity.EPIC)));
+    public static final DeferredItem<Item> SHADOW_PARTICLE_CRYSTAL = ITEMS.register("shadow_particle_crystal", () -> new Item(valuableProperties(Rarity.EPIC)));
+    public static final DeferredItem<Item> EARTH_PARTICLE_CRYSTAL = ITEMS.register("earth_particle_crystal", () -> new Item(valuableProperties(Rarity.RARE)));
+    public static final DeferredItem<Item> PURIFYING_VIAL = ITEMS.register("purifying_vial", () -> new Item(new Item.Properties().stacksTo(16)));
 
     public static final DeferredItem<Item> ECHO_SHARD = ITEMS.register("echo_shard",
             () -> new EchoMaterialItem("echo_shard", new Item.Properties().rarity(Rarity.UNCOMMON)));
@@ -120,6 +130,16 @@ public class ModItems {
     public static final DeferredItem<EchoUtilityConsumableItem> MEMORY_ECHO_STONE =
             ITEMS.register("memory_echo_stone", () -> new EchoUtilityConsumableItem("memory_echo_stone",
                     EchoUtilityConsumableItem.Kind.MEMORY_ECHO_STONE,
+                    new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+
+    public static final DeferredItem<FieldTrickItem> ECHO_DECOY = ITEMS.register("echo_decoy",
+            () -> new FieldTrickItem(FieldTrickItem.Kind.DECOY,
+                    new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<FieldTrickItem> CHIME_BURST = ITEMS.register("chime_burst",
+            () -> new FieldTrickItem(FieldTrickItem.Kind.BURST,
+                    new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<FieldTrickItem> SEEKER_SPORE = ITEMS.register("seeker_spore",
+            () -> new FieldTrickItem(FieldTrickItem.Kind.TRACE,
                     new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<EchoEnergyConsumableItem> FAINT_ECHO_CANDY =
@@ -434,7 +454,7 @@ public class ModItems {
                     new Item.Properties().stacksTo(1).durability(2600).rarity(Rarity.RARE).fireResistant()));
 
     public static final DeferredItem<TrueSightBladeItem> TRUE_SIGHT_BLADE =
-            ITEMS.register("true_sight_blade", () -> new TrueSightBladeItem(11.0, 2.2, 80,
+            ITEMS.register("true_sight_blade", () -> new TrueSightBladeItem(11.0, 2.0, 80,
                     6.5F, new Item.Properties().durability(2950).rarity(Rarity.RARE).fireResistant()));
 
     public static final DeferredItem<EchoMeleeWeaponItem> SILENCE_SCYTHE =
@@ -473,7 +493,7 @@ public class ModItems {
 
     public static final DeferredItem<DeepMeleeWeaponItem> RIFT_DAGGER =
             ITEMS.register("rift_dagger", () -> new DeepMeleeWeaponItem(
-                    DeepMeleeWeaponItem.Kind.RIFT_DAGGER, 18.0, 2.20, "rift_dagger",
+                    DeepMeleeWeaponItem.Kind.RIFT_DAGGER, 18.0, 2.0, "rift_dagger",
                     new Item.Properties().durability(4400).rarity(Rarity.EPIC).fireResistant()));
 
     public static final DeferredItem<DeepMeleeWeaponItem> ANCHOR_BLADE =
@@ -841,17 +861,8 @@ public class ModItems {
                     .effect(() -> new MobEffectInstance(MobEffects.DOLPHINS_GRACE, 300, 0), 1.0F)
                     .alwaysEdible().build())));
 
-    public static final DeferredItem<MobBucketItem> MIRROR_TAIL_FISH_BUCKET = ITEMS.register("mirror_tail_fish_bucket",
-            () -> new MobBucketItem(ModEntities.MIRROR_TAIL_FISH.get(), Fluids.WATER,
-                    SoundEvents.BUCKET_EMPTY_FISH, new Item.Properties().stacksTo(1)));
 
-    public static final DeferredItem<MobBucketItem> ECHO_CUTTLEFISH_BUCKET = ITEMS.register("echo_cuttlefish_bucket",
-            () -> new MobBucketItem(ModEntities.ECHO_CUTTLEFISH.get(), Fluids.WATER,
-                    SoundEvents.BUCKET_EMPTY_FISH, new Item.Properties().stacksTo(1)));
 
-    public static final DeferredItem<MobBucketItem> PEARLBACK_RAY_BUCKET = ITEMS.register("pearlback_ray_bucket",
-            () -> new MobBucketItem(ModEntities.PEARLBACK_RAY.get(), Fluids.WATER,
-                    SoundEvents.BUCKET_EMPTY_FISH, new Item.Properties().stacksTo(1)));
 
     public static final DeferredItem<EchoSetArmorItem> EXPLORER_HELMET = ITEMS.register("explorer_helmet",
             () -> new EchoSetArmorItem(ModArmorMaterials.EXPLORER, ArmorItem.Type.HELMET, "explorer",
@@ -1023,6 +1034,9 @@ public class ModItems {
     public static final DeferredItem<BlockItem> HIDDEN_RUNE_BRICKS = ITEMS.registerSimpleBlockItem("hidden_rune_bricks", ModBlocks.HIDDEN_RUNE_BRICKS);
     public static final DeferredItem<BlockItem> SEQUENCE_RUNE = ITEMS.registerSimpleBlockItem("sequence_rune", ModBlocks.SEQUENCE_RUNE);
     public static final DeferredItem<BlockItem> PUZZLE_CORE = ITEMS.registerSimpleBlockItem("puzzle_core", ModBlocks.PUZZLE_CORE);
+    public static final DeferredItem<BlockItem> WONDER_TRIAL = ITEMS.registerSimpleBlockItem("wonder_trial", ModBlocks.WONDER_TRIAL);
+    public static final DeferredItem<BlockItem> WONDER_PUZZLE_CORE = ITEMS.registerSimpleBlockItem("wonder_puzzle_core", ModBlocks.WONDER_PUZZLE_CORE);
+    public static final DeferredItem<BlockItem> WONDER_PUZZLE_DIAL = ITEMS.registerSimpleBlockItem("wonder_puzzle_dial", ModBlocks.WONDER_PUZZLE_DIAL);
     public static final DeferredItem<BlockItem> CHIME_ECHO_CORE = ITEMS.registerSimpleBlockItem("chime_echo_core", ModBlocks.CHIME_ECHO_CORE);
     public static final DeferredItem<BlockItem> FOLDPAGE_PAIR_CORE = ITEMS.registerSimpleBlockItem("foldpage_pair_core", ModBlocks.FOLDPAGE_PAIR_CORE);
     public static final DeferredItem<BlockItem> FOLDPAGE_TILE = ITEMS.registerSimpleBlockItem("foldpage_tile", ModBlocks.FOLDPAGE_TILE);
@@ -1185,6 +1199,14 @@ public class ModItems {
     public static final DeferredItem<BlockItem> WIND_ETCHED_BRICK_SLAB = ITEMS.registerSimpleBlockItem("wind_etched_brick_slab", ModBlocks.WIND_ETCHED_BRICK_SLAB);
     public static final DeferredItem<BlockItem> WIND_ETCHED_BRICK_WALL = ITEMS.registerSimpleBlockItem("wind_etched_brick_wall", ModBlocks.WIND_ETCHED_BRICK_WALL);
     public static final DeferredItem<BlockItem> WHISPERING_TIMBER_FRAME = ITEMS.registerSimpleBlockItem("whispering_timber_frame", ModBlocks.WHISPERING_TIMBER_FRAME);
+    public static final DeferredItem<BlockItem> TARRED_SHIP_PLANKS = ITEMS.registerSimpleBlockItem("tarred_ship_planks", ModBlocks.TARRED_SHIP_PLANKS);
+    public static final DeferredItem<BlockItem> SHIP_DECK_PLANKS = ITEMS.registerSimpleBlockItem("ship_deck_planks", ModBlocks.SHIP_DECK_PLANKS);
+    public static final DeferredItem<BlockItem> SHIP_TIMBER = ITEMS.registerSimpleBlockItem("ship_timber", ModBlocks.SHIP_TIMBER);
+    public static final DeferredItem<BlockItem> RIVETED_BRONZE_CASING = ITEMS.registerSimpleBlockItem("riveted_bronze_casing", ModBlocks.RIVETED_BRONZE_CASING);
+    public static final DeferredItem<BlockItem> WEATHERED_SAILCLOTH = ITEMS.registerSimpleBlockItem("weathered_sailcloth", ModBlocks.WEATHERED_SAILCLOTH);
+    public static final DeferredItem<BlockItem> IVORY_REEF_ASHLAR = ITEMS.registerSimpleBlockItem("ivory_reef_ashlar", ModBlocks.IVORY_REEF_ASHLAR);
+    public static final DeferredItem<BlockItem> CARVED_BELLSTONE = ITEMS.registerSimpleBlockItem("carved_bellstone", ModBlocks.CARVED_BELLSTONE);
+
     public static final DeferredItem<BlockItem> WHISPERING_TIMBER_STAIRS = ITEMS.registerSimpleBlockItem("whispering_timber_stairs", ModBlocks.WHISPERING_TIMBER_STAIRS);
     public static final DeferredItem<BlockItem> WHISPERING_TIMBER_SLAB = ITEMS.registerSimpleBlockItem("whispering_timber_slab", ModBlocks.WHISPERING_TIMBER_SLAB);
     public static final DeferredItem<BlockItem> WHISPERING_TIMBER_WALL = ITEMS.registerSimpleBlockItem("whispering_timber_wall", ModBlocks.WHISPERING_TIMBER_WALL);
@@ -1434,4 +1456,213 @@ public class ModItems {
                 .component(DataComponents.UNBREAKABLE, new Unbreakable(true))
                 .attributes(DiggerItem.createAttributes(DeepAlloyTier.INSTANCE, attackDamage, attackSpeed));
     }
+    public static final DeferredItem<BlockItem> WIND_ASHLAR = ITEMS.registerSimpleBlockItem("wind_ashlar", ModBlocks.WIND_ASHLAR);
+    public static final DeferredItem<BlockItem> WIND_CARVED_FRIEZE = ITEMS.registerSimpleBlockItem("wind_carved_frieze", ModBlocks.WIND_CARVED_FRIEZE);
+    public static final DeferredItem<BlockItem> WHISPERING_PANELLED_PLANKS = ITEMS.registerSimpleBlockItem("whispering_panelled_planks", ModBlocks.WHISPERING_PANELLED_PLANKS);
+    public static final DeferredItem<BlockItem> WHISPERING_CARVED_PANELS = ITEMS.registerSimpleBlockItem("whispering_carved_panels", ModBlocks.WHISPERING_CARVED_PANELS);
+    public static final DeferredItem<BlockItem> FOLDED_SLATE_TILES = ITEMS.registerSimpleBlockItem("folded_slate_tiles", ModBlocks.FOLDED_SLATE_TILES);
+    public static final DeferredItem<BlockItem> FOLDED_SLATE_RELIEF = ITEMS.registerSimpleBlockItem("folded_slate_relief", ModBlocks.FOLDED_SLATE_RELIEF);
+    public static final DeferredItem<DeferredSpawnEggItem> WIND_DRIFT_JELLY_SPAWN_EGG =
+            ITEMS.register("wind_drift_jelly_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.WIND_DRIFT_JELLY, 0xD9D4B4, 0x8AD8CC, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> REEDWING_DRAGONFLY_SPAWN_EGG =
+            ITEMS.register("reedwing_dragonfly_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.REEDWING_DRAGONFLY, 0x557A53, 0xD2B965, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> GALE_SHRIKE_SPAWN_EGG =
+            ITEMS.register("gale_shrike_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.GALE_SHRIKE, 0x3F5968, 0xD3B878, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> ASH_LANTERN_BAT_SPAWN_EGG =
+            ITEMS.register("ash_lantern_bat_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.ASH_LANTERN_BAT, 0x4C404F, 0xE79C56, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> PETALWING_BUTTERFLY_SPAWN_EGG =
+            ITEMS.register("petalwing_butterfly_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.PETALWING_BUTTERFLY, 0xCBA2C7, 0xE5CE7B, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> MOSSLIGHT_FIREFLY_SPAWN_EGG =
+            ITEMS.register("mosslight_firefly_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.MOSSLIGHT_FIREFLY, 0x38483C, 0xDDE991, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> BELL_NEEDLE_WASP_SPAWN_EGG =
+            ITEMS.register("bell_needle_wasp_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.BELL_NEEDLE_WASP, 0xB68A42, 0x3C3445, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> SHARDWING_SKATE_SPAWN_EGG =
+            ITEMS.register("shardwing_skate_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.SHARDWING_SKATE, 0x4C5379, 0x8DE1DA, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> SAILTAIL_MINNOW_SPAWN_EGG =
+            ITEMS.register("sailtail_minnow_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.SAILTAIL_MINNOW, 0x568893, 0xDBAC6A, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> MOSS_SAIL_SNAIL_SPAWN_EGG =
+            ITEMS.register("moss_sail_snail_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.MOSS_SAIL_SNAIL, 0x88644D, 0xA2BB6C, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> CRYSTAL_SPINE_URCHIN_SPAWN_EGG =
+            ITEMS.register("crystal_spine_urchin_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.CRYSTAL_SPINE_URCHIN, 0x5C4868, 0x8ED5D5, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> ASH_SAIL_SERPENT_SPAWN_EGG =
+            ITEMS.register("ash_sail_serpent_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.ASH_SAIL_SERPENT, 0x5C5360, 0xCB8A61, new Item.Properties()));
+
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> MOSSBACK_HEDGEHOG_SPAWN_EGG =
+            ITEMS.register("mossback_hedgehog_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.MOSSBACK_HEDGEHOG, 0x50694A, 0xB8BD8E, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> EMBERCLAW_SCORPION_SPAWN_EGG =
+            ITEMS.register("emberclaw_scorpion_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.EMBERCLAW_SCORPION, 0x645047, 0xEFA451, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> LANTERN_SEAHORSE_SPAWN_EGG =
+            ITEMS.register("lantern_seahorse_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.LANTERN_SEAHORSE, 0x427B83, 0xEFA451, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> REEFJAW_SHARK_SPAWN_EGG =
+            ITEMS.register("reefjaw_shark_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.REEFJAW_SHARK, 0x455E70, 0xCDD1BB, new Item.Properties()));
+
+
+
+
+    public static final DeferredItem<Item> WIND_DRIFT_JELLY_MEAT = ITEMS.register("wind_drift_jelly_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(1).saturationModifier(0.15F).build())));
+
+    public static final DeferredItem<Item> COOKED_WIND_DRIFT_JELLY_MEAT = ITEMS.register("cooked_wind_drift_jelly_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(3).saturationModifier(0.4F).build())));
+
+    public static final DeferredItem<Item> REEDWING_DRAGONFLY_MEAT = ITEMS.register("reedwing_dragonfly_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(2).saturationModifier(0.2F).build())));
+
+    public static final DeferredItem<Item> COOKED_REEDWING_DRAGONFLY_MEAT = ITEMS.register("cooked_reedwing_dragonfly_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(4).saturationModifier(0.5F).build())));
+
+    public static final DeferredItem<Item> PETALWING_BUTTERFLY_MEAT = ITEMS.register("petalwing_butterfly_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(1).saturationModifier(0.2F).build())));
+
+    public static final DeferredItem<Item> COOKED_PETALWING_BUTTERFLY_MEAT = ITEMS.register("cooked_petalwing_butterfly_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(3).saturationModifier(0.5F).build())));
+
+    public static final DeferredItem<Item> MOSSLIGHT_FIREFLY_MEAT = ITEMS.register("mosslight_firefly_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(1).saturationModifier(0.2F).build())));
+
+    public static final DeferredItem<Item> COOKED_MOSSLIGHT_FIREFLY_MEAT = ITEMS.register("cooked_mosslight_firefly_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(3).saturationModifier(0.5F).build())));
+
+    public static final DeferredItem<Item> SAILTAIL_MINNOW_MEAT = ITEMS.register("sailtail_minnow_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(2).saturationModifier(0.25F).build())));
+
+    public static final DeferredItem<Item> COOKED_SAILTAIL_MINNOW_MEAT = ITEMS.register("cooked_sailtail_minnow_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(5).saturationModifier(0.6F).build())));
+
+    public static final DeferredItem<Item> MOSS_SAIL_SNAIL_MEAT = ITEMS.register("moss_sail_snail_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(2).saturationModifier(0.2F).build())));
+
+    public static final DeferredItem<Item> COOKED_MOSS_SAIL_SNAIL_MEAT = ITEMS.register("cooked_moss_sail_snail_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(5).saturationModifier(0.5F).build())));
+
+    public static final DeferredItem<Item> MOSSBACK_HEDGEHOG_MEAT = ITEMS.register("mossback_hedgehog_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(3).saturationModifier(0.3F).build())));
+
+    public static final DeferredItem<Item> COOKED_MOSSBACK_HEDGEHOG_MEAT = ITEMS.register("cooked_mossback_hedgehog_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(6).saturationModifier(0.6F).build())));
+
+    public static final DeferredItem<Item> LANTERN_SEAHORSE_MEAT = ITEMS.register("lantern_seahorse_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(2).saturationModifier(0.25F).build())));
+
+    public static final DeferredItem<Item> COOKED_LANTERN_SEAHORSE_MEAT = ITEMS.register("cooked_lantern_seahorse_meat",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
+                    .nutrition(5).saturationModifier(0.6F).build())));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> SLATEHORN_BOAR_SPAWN_EGG =
+            ITEMS.register("slatehorn_boar_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.SLATEHORN_BOAR, 0x455E70, 0xC6A084, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> HOLLOW_REED_SERPENT_SPAWN_EGG =
+            ITEMS.register("hollow_reed_serpent_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.HOLLOW_REED_SERPENT, 0x50694A, 0xC2C5A0, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> RIFTFANG_EEL_SPAWN_EGG =
+            ITEMS.register("riftfang_eel_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.RIFTFANG_EEL, 0x263544, 0x7FB6B2, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> NEEDLEFIN_LIONFISH_SPAWN_EGG =
+            ITEMS.register("needlefin_lionfish_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.NEEDLEFIN_LIONFISH, 0x99755A, 0xE6DFB7, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> MOSSFANG_TOAD_SPAWN_EGG =
+            ITEMS.register("mossfang_toad_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.MOSSFANG_TOAD, 0x50694A, 0xEFA451, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> AMBERBACK_BEETLE_SPAWN_EGG =
+            ITEMS.register("amberback_beetle_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.AMBERBACK_BEETLE, 0x99755A, 0x427B83, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> LANTERNJAW_ANGLER_SPAWN_EGG =
+            ITEMS.register("lanternjaw_angler_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.LANTERNJAW_ANGLER, 0x455E70, 0xEFA451, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> SAWTOOTH_PRAWN_SPAWN_EGG =
+            ITEMS.register("sawtooth_prawn_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.SAWTOOTH_PRAWN, 0x99755A, 0x7FB6B2, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> REED_MASK_RAIDER_SPAWN_EGG =
+            ITEMS.register("reed_mask_raider_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.REED_MASK_RAIDER, 0x566547, 0xC0BD82, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> BROKEN_BELL_AXEMAN_SPAWN_EGG =
+            ITEMS.register("broken_bell_axeman_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.BROKEN_BELL_AXEMAN, 0xA17C4B, 0x4A7475, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> RIFT_PAGE_STALKER_SPAWN_EGG =
+            ITEMS.register("rift_page_stalker_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.RIFT_PAGE_STALKER, 0x5B4E69, 0xDBCFAC, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> MOSSPLATE_HOUND_SPAWN_EGG =
+            ITEMS.register("mossplate_hound_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.MOSSPLATE_HOUND, 0x344D3C, 0xC3CB9A, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> CAIRN_SHELL_BRUTE_SPAWN_EGG =
+            ITEMS.register("cairn_shell_brute_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.CAIRN_SHELL_BRUTE, 0x555660, 0xBEA16C, new Item.Properties()));
+
+
+    public static final DeferredItem<DeferredSpawnEggItem> SPORE_CROWNED_WRETCH_SPAWN_EGG =
+            ITEMS.register("spore_crowned_wretch_spawn_egg",
+                    () -> new DeferredSpawnEggItem(ModEntities.SPORE_CROWNED_WRETCH, 0x514F68, 0xD2BA86, new Item.Properties()));
+
 }

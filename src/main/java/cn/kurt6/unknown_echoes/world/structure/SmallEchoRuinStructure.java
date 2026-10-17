@@ -12,17 +12,17 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 主世界小型回响遗迹:回响石砖残垣 + 中央宝箱(回响碎片/低概率回响核心)+ 回响符文砖线索。 */
-public class SmallEchoRuinStructure extends SinglePieceStructure {
+public class SmallEchoRuinStructure extends TerrainAnchoredStructure {
     public static final MapCodec<SmallEchoRuinStructure> CODEC = simpleCodec(SmallEchoRuinStructure::new);
 
     private static final int WIDTH = 29;
@@ -112,6 +112,18 @@ public class SmallEchoRuinStructure extends SinglePieceStructure {
                         cracked, rune, lamp);
             }
 
+            // 断拱残门：东侧只保留一半拱肋，给小遗迹一个可识别的破损入口。
+            for (int y = 1; y <= 6; y++) {
+                this.placeBlock(level, y % 2 == 0 ? cracked : bricks, c + 11, y, c + 2, box);
+                if (y <= 4) {
+                    this.placeBlock(level, bricks, c + 13, y, c + 2, box);
+                }
+            }
+            for (int x = c + 11; x <= c + 13; x++) {
+                this.placeBlock(level, x == c + 12 ? rune : cracked, x, 7, c + 2, box);
+            }
+            this.placeBlock(level, lamp, c + 12, 8, c + 2, box);
+
             architecturalDisk(level, box, c, 2, c, 4, bricks);
             architecturalRing(level, box, c, 3, c, 3, rune);
             buildAccessibleChest(level, random, box, c, 3, c,
@@ -120,11 +132,22 @@ public class SmallEchoRuinStructure extends SinglePieceStructure {
                     ModLootTables.T1_BASIC);
             buildTrueSightVaultNiche(level, random, box,
                     c + 8, 2, c + 6, Direction.WEST);
-            scatterArchitecturalDebris(level, random, box, c, 1, c,
-                    8, 13, 28, cracked, mossy);
+            scatterArchitecturalDebris(level, box, "small_echo_ruin", c, 1, c,
+                    cracked, mossy);
 
             placeStructureSpawner(level, random, box, c + 5, 2, c - 9,
                     ModEntities.ECHO_REMNANT.get(), bricks, rune);
+            anchorGroundColumns(level, box, 0, mossy);
+            dressStructure(level, box, "small_echo_ruin");
+            buildGroundEntry(level, box);
+        }
+
+        private void buildGroundEntry(WorldGenLevel level, BoundingBox box) {
+            BlockState stairs = ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState()
+                    .setValue(StairBlock.FACING, Direction.NORTH);
+            for (int x = 17; x <= 18; x++) {
+                this.placeBlock(level, stairs, x, 1, 2, box);
+            }
         }
 
         @Override

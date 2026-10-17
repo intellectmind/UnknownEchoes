@@ -3,23 +3,33 @@
   "temperature": 0.85,
   "downfall": 0.05,
   "effects": {
-    "fog_color": 7232076,
-    "sky_color": 5918056,
-    "water_color": 4739152,
-    "water_fog_color": 2697776,
-    "grass_color": 7039048,
-    "foliage_color": 6250560,
+    "fog_color": 12888985,
+    "sky_color": 11441313,
+    "water_color": 8748680,
+    "water_fog_color": 4936534,
+    "grass_color": 10591100,
+    "foliage_color": 10591100,
     "ambient_particle": {
       "options": {
         "type": "minecraft:ash"
       },
-      "probability": 0.011
+      "probability": 0.003
     },
     "mood_sound": {
       "sound": "minecraft:ambient.cave",
-      "tick_delay": 6000,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.5
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.badlands",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": "minecraft:ambient.basalt_deltas.additions",
+      "tick_chance": 0.00035
     }
   },
   "carvers": {
@@ -42,7 +52,9 @@
       "unknown_echoes:wind_etched_stone_disk"
     ],
     [],
-    [],
+    [
+      "unknown_echoes:broken_bell_wastes_landform"
+    ],
     [
       "unknown_echoes:cinder_reed_patch",
       "unknown_echoes:clockwork_thistle_patch",
@@ -72,6 +84,48 @@
         "weight": 18,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:ash_lantern_bat",
+        "weight": 9,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:bell_needle_wasp",
+        "weight": 9,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:ash_sail_serpent",
+        "weight": 6,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:emberclaw_scorpion",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:slatehorn_boar",
+        "weight": 5,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:broken_bell_axeman",
+        "weight": 4,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:cairn_shell_brute",
+        "weight": 2,
+        "minCount": 1,
+        "maxCount": 1
       }
     ],
     "creature": [

@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.artifact.ArtifactManager;
 import cn.kurt6.unknown_echoes.item.tool.DeepAlloyTier;
 import cn.kurt6.unknown_echoes.registry.ModItems;
@@ -10,7 +11,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -133,8 +133,8 @@ public final class LandmarkWeaponItem extends EchoMeleeWeaponItem implements Wea
             WeaponFx.hitMark(level, target, fx);
         }
         WeaponFx.slashArc(level, player, fx, 12.0D, WeaponFx.halfAngleOf(0.45D));
-        level.playSound(null, player.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE,
-                SoundSource.PLAYERS, 0.9F, 1.35F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_PALIMPSEST_SABER_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void replayAnnotations(ServerLevel level, ServerPlayer player, long now) {
@@ -166,8 +166,8 @@ public final class LandmarkWeaponItem extends EchoMeleeWeaponItem implements Wea
             }
         }
         WeaponFx.groundRing(level, player, WeaponFxTheme.PALIMPSEST_SABER, 9.0D);
-        level.playSound(null, player.blockPosition(), SoundEvents.BOOK_PAGE_TURN,
-                SoundSource.PLAYERS, 1.2F, 0.7F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_PALIMPSEST_SABER_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private static void addAnnotationMark(LivingEntity target, ServerPlayer player,
@@ -269,8 +269,8 @@ public final class LandmarkWeaponItem extends EchoMeleeWeaponItem implements Wea
                 direction.z * 1.15D);
         player.hurtMarked = true;
         player.fallDistance = 0.0F;
-        level.playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW.value(),
-                SoundSource.PLAYERS, 1.0F, 1.15F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ORRERY_LANCE_PRIMARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void suspendOrbit(ServerLevel level, ServerPlayer player) {
@@ -301,8 +301,8 @@ public final class LandmarkWeaponItem extends EchoMeleeWeaponItem implements Wea
         player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING,
                 100, 0, true, false, true));
         WeaponFx.groundRing(level, player, WeaponFxTheme.ORRERY_LANCE, 9.0D);
-        level.playSound(null, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT,
-                SoundSource.PLAYERS, 1.15F, 0.75F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ORRERY_LANCE_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private static List<LivingEntity> coneTargets(ServerLevel level, ServerPlayer player,

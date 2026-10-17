@@ -1,18 +1,18 @@
 package cn.kurt6.unknown_echoes.block.deep;
 
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
+import cn.kurt6.unknown_echoes.fx.ProgressionFx;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.block.beacon.DeepEchoTeleporter;
-import cn.kurt6.unknown_echoes.entity.boss.BossFx;
 import cn.kurt6.unknown_echoes.entity.boss.VoidProphet;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionResult;
@@ -28,6 +28,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+
+import java.util.function.BooleanSupplier;
 
 /** 校准大厅的三能力节点。完成状态按玩家与结构坐标分别持久化。 */
 public class DeepCalibrationNodeBlock extends Block {
@@ -65,7 +67,9 @@ public class DeepCalibrationNodeBlock extends Block {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(player instanceof ServerPlayer serverPlayer) || serverPlayer.isSpectator()) {
+        if (!(level instanceof ServerLevel serverLevel)
+                || !(player instanceof ServerPlayer serverPlayer)
+                || !isCurrentInteraction(serverLevel, pos, state, serverPlayer)) {
             return InteractionResult.CONSUME;
         }
         if (!level.dimension().equals(DeepEchoTeleporter.DEEP_ECHOES)) {
@@ -92,6 +96,10 @@ public class DeepCalibrationNodeBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
+        BooleanSupplier current = () -> isCurrentInteraction(serverLevel, pos, state, serverPlayer)
+                && EchoPermission.canEnterDeepEchoes(serverPlayer)
+                && DeepRouteNodeBlock.hasCompletedHall(serverPlayer)
+                && EchoAbilityManager.hasAbility(serverPlayer, calibration.ability);
         BlockPos corePos = GravityCoreAltarBlock.findCoreNear(level, pos);
         if (corePos == null) {
             serverPlayer.displayClientMessage(Component.translatable(
@@ -99,10 +107,16 @@ public class DeepCalibrationNodeBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
+        if (!current.getAsBoolean()) {
+            return InteractionResult.CONSUME;
+        }
         String key = mechanismKey(level, pos, calibration);
         if (EchoAbilityManager.hasActivatedMechanism(serverPlayer, key)) {
-            notifyActiveProphets((ServerLevel) level, pos);
-            drawGuidance((ServerLevel) level, pos, corePos, calibration);
+            notifyActiveProphets(serverLevel, pos, current);
+            if (!current.getAsBoolean()) {
+                return InteractionResult.CONSUME;
+            }
+            drawGuidance(serverLevel, pos, corePos, calibration);
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.deep_calibration.already_"
                             + calibration.getSerializedName()), true);
@@ -115,17 +129,34 @@ public class DeepCalibrationNodeBlock extends Block {
             return InteractionResult.CONSUME;
         }
         EchoAbilityManager.syncToClient(serverPlayer);
-        playFeedback((ServerLevel) level, pos, corePos, calibration, serverPlayer);
-        notifyActiveProphets((ServerLevel) level, pos);
+        playFeedback(serverLevel, pos, corePos, calibration, serverPlayer, current);
+        notifyActiveProphets(serverLevel, pos, current);
         return InteractionResult.CONSUME;
     }
 
-    private static void notifyActiveProphets(ServerLevel level, BlockPos nodePos) {
+    private static boolean isCurrentInteraction(ServerLevel level, BlockPos pos, BlockState state,
+                                                ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.canInteractWithBlock(pos, 1.0D)
+                && state.getBlock() instanceof DeepCalibrationNodeBlock
+                && DeepArrayBlockAccess.getIfReady(level, pos) == state;
+    }
+
+    private static void notifyActiveProphets(ServerLevel level, BlockPos nodePos, BooleanSupplier current) {
+        if (!current.getAsBoolean()) {
+            return;
+        }
         AABB bounds = new AABB(nodePos).inflate(32.0D);
         for (VoidProphet prophet : level.getEntitiesOfClass(VoidProphet.class, bounds,
                 boss -> boss.isAlive() && boss.deepRechallengeAltar() != null
                         && boss.deepRechallengeAltar().distManhattan(nodePos) <= 48)) {
-            prophet.onCalibrationNodeActivated(level, nodePos);
+            if (!current.getAsBoolean()) {
+                return;
+            }
+            if (prophet.isAlive() && !prophet.isRemoved() && prophet.level() == level) {
+                prophet.onCalibrationNodeActivated(level, nodePos);
+            }
         }
     }
 
@@ -141,69 +172,71 @@ public class DeepCalibrationNodeBlock extends Block {
     }
 
     private static void playFeedback(ServerLevel level, BlockPos pos, BlockPos corePos,
-                                     Calibration calibration, ServerPlayer player) {
-        var particle = switch (calibration) {
-            case WIND -> ParticleTypes.CLOUD;
-            case TIDE -> ParticleTypes.SPLASH;
-            case TRUE_SIGHT -> ParticleTypes.ENCHANT;
-        };
-        level.sendParticles(particle, pos.getX() + 0.5, pos.getY() + 0.9,
-                pos.getZ() + 0.5, 30, 0.4, 0.5, 0.4, 0.04);
-        level.playSound(null, pos, SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                SoundSource.BLOCKS, 0.9F, calibration.pitch);
-
-        drawGuidance(level, pos, corePos, calibration);
-
-        if (!GravityCoreAltarBlock.hasCompletedCalibrations(player, level, corePos)) {
+                                     Calibration calibration, ServerPlayer player, BooleanSupplier current) {
+        if (!current.getAsBoolean()) {
             return;
         }
-        Vec3 altarCenter = Vec3.atCenterOf(corePos).add(0.0D, 0.65D, 0.0D);
-        for (BlockPos nodePos : GravityCoreAltarBlock.findCalibrationNodes(level, corePos)) {
-            BlockState nodeState = level.getBlockState(nodePos);
-            Calibration nodeCalibration = nodeState.getValue(CALIBRATION);
-            var nodeParticle = switch (nodeCalibration) {
-                case WIND -> ParticleTypes.CLOUD;
-                case TIDE -> ParticleTypes.SPLASH;
-                case TRUE_SIGHT -> ParticleTypes.ENCHANT;
-            };
-            Vec3 source = Vec3.atCenterOf(nodePos).add(0.0D, 0.45D, 0.0D);
-            BossFx.guidanceMarker(level, source, nodeParticle);
-            BossFx.guidanceFlow(level, source, altarCenter,
-                    ParticleTypes.GLOW, nodeParticle, level.getGameTime());
+        switch (calibration) {
+            case WIND -> level.playSound(null, pos, ModSounds.BLOCK_DEEP_CALIBRATION_WIND.get(),
+                    SoundSource.BLOCKS, 0.9F, 1.0F);
+            case TIDE -> level.playSound(null, pos, ModSounds.BLOCK_DEEP_CALIBRATION_TIDE.get(),
+                    SoundSource.BLOCKS, 0.9F, 1.0F);
+            case TRUE_SIGHT -> level.playSound(null, pos, ModSounds.BLOCK_DEEP_CALIBRATION_SIGHT.get(),
+                    SoundSource.BLOCKS, 0.9F, 1.0F);
         }
-        BossFx.impactBurst(level, altarCenter, ParticleTypes.END_ROD);
-        level.playSound(null, corePos, SoundEvents.BEACON_ACTIVATE,
-                SoundSource.BLOCKS, 1.35F, 1.15F);
+        if (!current.getAsBoolean()) {
+            return;
+        }
+        drawGuidance(level, pos, corePos, calibration);
+        if (!current.getAsBoolean()
+                || !GravityCoreAltarBlock.hasCompletedCalibrations(player, level, corePos)) {
+            return;
+        }
+        Vec3 altarCenter = Vec3.atCenterOf(corePos).add(0, .65, 0);
+        for (BlockPos nodePos : GravityCoreAltarBlock.findCalibrationNodes(level, corePos)) {
+            if (nodePos.equals(pos)) continue;
+            if (!current.getAsBoolean()) {
+                return;
+            }
+            BlockState nodeState = DeepArrayBlockAccess.getIfReady(level, nodePos);
+            if (nodeState == null || !(nodeState.getBlock() instanceof DeepCalibrationNodeBlock)) {
+                return;
+            }
+            Calibration nodeCalibration = nodeState.getValue(CALIBRATION);
+            drawGuidance(level, nodePos, corePos, nodeCalibration);
+        }
+        if (!current.getAsBoolean()
+                || !GravityCoreAltarBlock.hasCompletedCalibrations(player, level, corePos)) {
+            return;
+        }
+        MechanismFx.emit(level, ProgressionFx.convergence(altarCenter, ProgressionFx.Theme.GRAVITY));
+        if (!current.getAsBoolean()) {
+            return;
+        }
+        level.playSound(null, corePos, ModSounds.BLOCK_DEEP_CALIBRATION_COMPLETE.get(),
+                SoundSource.BLOCKS, 1.35F, 1.0F);
     }
 
     private static void drawGuidance(ServerLevel level, BlockPos pos, BlockPos corePos,
                                      Calibration calibration) {
-        var particle = switch (calibration) {
-            case WIND -> ParticleTypes.CLOUD;
-            case TIDE -> ParticleTypes.SPLASH;
-            case TRUE_SIGHT -> ParticleTypes.ENCHANT;
-        };
-
-        Vec3 nodeCenter = Vec3.atCenterOf(pos).add(0.0D, 0.45D, 0.0D);
-        Vec3 altarCenter = Vec3.atCenterOf(corePos).add(0.0D, 0.65D, 0.0D);
-        BossFx.guidanceMarker(level, nodeCenter, particle);
-        BossFx.guidanceFlow(level, nodeCenter, altarCenter,
-                ParticleTypes.GLOW, particle, level.getGameTime());
+        Vec3 nodeCenter = Vec3.atCenterOf(pos).add(0, .45, 0);
+        Vec3 altarCenter = Vec3.atCenterOf(corePos).add(0, .65, 0);
+        MechanismFx.emit(level, ProgressionFx.guidance(nodeCenter, altarCenter, calibration.theme));
     }
 
     public enum Calibration implements StringRepresentable {
-        WIND("wind", EchoAbilityType.WIND_ECHO, 1.25F),
-        TIDE("tide", EchoAbilityType.TIDE_ECHO, 0.9F),
-        TRUE_SIGHT("true_sight", EchoAbilityType.TRUE_SIGHT_ECHO, 1.5F);
+        WIND("wind", EchoAbilityType.WIND_ECHO, ProgressionFx.Theme.WIND),
+        TIDE("tide", EchoAbilityType.TIDE_ECHO, ProgressionFx.Theme.TIDE),
+        TRUE_SIGHT("true_sight", EchoAbilityType.TRUE_SIGHT_ECHO, ProgressionFx.Theme.TRUE_SIGHT);
 
         private final String name;
         private final EchoAbilityType ability;
-        private final float pitch;
+        private final ProgressionFx.Theme theme;
 
-        Calibration(String name, EchoAbilityType ability, float pitch) {
+        Calibration(String name, EchoAbilityType ability, ProgressionFx.Theme theme) {
             this.name = name;
             this.ability = ability;
-            this.pitch = pitch;
+            this.theme = theme;
         }
 
         @Override

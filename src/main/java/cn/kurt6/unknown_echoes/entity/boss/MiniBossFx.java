@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import cn.kurt6.unknown_echoes.fx.CombatFx;
+import cn.kurt6.unknown_echoes.network.CombatFxPayload.Shape;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -43,6 +45,8 @@ public final class MiniBossFx {
      */
     public static void groundRing(ServerLevel level, Vec3 center,
                                   MiniBossFxTheme.Theme theme, double radius) {
+        CombatFx.boss(level, Shape.RING, center.add(0, 0.18, 0), Vec3.ZERO, radius, 0, 0,
+                theme.coreDust(1), 12);
         int points = Math.min(MAX_RING_POINTS, 12 + (int) (radius * 2.0D));
         ParticleOptions trace = theme.trace(1.6F);
         for (int i = 0; i < points; i++) {
@@ -61,6 +65,30 @@ public final class MiniBossFx {
         }
     }
 
+    /** 瞬发范围技的释放波。固定外环保留结算边界，内侧双波只负责扩散余势。 */
+    public static void releasePulse(ServerLevel level, Vec3 center,
+                                    MiniBossFxTheme.Theme theme, double radius) {
+        groundRing(level, center, theme, radius);
+        CombatFx.emit(level, Shape.SHOCKWAVE, center.add(0, 0.2, 0), Vec3.ZERO, radius, 0, 0,
+                CombatFx.color(theme.core()), CombatFx.color(theme.edge()), 12, true);
+    }
+
+    /** 真实重击落地时掀起客户端材质碎块；蓄力、预警和机制目标不得调用。 */
+    public static void groundImpact(ServerLevel level, Vec3 center,
+                                    MiniBossFxTheme.Theme theme, double radius, double strength) {
+        releasePulse(level, center, theme, radius);
+        CombatFx.debris(level, center, radius, strength);
+    }
+
+    /** 持续法阵刚激活时的一次收束，不推进领域半径或重复扮演落点预警。 */
+    public static void sealRelease(ServerLevel level, Vec3 center,
+                                   MiniBossFxTheme.Theme theme, double radius) {
+        CombatFx.emit(level, Shape.SIGIL, center.add(0, .16, 0), Vec3.ZERO, radius, 0, 0,
+                CombatFx.color(theme.core()), CombatFx.color(theme.edge()), 14, true);
+        CombatFx.emit(level, Shape.IMPLOSION, center.add(0, 0.6, 0), Vec3.ZERO,
+                radius, 1.8, 0, CombatFx.color(theme.core()), CombatFx.color(theme.edge()), 12, true);
+    }
+
     /**
      * 扩张环：给逐帧长大的半径判定用（静默领域的声波、潮涌）。
      * progress 取 [0,1]，越接近 1 环越淡——判定已经扫过的位置不该继续亮着。
@@ -68,6 +96,8 @@ public final class MiniBossFx {
     public static void expandingRing(ServerLevel level, Vec3 center,
                                      MiniBossFxTheme.Theme theme,
                                      double radius, double progress) {
+        CombatFx.boss(level, Shape.RING, center.add(0, 0.2, 0), Vec3.ZERO, radius, 0, 0,
+                theme.coreDust(1), 4);
         double phase = Math.max(0.0D, Math.min(1.0D, progress));
         int points = Math.min(MAX_RING_POINTS, 12 + (int) (radius * 2.0D));
         ParticleOptions edge = phase > 0.6D ? theme.fade(1.2F) : theme.trace(1.5F);
@@ -90,6 +120,7 @@ public final class MiniBossFx {
         Vec3 side = Math.abs(dir.y) > 0.92D
                 ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(-dir.z, 0.0D, dir.x).normalize();
         int steps = Math.min(MAX_BEAM_POINTS, Math.max(3, (int) (length / 0.8D)));
+        CombatFx.boss(level, Shape.BEAM, origin, dir, 0, length, 0, theme.coreDust(1), 10);
         ParticleOptions trace = theme.trace(1.3F);
         for (int i = 0; i < steps; i++) {
             Vec3 point = origin.add(dir.scale(length * (i + 0.5D) / steps));
@@ -115,6 +146,8 @@ public final class MiniBossFx {
     public static void impactZone(ServerLevel level, Vec3 center,
                                   MiniBossFxTheme.Theme theme,
                                   double radius, double progress) {
+        CombatFx.boss(level, Shape.RING, center.add(0, 0.14, 0), Vec3.ZERO, radius, 0, 0,
+                theme.coreDust(1), 6);
         double phase = Math.max(0.0D, Math.min(1.0D, progress));
         int points = Math.min(MAX_ZONE_POINTS, 8 + (int) (radius * 3.0D));
         ParticleOptions trace = theme.trace(1.4F);
@@ -142,6 +175,7 @@ public final class MiniBossFx {
         Vec3 side = new Vec3(-dir.z, 0.0D, dir.x);
         // halfAngle 钳到正值：minDot=1.0 的锥退化成射线时它是 0，除法会得到 NaN 坐标。
         double span = Math.max(1.0E-3D, halfAngle);
+        CombatFx.boss(level, Shape.CONE, origin, dir, range, 0, span, theme.coreDust(1), 10);
         int arms = Math.min(MAX_CONE_ARMS, 5);
         int steps = Math.min(MAX_BEAM_POINTS / arms, Math.max(2, (int) (range / 1.2D)));
         ParticleOptions trace = theme.trace(1.3F);
@@ -166,6 +200,7 @@ public final class MiniBossFx {
         Vec3 waist = target.position().add(0.0D, target.getBbHeight() * 0.55D, 0.0D);
         double radius = markRadiusOf(target);
         ParticleOptions fade = theme.fade(1.4F);
+        CombatFx.boss(level, Shape.IMPACT, waist, Vec3.ZERO, radius, 0, 0, theme.coreDust(1), 8);
         for (int i = 0; i < MARK_POINTS; i++) {
             double angle = TAU * i / MARK_POINTS;
             at(level, fade, waist.add(Math.cos(angle) * radius, 0.0D,
@@ -193,6 +228,10 @@ public final class MiniBossFx {
     public static void chargeConverge(ServerLevel level, Vec3 center,
                                       MiniBossFxTheme.Theme theme,
                                       double radius, double progress) {
+        if (level.getGameTime() % 4 == 0) {
+            CombatFx.boss(level, Shape.IMPLOSION, center.add(0, 0.4, 0), Vec3.ZERO, radius, radius * 2, 0,
+                    theme.coreDust(1), 8);
+        }
         double phase = Math.max(0.0D, Math.min(1.0D, progress));
         int points = Math.min(MAX_ZONE_POINTS, 10 + (int) (radius * 2.0D));
         ParticleOptions trace = theme.trace(1.2F);
@@ -215,6 +254,8 @@ public final class MiniBossFx {
                                  MiniBossFxTheme.Theme theme, long age) {
         double radius = self.getBbWidth() * 0.6D + 0.35D;
         double height = self.getBbHeight();
+        CombatFx.boss(level, Shape.SPIRAL, self.position(), Vec3.ZERO, radius, height, TAU,
+                theme.coreDust(1), 8);
         ParticleOptions fade = theme.fade(1.3F);
         for (int arm = 0; arm < 2; arm++) {
             double angle = age * 0.28D + arm * Math.PI;
@@ -268,6 +309,8 @@ public final class MiniBossFx {
     public static void pillarBeam(ServerLevel level, Vec3 base,
                                   MiniBossFxTheme.Theme theme, double height) {
         int steps = Math.min(MAX_BEAM_POINTS, Math.max(2, (int) (height / 0.18D)));
+        CombatFx.boss(level, Shape.BEAM, base, new Vec3(0, 1, 0), 0, steps * 0.18, 0,
+                theme.coreDust(1), 12);
         ParticleOptions trace = theme.trace(1.4F);
         for (int i = 0; i < steps; i++) {
             at(level, trace, base.add(0.0D, i * 0.18D, 0.0D));

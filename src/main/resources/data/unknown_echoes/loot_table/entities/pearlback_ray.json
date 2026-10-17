@@ -29,6 +29,24 @@
           ]
         }
       ]
+    },
+    {
+      "rolls": 1,
+      "conditions": [
+        {
+          "condition": "minecraft:killed_by_player"
+        },
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.05
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:frost_particle_crystal"
+        }
+      ]
     }
   ],
   "random_sequence": "unknown_echoes:entities/pearlback_ray"

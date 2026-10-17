@@ -50,8 +50,12 @@ public class FoldpagePairCoreBlock extends BaseEntityBlock {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!state.getValue(ACTIVE)
-                && level.getBlockEntity(pos) instanceof FoldpagePairCoreBlockEntity core) {
+        if (!level.hasChunkAt(pos) || level.getBlockState(pos) != state) {
+            return InteractionResult.CONSUME;
+        }
+        if (state.getValue(ACTIVE)) {
+            PuzzleSolveEffects.recoverSeals(level, pos, state);
+        } else if (level.getBlockEntity(pos) instanceof FoldpagePairCoreBlockEntity core) {
             player.displayClientMessage(
                     Component.translatable("message.unknown_echoes.foldpage.progress",
                             core.matchedPairs(), core.totalPairs()), true);

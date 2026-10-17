@@ -21,19 +21,18 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DoorHingeSide;
-import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.block.state.properties.WallSide;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 import java.util.Arrays;
 
-public class DeepRegionStructure extends SinglePieceStructure {
+public class DeepRegionStructure extends TerrainAnchoredStructure {
     public static final MapCodec<DeepRegionStructure> FOLDED_ARCHIVE_CODEC = codec(Kind.FOLDED_ARCHIVE);
     public static final MapCodec<DeepRegionStructure> INVERTED_CHASM_BRIDGE_CODEC =
             codec(Kind.INVERTED_CHASM_BRIDGE);
@@ -142,7 +141,7 @@ public class DeepRegionStructure extends SinglePieceStructure {
         INVERTED_ARCHIVE_TOWER("inverted_archive_tower", 35, 40, 35),
         SUSPENDED_SURVEY_STATION("suspended_survey_station", 41, 24, 37),
         FRACTURED_ANCHOR_STATION("fractured_anchor_station", 39, 24, 39),
-        SEVERED_ARCHIVE_VAULT("severed_archive_vault", 43, 22, 37),
+        SEVERED_ARCHIVE_VAULT("severed_archive_vault", 43, 30, 37),
         RESONANCE_FOUNDRY("resonance_foundry", 61, 25, 61),
         GRAVITY_CROWN_OBSERVATORY("gravity_crown_observatory", 57, 32, 57),
         VOIDSCAR_BASTION("voidscar_bastion", 65, 28, 65),
@@ -192,6 +191,43 @@ public class DeepRegionStructure extends SinglePieceStructure {
         }
 
         @Override
+        protected int sampleGroundHeight(net.minecraft.world.level.levelgen.structure.Structure.GenerationContext context) {
+            BlockPos entry = switch (kind) {
+                case FOLDED_ARCHIVE -> new BlockPos(16, 0, -1);
+                case INVERTED_CHASM_BRIDGE -> new BlockPos(-1, 0, 11);
+                case SILENT_ABYSS_ANCHOR -> new BlockPos(31, 0, 14);
+                case CALIBRATION_HALL -> new BlockPos(21, 0, -1);
+                case VOID_VEIN_CHAMBER -> new BlockPos(24, 0, -1);
+                case WORLD_RESONANCE_HALL -> new BlockPos(-1, 0, 40);
+                case FOLDED_WAYSTATION -> new BlockPos(11, 0, -1);
+                case GRAVITY_SHARD_SPIRE -> new BlockPos(12, 0, -1);
+                case HUSHED_REFUGE -> new BlockPos(14, 0, -1);
+                case INVERTED_ARCHIVE_TOWER -> new BlockPos(-1, 0, 17);
+                case SUSPENDED_SURVEY_STATION -> new BlockPos(14, 0, -1);
+                case FRACTURED_ANCHOR_STATION -> new BlockPos(39, 0, 10);
+                case SEVERED_ARCHIVE_VAULT -> new BlockPos(21, 0, -1);
+                case RESONANCE_FOUNDRY -> new BlockPos(30, 0, -1);
+                case GRAVITY_CROWN_OBSERVATORY -> new BlockPos(28, 0, -1);
+                case VOIDSCAR_BASTION -> new BlockPos(32, 0, -1);
+                case SHATTERED_CODEX_VAULT -> new BlockPos(33, 0, -1);
+                case WEIGHTLESS_ORRERY_COURT -> new BlockPos(31, 0, -1);
+                case RIFTGLASS_CITADEL -> new BlockPos(36, 0, -1);
+                case HUSHED_CATHEDRAL -> new BlockPos(34, 0, -1);
+                case FOLDED_CELESTIAL_ARCHIVE -> new BlockPos(35, 0, -1);
+                case INVERTED_PENDULUM_PALACE -> new BlockPos(37, 0, -1);
+                case RIFTWORN_MEMORIAL_COURT -> new BlockPos(39, 0, -1);
+                default -> null;
+            };
+            if (entry == null) {
+                return super.sampleGroundHeight(context);
+            }
+            // 浮岛上下层的平均高度可能落在空气中，按入口外的固定地表列定高。
+            return context.chunkGenerator().getBaseHeight(getWorldX(entry.getX(), entry.getZ()), getWorldZ(entry.getX(), entry.getZ()),
+                    net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE_WG,
+                    context.heightAccessor(), context.randomState());
+        }
+
+        @Override
         public void postProcess(WorldGenLevel level, StructureManager structureManager,
                                 ChunkGenerator generator, RandomSource random, BoundingBox box,
                                 ChunkPos chunkPos, BlockPos pos) {
@@ -227,8 +263,311 @@ public class DeepRegionStructure extends SinglePieceStructure {
                 case RIFTWORN_MEMORIAL_COURT -> buildRiftwornMemorialCourt(level, box);
             }
             buildArchitecturalEnvelope(level, box);
+            buildDeepSignature(level, box);
             placeExplorationLoot(level, random, box);
             placeThemedEncounter(level, random, box);
+            BlockState foundation = switch (kind) {
+                case INVERTED_CHASM_BRIDGE, GRAVITY_SHARD_SPIRE, GRAVITY_CROWN_OBSERVATORY,
+                        WEIGHTLESS_ORRERY_COURT, INVERTED_PENDULUM_PALACE ->
+                        ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                case SILENT_ABYSS_ANCHOR, HUSHED_REFUGE, HUSHED_CATHEDRAL ->
+                        ModBlocks.SILENT_MUDSTONE_BRICKS.get().defaultBlockState();
+                default -> ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+            };
+            anchorGroundColumns(level, box, 0, foundation);
+            dressStructure(level, box, kind.id);
+            if (kind == Kind.FOLDED_CELESTIAL_ARCHIVE) {
+                placeBlock(level, ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState(), 47, 7, 39, box);
+            }
+            buildGroundEntry(level, box);
+        }
+
+        private void buildGroundEntry(WorldGenLevel level, BoundingBox box) {
+            switch (kind) {
+                case GRAVITY_SHARD_SPIRE -> {
+                    BlockState stairs = ModBlocks.GRAVITY_SHALE_BRICK_STAIRS.get().defaultBlockState()
+                            .setValue(StairBlock.FACING, Direction.NORTH);
+                    placeBlock(level, ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState(), 12, 0, 1, box);
+                    placeBlock(level, stairs, 12, 1, 1, box);
+                    placeBlock(level, stairs, 12, 0, 0, box);
+                    BlockState wall = ModBlocks.GRAVITY_SHALE_BRICK_WALL.get().defaultBlockState()
+                            .setValue(BlockStateProperties.NORTH_WALL, WallSide.TALL)
+                            .setValue(BlockStateProperties.EAST_WALL, WallSide.TALL);
+                    placeBlock(level, wall, 13, 1, 1, box);
+                }
+                case FOLDED_ARCHIVE -> placeBlock(level,
+                        ModBlocks.FOLDED_SLATE_BRICK_STAIRS.get().defaultBlockState()
+                                .setValue(StairBlock.FACING, Direction.NORTH), 16, 0, 0, box);
+                case SILENT_ABYSS_ANCHOR -> {
+                    BlockState stairs = ModBlocks.ABYSSAL_STONE_BRICK_STAIRS.get().defaultBlockState()
+                            .setValue(StairBlock.FACING, Direction.WEST);
+                    placeBlock(level, stairs, 28, 1, 14, box);
+                    placeBlock(level, stairs, 29, 0, 14, box);
+                    BlockState wall = ModBlocks.ABYSSAL_STONE_BRICK_WALL.get().defaultBlockState();
+                    placeBlock(level, wall.setValue(BlockStateProperties.SOUTH_WALL, WallSide.TALL),
+                            28, 1, 13, box);
+                    placeBlock(level, wall.setValue(BlockStateProperties.NORTH_WALL, WallSide.TALL)
+                                    .setValue(BlockStateProperties.EAST_WALL, WallSide.TALL)
+                                    .setValue(BlockStateProperties.WEST_WALL, WallSide.TALL),
+                            28, 1, 15, box);
+                }
+                case FRACTURED_ANCHOR_STATION -> {
+                    BlockState bricks = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+                    for (int x = 35; x <= 37; x++) {
+                        placeBlock(level, bricks, x, 0, 10, box);
+                    }
+                    placeBlock(level, bricks, 36, 1, 10, box);
+                    placeBlock(level, Blocks.AIR.defaultBlockState(), 35, 2, 10, box);
+                    placeBlock(level, Blocks.AIR.defaultBlockState(), 35, 3, 10, box);
+                    BlockState stairs = ModBlocks.ABYSSAL_STONE_BRICK_STAIRS.get().defaultBlockState()
+                            .setValue(StairBlock.FACING, Direction.WEST);
+                    placeBlock(level, stairs, 37, 1, 10, box);
+                    placeBlock(level, stairs, 38, 0, 10, box);
+                    BlockState wall = ModBlocks.ABYSSAL_STONE_BRICK_WALL.get().defaultBlockState();
+                    placeBlock(level, wall.setValue(BlockStateProperties.SOUTH_WALL, WallSide.LOW),
+                            37, 1, 9, box);
+                    placeBlock(level, wall.setValue(BlockStateProperties.NORTH_WALL, WallSide.LOW),
+                            37, 1, 11, box);
+                }
+                default -> {
+                }
+            }
+        }
+
+        /** 深层结构的专属构件:折叠、重力与虚痕各自拥有不同的远景节奏。 */
+        private void buildDeepSignature(WorldGenLevel level, BoundingBox box) {
+            int c = kind.width / 2;
+            switch (kind) {
+                case FOLDED_ARCHIVE -> {
+                    BlockState slate = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState rune = ModBlocks.RESONANT_FOLDED_SLATE.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        for (int z = c - 10; z <= c + 10; z += 5) {
+                            placeCorniceBlock(level, box, slate, c + side * 12, 11, z);
+                            placeCorniceBlock(level, box, rune, c + side * 12, 12, z);
+                        }
+                    }
+                }
+                case INVERTED_CHASM_BRIDGE -> {
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    BlockState band = ModBlocks.BANDED_GRAVITY_SHALE.get().defaultBlockState();
+                    for (int x = 7; x <= 29; x += 4) {
+                        architecturalPillar(level, box, x, 14, c, 7, gravity);
+                        placeCorniceBlock(level, box, band, x, 21, c);
+                    }
+                }
+                case SILENT_ABYSS_ANCHOR -> {
+                    BlockState abyss = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+                    BlockState vein = ModBlocks.VEINED_ABYSSAL_STONE.get().defaultBlockState();
+                    for (Direction direction : Direction.Plane.HORIZONTAL) {
+                        architecturalPillar(level, box, c + direction.getStepX() * 11,
+                                10, c + direction.getStepZ() * 11, 7, abyss);
+                        placeCorniceBlock(level, box, vein, c + direction.getStepX() * 11,
+                                17, c + direction.getStepZ() * 11);
+                    }
+                }
+                case CALIBRATION_HALL -> {
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    BlockState band = ModBlocks.BANDED_GRAVITY_SHALE.get().defaultBlockState();
+                    for (int radius : new int[]{20, 22}) {
+                        architecturalRing(level, box, c, 16 + radius % 3, c, radius,
+                                radius == 20 ? gravity : band);
+                    }
+                }
+                case VOID_VEIN_CHAMBER -> {
+                    BlockState abyss = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+                    BlockState vein = ModBlocks.VEINED_ABYSSAL_STONE.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        for (int y = 10; y <= 24; y += 3) {
+                            placeCorniceBlock(level, box, y % 2 == 0 ? abyss : vein,
+                                    c + side * 23, y, c + side * 7);
+                        }
+                    }
+                }
+                case WORLD_RESONANCE_HALL -> {
+                    BlockState folded = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    for (int layer = 0; layer < 3; layer++) {
+                        architecturalRing(level, box, c, 17 + layer * 5, c,
+                                25 + layer * 5, layer == 1 ? gravity : folded);
+                    }
+                }
+                case FOLDED_WAYSTATION -> {
+                    BlockState slate = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState rune = ModBlocks.RESONANT_FOLDED_SLATE.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        architecturalPillar(level, box, c + side * 8, 10, c - 8, 5, slate);
+                        placeCorniceBlock(level, box, rune, c + side * 8, 15, c - 8);
+                    }
+                }
+                case GRAVITY_SHARD_SPIRE -> {
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    BlockState band = ModBlocks.BANDED_GRAVITY_SHALE.get().defaultBlockState();
+                    for (int y = 12; y <= 26; y += 2) {
+                        int radius = 8 - (y - 12) / 5;
+                        architecturalRing(level, box, c, y, c, Math.max(3, radius),
+                                y % 4 == 0 ? band : gravity);
+                    }
+                }
+                case HUSHED_REFUGE -> {
+                    BlockState abyss = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+                    BlockState moss = ModBlocks.MUFFLE_MOSS.get().defaultBlockState();
+                    architecturalRing(level, box, c, 11, c, 10, abyss);
+                    for (Direction direction : Direction.Plane.HORIZONTAL) {
+                        placeCorniceBlock(level, box, moss, c + direction.getStepX() * 10,
+                                12, c + direction.getStepZ() * 10);
+                    }
+                }
+                case MISFILED_CATALOG_WELL -> {
+                    BlockState folded = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState trim = ModBlocks.CHISELED_FOLDED_SLATE.get().defaultBlockState();
+                    for (int radius : new int[]{9, 12, 15}) {
+                        architecturalRing(level, box, c, 12 + radius % 4, c, radius,
+                                radius == 12 ? trim : folded);
+                    }
+                }
+                case FOLDED_SCRIPTORIUM -> {
+                    BlockState slate = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState trim = ModBlocks.CHISELED_FOLDED_SLATE.get().defaultBlockState();
+                    for (int x = c - 13; x <= c + 13; x += 5) {
+                        architecturalPillar(level, box, x, 11, c - 14, 6, slate);
+                        placeCorniceBlock(level, box, trim, x, 17, c - 14);
+                    }
+                }
+                case INVERTED_ARCHIVE_TOWER -> {
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    BlockState folded = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    for (int y = 20; y <= 34; y += 3) {
+                        int radius = Math.max(3, 9 - (y - 20) / 4);
+                        architecturalRing(level, box, c, y, c, radius,
+                                y % 2 == 0 ? gravity : folded);
+                    }
+                }
+                case SUSPENDED_SURVEY_STATION -> {
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    BlockState band = ModBlocks.BANDED_GRAVITY_SHALE.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        for (int z = c - 12; z <= c + 12; z += 6) {
+                            placeCorniceBlock(level, box, gravity, c + side * 14, 14, z);
+                            placeCorniceBlock(level, box, band, c + side * 14, 15, z);
+                        }
+                    }
+                }
+                case FRACTURED_ANCHOR_STATION -> {
+                    BlockState abyss = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+                    BlockState vein = ModBlocks.VEINED_ABYSSAL_STONE.get().defaultBlockState();
+                    for (int i = 0; i < 8; i++) {
+                        double angle = i * Math.PI / 4.0D;
+                        int x = c + (int) Math.round(Math.cos(angle) * 15);
+                        int z = c + (int) Math.round(Math.sin(angle) * 15);
+                        architecturalPillar(level, box, x, 12, z, 6, abyss);
+                        placeCorniceBlock(level, box, vein, x, 18, z);
+                    }
+                }
+                case SEVERED_ARCHIVE_VAULT -> {
+                    BlockState abyss = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+                    BlockState trim = ModBlocks.CHISELED_FOLDED_SLATE.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        architecturalPillar(level, box, c + side * 17, 12, c - 12, 7, abyss);
+                        placeCorniceBlock(level, box, trim, c + side * 17, 19, c - 12);
+                    }
+                }
+                case RESONANCE_FOUNDRY -> {
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    BlockState folded = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    for (int radius : new int[]{20, 26}) {
+                        architecturalRing(level, box, c, 14 + radius % 3, c, radius,
+                                radius == 20 ? gravity : folded);
+                    }
+                }
+                case GRAVITY_CROWN_OBSERVATORY -> {
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    BlockState band = ModBlocks.BANDED_GRAVITY_SHALE.get().defaultBlockState();
+                    for (Direction direction : Direction.Plane.HORIZONTAL) {
+                        architecturalPillar(level, box, c + direction.getStepX() * 18,
+                                16, c + direction.getStepZ() * 18, 9, gravity);
+                        placeCorniceBlock(level, box, band, c + direction.getStepX() * 18,
+                                25, c + direction.getStepZ() * 18);
+                    }
+                }
+                case VOIDSCAR_BASTION -> {
+                    BlockState abyss = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+                    BlockState vein = ModBlocks.VEINED_ABYSSAL_STONE.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        for (int z = c - 23; z <= c + 23; z += 8) {
+                            architecturalPillar(level, box, c + side * 24, 15, z, 8, abyss);
+                            placeCorniceBlock(level, box, vein, c + side * 24, 23, z);
+                        }
+                    }
+                }
+                case SHATTERED_CODEX_VAULT -> {
+                    BlockState folded = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState rune = ModBlocks.RESONANT_FOLDED_SLATE.get().defaultBlockState();
+                    for (int radius : new int[]{18, 24, 30}) {
+                        architecturalRing(level, box, c, 14 + radius % 4, c, radius,
+                                radius == 24 ? rune : folded);
+                    }
+                }
+                case WEIGHTLESS_ORRERY_COURT -> {
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    BlockState prism = ModBlocks.ORRERY_PRISM_BLOCK.get().defaultBlockState();
+                    for (int i = 0; i < 10; i++) {
+                        double angle = i * Math.PI / 5.0D;
+                        int x = c + (int) Math.round(Math.cos(angle) * 22);
+                        int z = c + (int) Math.round(Math.sin(angle) * 22);
+                        architecturalPillar(level, box, x, 15, z, 8, gravity);
+                        placeCorniceBlock(level, box, prism, x, 23, z);
+                    }
+                }
+                case HUSHED_CATHEDRAL -> {
+                    BlockState abyss = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+                    BlockState moss = ModBlocks.MUFFLE_MOSS.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        for (int x = c - 25; x <= c + 25; x += 10) {
+                            architecturalPillar(level, box, x, 17, c + side * 26, 9, abyss);
+                            placeCorniceBlock(level, box, moss, x, 26, c + side * 26);
+                        }
+                    }
+                }
+                case RIFTGLASS_CITADEL -> {
+                    BlockState folded = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState glass = ModBlocks.RESONANT_FOLDED_SLATE.get().defaultBlockState();
+                    for (int radius : new int[]{24, 30, 34}) {
+                        architecturalRing(level, box, c, 17 + radius % 4, c, radius,
+                                radius == 30 ? glass : folded);
+                    }
+                }
+                case FOLDED_CELESTIAL_ARCHIVE -> {
+                    BlockState slate = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState trim = ModBlocks.CHISELED_FOLDED_SLATE.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        for (int z = c - 24; z <= c + 24; z += 8) {
+                            architecturalPillar(level, box, c + side * 25, 16, z, 8, slate);
+                            placeCorniceBlock(level, box, trim, c + side * 25, 24, z);
+                        }
+                    }
+                }
+                case INVERTED_PENDULUM_PALACE -> {
+                    BlockState gravity = ModBlocks.GRAVITY_SHALE_BRICKS.get().defaultBlockState();
+                    BlockState band = ModBlocks.BANDED_GRAVITY_SHALE.get().defaultBlockState();
+                    for (int y = 17; y <= 35; y += 3) {
+                        int radius = 20 + (y % 6);
+                        architecturalRing(level, box, c, y, c, radius,
+                                y % 2 == 0 ? gravity : band);
+                    }
+                }
+                case RIFTWORN_MEMORIAL_COURT -> {
+                    BlockState abyss = ModBlocks.ABYSSAL_STONE_BRICKS.get().defaultBlockState();
+                    BlockState vein = ModBlocks.VEINED_ABYSSAL_STONE.get().defaultBlockState();
+                    for (int i = 0; i < 12; i++) {
+                        double angle = i * Math.PI / 6.0D;
+                        int x = c + (int) Math.round(Math.cos(angle) * 29);
+                        int z = c + (int) Math.round(Math.sin(angle) * 29);
+                        architecturalPillar(level, box, x, 16, z, 10, abyss);
+                        placeCorniceBlock(level, box, vein, x, 26, z);
+                    }
+                }
+            }
         }
 
         /**
@@ -444,7 +783,7 @@ public class DeepRegionStructure extends SinglePieceStructure {
                 }
                 case MISFILED_CATALOG_WELL -> {
                     buildAccessibleChest(level, random, box, 17, 1, 17,
-                            ModLootTables.MISFILED_CATALOG_WELL_CHEST);
+                            ModLootTables.PUZZLE_MISFILED_CATALOG_WELL_CHEST);
                     buildAccessibleChest(level, random, box, 5, 1, 17,
                             ModLootTables.MISFILED_CATALOG_WELL_CHEST);
                 }
@@ -462,7 +801,7 @@ public class DeepRegionStructure extends SinglePieceStructure {
                 }
                 case SUSPENDED_SURVEY_STATION -> {
                     buildAccessibleChest(level, random, box, 20, 1, 6,
-                            ModLootTables.SUSPENDED_SURVEY_STATION_CHEST);
+                            ModLootTables.PUZZLE_SUSPENDED_SURVEY_STATION_CHEST);
                     buildAccessibleChest(level, random, box, 20, 10, 18,
                             ModLootTables.SUSPENDED_SURVEY_STATION_CHEST);
                 }
@@ -474,9 +813,9 @@ public class DeepRegionStructure extends SinglePieceStructure {
                 }
                 case SEVERED_ARCHIVE_VAULT -> {
                     buildAccessibleChest(level, random, box, 21, 1, 18,
-                            ModLootTables.SEVERED_ARCHIVE_VAULT_CHEST);
+                            ModLootTables.PUZZLE_SEVERED_ARCHIVE_VAULT_CHEST);
                     buildAccessibleChest(level, random, box, 8, 1, 18,
-                            ModLootTables.SEVERED_ARCHIVE_VAULT_CHEST);
+                            ModLootTables.SEVERED_ARCHIVE_VAULT_CHEST, Direction.EAST);
                 }
                 case RESONANCE_FOUNDRY -> {
                     for (int[] point : new int[][]{{8, 1, 30}, {52, 1, 30},
@@ -506,7 +845,9 @@ public class DeepRegionStructure extends SinglePieceStructure {
                             ModLootTables.VOIDSCAR_BASTION_VAULT);
                 }
                 case SHATTERED_CODEX_VAULT -> {
-                    for (int[] point : new int[][]{{33, 1, 9}, {33, 1, 57},
+                    buildAccessibleChest(level, random, box, 33, 1, 9,
+                            ModLootTables.PUZZLE_SHATTERED_CODEX_CACHE);
+                    for (int[] point : new int[][]{{33, 1, 57},
                             {9, 1, 33}, {57, 1, 33}}) {
                         buildAccessibleChest(level, random, box, point[0], point[1], point[2],
                                 ModLootTables.SHATTERED_CODEX_CACHE);
@@ -524,7 +865,9 @@ public class DeepRegionStructure extends SinglePieceStructure {
                             ModLootTables.WEIGHTLESS_ORRERY_VAULT);
                 }
                 case HUSHED_CATHEDRAL -> {
-                    for (int[] point : new int[][]{{34, 2, 10}, {34, 2, 58},
+                    buildAccessibleChest(level, random, box, 34, 2, 10,
+                            ModLootTables.PUZZLE_HUSHED_CATHEDRAL_CACHE);
+                    for (int[] point : new int[][]{{34, 2, 58},
                             {10, 2, 34}, {58, 2, 34}}) {
                         buildAccessibleChest(level, random, box, point[0], point[1], point[2],
                                 ModLootTables.HUSHED_CATHEDRAL_CACHE);
@@ -542,8 +885,9 @@ public class DeepRegionStructure extends SinglePieceStructure {
                             ModLootTables.RIFTGLASS_CITADEL_VAULT);
                 }
                 case FOLDED_CELESTIAL_ARCHIVE -> {
-                    for (int[] point : new int[][]{{35, 2, 9}, {35, 2, 61},
-                            {9, 2, 35}, {61, 2, 35}}) {
+                    buildAccessibleChest(level, random, box, 9, 2, 35,
+                            ModLootTables.PUZZLE_FOLDED_CELESTIAL_ARCHIVE_CACHE);
+                    for (int[] point : new int[][]{{35, 2, 9}, {35, 2, 61}, {61, 2, 35}}) {
                         buildAccessibleChest(level, random, box, point[0], point[1], point[2],
                                 ModLootTables.FOLDED_CELESTIAL_ARCHIVE_CACHE);
                     }
@@ -700,12 +1044,8 @@ public class DeepRegionStructure extends SinglePieceStructure {
                     centerX, 5, centerZ, box);
             placeBlock(level, ModBlocks.DEEP_PROVISION_BRAZIER.get().defaultBlockState(),
                     6, 1, 6, box);
-            for (int y = 5; y <= 8; y++) {
-                for (int z = centerZ - 1; z <= centerZ + 1; z++) {
-                    placeBlock(level, ModBlocks.GRAVITY_FOLD_DOOR.get().defaultBlockState(),
-                            25, y, z, box);
-                }
-            }
+            buildConnectedDoor(level, box, ModBlocks.GRAVITY_FOLD_DOOR.get().defaultBlockState(),
+                    25, 5, centerZ - 1, Direction.EAST, 3, 4);
         }
 
         private void buildSilentAnchor(WorldGenLevel level, BoundingBox box) {
@@ -737,6 +1077,7 @@ public class DeepRegionStructure extends SinglePieceStructure {
             for (int[] anchor : anchors) {
                 disk(level, box, anchor[0], 1, anchor[1], 3, sealed);
                 annulus(level, box, anchor[0], 2, anchor[1], 2, 3, rune);
+                placeBlock(level, sealed, anchor[0], 2, anchor[1], box);
                 placeBlock(level, ModBlocks.SPACE_ANCHOR.get().defaultBlockState(),
                         anchor[0], 3, anchor[1], box);
                 for (int side : new int[]{-3, 3}) {
@@ -1003,12 +1344,12 @@ public class DeepRegionStructure extends SinglePieceStructure {
 
             BlockState grandStairs = ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState();
             BlockState grandSlab = ModBlocks.ECHO_STONE_BRICK_SLAB.get().defaultBlockState();
-            buildStairCornice(level, box, center, 1, center, Footprint.square(36), grandStairs, grandSlab, false);
+            buildCircularPlinth(level, box, center, 0, center, 37, wall, grandStairs);
 
-            buildStairCornice(level, box, center, 23, center, Footprint.square(38), grandStairs, grandSlab, true);
-            buildParapet(level, box, center, 24, center, Footprint.square(38), 7, ModBlocks.ECHO_STONE_BRICK_WALL.get().defaultBlockState(), rune);
+            buildCircularCornice(level, box, center, 23, center, 38, grandStairs, grandSlab, true);
+            buildCircularParapet(level, box, center, 24, center, 38, ModBlocks.ECHO_STONE_BRICK_WALL.get().defaultBlockState());
 
-            buildStairCornice(level, box, center, 12, center, Footprint.square(38), grandStairs, grandSlab, true);
+            buildCircularCornice(level, box, center, 12, center, 38, grandStairs, grandSlab, true);
             for (int index = 0; index < 12; index++) {
                 double angle = Math.toRadians(15.0D + index * 30.0D);
                 int towerX = center + (int) Math.round(Math.cos(angle) * 37.0D);
@@ -1435,8 +1776,8 @@ public class DeepRegionStructure extends SinglePieceStructure {
                     {25, 2, 15}, {28, 2, 13}, {16, 2, 11}, {24, 2, 11}
             };
             int[][] hints = {
-                    {17, 8, 12}, {18, 9, 12}, {19, 8, 12},
-                    {20, 10, 12}, {21, 8, 12}, {22, 9, 12}, {23, 8, 12}
+                    {17, 10, 13}, {18, 10, 13}, {19, 10, 13},
+                    {20, 10, 13}, {21, 10, 13}, {22, 10, 13}
             };
             installSequencePuzzle(level, box, 20, 2, 12,
                     runes, hints, 6, banded, 0x41D2C6A7L);
@@ -1550,14 +1891,10 @@ public class DeepRegionStructure extends SinglePieceStructure {
                     Direction.SOUTH, anchored, ModBlocks.SEALED_STONE.get().defaultBlockState());
             buildVaultShell(level, box, 14, 28, 10, 26, 0, 15,
                     Direction.SOUTH, anchored, ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState());
-            for (int z = 7; z <= 29; z += 2) {
-                int halfWidth = 3 + Math.floorMod(z, 7);
-                for (int x = centerX - halfWidth; x <= centerX + halfWidth; x++) {
-                    if (x == centerX || Math.floorMod(x + z, 4) == 0) {
-                        placeBlock(level, crystal, x, 0, z, box);
-                    } else {
-                        placeBlock(level, veined, x, 0, z, box);
-                    }
+            // 晶石挂在内室顶板下方，不能嵌入封印边界的地板或侧墙。
+            for (int z = 11; z <= 25; z += 2) {
+                for (int x = 17; x <= 25; x += 2) {
+                    placeBlock(level, crystal, x, 14, z, box);
                 }
             }
             for (int[] point : new int[][]{{10, 9}, {32, 9}, {10, 27}, {32, 27}}) {
@@ -1583,14 +1920,14 @@ public class DeepRegionStructure extends SinglePieceStructure {
 
             int[][] runes = {
                     {13, 2, 32}, {16, 2, 34}, {19, 2, 33}, {23, 2, 33},
-                    {26, 2, 34}, {29, 2, 32}, {11, 2, 29}, {31, 2, 29}
+                    {26, 2, 34}, {29, 2, 32}, {11, 2, 32}, {31, 2, 32}
             };
             int[][] hints = {
-                    {17, 10, 29}, {18, 11, 29}, {19, 10, 29}, {20, 12, 29},
-                    {21, 10, 29}, {22, 11, 29}, {23, 10, 29}, {24, 12, 29}
+                    {17, 6, 32}, {18, 6, 32}, {19, 6, 32}, {20, 6, 32},
+                    {21, 6, 32}, {22, 6, 32}, {23, 6, 32}
             };
             installSequencePuzzle(level, box, centerX, 2, 32,
-                    runes, hints, 7, veined, 0x6B81F253L);
+                    runes, hints, 7, veined, 0x6B81F253L, Direction.SOUTH);
         }
 
         private void buildShatteredCodexVault(WorldGenLevel level, BoundingBox box) {
@@ -2058,13 +2395,14 @@ public class DeepRegionStructure extends SinglePieceStructure {
             placeBlock(level, light, centerX, 31, centerZ, box);
         }
 
-        /** 投影负责从外侧维持铁门，内侧原版踏板保证单人始终可以离开。 */
+        /** 内外投影踏板共用同组封门，内侧踏板留在宝箱清理范围之外。 */
         private void buildProjectionRelayGallery(WorldGenLevel level, BoundingBox box,
                                                   int gateX, int baseY, int gateZ,
                                                   Direction towardCache, BlockState floor,
                                                   BlockState wall, BlockState accent,
                                                   BlockState light) {
             BlockState air = Blocks.AIR.defaultBlockState();
+            BlockState anchored = ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState();
             for (int forward = -4; forward <= 5; forward++) {
                 for (int lateral = -3; lateral <= 3; lateral++) {
                     int x = gateX + towardCache.getStepX() * forward
@@ -2083,13 +2421,17 @@ public class DeepRegionStructure extends SinglePieceStructure {
                             + towardCache.getStepZ() * lateral;
                     int z = gateZ + towardCache.getStepZ() * forward
                             - towardCache.getStepX() * lateral;
-                    placeBlock(level, Math.abs(lateral) == 4 ? accent : floor,
+                    boolean vault = forward >= 0;
+                    placeBlock(level, vault ? anchored : Math.abs(lateral) == 4 ? accent : floor,
                             x, baseY - 1, z, box);
-                    placeBlock(level, Math.floorMod(forward + lateral, 4) == 0 ? accent : wall,
+                    if (vault && baseY >= 2) {
+                        placeBlock(level, anchored, x, baseY - 2, z, box);
+                    }
+                    placeBlock(level, vault ? anchored : Math.floorMod(forward + lateral, 4) == 0 ? accent : wall,
                             x, baseY + 6, z, box);
                     if (Math.abs(lateral) == 4 || forward == 6) {
                         for (int y = baseY; y <= baseY + 5; y++) {
-                            placeBlock(level, (y == baseY + 3 || forward % 3 == 0)
+                            placeBlock(level, vault ? anchored : (y == baseY + 3 || forward % 3 == 0)
                                             ? accent : wall,
                                     x, y, z, box);
                         }
@@ -2102,26 +2444,22 @@ public class DeepRegionStructure extends SinglePieceStructure {
                 int z = gateZ - towardCache.getStepX() * lateral;
                 for (int y = baseY; y <= baseY + 5; y++) {
                     if (lateral != 0 || y >= baseY + 2) {
-                        placeBlock(level, y == baseY + 3 ? accent : wall, x, y, z, box);
+                        placeBlock(level, anchored, x, y, z, box);
                     }
                 }
             }
 
-            BlockState lowerDoor = Blocks.IRON_DOOR.defaultBlockState()
-                    .setValue(BlockStateProperties.HORIZONTAL_FACING, towardCache)
-                    .setValue(BlockStateProperties.DOOR_HINGE, DoorHingeSide.LEFT)
-                    .setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.LOWER);
-            placeBlock(level, lowerDoor, gateX, baseY, gateZ, box);
-            placeBlock(level, lowerDoor.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF,
-                    DoubleBlockHalf.UPPER), gateX, baseY + 1, gateZ, box);
+            BlockState door = ModBlocks.PROJECTION_RESONANCE_DOOR.get().defaultBlockState();
+            placeBlock(level, door, gateX, baseY, gateZ, box);
+            placeBlock(level, door, gateX, baseY + 1, gateZ, box);
 
             int relayX = gateX - towardCache.getStepX() * 3;
             int relayZ = gateZ - towardCache.getStepZ() * 3;
             placeBlock(level, ModBlocks.PROJECTION_RESONANCE_PLATE.get().defaultBlockState(),
                     relayX, baseY, relayZ, box);
-            placeBlock(level, Blocks.STONE_PRESSURE_PLATE.defaultBlockState(),
-                    gateX + towardCache.getStepX(), baseY,
-                    gateZ + towardCache.getStepZ(), box);
+            placeBlock(level, ModBlocks.PROJECTION_RESONANCE_PLATE.get().defaultBlockState(),
+                    gateX + towardCache.getStepX() * 3 + towardCache.getStepZ() * 2, baseY,
+                    gateZ + towardCache.getStepZ() * 3 - towardCache.getStepX() * 2, box);
 
             for (int lateral : new int[]{-3, 3}) {
                 int outerX = gateX - towardCache.getStepX() * 2
@@ -3459,6 +3797,16 @@ public class DeepRegionStructure extends SinglePieceStructure {
                                            int[][] runeSpots, int[][] hintSpots,
                                            int sequenceLength, BlockState pedestal,
                                            long salt) {
+            installSequencePuzzle(level, box, coreX, coreY, coreZ, runeSpots, hintSpots,
+                    sequenceLength, pedestal, salt, Direction.UP);
+        }
+
+        private void installSequencePuzzle(WorldGenLevel level, BoundingBox box,
+                                           int coreX, int coreY, int coreZ,
+                                           int[][] runeSpots, int[][] hintSpots,
+                                           int sequenceLength, BlockState pedestal,
+                                           long salt, Direction hintFacing) {
+            placeBlock(level, pedestal, coreX, coreY - 1, coreZ, box);
             placeBlock(level, ModBlocks.PUZZLE_CORE.get().defaultBlockState(),
                     coreX, coreY, coreZ, box);
             RandomSource puzzleRandom = RandomSource.create(
@@ -3478,7 +3826,8 @@ public class DeepRegionStructure extends SinglePieceStructure {
                 int[] spot = hintSpots[i];
                 BlockState hint = ModBlocks.SEQUENCE_RUNE.get().defaultBlockState()
                         .setValue(SequenceRuneBlock.ORDER, sequence[i])
-                        .setValue(SequenceRuneBlock.LIT, Boolean.TRUE);
+                        .setValue(SequenceRuneBlock.LIT, Boolean.TRUE)
+                        .setValue(BlockStateProperties.FACING, localFurnitureFacing(hintFacing));
                 placeBlock(level, hint, spot[0], spot[1], spot[2], box);
             }
 
@@ -3496,6 +3845,8 @@ public class DeepRegionStructure extends SinglePieceStructure {
             BlockState air = Blocks.AIR.defaultBlockState();
             for (int x = minX; x <= maxX; x++) {
                 for (int z = minZ; z <= maxZ; z++) {
+                    // 地板纹饰与后续大厅铺装可覆盖表层，下垫层必须保持封闭。
+                    placeBlock(level, shell, x, floorY - 1, z, box);
                     placeBlock(level, shell, x, floorY, z, box);
                     placeBlock(level, shell, x, roofY, z, box);
                 }
@@ -3759,7 +4110,7 @@ public class DeepRegionStructure extends SinglePieceStructure {
         private void pillar(WorldGenLevel level, BoundingBox box, int x, int y, int z,
                             int height, BlockState state) {
             for (int yy = y; yy < y + height; yy++) {
-                placeBlock(level, state, x, yy, z, box);
+                placeCorniceBlock(level, box, state, x, yy, z);
             }
         }
 

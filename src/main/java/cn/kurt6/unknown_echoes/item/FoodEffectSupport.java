@@ -44,23 +44,15 @@ public final class FoodEffectSupport {
                 && current.getDuration() <= Math.max(1, durationTicks / 2);
     }
 
-    /** 同级护盾被打穿时先移除再重加，确保食用确实恢复临时生命。 */
+    /** 原版 onEffectStarted 会补足护盾；直接施加以保留剩余时长和隐藏层。 */
     public static void applyAbsorption(LivingEntity entity, int durationTicks,
                                        int amplifier, float absorptionHealth) {
         MobEffectInstance current = entity.getEffect(MobEffects.ABSORPTION);
-        if (current != null && current.getAmplifier() == amplifier
-                && entity.getAbsorptionAmount() + 0.01F < absorptionHealth) {
-            entity.removeEffect(MobEffects.ABSORPTION);
-            current = null;
-        }
         boolean higherEffectIsNearExpiry = current != null
                 && current.getAmplifier() > amplifier
                 && current.getDuration() >= 0
                 && current.getDuration() <= Math.max(1, durationTicks / 2);
         if (current == null || current.getAmplifier() <= amplifier || higherEffectIsNearExpiry) {
-            if (current != null && current.getAmplifier() < amplifier) {
-                entity.removeEffect(MobEffects.ABSORPTION);
-            }
             entity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION,
                     durationTicks, amplifier, true, false, true));
         }

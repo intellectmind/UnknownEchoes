@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.projection;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.item.EchoProjectorItem;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -126,7 +127,7 @@ public class EchoProjectionEntity extends LivingEntity implements GeoEntity {
             serverLevel.sendParticles(ParticleTypes.PORTAL,
                     this.getX(), this.getY() + 0.15D, this.getZ(),
                     14, 0.5D, 0.08D, 0.5D, 0.02D);
-            this.playSound(net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_CHIME, 0.8F, 1.4F);
+            this.playSound(ModSounds.ECHO_PROJECTION_FADE.get(), 0.8F, 1.0F);
         }
         this.discard();
     }

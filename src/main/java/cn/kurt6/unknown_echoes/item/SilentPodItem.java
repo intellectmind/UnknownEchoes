@@ -36,19 +36,21 @@ public class SilentPodItem extends Item {
 
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof Player player && !canBenefit(player)) {
-            return stack;
-        }
-        ItemStack result = super.finishUsingItem(stack, level, entity);
-        if (!level.isClientSide) {
-            List<MobEffectInstance> harmful = entity.getActiveEffects().stream()
-                    .filter(effect -> !effect.getEffect().value().isBeneficial())
-                    .toList();
-            for (MobEffectInstance effect : harmful) {
-                entity.removeEffect(effect.getEffect());
+        return ConsumableCompletion.finish(this, stack, entity, () -> {
+            if (entity instanceof Player player && !canBenefit(player)) {
+                return stack;
             }
-        }
-        return result;
+            ItemStack result = super.finishUsingItem(stack, level, entity);
+            if (!level.isClientSide) {
+                List<MobEffectInstance> harmful = entity.getActiveEffects().stream()
+                        .filter(effect -> !effect.getEffect().value().isBeneficial())
+                        .toList();
+                for (MobEffectInstance effect : harmful) {
+                    entity.removeEffect(effect.getEffect());
+                }
+            }
+            return result;
+        });
     }
 
     private static boolean canBenefit(Player player) {

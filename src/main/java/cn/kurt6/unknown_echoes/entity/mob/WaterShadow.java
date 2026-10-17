@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.EcologyMeleePresentation;
 import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -43,6 +44,8 @@ public class WaterShadow extends Monster implements GeoEntity {
             RawAnimation.begin().then("animation.water_shadow.attack", Animation.LoopType.PLAY_ONCE);
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
+    private final EcologyMeleePresentation<WaterShadow> meleePresentation =
+            new EcologyMeleePresentation<>(this, 10);
 
     public WaterShadow(EntityType<? extends Monster> type, Level level) {
         super(type, level);
@@ -93,9 +96,19 @@ public class WaterShadow extends Monster implements GeoEntity {
     }
 
     @Override
+    public boolean canAttack(LivingEntity target) {
+        return this.isInWater() && target.isInWater() && super.canAttack(target);
+    }
+
+    @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide && this.tickCount % 10 == 0
+        if (!this.level().isClientSide && this.getTarget() != null
+                && !this.meleePresentation.canAttack(this.getTarget())) {
+            this.setTarget(null);
+            this.getNavigation().stop();
+        }
+        if (!this.level().isClientSide && this.isAlive() && this.tickCount % 10 == 0
                 && this.level() instanceof ServerLevel serverLevel) {
             serverLevel.sendParticles(
                     cn.kurt6.unknown_echoes.entity.boss.BossFx.waterBubbleOr(
@@ -107,17 +120,29 @@ public class WaterShadow extends Monster implements GeoEntity {
 
     @Override
     public boolean doHurtTarget(Entity target) {
+        if (!(target instanceof LivingEntity living) || !this.meleePresentation.canAttack(living)) {
+            return false;
+        }
+        LivingEntity navigationTarget = this.getTarget();
         boolean hit = super.doHurtTarget(target);
-        if (hit && !this.level().isClientSide) {
-            if (target instanceof LivingEntity living) {
-                living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 70, 0), this);
-            }
+        if (!hit || this.getTarget() != navigationTarget || !this.meleePresentation.canAttack(living)) {
+            return hit;
+        }
+        living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 70, 0), this);
+        if (this.getTarget() == navigationTarget && this.meleePresentation.canAttack(living)
+                && this.meleePresentation.begin(living)) {
             ((ServerLevel) this.level()).sendParticles(ParticleTypes.SQUID_INK,
                     target.getX(), target.getY() + 0.8D, target.getZ(),
                     5, 0.22D, 0.28D, 0.22D, 0.01D);
-            this.triggerAnim("attack_controller", "attack");
+            this.playSound(ModSounds.WATER_SHADOW_STRIKE.get(), 0.7F, 1.0F);
         }
         return hit;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        this.meleePresentation.tick();
     }
 
     @Override

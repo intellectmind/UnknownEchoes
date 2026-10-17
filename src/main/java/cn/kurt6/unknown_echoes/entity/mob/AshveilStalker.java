@@ -78,6 +78,9 @@ public class AshveilStalker extends Monster implements GeoEntity {
     @Override
     public void aiStep() {
         super.aiStep();
+        if (!this.isAlive() || this.isNoAi()) {
+            return;
+        }
         if (this.pounceCooldown > 0) {
             --this.pounceCooldown;
         }
@@ -85,7 +88,8 @@ public class AshveilStalker extends Monster implements GeoEntity {
             return;
         }
         LivingEntity target = this.getTarget();
-        if (target == null || !target.isAlive()) {
+        if (target == null || !target.isAlive() || target.level() != this.level()
+                || !this.canAttack(target)) {
             return;
         }
         double distanceSqr = this.distanceToSqr(target);

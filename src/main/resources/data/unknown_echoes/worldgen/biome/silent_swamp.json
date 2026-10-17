@@ -3,23 +3,29 @@
   "temperature": 0.7,
   "downfall": 0.9,
   "effects": {
-    "fog_color": 4215364,
-    "sky_color": 3490125,
-    "water_color": 5074008,
-    "water_fog_color": 2110506,
-    "grass_color": 5074251,
-    "foliage_color": 4809798,
+    "fog_color": 7442054,
+    "sky_color": 6847377,
+    "water_color": 4746856,
+    "water_fog_color": 2703164,
+    "grass_color": 6850173,
+    "foliage_color": 6850173,
     "ambient_particle": {
       "options": {
         "type": "minecraft:white_ash"
       },
-      "probability": 0.01
+      "probability": 0.0006
     },
     "mood_sound": {
       "sound": "minecraft:ambient.cave",
-      "tick_delay": 12000,
+      "tick_delay": 24000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.swamp",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
     }
   },
   "carvers": {
@@ -41,7 +47,9 @@
       "unknown_echoes:muffle_moss_disk"
     ],
     [],
-    [],
+    [
+      "unknown_echoes:silent_swamp_landform"
+    ],
     [
       "unknown_echoes:mute_reed_patch",
       "unknown_echoes:mire_bell_patch",
@@ -66,6 +74,36 @@
         "weight": 15,
         "minCount": 1,
         "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:hollow_reed_serpent",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:mossfang_toad",
+        "weight": 6,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:reed_mask_raider",
+        "weight": 4,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:mossplate_hound",
+        "weight": 2,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:spore_crowned_wretch",
+        "weight": 3,
+        "minCount": 1,
+        "maxCount": 1
       }
     ],
     "creature": [
@@ -74,6 +112,18 @@
         "weight": 25,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:reedwing_dragonfly",
+        "weight": 20,
+        "minCount": 2,
+        "maxCount": 4
+      },
+      {
+        "type": "unknown_echoes:mosslight_firefly",
+        "weight": 18,
+        "minCount": 2,
+        "maxCount": 4
       }
     ],
     "ambient": [],

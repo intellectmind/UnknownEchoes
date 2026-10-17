@@ -11,19 +11,48 @@
           "functions": [
             {
               "function": "minecraft:set_count",
-              "count": { "type": "minecraft:uniform", "min": 1, "max": 2 }
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
+                "max": 2
+              }
             },
             {
               "function": "minecraft:enchanted_count_increase",
               "enchantment": "minecraft:looting",
-              "count": { "type": "minecraft:uniform", "min": 0.0, "max": 1.0 },
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 0.0,
+                "max": 1.0
+              },
               "limit": 4
             }
           ]
         }
       ],
       "conditions": [
-        { "condition": "minecraft:random_chance", "chance": 0.8 }
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.8
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "conditions": [
+        {
+          "condition": "minecraft:killed_by_player"
+        },
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.05
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:earth_particle_crystal"
+        }
       ]
     }
   ],

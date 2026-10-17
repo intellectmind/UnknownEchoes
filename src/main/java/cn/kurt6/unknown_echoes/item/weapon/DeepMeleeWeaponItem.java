@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.item.tool.DeepAlloyTier;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
@@ -12,7 +13,6 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -175,10 +175,9 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
             }
         }
         WeaponFx.groundRing(level, player, fx, 6.0D);
-        level.sendParticles(ParticleTypes.EXPLOSION, player.getX(), player.getY() + 0.2D, player.getZ(),
-                1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND,
-                SoundSource.PLAYERS, 1.2F, 0.45F);
+        WeaponFx.releaseBurst(level, player.position().add(0, .2, 0), fx, 1.15D);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_GRAVITY_HAMMER_PRIMARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void castGravityWell(ServerLevel level, ServerPlayer player) {
@@ -193,6 +192,8 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
                     true, false, true));
         }
         WeaponFx.groundRing(level, player, fx, 9.0D);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_GRAVITY_HAMMER_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void castRiftRush(ServerLevel level, ServerPlayer player) {
@@ -212,8 +213,8 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
                 Math.max(0.08D, direction.y * 0.8D + 0.08D), direction.z * 1.5D);
         player.hurtMarked = true;
         player.fallDistance = 0.0F;
-        level.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT,
-                SoundSource.PLAYERS, 0.8F, 1.4F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_RIFT_DAGGER_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.8F, 1.0F);
     }
 
     private void castRiftVeil(ServerLevel level, ServerPlayer player, Vec3 destination) {
@@ -231,6 +232,8 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 60, 0, true, false, true));
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 120, 1, true, false, true));
         WeaponFx.wardSpiral(level, player, fx, 0.7D, 2);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_RIFT_DAGGER_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void castAnchorChains(ServerLevel level, ServerPlayer player) {
@@ -245,14 +248,16 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         }
         WeaponFx.slashArc(level, player, WeaponFxTheme.ANCHOR_BLADE,
                 7.0D, WeaponFx.halfAngleOf(0.1D));
-        level.playSound(null, player.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                SoundSource.PLAYERS, 1.0F, 0.7F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ANCHOR_BLADE_PRIMARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void castAnchorBulwark(ServerLevel level, ServerPlayer player) {
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 160, 1, true, false, true));
         WeaponSkillSupport.applyAbsorption(player, 160, 2, 12.0F);
         WeaponFx.wardSpiral(level, player, WeaponFxTheme.ANCHOR_BLADE, 1.25D, 3);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ANCHOR_BLADE_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void castUnfoldedArc(ServerLevel level, ServerPlayer player) {
@@ -267,6 +272,8 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         }
         WeaponFx.slashArc(level, player, WeaponFxTheme.FOLDED_GLAIVE,
                 9.0D, WeaponFx.halfAngleOf(-0.05D));
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_FOLDED_GLAIVE_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void castFoldedCollapse(ServerLevel level, ServerPlayer player) {
@@ -283,6 +290,8 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
             }
         }
         WeaponFx.groundRing(level, player, fx, 8.0D);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_FOLDED_GLAIVE_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     @Override
@@ -335,11 +344,8 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
                 deepTarget ? 70 : 60, deepTarget ? 2 : 1, true, false, true));
         WeaponFx.heavyHitMark(level, target, WeaponFxTheme.GRAVITY_HAMMER);
-        level.sendParticles(ParticleTypes.EXPLOSION,
-                target.getX(), target.getY() + 0.2D, target.getZ(),
-                1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.playSound(null, target.blockPosition(), SoundEvents.ANVIL_LAND,
-                SoundSource.PLAYERS, 0.75F, 0.55F);
+        level.playSound(null, target.blockPosition(), ModSounds.WEAPON_GRAVITY_HAMMER_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.75F, 1.0F);
     }
 
     private void applyRiftDagger(ServerLevel level, ServerPlayer player, LivingEntity target) {
@@ -372,8 +378,8 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
                     40, 0, true, false, true));
         }
         WeaponFx.wardSpiral(level, player, WeaponFxTheme.RIFT_DAGGER, 0.6D, 2);
-        level.playSound(null, BlockPos.containing(destination), SoundEvents.ENDERMAN_TELEPORT,
-                SoundSource.PLAYERS, 0.65F, 1.45F);
+        level.playSound(null, BlockPos.containing(destination), ModSounds.WEAPON_RIFT_DAGGER_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.65F, 1.0F);
     }
 
     private void applyAnchorBlade(ServerLevel level, ServerPlayer player, LivingEntity target) {
@@ -394,8 +400,8 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
                 deepTarget ? 60 : 50, 1,
                 true, false, true));
         WeaponFx.hitMark(level, target, WeaponFxTheme.ANCHOR_BLADE);
-        level.playSound(null, target.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                SoundSource.PLAYERS, 0.75F, 0.75F);
+        level.playSound(null, target.blockPosition(), ModSounds.WEAPON_ANCHOR_BLADE_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.75F, 1.0F);
     }
 
     private void applyFoldedGlaive(ServerLevel level, ServerPlayer player, LivingEntity target) {
@@ -430,8 +436,8 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         level.sendParticles(ParticleTypes.SWEEP_ATTACK,
                 target.getX(), target.getY() + target.getBbHeight() * 0.45D, target.getZ(),
                 Math.max(1, affected), 1.2D, 0.25D, 1.2D, 0.0D);
-        level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.PLAYERS, 0.85F, 0.8F);
+        level.playSound(null, target.blockPosition(), ModSounds.WEAPON_FOLDED_GLAIVE_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.85F, 1.0F);
     }
 
     private static Vec3 findSafeBackstep(ServerLevel level, ServerPlayer player, double range) {

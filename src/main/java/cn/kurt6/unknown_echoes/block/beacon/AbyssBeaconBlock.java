@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.block.beacon;
 
+import cn.kurt6.unknown_echoes.fx.PlayerSoundFeedback;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
@@ -8,10 +9,8 @@ import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -20,12 +19,18 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.function.BooleanSupplier;
 
 /** 第一维度毕业入口。每座信标的三段校准按玩家和坐标独立保存。 */
 public class AbyssBeaconBlock extends Block {
@@ -38,6 +43,7 @@ public class AbyssBeaconBlock extends Block {
     private static final String CALIBRATION_PREFIX = "abyss_beacon:";
     private static final int STAGE_COOLDOWN_TICKS = 24;
     private static final int ACTIVATION_COOLDOWN_TICKS = 62;
+    private static final Set<ServerPlayer> INTERACTING = Collections.newSetFromMap(new WeakHashMap<>());
 
     public AbyssBeaconBlock(Properties properties) {
         super(properties);
@@ -60,10 +66,21 @@ public class AbyssBeaconBlock extends Block {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(player instanceof ServerPlayer serverPlayer) || serverPlayer.isSpectator()) {
+        if (!(player instanceof ServerPlayer serverPlayer) || !(level instanceof ServerLevel serverLevel)) {
             return InteractionResult.CONSUME;
         }
+        BlockPos source = pos.immutable();
+        if (!isInteractionCurrent(serverPlayer, serverLevel, source) || !INTERACTING.add(serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
+        try {
+            return useBeacon(serverLevel, source, serverPlayer);
+        } finally {
+            INTERACTING.remove(serverPlayer);
+        }
+    }
 
+    private static InteractionResult useBeacon(ServerLevel level, BlockPos pos, ServerPlayer serverPlayer) {
         if (level.dimension().equals(DeepEchoTeleporter.DEEP_ECHOES)) {
             DeepEchoTeleporter.returnToEchoRealm(serverPlayer, pos);
             return InteractionResult.CONSUME;
@@ -75,6 +92,9 @@ public class AbyssBeaconBlock extends Block {
         }
 
         EchoCompletionManager.refreshMainlineCompletion(serverPlayer);
+        if (!isInteractionCurrent(serverPlayer, level, pos)) {
+            return InteractionResult.CONSUME;
+        }
         if (!EchoPermission.canCalibrateAbyssBeacon(serverPlayer)) {
             fail(level, pos, serverPlayer, "message.unknown_echoes.abyss_beacon.mainline_required");
             return InteractionResult.CONSUME;
@@ -111,21 +131,25 @@ public class AbyssBeaconBlock extends Block {
                         "message.unknown_echoes.progress_record.full"), true);
                 return InteractionResult.CONSUME;
             }
-            playStageFeedback(level, pos, serverPlayer,
+            BooleanSupplier canContinue = () -> isCalibrationCurrent(serverPlayer, level, pos,
+                    baseKey, "complete", EchoAbilityType.TRUE_SIGHT_ECHO)
+                    && isStageComplete(serverPlayer, baseKey, "true_sight")
+                    && EchoPermission.canEnterDeepEchoes(serverPlayer);
+            if (!playStageFeedback(level, pos, serverPlayer,
                     EchoAbilityType.TRUE_SIGHT_ECHO, ParticleTypes.ENCHANT,
-                    SoundEvents.BEACON_ACTIVATE);
+                    SoundEvents.BEACON_ACTIVATE, ACTIVATION_COOLDOWN_TICKS, canContinue)) {
+                return InteractionResult.CONSUME;
+            }
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.abyss_beacon.calibrated_true_sight"), true);
-            if (level instanceof ServerLevel serverLevel) {
-                playActivationFx(serverLevel, pos);
+            if (canContinue.getAsBoolean()) {
+                AbyssBeaconEffects.playActivation(level, pos);
             }
-            serverPlayer.getCooldowns().addCooldown(
-                    ModItems.ABYSS_BEACON.get(), ACTIVATION_COOLDOWN_TICKS);
         }
         return InteractionResult.CONSUME;
     }
 
-    private static boolean calibrateStage(Level level, BlockPos pos, ServerPlayer player, String baseKey,
+    private static boolean calibrateStage(ServerLevel level, BlockPos pos, ServerPlayer player, String baseKey,
                                           String stage, EchoAbilityType ability,
                                           net.minecraft.core.particles.ParticleOptions particle,
                                           net.minecraft.sounds.SoundEvent sound) {
@@ -138,141 +162,57 @@ public class AbyssBeaconBlock extends Block {
                     "message.unknown_echoes.progress_record.full"), true);
             return false;
         }
+        BooleanSupplier canContinue = () -> isCalibrationCurrent(player, level, pos, baseKey, stage, ability);
+        if (!canContinue.getAsBoolean()) {
+            return false;
+        }
         EchoAbilityManager.syncToClient(player);
-        playStageFeedback(level, pos, player, ability, particle, sound);
-        return true;
+        return playStageFeedback(level, pos, player, ability, particle, sound,
+                STAGE_COOLDOWN_TICKS, canContinue);
     }
 
-    private static void playStageFeedback(Level level, BlockPos pos, ServerPlayer player,
+    private static boolean playStageFeedback(ServerLevel level, BlockPos pos, ServerPlayer player,
                                           EchoAbilityType ability,
                                           net.minecraft.core.particles.ParticleOptions particle,
-                                          net.minecraft.sounds.SoundEvent sound) {
-        player.getCooldowns().addCooldown(ModItems.ABYSS_BEACON.get(), STAGE_COOLDOWN_TICKS);
+                                          net.minecraft.sounds.SoundEvent sound, int cooldownTicks,
+                                          BooleanSupplier canContinue) {
+        if (!canContinue.getAsBoolean()) {
+            return false;
+        }
+        player.getCooldowns().addCooldown(ModItems.ABYSS_BEACON.get(), cooldownTicks);
+        if (!canContinue.getAsBoolean()) {
+            return false;
+        }
         level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.9F, 1.0F);
-        if (level instanceof ServerLevel serverLevel) {
-            playCalibrationFx(serverLevel, pos, ability, particle);
+        if (!canContinue.getAsBoolean()) {
+            return false;
+        }
+        AbyssBeaconEffects.playCalibration(level, pos, ability, particle);
+        return canContinue.getAsBoolean();
+    }
+
+    private static void fail(ServerLevel level, BlockPos pos, ServerPlayer player, String messageKey) {
+        PlayerSoundFeedback.deny(player);
+        if (isInteractionCurrent(player, level, pos)) {
+            player.displayClientMessage(Component.translatable(messageKey), true);
         }
     }
 
-    private static void playCalibrationFx(ServerLevel level, BlockPos pos,
-                                          EchoAbilityType ability, ParticleOptions primary) {
-        ParticleOptions accent = switch (ability) {
-            case WIND_ECHO -> ParticleTypes.END_ROD;
-            case TIDE_ECHO -> ParticleTypes.NAUTILUS;
-            case TRUE_SIGHT_ECHO -> ParticleTypes.GLOW;
-            case GRAVITY_ECHO -> ParticleTypes.ELECTRIC_SPARK;
-            case VOID_ECHO -> ParticleTypes.REVERSE_PORTAL;
-        };
-        int startTick = level.getServer().getTickCount();
-        for (int frame = 0; frame <= 22; frame++) {
-            int frameIndex = frame;
-            level.getServer().tell(new TickTask(startTick + frame, () -> {
-                if (!canPlayFx(level, pos)) {
-                    return;
-                }
-                double progress = frameIndex / 22.0D;
-                double radius = 1.35D - progress * 0.95D;
-                double height = 0.25D + progress * 3.4D;
-                double direction = ability == EchoAbilityType.TIDE_ECHO ? -1.0D : 1.0D;
-                double phase = frameIndex * 0.42D * direction;
-                for (int arm = 0; arm < 5; arm++) {
-                    double angle = phase + arm * Math.PI * 2.0D / 5.0D;
-                    double x = pos.getX() + 0.5D + Math.cos(angle) * radius;
-                    double z = pos.getZ() + 0.5D + Math.sin(angle) * radius;
-                    level.sendParticles(primary, x, pos.getY() + height, z,
-                            2, 0.035D, 0.035D, 0.035D, 0.015D);
-                    if ((frameIndex + arm) % 3 == 0) {
-                        level.sendParticles(accent, x, pos.getY() + height + 0.12D, z,
-                                1, 0.02D, 0.03D, 0.02D, 0.01D);
-                    }
-                }
-                if (frameIndex % 5 == 0) {
-                    emitRing(level, pos, primary, 0.7D + progress * 1.5D,
-                            0.35D + progress * 1.2D, 20);
-                }
-            }));
-        }
+    private static boolean isCalibrationCurrent(ServerPlayer player, ServerLevel level, BlockPos pos,
+                                                 String baseKey, String stage, EchoAbilityType ability) {
+        return isInteractionCurrent(player, level, pos)
+                && EchoPermission.canCalibrateAbyssBeacon(player)
+                && EchoAbilityManager.hasAbility(player, ability)
+                && isStageComplete(player, baseKey, stage);
     }
 
-    private static void playActivationFx(ServerLevel level, BlockPos pos) {
-        int startTick = level.getServer().getTickCount();
-        for (int frame = 0; frame <= 30; frame++) {
-            int frameIndex = frame;
-            level.getServer().tell(new TickTask(startTick + frame * 2, () -> {
-                if (!canPlayFx(level, pos)) {
-                    return;
-                }
-                double progress = frameIndex / 30.0D;
-                double pulse = Math.sin(progress * Math.PI);
-                double radius = 0.55D + pulse * 2.5D;
-                double y = 0.45D + progress * 3.8D;
-                double phase = frameIndex * 0.28D;
-                for (int arm = 0; arm < 5; arm++) {
-                    double angle = phase + arm * Math.PI * 2.0D / 5.0D;
-                    double x = pos.getX() + 0.5D + Math.cos(angle) * radius;
-                    double z = pos.getZ() + 0.5D + Math.sin(angle) * radius;
-                    ParticleOptions echoParticle = switch (arm) {
-                        case 0 -> ParticleTypes.CLOUD;
-                        case 1 -> ParticleTypes.SPLASH;
-                        case 2 -> ParticleTypes.ENCHANT;
-                        case 3 -> ParticleTypes.ELECTRIC_SPARK;
-                        default -> ParticleTypes.REVERSE_PORTAL;
-                    };
-                    level.sendParticles(echoParticle, x, pos.getY() + y, z,
-                            2, 0.025D, 0.04D, 0.025D, 0.01D);
-                    level.sendParticles(ParticleTypes.END_ROD, x, pos.getY() + y + 0.08D, z,
-                            1, 0.015D, 0.025D, 0.015D, 0.005D);
-                    level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                            pos.getX() + 0.5D - Math.cos(angle) * radius * 0.65D,
-                            pos.getY() + y * 0.82D,
-                            pos.getZ() + 0.5D - Math.sin(angle) * radius * 0.65D,
-                            1, 0.025D, 0.04D, 0.025D, 0.02D);
-                }
-                if (frameIndex % 6 == 0) {
-                    emitRing(level, pos, ParticleTypes.ENCHANT,
-                            0.8D + progress * 2.6D, 0.3D + progress * 0.9D, 28);
-                }
-                if (frameIndex == 12) {
-                    level.playSound(null, pos, SoundEvents.BEACON_POWER_SELECT,
-                            SoundSource.BLOCKS, 1.4F, 0.7F);
-                } else if (frameIndex == 24) {
-                    level.playSound(null, pos, SoundEvents.END_PORTAL_SPAWN,
-                            SoundSource.BLOCKS, 1.8F, 1.1F);
-                } else if (frameIndex == 30) {
-                    double x = pos.getX() + 0.5D;
-                    double yTop = pos.getY() + 3.6D;
-                    double z = pos.getZ() + 0.5D;
-                    level.sendParticles(ParticleTypes.FLASH, x, yTop, z,
-                            3, 0.0D, 0.0D, 0.0D, 0.0D);
-                    level.sendParticles(ParticleTypes.END_ROD, x, yTop, z,
-                            110, 1.8D, 2.1D, 1.8D, 0.22D);
-                    level.sendParticles(ParticleTypes.REVERSE_PORTAL, x, yTop, z,
-                            140, 2.1D, 2.3D, 2.1D, 0.3D);
-                }
-            }));
-        }
-    }
-
-    private static void emitRing(ServerLevel level, BlockPos pos, ParticleOptions particle,
-                                 double radius, double height, int points) {
-        for (int point = 0; point < points; point++) {
-            double angle = point * Math.PI * 2.0D / points;
-            level.sendParticles(particle,
-                    pos.getX() + 0.5D + Math.cos(angle) * radius,
-                    pos.getY() + height,
-                    pos.getZ() + 0.5D + Math.sin(angle) * radius,
-                    1, 0.01D, 0.01D, 0.01D, 0.0D);
-        }
-    }
-
-    private static boolean canPlayFx(ServerLevel level, BlockPos pos) {
-        return level.hasChunkAt(pos) && level.getBlockState(pos).is(ModBlocks.ABYSS_BEACON.get());
-    }
-
-    private static void fail(Level level, BlockPos pos, ServerPlayer player, String messageKey) {
-        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE,
-                SoundSource.BLOCKS, 0.7F, 0.45F);
-        player.displayClientMessage(Component.translatable(messageKey), true);
+    private static boolean isInteractionCurrent(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        return !player.isRemoved() && player.isAlive() && !player.isSpectator() && !player.hasDisconnected()
+                && player.level() == level
+                && player.server.getPlayerList().getPlayer(player.getUUID()) == player
+                && player.server.getLevel(level.dimension()) == level
+                && player.canInteractWithBlock(pos, 1.0D)
+                && isBeaconPresent(level, pos);
     }
 
     private static boolean isStageComplete(ServerPlayer player, String baseKey, String stage) {
@@ -281,9 +221,16 @@ public class AbyssBeaconBlock extends Block {
 
     public static boolean isCalibratedFor(ServerPlayer player, Level level, BlockPos pos) {
         return level.dimension().equals(EchoBeaconBlock.ECHO_REALM)
-                && level.hasChunkAt(pos)
-                && level.getBlockState(pos).is(ModBlocks.ABYSS_BEACON.get())
+                && isBeaconPresent(level, pos)
                 && isStageComplete(player, calibrationKey(level, pos), "complete");
+    }
+
+    static boolean isBeaconPresent(Level level, BlockPos pos) {
+        if (!(level instanceof ServerLevel serverLevel) || level.isOutsideBuildHeight(pos)) {
+            return false;
+        }
+        LevelChunk chunk = serverLevel.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk != null && chunk.getBlockState(pos).is(ModBlocks.ABYSS_BEACON.get());
     }
 
     /** 结构中心与信标中心共享 X/Z；忽略地表自适应产生的 Y 差异。 */

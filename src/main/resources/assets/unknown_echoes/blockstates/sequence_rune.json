@@ -1,52 +1,420 @@
 {
   "variants": {
-    "order=0,lit=false": {
+    "facing=up,order=0,lit=false": {
       "model": "unknown_echoes:block/sequence_rune_0"
     },
-    "order=0,lit=true": {
+    "facing=down,order=0,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_0",
+      "x": 180
+    },
+    "facing=north,order=0,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_0",
+      "x": 90
+    },
+    "facing=east,order=0,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_0",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=0,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_0",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=0,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_0",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=0,lit=true": {
       "model": "unknown_echoes:block/sequence_rune_0_lit"
     },
-    "order=1,lit=false": {
+    "facing=down,order=0,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_0_lit",
+      "x": 180
+    },
+    "facing=north,order=0,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_0_lit",
+      "x": 90
+    },
+    "facing=east,order=0,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_0_lit",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=0,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_0_lit",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=0,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_0_lit",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=1,lit=false": {
       "model": "unknown_echoes:block/sequence_rune_1"
     },
-    "order=1,lit=true": {
+    "facing=down,order=1,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_1",
+      "x": 180
+    },
+    "facing=north,order=1,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_1",
+      "x": 90
+    },
+    "facing=east,order=1,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_1",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=1,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_1",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=1,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_1",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=1,lit=true": {
       "model": "unknown_echoes:block/sequence_rune_1_lit"
     },
-    "order=2,lit=false": {
+    "facing=down,order=1,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_1_lit",
+      "x": 180
+    },
+    "facing=north,order=1,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_1_lit",
+      "x": 90
+    },
+    "facing=east,order=1,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_1_lit",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=1,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_1_lit",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=1,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_1_lit",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=2,lit=false": {
       "model": "unknown_echoes:block/sequence_rune_2"
     },
-    "order=2,lit=true": {
+    "facing=down,order=2,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_2",
+      "x": 180
+    },
+    "facing=north,order=2,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_2",
+      "x": 90
+    },
+    "facing=east,order=2,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_2",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=2,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_2",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=2,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_2",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=2,lit=true": {
       "model": "unknown_echoes:block/sequence_rune_2_lit"
     },
-    "order=3,lit=false": {
+    "facing=down,order=2,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_2_lit",
+      "x": 180
+    },
+    "facing=north,order=2,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_2_lit",
+      "x": 90
+    },
+    "facing=east,order=2,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_2_lit",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=2,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_2_lit",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=2,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_2_lit",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=3,lit=false": {
       "model": "unknown_echoes:block/sequence_rune_3"
     },
-    "order=3,lit=true": {
+    "facing=down,order=3,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_3",
+      "x": 180
+    },
+    "facing=north,order=3,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_3",
+      "x": 90
+    },
+    "facing=east,order=3,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_3",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=3,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_3",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=3,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_3",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=3,lit=true": {
       "model": "unknown_echoes:block/sequence_rune_3_lit"
     },
-    "order=4,lit=false": {
+    "facing=down,order=3,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_3_lit",
+      "x": 180
+    },
+    "facing=north,order=3,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_3_lit",
+      "x": 90
+    },
+    "facing=east,order=3,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_3_lit",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=3,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_3_lit",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=3,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_3_lit",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=4,lit=false": {
       "model": "unknown_echoes:block/sequence_rune_4"
     },
-    "order=4,lit=true": {
+    "facing=down,order=4,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_4",
+      "x": 180
+    },
+    "facing=north,order=4,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_4",
+      "x": 90
+    },
+    "facing=east,order=4,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_4",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=4,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_4",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=4,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_4",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=4,lit=true": {
       "model": "unknown_echoes:block/sequence_rune_4_lit"
     },
-    "order=5,lit=false": {
+    "facing=down,order=4,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_4_lit",
+      "x": 180
+    },
+    "facing=north,order=4,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_4_lit",
+      "x": 90
+    },
+    "facing=east,order=4,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_4_lit",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=4,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_4_lit",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=4,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_4_lit",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=5,lit=false": {
       "model": "unknown_echoes:block/sequence_rune_5"
     },
-    "order=5,lit=true": {
+    "facing=down,order=5,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_5",
+      "x": 180
+    },
+    "facing=north,order=5,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_5",
+      "x": 90
+    },
+    "facing=east,order=5,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_5",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=5,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_5",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=5,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_5",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=5,lit=true": {
       "model": "unknown_echoes:block/sequence_rune_5_lit"
     },
-    "order=6,lit=false": {
+    "facing=down,order=5,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_5_lit",
+      "x": 180
+    },
+    "facing=north,order=5,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_5_lit",
+      "x": 90
+    },
+    "facing=east,order=5,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_5_lit",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=5,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_5_lit",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=5,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_5_lit",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=6,lit=false": {
       "model": "unknown_echoes:block/sequence_rune_6"
     },
-    "order=6,lit=true": {
+    "facing=down,order=6,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_6",
+      "x": 180
+    },
+    "facing=north,order=6,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_6",
+      "x": 90
+    },
+    "facing=east,order=6,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_6",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=6,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_6",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=6,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_6",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=6,lit=true": {
       "model": "unknown_echoes:block/sequence_rune_6_lit"
     },
-    "order=7,lit=false": {
+    "facing=down,order=6,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_6_lit",
+      "x": 180
+    },
+    "facing=north,order=6,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_6_lit",
+      "x": 90
+    },
+    "facing=east,order=6,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_6_lit",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=6,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_6_lit",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=6,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_6_lit",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=7,lit=false": {
       "model": "unknown_echoes:block/sequence_rune_7"
     },
-    "order=7,lit=true": {
+    "facing=down,order=7,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_7",
+      "x": 180
+    },
+    "facing=north,order=7,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_7",
+      "x": 90
+    },
+    "facing=east,order=7,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_7",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=7,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_7",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=7,lit=false": {
+      "model": "unknown_echoes:block/sequence_rune_7",
+      "x": 90,
+      "y": 270
+    },
+    "facing=up,order=7,lit=true": {
       "model": "unknown_echoes:block/sequence_rune_7_lit"
+    },
+    "facing=down,order=7,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_7_lit",
+      "x": 180
+    },
+    "facing=north,order=7,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_7_lit",
+      "x": 90
+    },
+    "facing=east,order=7,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_7_lit",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south,order=7,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_7_lit",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west,order=7,lit=true": {
+      "model": "unknown_echoes:block/sequence_rune_7_lit",
+      "x": 90,
+      "y": 270
     }
   }
 }

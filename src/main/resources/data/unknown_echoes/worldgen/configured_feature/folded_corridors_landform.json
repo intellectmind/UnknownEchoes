@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "arch",
+    "rock": {
+      "Name": "unknown_echoes:folded_slate"
+    },
+    "accent": {
+      "Name": "minecraft:calcite"
+    },
+    "height": 18,
+    "radius": 9,
+    "submerged": false,
+    "drape": 0,
+    "waterline": false
+  }
+}

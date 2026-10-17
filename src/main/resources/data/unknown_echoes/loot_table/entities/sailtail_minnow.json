@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:entity",
+  "random_sequence": "unknown_echoes:entities/sailtail_minnow",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:wind_sac_membrane"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.5
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:sailtail_minnow_meat"
+        }
+      ]
+    }
+  ]
+}

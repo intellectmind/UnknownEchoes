@@ -18,6 +18,15 @@ public class ModBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, UnknownEchoes.MODID);
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<cn.kurt6.unknown_echoes.block.puzzle.WonderTrialBlockEntity>> WONDER_TRIAL =
+            BLOCK_ENTITY_TYPES.register("wonder_trial", () -> BlockEntityType.Builder.of(
+                    cn.kurt6.unknown_echoes.block.puzzle.WonderTrialBlockEntity::new, ModBlocks.WONDER_TRIAL.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<cn.kurt6.unknown_echoes.block.puzzle.WonderPuzzleCoreBlockEntity>> WONDER_PUZZLE_CORE =
+            BLOCK_ENTITY_TYPES.register("wonder_puzzle_core", () -> BlockEntityType.Builder.of(
+                    cn.kurt6.unknown_echoes.block.puzzle.WonderPuzzleCoreBlockEntity::new,
+                    ModBlocks.WONDER_PUZZLE_CORE.get()).build(null));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PuzzleCoreBlockEntity>> PUZZLE_CORE =
             BLOCK_ENTITY_TYPES.register("puzzle_core",
                     () -> BlockEntityType.Builder.of(PuzzleCoreBlockEntity::new,

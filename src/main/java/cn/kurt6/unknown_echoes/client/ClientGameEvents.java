@@ -51,11 +51,6 @@ public class ClientGameEvents {
     /** 自行统计的跳跃按下边沿数：KeyMapping.consumeClick 会把 GLFW REPEAT 也算成点击。 */
     private static int jumpPressCount = 0;
     private static final int WIND_PLATFORM_TAKEOFF_CHECK_HEIGHT = 24;
-    private static BossMusicSound bossMusic = null;
-    private static int bossMusicScanCooldown = 0;
-    private static net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> bossMusicDimension = null;
-    private static boolean silenceDomainActive = false;
-    private static int silenceDomainScanCooldown = 0;
     private static final int TRUE_SIGHT_CACHE_REFRESH_TICKS = 40;
     private static final int TRUE_SIGHT_CACHE_MOVE_DISTANCE = 8;
     private static final int TRUE_SIGHT_CACHE_LIMIT = 64;
@@ -123,6 +118,7 @@ public class ClientGameEvents {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         if (player == null) {
+            ClientBossMusic.clear(mc);
             usedDoubleJump = false;
             wasGrounded = true;
             glideTicks = 0;
@@ -147,7 +143,7 @@ public class ClientGameEvents {
         handleItemAlternateSkillKey(mc, player);
         handleArtifactUseKey(mc, player);
 
-        tickBossMusic(mc, player);
+        ClientBossMusic.tick(mc);
         tickTrueSightShimmer(player);
         tickTrueSightIllusionPulse(player);
         tickEchoToolSkillKey(mc, player);
@@ -174,6 +170,7 @@ public class ClientGameEvents {
             usedDoubleJump = true;
             PacketDistributor.sendToServer(DoubleJumpPayload.JUMP);
             if (ClientConfig.ENABLE_ECHO_PARTICLES.get()) {
+                ClientEquipmentFx.wind(player, false);
                 for (int i = 0; i < 8; i++) {
                     player.level().addParticle(ParticleTypes.CLOUD,
                             player.getX() + (player.getRandom().nextDouble() - 0.5) * 0.6,
@@ -360,13 +357,6 @@ public class ClientGameEvents {
             player.getAbilities().flying = true;
             player.fallDistance = 0.0F;
             glideTicks = 0;
-            if (ClientConfig.ENABLE_ECHO_PARTICLES.get() && player.tickCount % 4 == 0) {
-                player.level().addParticle(ParticleTypes.CLOUD,
-                        player.getX() + (player.getRandom().nextDouble() - 0.5D) * 0.8D,
-                        player.getY() + 0.2D,
-                        player.getZ() + (player.getRandom().nextDouble() - 0.5D) * 0.8D,
-                        0.0D, -0.02D, 0.0D);
-            }
         }
         return true;
     }
@@ -507,7 +497,9 @@ public class ClientGameEvents {
         if (glideTicks <= 0) {
             return;
         }
-        if (player.isInWater() || player.isInLava() || player.isFallFlying() || player.isPassenger()) {
+        if (!player.isAlive() || player.isSpectator()
+                || !ClientAbilityCache.hasAbility(EchoAbilityType.WIND_ECHO)
+                || player.isInWater() || player.isInLava() || player.isFallFlying() || player.isPassenger()) {
             glideTicks = 0;
             return;
         }
@@ -521,6 +513,9 @@ public class ClientGameEvents {
             PacketDistributor.sendToServer(DoubleJumpPayload.GLIDE_HOLD);
         }
         if (ClientConfig.ENABLE_ECHO_PARTICLES.get() && player.tickCount % 4 == 0) {
+            if (player.tickCount % 12 == 0) {
+                ClientEquipmentFx.wind(player, true);
+            }
             player.level().addParticle(ParticleTypes.CLOUD,
                     player.getX() + (player.getRandom().nextDouble() - 0.5) * 0.5,
                     player.getY() + 0.2,
@@ -627,6 +622,7 @@ public class ClientGameEvents {
             if (entity == player) {
                 continue;
             }
+            ClientEquipmentFx.trueSight(entity);
             for (int i = 0; i < 3; i++) {
                 player.level().addParticle(ParticleTypes.END_ROD,
                         entity.getX() + (random.nextDouble() - 0.5D) * entity.getBbWidth(),
@@ -648,100 +644,16 @@ public class ClientGameEvents {
         return research >= 1 ? 10 : 6;
     }
 
-    /** 靠近存活的主线 Boss 时播放对应 Boss BGM,远离/Boss 死亡由音轨自身淡出。 */
-    private static void tickBossMusic(Minecraft mc, LocalPlayer player) {
-        var dimension = player.level().dimension();
-        if (!dimension.equals(bossMusicDimension)) {
-            if (bossMusic != null) {
-                mc.getSoundManager().stop(bossMusic);
-                bossMusic = null;
-            }
-            bossMusicDimension = dimension;
-            bossMusicScanCooldown = 0;
-            silenceDomainActive = false;
-            silenceDomainScanCooldown = 0;
-        }
-        if (bossMusic != null && !mc.getSoundManager().isActive(bossMusic)) {
-            bossMusic = null;
-        }
-
-        if (--silenceDomainScanCooldown <= 0) {
-            silenceDomainScanCooldown = 10;
-            silenceDomainActive = !player.level().getEntitiesOfClass(
-                    cn.kurt6.unknown_echoes.entity.boss.SilentPriest.class,
-                    player.getBoundingBox().inflate(cn.kurt6.unknown_echoes.entity.boss.SilentPriest.DOMAIN_RADIUS),
-                    priest -> priest.isAlive() && priest.isDomainActive()).isEmpty();
-        }
-        if (silenceDomainActive) {
-            mc.getMusicManager().stopPlaying();
-            if (bossMusic != null) {
-                mc.getSoundManager().stop(bossMusic);
-                bossMusic = null;
-            }
-            return;
-        }
-        if (bossMusic != null) {
-
-            mc.getMusicManager().stopPlaying();
-        }
-        if (--bossMusicScanCooldown > 0 || bossMusic != null
-                || !ClientConfig.PLAY_ECHO_AMBIENT_SOUNDS.get()) {
-            return;
-        }
-        bossMusicScanCooldown = 20;
-        var area = player.getBoundingBox().inflate(48.0D);
-        var nearbyBosses = player.level().getEntitiesOfClass(
-                net.minecraft.world.entity.LivingEntity.class, area,
-                boss -> boss.isAlive() && (boss instanceof cn.kurt6.unknown_echoes.entity.boss.VoidProphet
-                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.RiftWarden
-                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.WorldEcho
-                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus
-                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher
-                        || boss instanceof cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian));
-        net.minecraft.world.entity.LivingEntity selected = null;
-        int selectedPriority = Integer.MAX_VALUE;
-        for (var boss : nearbyBosses) {
-            int priority = boss instanceof cn.kurt6.unknown_echoes.entity.boss.VoidProphet ? 0
-                    : boss instanceof cn.kurt6.unknown_echoes.entity.boss.RiftWarden ? 1
-                    : boss instanceof cn.kurt6.unknown_echoes.entity.boss.WorldEcho ? 2
-                    : boss instanceof cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus ? 3
-                    : boss instanceof cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher ? 4 : 5;
-            if (priority < selectedPriority) {
-                selected = boss;
-                selectedPriority = priority;
-            }
-        }
-        if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.VoidProphet) {
-            startBossMusic(mc, new BossMusicSound(selected, ModSounds.VOID_PROPHET_MUSIC.get()));
-        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.RiftWarden) {
-            startBossMusic(mc, new BossMusicSound(selected, ModSounds.RIFT_WARDEN_MUSIC.get()));
-        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.WorldEcho) {
-            startBossMusic(mc, new BossMusicSound(selected, ModSounds.WORLD_ECHO_MUSIC.get()));
-        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus) {
-            startBossMusic(mc, new BossMusicSound(selected, ModSounds.COLOSSUS_MUSIC.get()));
-        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher) {
-            startBossMusic(mc, new BossMusicSound(selected, ModSounds.ABYSS_WATCHER_MUSIC.get()));
-        } else if (selected instanceof cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian) {
-
-            startBossMusic(mc, new BossMusicSound(selected, ModSounds.MIRROR_GUARDIAN_MUSIC.get()));
-        }
-    }
-
-    private static void startBossMusic(Minecraft mc, BossMusicSound sound) {
-        bossMusic = sound;
-        mc.getMusicManager().stopPlaying();
-        mc.getSoundManager().play(bossMusic);
-    }
-
     @SubscribeEvent
     public static void onLoggedOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        if (bossMusic != null) {
-            Minecraft.getInstance().getSoundManager().stop(bossMusic);
-        }
+        ClientBossMusic.clear(Minecraft.getInstance());
         ClientAbilityCache.clear();
         ClientAbilityCooldownCache.clear();
         ClientArtifactCache.clear();
         ClientJournalCache.clear();
+        ClientJourneyCache.clear();
+        ClientStudyCache.clear();
+        ClientChaseCache.clear();
         ClientTradeCache.clearSession();
         ClientWorldEchoFlightCache.clear();
         cn.kurt6.unknown_echoes.client.gui.EchoBossBarOverlay.clearCaches();
@@ -752,11 +664,6 @@ public class ClientGameEvents {
         worldEchoFlightToggleTicks = 0;
         echoToolSkillKeyActive = false;
         jumpPressCount = 0;
-        bossMusic = null;
-        bossMusicScanCooldown = 0;
-        bossMusicDimension = null;
-        silenceDomainActive = false;
-        silenceDomainScanCooldown = 0;
         clearTrueSightCache();
     }
 }

@@ -297,7 +297,7 @@ public class DreamBloomKeeper extends MiniBossEntity {
                 }
             }
         }
-        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), NOVA_RADIUS);
+        MiniBossFx.releasePulse(serverLevel, this.position(), this.fxTheme(), NOVA_RADIUS);
         BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
                 26.0D, 0.54F, 7, this.combatImpactColor());
     }
@@ -309,6 +309,9 @@ public class DreamBloomKeeper extends MiniBossEntity {
             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1), this);
             player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 80, 0), this);
             this.triggerAnim("attack_controller", "swipe");
+            if (!this.level().isClientSide) {
+                this.playSound(ModSounds.DREAM_BLOOM_KEEPER_ATTACK_MELEE.get(), 1.1F, 1.0F);
+            }
         }
         return hit;
     }
@@ -380,5 +383,9 @@ public class DreamBloomKeeper extends MiniBossEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return geoCache;
+    }
+    @Override
+    public int musicStage() {
+        return this.exposedTicks > 0 ? 1 : 0;
     }
 }

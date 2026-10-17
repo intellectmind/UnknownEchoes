@@ -15,15 +15,15 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-public class BrokenArchiveStructure extends SinglePieceStructure {
+public class BrokenArchiveStructure extends TerrainAnchoredStructure {
     public static final MapCodec<BrokenArchiveStructure> CODEC = simpleCodec(BrokenArchiveStructure::new);
 
     private static final int SIZE = 65;
@@ -60,6 +60,7 @@ public class BrokenArchiveStructure extends SinglePieceStructure {
             if (!this.updateAverageGroundHeight(level, box, 0)) {
                 return;
             }
+            clearStructureSpace(level, box, 0);
             BlockState rusted = ModBlocks.RUSTED_BELLSTONE.get().defaultBlockState();
             BlockState stone = ModBlocks.ASHEN_BELLSTONE.get().defaultBlockState();
             BlockState bricks = ModBlocks.ASHEN_BELLSTONE_BRICKS.get().defaultBlockState();
@@ -149,6 +150,20 @@ public class BrokenArchiveStructure extends SinglePieceStructure {
             buildCornice(level, box, c, top + 16, c, Footprint.of(16, 25), bricks, rusted);
             buildParapet(level, box, c, top + 17, c, Footprint.of(16, 25), 8, ModBlocks.ASHEN_BELLSTONE_BRICK_WALL.get().defaultBlockState(), rusted);
 
+            // 断裂钟摆：档案馆中央偏轴悬下一根残钟脊柱，打破普通钟塔的对称立面。
+            int pendulumX = c + 18;
+            int pendulumZ = c - 17;
+            for (int y = 20; y <= 34; y++) {
+                this.placeBlock(level, y % 3 == 0 ? rune : rusted, pendulumX, y, pendulumZ, box);
+            }
+            for (int x = pendulumX - 5; x <= pendulumX + 5; x++) {
+                if (Math.abs(x - pendulumX) <= 1 || x % 2 == 0) {
+                    this.placeBlock(level, bricks, x, 27, pendulumZ, box);
+                }
+            }
+            this.placeBlock(level, ModBlocks.RESONANCE_CANDLE.get().defaultBlockState(),
+                    pendulumX, 35, pendulumZ, box);
+
             for (int i = 1; i <= 8; i++) {
                 if (random.nextFloat() < 1.0F - i * 0.2F) {
                     this.placeBlock(level, i < 4 ? bricks : cracked, c + 7 + i, top - 1, c, box);
@@ -171,14 +186,34 @@ public class BrokenArchiveStructure extends SinglePieceStructure {
             }
             buildRuneCauseway(level, box, c, top, c, Direction.SOUTH,
                     8, 19, 2, stone, rusted, rune);
-            scatterArchitecturalDebris(level, random, box, c, top, c,
-                    12, 19, 32, cracked, rusted);
+            scatterArchitecturalDebris(level, box, "broken_archive", c, top, c,
+                    cracked, rusted);
 
             placeStructureSpawner(level, random, box, c - 10, top, c + 8,
                     ModEntities.BROKEN_BELL_GUARD.get(), stone, cracked);
             for (int[] node : BROKEN_ARCHIVE_ORE_NODES) {
                 this.placeBlock(level, ModBlocks.BROKEN_BELL_ORE.get().defaultBlockState(),
                         c + node[0], top - 1, c + node[1], box);
+            }
+            anchorGroundColumns(level, box, 0, stone);
+            dressStructure(level, box, "broken_archive");
+            buildGroundEntry(level, box);
+        }
+
+        private void buildGroundEntry(WorldGenLevel level, BoundingBox box) {
+            BlockState bricks = ModBlocks.ASHEN_BELLSTONE_BRICKS.get().defaultBlockState();
+            BlockState stairs = ModBlocks.ASHEN_BELLSTONE_BRICK_STAIRS.get().defaultBlockState();
+            for (int side : new int[]{-1, 1}) {
+                for (int distance = 1; distance <= 3; distance++) {
+                    int x = 32 + side * distance;
+                    int y = 3 - distance;
+                    for (int support = 0; support < y; support++) {
+                        this.placeBlock(level, bricks, x, support, 63, box);
+                    }
+                    Direction facing = distance == 1 ? Direction.SOUTH
+                            : side < 0 ? Direction.EAST : Direction.WEST;
+                    this.placeBlock(level, stairs.setValue(StairBlock.FACING, facing), x, y, 63, box);
+                }
             }
         }
 

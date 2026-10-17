@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "shelves",
+    "rock": {
+      "Name": "unknown_echoes:folded_slate"
+    },
+    "accent": {
+      "Name": "minecraft:tuff"
+    },
+    "height": 17,
+    "radius": 7,
+    "submerged": false,
+    "drape": 0,
+    "waterline": false
+  }
+}

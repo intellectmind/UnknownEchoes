@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:stone", "minecraft:deepslate", "minecraft:tuff",
+    "minecraft:dirt", "minecraft:coarse_dirt", "minecraft:grass_block", "minecraft:podzol",
+    "minecraft:gravel", "minecraft:sand", "minecraft:red_sand",
+    "unknown_echoes:echo_cliff_stone"
+  ]
+}

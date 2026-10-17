@@ -3,23 +3,29 @@
   "temperature": 0.6,
   "downfall": 0.5,
   "effects": {
-    "fog_color": 10344434,
-    "sky_color": 4611486,
-    "water_color": 8639721,
-    "water_fog_color": 1193830,
-    "grass_color": 7317642,
-    "foliage_color": 6858622,
+    "fog_color": 12770537,
+    "sky_color": 10205401,
+    "water_color": 5607338,
+    "water_fog_color": 3561321,
+    "grass_color": 9614768,
+    "foliage_color": 9614768,
     "ambient_particle": {
       "options": {
-        "type": "minecraft:nautilus"
+        "type": "minecraft:underwater"
       },
-      "probability": 0.008
+      "probability": 0.0015
     },
     "mood_sound": {
-      "sound": "minecraft:ambient.underwater.loop",
-      "tick_delay": 6000,
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.meadow",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
     }
   },
   "carvers": {
@@ -43,7 +49,9 @@
       "unknown_echoes:tide_salt_ore_disk"
     ],
     [],
-    [],
+    [
+      "unknown_echoes:mirror_lake_landform"
+    ],
     [
       "unknown_echoes:echo_flowers",
       "unknown_echoes:glow_fern_patch",
@@ -75,6 +83,18 @@
         "weight": 10,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:riftfang_eel",
+        "weight": 5,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:lanternjaw_angler",
+        "weight": 4,
+        "minCount": 1,
+        "maxCount": 1
       }
     ],
     "creature": [
@@ -83,6 +103,18 @@
         "weight": 15,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:reedwing_dragonfly",
+        "weight": 20,
+        "minCount": 2,
+        "maxCount": 4
+      },
+      {
+        "type": "unknown_echoes:sailtail_minnow",
+        "weight": 12,
+        "minCount": 2,
+        "maxCount": 3
       }
     ],
     "ambient": [],
@@ -104,6 +136,12 @@
       },
       {
         "type": "unknown_echoes:pearlback_ray",
+        "weight": 10,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:lantern_seahorse",
         "weight": 10,
         "minCount": 1,
         "maxCount": 2

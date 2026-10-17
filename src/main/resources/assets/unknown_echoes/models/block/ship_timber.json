@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "side": "unknown_echoes:block/ship_timber",
+    "end": "unknown_echoes:block/ship_timber_top"
+  }
+}

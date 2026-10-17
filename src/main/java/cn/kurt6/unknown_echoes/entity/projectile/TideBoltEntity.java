@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.projectile;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
+import cn.kurt6.unknown_echoes.item.weapon.WeaponProjectileFx;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
@@ -12,6 +14,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
@@ -20,12 +23,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.Tags;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /** 潮汐弩矢( 强化):潮汐弩发射的弹射物。 */
@@ -73,17 +78,27 @@ public class TideBoltEntity extends AbstractArrow {
     }
 
     @Override
+    public void tick() {
+        super.tick();
+        if (this.level().isClientSide && !this.inGround && !this.isRemoved() && this.tickCount % 2 == 0) {
+            WeaponProjectileFx.tideTrail(this.level(), this.position(), this.getDeltaMovement());
+        }
+    }
+
+    @Override
     protected void onHitEntity(net.minecraft.world.phys.EntityHitResult result) {
+        Entity directHit = result.getEntity();
+        // 受伤回调可能让目标瞬移或改变体型，潮爆仍以本次接触时的位置结算。
+        Vec3 impactCenter = directHit.position().add(0, directHit.getBbHeight() * 0.5, 0);
         double impactSpeed = this.getDeltaMovement().length();
 
         double originalBaseDamage = this.getBaseDamage();
-        if (result.getEntity().isInWater()) {
+        if (directHit.isInWater()) {
             this.setBaseDamage(originalBaseDamage * ServerConfig.TIDE_BOLT_WET_DAMAGE_MULTIPLIER.get());
         }
         super.onHitEntity(result);
         this.setBaseDamage(originalBaseDamage);
-        this.tideBurst(result.getEntity().position()
-                .add(0, result.getEntity().getBbHeight() * 0.5, 0), result.getEntity(), impactSpeed);
+        this.tideBurst(impactCenter, directHit, impactSpeed);
     }
 
     @Override
@@ -95,27 +110,30 @@ public class TideBoltEntity extends AbstractArrow {
     }
 
     /** 潮爆:命中点水压炸裂,范围伤害 + 径向冲开 + 水花环演出。 */
-    private void tideBurst(Vec3 center, @Nullable net.minecraft.world.entity.Entity directHit,
+    private void tideBurst(Vec3 center, @Nullable Entity directHit,
                            double impactSpeed) {
         if (this.burstDone || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
         this.burstDone = true;
         double burstRadius = ServerConfig.TIDE_BOLT_BURST_RADIUS.get();
+        double radiusSqr = burstRadius * burstRadius;
         float burstDamage = (float) (this.getBaseDamage() * impactSpeed
                 * ServerConfig.TIDE_BOLT_BURST_DAMAGE_FACTOR.get());
         burstDamage = Math.max(2.0F, Math.min(burstDamage, 6.5F));
         var owner = this.getOwner();
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 new net.minecraft.world.phys.AABB(center, center).inflate(burstRadius),
-                e -> e != owner && e != directHit && e instanceof Enemy && e.isAlive()
-                        && e.distanceToSqr(center) <= burstRadius * burstRadius
-                        && !(owner instanceof LivingEntity living && e.isAlliedTo(living)))) {
+                e -> validBurstTarget(e, owner, directHit, serverLevel, center, radiusSqr))) {
+            if (!validBurstTarget(victim, owner, directHit, serverLevel, center, radiusSqr)) {
+                continue;
+            }
             boolean hurt = victim.hurt(owner instanceof LivingEntity living
                             ? this.damageSources().mobProjectile(this, living)
                             : this.damageSources().generic(),
                     burstDamage);
-            if (!hurt || isBoss(victim)) {
+            if (!hurt || !validBurstTarget(victim, owner, directHit, serverLevel, center, radiusSqr)
+                    || isBoss(victim)) {
                 continue;
             }
             Vec3 away = victim.position().subtract(center).multiply(1, 0, 1);
@@ -126,23 +144,18 @@ public class TideBoltEntity extends AbstractArrow {
             }
         }
 
-        serverLevel.sendParticles(ParticleTypes.SPLASH,
-                center.x, center.y, center.z, 30, 0.8, 0.5, 0.8, 0.2);
-        for (int i = 0; i < 16; i++) {
-            double angle = Math.PI * 2 * i / 16;
-            serverLevel.sendParticles(ParticleTypes.BUBBLE_POP,
-                    center.x + Math.cos(angle) * burstRadius * 0.7,
-                    center.y + 0.2,
-                    center.z + Math.sin(angle) * burstRadius * 0.7, 2, 0.1, 0.15, 0.1, 0.02);
-        }
-        serverLevel.sendParticles(ParticleTypes.GLOW,
-                center.x, center.y + 0.3, center.z, 6, 0.4, 0.3, 0.4, 0.02);
+        WeaponProjectileFx.tideImpact(serverLevel, center, burstRadius);
         serverLevel.playSound(null, BlockPos.containing(center),
-                net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(),
-                net.minecraft.sounds.SoundSource.PLAYERS, 0.6F, 1.7F);
-        serverLevel.playSound(null, BlockPos.containing(center),
-                net.minecraft.sounds.SoundEvents.DOLPHIN_SPLASH,
-                net.minecraft.sounds.SoundSource.PLAYERS, 1.2F, 0.8F);
+                ModSounds.PROJECTILE_TIDE_BOLT_BURST.get(),
+                net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
+    private static boolean validBurstTarget(LivingEntity victim, @Nullable Entity owner,
+                                           @Nullable Entity directHit, ServerLevel level,
+                                           Vec3 center, double radiusSqr) {
+        return victim.level() == level && victim != owner && victim != directHit
+                && victim instanceof Enemy && victim.isAlive() && victim.distanceToSqr(center) <= radiusSqr
+                && !(owner instanceof LivingEntity living && victim.isAlliedTo(living));
     }
 
     @Override
@@ -168,9 +181,7 @@ public class TideBoltEntity extends AbstractArrow {
             return;
         }
         NEXT_MARK_SEARCH.put(player.getUUID(), maximumNextSearch);
-        BlockPos.findClosestMatch(target.blockPosition(), ServerConfig.TIDE_BOLT_RUNE_SEARCH_RADIUS.get(), 8,
-                pos -> serverLevel.isLoaded(pos)
-                        && serverLevel.getBlockState(pos).is(ModBlocks.TIDE_RUNE.get()))
+        findMarkRune(serverLevel, target.blockPosition(), ServerConfig.TIDE_BOLT_RUNE_SEARCH_RADIUS.get())
                 .ifPresent(runePos -> {
                     Vec3 from = target.position().add(0, target.getBbHeight() * 0.5, 0);
                     Vec3 dir = Vec3.atCenterOf(runePos).subtract(from).normalize();
@@ -183,6 +194,27 @@ public class TideBoltEntity extends AbstractArrow {
                                 p.x, p.y, p.z, 2, 0.05, 0.05, 0.05, 0.0);
                     }
                 });
+    }
+
+    private static Optional<BlockPos> findMarkRune(ServerLevel level, BlockPos origin, int radius) {
+        int minChunkX = (origin.getX() - radius) >> 4;
+        int minChunkZ = (origin.getZ() - radius) >> 4;
+        int chunksX = ((origin.getX() + radius) >> 4) - minChunkX + 1;
+        int chunksZ = ((origin.getZ() + radius) >> 4) - minChunkZ + 1;
+        boolean[] checkedChunks = new boolean[chunksX * chunksZ];
+        LevelChunk[] loadedChunks = new LevelChunk[checkedChunks.length];
+        // 沿用原版搜索顺序；加载状态只在本次同步搜索中复用。
+        return BlockPos.findClosestMatch(origin, radius, 8, pos -> {
+            if (level.isOutsideBuildHeight(pos)) {
+                return false;
+            }
+            int index = ((pos.getX() >> 4) - minChunkX) * chunksZ + (pos.getZ() >> 4) - minChunkZ;
+            if (!checkedChunks[index]) {
+                loadedChunks[index] = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+                checkedChunks[index] = true;
+            }
+            return loadedChunks[index] != null && loadedChunks[index].getBlockState(pos).is(ModBlocks.TIDE_RUNE.get());
+        });
     }
 
     private void applyAmmoEffects(LivingEntity target) {

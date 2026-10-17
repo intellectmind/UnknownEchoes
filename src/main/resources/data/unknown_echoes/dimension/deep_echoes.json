@@ -2,79 +2,187 @@
   "type": "unknown_echoes:deep_echoes",
   "generator": {
     "type": "minecraft:noise",
-    "settings": "minecraft:overworld",
+    "settings": "unknown_echoes:deep_reverie",
     "biome_source": {
       "type": "minecraft:multi_noise",
       "biomes": [
         {
           "biome": "unknown_echoes:folded_corridors",
           "parameters": {
-            "temperature": [-1.0, 1.0],
-            "humidity": [-1.0, 1.0],
-            "continentalness": [-1.2, 1.0],
-            "erosion": [-1.0, 1.0],
-            "weirdness": [-1.0, 0.0002],
-            "depth": [-1.0, -0.0924],
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              1.0
+            ],
+            "continentalness": [
+              -1.2,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              0.0018
+            ],
+            "depth": [
+              -2.0,
+              -0.9185
+            ],
             "offset": 0.0
           }
         },
         {
           "biome": "unknown_echoes:shattered_archive",
           "parameters": {
-            "temperature": [-1.0, 1.0],
-            "humidity": [-1.0, 1.0],
-            "continentalness": [-1.2, 1.0],
-            "erosion": [-1.0, 1.0],
-            "weirdness": [0.0002, 1.0],
-            "depth": [-1.0, -0.0924],
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              1.0
+            ],
+            "continentalness": [
+              -1.2,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              0.0018,
+              1.0
+            ],
+            "depth": [
+              -2.0,
+              -0.9185
+            ],
             "offset": 0.0
           }
         },
         {
           "biome": "unknown_echoes:inverted_chasm",
           "parameters": {
-            "temperature": [-1.0, 1.0],
-            "humidity": [-1.0, 1.0],
-            "continentalness": [-1.2, 1.0],
-            "erosion": [-1.0, 1.0],
-            "weirdness": [-1.0, 0.0002],
-            "depth": [-0.0924, -0.0081],
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              1.0
+            ],
+            "continentalness": [
+              -1.2,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              0.0245
+            ],
+            "depth": [
+              -0.9185,
+              -0.0592
+            ],
             "offset": 0.0
           }
         },
         {
           "biome": "unknown_echoes:weightless_grotto",
           "parameters": {
-            "temperature": [-1.0, 1.0],
-            "humidity": [-1.0, 1.0],
-            "continentalness": [-1.2, 1.0],
-            "erosion": [-1.0, 1.0],
-            "weirdness": [0.0002, 1.0],
-            "depth": [-0.0924, -0.0081],
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              1.0
+            ],
+            "continentalness": [
+              -1.2,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              0.0245,
+              1.0
+            ],
+            "depth": [
+              -0.9185,
+              -0.0592
+            ],
             "offset": 0.0
           }
         },
         {
           "biome": "unknown_echoes:silent_abyss",
           "parameters": {
-            "temperature": [-1.0, 1.0],
-            "humidity": [-1.0, 1.0],
-            "continentalness": [-1.2, 1.0],
-            "erosion": [-1.0, 1.0],
-            "weirdness": [-1.0, 0.0002],
-            "depth": [-0.0081, 1.0],
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              1.0
+            ],
+            "continentalness": [
+              -1.2,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.0164
+            ],
+            "depth": [
+              -0.0592,
+              1.0
+            ],
             "offset": 0.0
           }
         },
         {
           "biome": "unknown_echoes:voidscar_hollows",
           "parameters": {
-            "temperature": [-1.0, 1.0],
-            "humidity": [-1.0, 1.0],
-            "continentalness": [-1.2, 1.0],
-            "erosion": [-1.0, 1.0],
-            "weirdness": [0.0002, 1.0],
-            "depth": [-0.0081, 1.0],
+            "temperature": [
+              -1.0,
+              1.0
+            ],
+            "humidity": [
+              -1.0,
+              1.0
+            ],
+            "continentalness": [
+              -1.2,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              -0.0164,
+              1.0
+            ],
+            "depth": [
+              -0.0592,
+              1.0
+            ],
             "offset": 0.0
           }
         }

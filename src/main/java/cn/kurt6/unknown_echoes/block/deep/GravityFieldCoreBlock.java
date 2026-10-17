@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.block.deep;
 
+import cn.kurt6.unknown_echoes.fx.PlayerSoundFeedback;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
@@ -34,6 +35,7 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nullable;
+import java.util.function.BooleanSupplier;
 
 /** 可关闭的房间级重力场核心，不修改全局物理或其他 Mod 的飞行状态。 */
 public class GravityFieldCoreBlock extends BaseEntityBlock {
@@ -95,53 +97,104 @@ public class GravityFieldCoreBlock extends BaseEntityBlock {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(player instanceof ServerPlayer serverPlayer) || serverPlayer.isSpectator()) {
+        if (!(level instanceof ServerLevel serverLevel)
+                || !(player instanceof ServerPlayer serverPlayer)
+                || !isCurrentPlayer(serverLevel, pos, serverPlayer)) {
             return InteractionResult.CONSUME;
         }
         if (!EchoPermission.canUseGravityMechanism(serverPlayer)) {
-            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE,
-                    SoundSource.BLOCKS, 0.8F, 0.45F);
+            PlayerSoundFeedback.deny(serverPlayer);
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.gravity_field.locked"), true);
             EchoAbilityManager.recordFailure(serverPlayer, EchoAbilityType.GRAVITY_ECHO,
                     "gravity_field_locked");
             return InteractionResult.CONSUME;
         }
-        if (!(level.getBlockEntity(pos) instanceof GravityFieldCoreBlockEntity core)) {
+        GravityFieldCoreBlockEntity core = GravityFieldCoreBlockEntity.getIfReady(serverLevel, pos);
+        if (core == null || !core.isCurrentState(state)
+                || !core.tryBeginInteraction()) {
             return InteractionResult.CONSUME;
         }
 
-        if (state.getValue(ACTIVE)) {
-            core.deactivate();
-            ServerLevel serverLevel = (ServerLevel) level;
-            for (InvertedGatekeeper boss : serverLevel.getEntitiesOfClass(InvertedGatekeeper.class,
-                    new net.minecraft.world.phys.AABB(pos).inflate(36.0D),
-                    entity -> entity.isAlive())) {
-                boss.onGravityCoreDeactivated(serverLevel, pos);
+        try {
+            BooleanSupplier current = () -> isCurrentPlayer(serverLevel, pos, serverPlayer)
+                    && EchoPermission.canUseGravityMechanism(serverPlayer);
+            boolean wasActive = state.getValue(ACTIVE);
+            BlockState appliedState = state.setValue(ACTIVE, !wasActive).setValue(INVERTED, !wasActive);
+            if (!core.setActive(!wasActive, current)) {
+                return InteractionResult.CONSUME;
             }
-        } else {
-            core.activate();
-            if (emitAnchorGuidance((ServerLevel) level, pos)) {
+            BooleanSupplier applied = () -> current.getAsBoolean() && core.getLevel() == serverLevel
+                    && core.isCurrentState(appliedState);
+            if (wasActive) {
+                notifyActiveGatekeepers(serverLevel, pos, applied);
+            } else if (emitAnchorGuidanceWhileCurrent(serverLevel, pos, applied)) {
                 serverPlayer.displayClientMessage(Component.translatable(
                         "message.unknown_echoes.gravity_field.started_with_anchors"), true);
             }
+            return InteractionResult.CONSUME;
+        } finally {
+            core.endInteraction();
         }
-        return InteractionResult.CONSUME;
+    }
+
+    private static boolean isCurrentPlayer(ServerLevel level, BlockPos pos, ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.canInteractWithBlock(pos, 1.0D);
+    }
+
+    private static void notifyActiveGatekeepers(ServerLevel level, BlockPos pos, BooleanSupplier current) {
+        if (!current.getAsBoolean()) {
+            return;
+        }
+        for (InvertedGatekeeper boss : level.getEntitiesOfClass(InvertedGatekeeper.class,
+                new net.minecraft.world.phys.AABB(pos).inflate(36.0D), entity -> entity.isAlive())) {
+            if (!current.getAsBoolean()) {
+                return;
+            }
+            if (boss.isAlive() && !boss.isRemoved() && boss.level() == level) {
+                boss.onGravityCoreDeactivated(level, pos);
+            }
+        }
     }
 
     static boolean emitAnchorGuidance(ServerLevel level, BlockPos pos) {
+        GravityFieldCoreBlockEntity core = GravityFieldCoreBlockEntity.getIfReady(level, pos);
+        if (core == null) {
+            return false;
+        }
+        BlockState state = core.getBlockState();
+        return emitAnchorGuidanceWhileCurrent(level, pos, () -> core.getLevel() == level
+                && core.isCurrentState(state) && state.getValue(ACTIVE));
+    }
+
+    static boolean emitAnchorGuidanceWhileCurrent(ServerLevel level, BlockPos pos,
+                                                  BooleanSupplier current) {
+        if (!current.getAsBoolean()) {
+            return false;
+        }
         var anchors = SpaceAnchorBlock.findArrayAnchorsNear(level, pos);
         if (anchors.isEmpty()) {
             return false;
         }
         Vec3 source = Vec3.atCenterOf(pos).add(0.0D, 0.45D, 0.0D);
         for (BlockPos anchor : anchors) {
+            if (!current.getAsBoolean()) {
+                return false;
+            }
+            BlockState anchorState = DeepArrayBlockAccess.getIfReady(level, anchor);
+            if (anchorState == null || !(anchorState.getBlock() instanceof SpaceAnchorBlock)) {
+                return false;
+            }
             Vec3 target = Vec3.atCenterOf(anchor).add(0.0D, 0.75D, 0.0D);
             BossFx.guidanceMarker(level, target, ParticleTypes.SCULK_SOUL);
+            if (!current.getAsBoolean() || DeepArrayBlockAccess.getIfReady(level, anchor) != anchorState) {
+                return false;
+            }
             BossFx.guidanceFlow(level, source, target,
-                    ParticleTypes.ELECTRIC_SPARK, ParticleTypes.END_ROD,
-                    level.getGameTime());
+                    ParticleTypes.ELECTRIC_SPARK, ParticleTypes.END_ROD, level.getGameTime());
         }
-        return true;
+        return current.getAsBoolean() && SpaceAnchorBlock.findArrayAnchorsNear(level, pos).equals(anchors);
     }
 }

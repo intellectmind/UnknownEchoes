@@ -15,11 +15,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 
 /** 回声峭壁中的纪念性折痕祭坛。结构可多处生成，个人校准互不影响。 */
-public class AbyssBeaconStructure extends SinglePieceStructure {
+public class AbyssBeaconStructure extends TerrainAnchoredStructure {
     public static final MapCodec<AbyssBeaconStructure> CODEC = simpleCodec(AbyssBeaconStructure::new);
 
     private static final int WIDTH = 49;
@@ -154,15 +153,28 @@ public class AbyssBeaconStructure extends SinglePieceStructure {
             }
             architecturalRing(level, box, c, 17, c, 7, rune);
             architecturalRing(level, box, c, 20, c, 5, cracked);
+            // 折痕冠脊：四条不等长的悬挑脊线让祭坛从远处呈现断裂的深渊轮廓。
+            for (int[] rib : new int[][]{{-4, 0, 23}, {4, 0, 22}, {0, -4, 24}, {0, 4, 21}}) {
+                int length = rib[2] - 20;
+                for (int step = 0; step <= length; step++) {
+                    int x = c + (rib[0] == 0 ? 0 : Integer.signum(rib[0]) * step);
+                    int z = c + (rib[1] == 0 ? 0 : Integer.signum(rib[1]) * step);
+                    this.placeBlock(level, step % 2 == 0 ? rune : cracked,
+                            x, 20 + step, z, box);
+                }
+                this.placeBlock(level, crystal, c + rib[0], rib[2], c + rib[1], box);
+            }
             this.placeBlock(level, bricks, c, 4, c, box);
             this.placeBlock(level, ModBlocks.ABYSS_BEACON.get().defaultBlockState(),
                     c, 5, c, box);
 
-            scatterArchitecturalDebris(level, random, box, c, 1, c,
-                    20, 23, 36, stone, cracked);
+            scatterArchitecturalDebris(level, box, "abyss_beacon_structure", c, 1, c,
+                    stone, cracked);
 
             placeStructureSpawner(level, random, box, c + 13, 3, c + 5,
                     ModEntities.CRYSTAL_NOISE_WISP.get(), bricks, rune);
+            anchorGroundColumns(level, box, 0, stone);
+            dressStructure(level, box, "abyss_beacon_structure");
         }
     }
 }

@@ -147,13 +147,13 @@ public class WindGlideTracker {
             }
             case DoubleJumpPayload.MODE_GLIDE_HOLD -> {
 
-                if (!s.gliding) {
+                if (!s.gliding || !isAirborneForWindAction(player)) {
                     return;
                 }
                 player.fallDistance = 0.0F;
 
                 long now = player.level().getGameTime();
-                if (s.lastGlideHoldSoundTick > now || now - s.lastGlideHoldSoundTick >= 10L) {
+                if (s.lastGlideHoldSoundTick > now || now - s.lastGlideHoldSoundTick >= 30L) {
                     s.lastGlideHoldSoundTick = now;
                     player.level().playSound(null, player.blockPosition(),
                             ModSounds.WIND_GLIDE.get(), SoundSource.PLAYERS, 0.4F, 1.0F);
@@ -175,7 +175,7 @@ public class WindGlideTracker {
     }
 
     private static boolean isAirborneForWindAction(ServerPlayer player) {
-        if (player.isInWater() || player.isInLava()
+        if (player.isInWater() || player.isInLava() || player.isFallFlying()
                 || player.getAbilities().flying || player.onClimbable() || player.isPassenger()) {
             return false;
         }
@@ -183,7 +183,7 @@ public class WindGlideTracker {
     }
 
     private static boolean isGroundedForWind(ServerPlayer player) {
-        return player.onGround() || player.isInWater() || player.isInLava()
+        return player.onGround() || player.isInWater() || player.isInLava() || player.isFallFlying()
                 || player.getAbilities().flying || player.onClimbable() || player.isPassenger();
     }
 

@@ -1,9 +1,11 @@
 package cn.kurt6.unknown_echoes.item;
 
+import cn.kurt6.unknown_echoes.fx.PlayerSoundFeedback;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.RealmHabitatChimeBlock;
 import cn.kurt6.unknown_echoes.ecology.RealmLivingTrailManager;
-import cn.kurt6.unknown_echoes.registry.ModBlocks;
+import cn.kurt6.unknown_echoes.ecology.RealmChimeLookup;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.worldevent.WorldEventManager;
@@ -32,6 +34,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -103,8 +106,7 @@ public final class RealmFieldLensItem extends Item {
             serverPlayer.getCooldowns().addCooldown(this, 20);
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.realm_field_lens.event_trace.none"), true);
-            serverLevel.playSound(null, serverPlayer.blockPosition(),
-                    SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 0.4F, 0.45F);
+            PlayerSoundFeedback.deny(serverPlayer);
             return InteractionResultHolder.consume(stack);
         }
 
@@ -115,7 +117,8 @@ public final class RealmFieldLensItem extends Item {
                 "message.unknown_echoes.realm_field_lens.event_trace."
                         + signal.type().getId()), true);
         serverPlayer.swing(hand, true);
-        return InteractionResultHolder.consume(stack);
+        // 耐久或声音回调可能替换手持物；返回旧空栈会让原版收尾清掉新物品。
+        return InteractionResultHolder.consume(serverPlayer.getItemInHand(hand));
     }
 
     private static WorldEventManager.WorldEventSignal nearestSignal(
@@ -236,8 +239,15 @@ public final class RealmFieldLensItem extends Item {
             return InteractionResult.SUCCESS;
         }
 
+        if (!isCurrentTrailContext(level, serverPlayer, resident, forageTarget, mode)) {
+            return InteractionResult.SUCCESS;
+        }
         serverPlayer.getCooldowns().addCooldown(this, TRACE_COOLDOWN_TICKS);
         stack.hurtAndBreak(1, serverPlayer, serverPlayer.getSlotForHand(hand));
+        // 耐久成就或损坏回调可能已移除生灵，不能重新登记离开世界的实体。
+        if (!isCurrentTrailContext(level, serverPlayer, resident, forageTarget, mode)) {
+            return InteractionResult.SUCCESS;
+        }
         RealmLivingTrailManager.startTrail(level, serverPlayer, resident, forageTarget, mode);
         presentLivingTrail(level, resident, forageTarget, mode);
         return InteractionResult.SUCCESS;
@@ -245,25 +255,76 @@ public final class RealmFieldLensItem extends Item {
 
     private static boolean isEligibleResident(PathfinderMob resident,
                                               RealmHabitatChimeBlock.Mode mode) {
-        return resident.isAlive() && resident.getTarget() == null
+        return resident.isAlive() && !resident.isRemoved() && resident.getTarget() == null
                 && !resident.isLeashed() && !resident.isPassenger() && !resident.isVehicle()
                 && RealmHabitatChimeBlock.matchesMode(resident, mode)
                 && (mode != RealmHabitatChimeBlock.Mode.WAYFARER
                 || resident instanceof Animal);
     }
 
+    private static boolean isCurrentTrailContext(ServerLevel level, ServerPlayer player,
+                                                  PathfinderMob resident, BlockPos forageTarget,
+                                                  RealmHabitatChimeBlock.Mode mode) {
+        return player.level() == level && player.isAlive() && !player.isRemoved() && !player.isSpectator()
+                && resident.level() == level && isEligibleResident(resident, mode)
+                && RealmHabitatChimeBlock.modeForDimension(level) == mode
+                && level.hasChunkAt(forageTarget)
+                && isForageTarget(level.getBlockState(forageTarget), mode);
+    }
+
     private static BlockPos findNearestForageTarget(ServerLevel level, BlockPos origin,
                                                     RealmHabitatChimeBlock.Mode mode) {
+        int minY = Math.max(level.getMinBuildHeight(), origin.getY() - TRACE_VERTICAL_RADIUS);
+        int maxY = Math.min(level.getMaxBuildHeight() - 1, origin.getY() + TRACE_VERTICAL_RADIUS);
+        if (minY > maxY) return null;
+        int minChunkX = (origin.getX() - TRACE_RADIUS) >> 4;
+        int maxChunkX = (origin.getX() + TRACE_RADIUS) >> 4;
+        int minChunkZ = (origin.getZ() - TRACE_RADIUS) >> 4;
+        int maxChunkZ = (origin.getZ() + TRACE_RADIUS) >> 4;
+        int minSectionY = minY >> 4;
+        int maxSectionY = maxY >> 4;
+        int chunkCountZ = maxChunkZ - minChunkZ + 1;
+        int sectionCount = maxSectionY - minSectionY + 1;
+        LevelChunkSection[] candidates = new LevelChunkSection[
+                (maxChunkX - minChunkX + 1) * chunkCountZ * sectionCount];
+        TagKey<Block> tag = forageTag(mode);
+        java.util.function.Predicate<BlockState> matches = state -> state.is(tag);
+        boolean hasCandidates = false;
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                var chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                if (chunk == null) continue;
+                for (int sectionY = minSectionY; sectionY <= maxSectionY; sectionY++) {
+                    var section = chunk.getSection(chunk.getSectionIndex(sectionY << 4));
+                    if (!section.maybeHas(matches)) continue;
+                    int index = ((chunkX - minChunkX) * chunkCountZ + chunkZ - minChunkZ)
+                            * sectionCount + sectionY - minSectionY;
+                    candidates[index] = section;
+                    hasCandidates = true;
+                }
+            }
+        }
+        if (!hasCandidates) return null;
+
         BlockPos nearest = null;
         double nearestDistance = Double.MAX_VALUE;
-        TagKey<Block> tag = forageTag(mode);
         for (BlockPos cursor : BlockPos.withinManhattan(origin,
                 TRACE_RADIUS, TRACE_VERTICAL_RADIUS, TRACE_RADIUS)) {
-            double distance = cursor.distSqr(origin);
-            if (distance < 16.0D || distance >= nearestDistance || !level.hasChunkAt(cursor)
-                    || !level.getBlockState(cursor).is(tag)) {
-                continue;
+            if (nearest != null) {
+                int depth = Math.abs(cursor.getX() - origin.getX())
+                        + Math.abs(cursor.getY() - origin.getY()) + Math.abs(cursor.getZ() - origin.getZ());
+                // 后续曼哈顿层的欧氏距离平方至少为 depth² / 3，同距仍保留原版先后顺序。
+                if (depth * depth > 3.0D * nearestDistance) break;
             }
+            int y = cursor.getY();
+            if (y < minY || y > maxY) continue;
+            double distance = cursor.distSqr(origin);
+            if (distance < 16.0D || distance >= nearestDistance) continue;
+            int index = (((cursor.getX() >> 4) - minChunkX) * chunkCountZ
+                    + (cursor.getZ() >> 4) - minChunkZ) * sectionCount + (y >> 4) - minSectionY;
+            LevelChunkSection section = candidates[index];
+            if (section == null
+                    || !section.getBlockState(cursor.getX() & 15, y & 15, cursor.getZ() & 15).is(tag)) continue;
             nearestDistance = distance;
             nearest = cursor.immutable();
         }
@@ -295,8 +356,8 @@ public final class RealmFieldLensItem extends Item {
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER,
                 destination.x, destination.y, destination.z,
                 8, 0.25D, 0.2D, 0.25D, 0.015D);
-        level.playSound(null, resident.blockPosition(), SoundEvents.SPYGLASS_USE,
-                SoundSource.PLAYERS, 0.65F, 1.25F);
+        level.playSound(null, resident.blockPosition(), ModSounds.ITEM_FIELD_LENS_INSPECT.get(),
+                SoundSource.PLAYERS, 0.8F, 1.0F);
         level.playSound(null, target, SoundEvents.AMETHYST_BLOCK_RESONATE,
                 SoundSource.BLOCKS, 0.45F, mode == RealmHabitatChimeBlock.Mode.INTERLAYER
                         ? 0.7F : 1.45F);
@@ -369,38 +430,7 @@ public final class RealmFieldLensItem extends Item {
 
     private static BlockPos findActiveChime(ServerLevel level, BlockPos origin,
                                             RealmHabitatChimeBlock.Mode mode) {
-        BlockPos nearest = null;
-        double nearestDistance = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        for (int x = origin.getX() - CHIME_RADIUS; x <= origin.getX() + CHIME_RADIUS; x++) {
-            int dx = x - origin.getX();
-            for (int z = origin.getZ() - CHIME_RADIUS; z <= origin.getZ() + CHIME_RADIUS; z++) {
-                int dz = z - origin.getZ();
-                if (dx * dx + dz * dz > CHIME_RADIUS * CHIME_RADIUS) {
-                    continue;
-                }
-                cursor.set(x, origin.getY(), z);
-                if (!level.hasChunkAt(cursor)) {
-                    continue;
-                }
-                for (int y = origin.getY() - CHIME_VERTICAL_RADIUS;
-                     y <= origin.getY() + CHIME_VERTICAL_RADIUS; y++) {
-                    cursor.set(x, y, z);
-                    BlockState state = level.getBlockState(cursor);
-                    if (!state.is(ModBlocks.REALM_HABITAT_CHIME.get())
-                            || !state.getValue(RealmHabitatChimeBlock.ACTIVE)
-                            || state.getValue(RealmHabitatChimeBlock.MODE) != mode) {
-                        continue;
-                    }
-                    double distance = cursor.distSqr(origin);
-                    if (distance < nearestDistance) {
-                        nearestDistance = distance;
-                        nearest = cursor.immutable();
-                    }
-                }
-            }
-        }
-        return nearest;
+        return RealmChimeLookup.findActive(level, origin, mode, CHIME_RADIUS, CHIME_VERTICAL_RADIUS);
     }
 
     private static ResidentSelection findResident(ServerLevel level, BlockPos floraPos,
@@ -500,10 +530,10 @@ public final class RealmFieldLensItem extends Item {
         sendTrace(level, creature, flora, ParticleTypes.GLOW);
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER,
                 flora.x, flora.y, flora.z, 14, 0.35D, 0.25D, 0.35D, 0.02D);
-        level.playSound(null, floraPos, SoundEvents.SPYGLASS_USE,
-                SoundSource.PLAYERS, 0.7F, 1.35F);
-        level.playSound(null, chimePos, SoundEvents.AMETHYST_BLOCK_CHIME,
-                SoundSource.BLOCKS, 0.6F, 1.55F);
+        level.playSound(null, floraPos, ModSounds.ITEM_FIELD_LENS_INSPECT.get(),
+                SoundSource.PLAYERS, 0.8F, 1.0F);
+        level.playSound(null, chimePos, ModSounds.ITEM_FIELD_LENS_CONFIRM.get(),
+                SoundSource.BLOCKS, 0.6F, 1.0F);
     }
 
     private static void sendTrace(ServerLevel level, Vec3 from, Vec3 to,

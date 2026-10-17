@@ -1,14 +1,18 @@
 package cn.kurt6.unknown_echoes.block.deep;
 
+import cn.kurt6.unknown_echoes.block.FacilityActivation;
+import cn.kurt6.unknown_echoes.block.FacilitySupport;
 import cn.kurt6.unknown_echoes.registry.ModItems;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
+import cn.kurt6.unknown_echoes.config.ClientConfig;
+import cn.kurt6.unknown_echoes.fx.ExplorationFx;
+import cn.kurt6.unknown_echoes.fx.ExplorationFx.Provision;
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
@@ -27,6 +31,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -77,8 +82,13 @@ public final class DeepProvisionBrazierBlock extends Block {
                                               BlockHitResult hitResult) {
         Mode requested = modeFor(stack);
         if (requested == Mode.IDLE) {
+            // 主手无对应材料时留给副手，不能让提示或默认交互提前结束本次右键。
+            if (hand == InteractionHand.MAIN_HAND
+                    && modeFor(player.getOffhandItem()) != Mode.IDLE) {
+                return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+            }
             if (!level.isClientSide) {
-                showHint(player, state);
+                showHint(player, state, level, pos);
             }
             return ItemInteractionResult.SUCCESS;
         }
@@ -91,15 +101,14 @@ public final class DeepProvisionBrazierBlock extends Block {
             return ItemInteractionResult.CONSUME;
         }
         if (state.getValue(MODE) != Mode.IDLE) {
-            showHint(serverPlayer, state);
+            showHint(serverPlayer, state, level, pos);
             return ItemInteractionResult.CONSUME;
         }
 
-        if (!serverPlayer.getAbilities().instabuild) {
-            stack.shrink(1);
+        if (!FacilityActivation.activate(serverLevel, pos, state,
+                state.setValue(MODE, requested), serverPlayer, stack, ACTIVE_TICKS)) {
+            return ItemInteractionResult.CONSUME;
         }
-        serverLevel.setBlock(pos, state.setValue(MODE, requested), Block.UPDATE_ALL);
-        serverLevel.scheduleTick(pos, this, ACTIVE_TICKS);
         applySupport(serverLevel, pos, requested);
         playActivation(serverLevel, pos, requested);
         return ItemInteractionResult.CONSUME;
@@ -111,7 +120,7 @@ public final class DeepProvisionBrazierBlock extends Block {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        showHint(player, state);
+        showHint(player, state, level, pos);
         return InteractionResult.CONSUME;
     }
 
@@ -121,27 +130,23 @@ public final class DeepProvisionBrazierBlock extends Block {
             return;
         }
         level.setBlock(pos, state.setValue(MODE, Mode.IDLE), Block.UPDATE_ALL);
-        level.sendParticles(ParticleTypes.SMOKE,
-                pos.getX() + 0.5D, pos.getY() + 0.85D, pos.getZ() + 0.5D,
-                8, 0.22D, 0.12D, 0.22D, 0.01D);
-        level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH,
-                SoundSource.BLOCKS, 0.35F, 1.6F);
+        MechanismFx.emit(level, ExplorationFx.provision(Vec3.atBottomCenterOf(pos), themeFor(state.getValue(MODE)), true));
+        level.playSound(null, pos, ModSounds.BLOCK_PROVISION_COOL.get(), SoundSource.BLOCKS, 0.35F, 1.0F);
     }
 
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
         Mode mode = state.getValue(MODE);
-        if (mode == Mode.IDLE || random.nextInt(2) != 0) {
+        if (mode == Mode.IDLE || !ClientConfig.ENABLE_ECHO_PARTICLES.get() || random.nextInt(4) != 0) {
             return;
         }
-        ParticleOptions particle = particleFor(mode);
         double angle = random.nextDouble() * Math.PI * 2.0D;
-        double radius = 0.12D + random.nextDouble() * 0.28D;
-        level.addParticle(particle,
+        double radius = 0.10D + random.nextDouble() * 0.14D;
+        level.addParticle(themeFor(mode).ember(),
                 pos.getX() + 0.5D + Math.cos(angle) * radius,
-                pos.getY() + 0.72D + random.nextDouble() * 0.35D,
+                pos.getY() + 0.72D + random.nextDouble() * 0.18D,
                 pos.getZ() + 0.5D + Math.sin(angle) * radius,
-                0.0D, 0.008D + random.nextDouble() * 0.012D, 0.0D);
+                0.0D, 0.001D + random.nextDouble() * 0.002D, 0.0D);
     }
 
     private static Mode modeFor(ItemStack stack) {
@@ -159,30 +164,36 @@ public final class DeepProvisionBrazierBlock extends Block {
 
     private static int applySupport(ServerLevel level, BlockPos pos, Mode mode) {
         List<ServerPlayer> players = level.getEntitiesOfClass(ServerPlayer.class,
-                new AABB(pos).inflate(EFFECT_RADIUS), player -> !player.isSpectator()
-                        && player.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D,
-                        pos.getZ() + 0.5D) <= EFFECT_RADIUS * EFFECT_RADIUS);
+                new AABB(pos).inflate(EFFECT_RADIUS),
+                player -> FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player));
+        int supported = 0;
         for (ServerPlayer player : players) {
+            if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
             switch (mode) {
                 case FOLDED -> {
                     addEffect(player, MobEffects.MOVEMENT_SPEED, EFFECT_TICKS);
+                    if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
                     addEffect(player, MobEffects.DIG_SPEED, EFFECT_TICKS);
                 }
                 case GRAVITY -> {
                     player.fallDistance = 0.0F;
                     addEffect(player, MobEffects.SLOW_FALLING, EFFECT_TICKS);
+                    if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
                     addEffect(player, MobEffects.JUMP, EFFECT_TICKS);
                 }
                 case HUSHED -> {
                     player.removeEffect(MobEffects.GLOWING);
+                    if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
                     addEffect(player, MobEffects.NIGHT_VISION, EFFECT_TICKS);
+                    if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
                     addEffect(player, MobEffects.INVISIBILITY, 300);
                 }
                 case IDLE -> {
                 }
             }
+            supported++;
         }
-        return players.size();
+        return supported;
     }
 
     private static void addEffect(ServerPlayer player,
@@ -192,35 +203,31 @@ public final class DeepProvisionBrazierBlock extends Block {
     }
 
     private static void playActivation(ServerLevel level, BlockPos pos, Mode mode) {
-        ParticleOptions particle = particleFor(mode);
-        level.sendParticles(particle,
-                pos.getX() + 0.5D, pos.getY() + 0.85D, pos.getZ() + 0.5D,
-                42, 0.6D, 0.35D, 0.6D, 0.055D);
-        level.sendParticles(ParticleTypes.GLOW,
-                pos.getX() + 0.5D, pos.getY() + 0.95D, pos.getZ() + 0.5D,
-                18, 0.45D, 0.25D, 0.45D, 0.025D);
-        float pitch = switch (mode) {
-            case FOLDED -> 1.35F;
-            case GRAVITY -> 0.85F;
-            case HUSHED -> 0.55F;
-            case IDLE -> 1.0F;
-        };
-        level.playSound(null, pos, mode == Mode.GRAVITY
-                        ? SoundEvents.RESPAWN_ANCHOR_CHARGE
-                        : SoundEvents.AMETHYST_BLOCK_CHIME,
-                SoundSource.BLOCKS, 0.9F, pitch);
+        Provision theme = themeFor(mode);
+        if (theme == null) return;
+        MechanismFx.emit(level, ExplorationFx.provision(Vec3.atBottomCenterOf(pos), theme, false));
+        switch (mode) {
+            case FOLDED -> level.playSound(null, pos, ModSounds.BLOCK_PROVISION_FOLDED.get(), SoundSource.BLOCKS, 0.8F, 1.0F);
+            case GRAVITY -> level.playSound(null, pos, ModSounds.BLOCK_PROVISION_GRAVITY.get(), SoundSource.BLOCKS, 0.8F, 1.0F);
+            case HUSHED -> level.playSound(null, pos, ModSounds.BLOCK_PROVISION_HUSHED.get(), SoundSource.BLOCKS, 0.8F, 1.0F);
+            case IDLE -> { }
+        }
     }
 
-    private static ParticleOptions particleFor(Mode mode) {
+    private static Provision themeFor(Mode mode) {
         return switch (mode) {
-            case FOLDED -> ParticleTypes.HAPPY_VILLAGER;
-            case GRAVITY -> ParticleTypes.REVERSE_PORTAL;
-            case HUSHED -> ParticleTypes.SCULK_SOUL;
-            case IDLE -> ParticleTypes.SMOKE;
+            case FOLDED -> Provision.FOLDED;
+            case GRAVITY -> Provision.GRAVITY;
+            case HUSHED -> Provision.HUSHED;
+            case IDLE -> null;
         };
     }
 
-    private static void showHint(Player player, BlockState state) {
+    private static void showHint(Player player, BlockState state, Level level, BlockPos pos) {
+        if (player.level() != level || !player.isAlive() || player.isSpectator()
+                || !player.canInteractWithBlock(pos, 1.0D) || level.getBlockState(pos) != state) {
+            return;
+        }
         Mode mode = state.getValue(MODE);
         player.displayClientMessage(Component.translatable(mode == Mode.IDLE
                 ? "message.unknown_echoes.deep_provision_brazier.hint"

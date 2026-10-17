@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.artifact;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.item.InventoryPayment;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoArmorSets;
@@ -234,8 +235,7 @@ public class ArtifactManager {
                 actionbar(player, "message.unknown_echoes.artifact.need_space");
                 return false;
             }
-            player.level().playSound(null, player.blockPosition(),
-                    SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 1.3F);
+            player.playNotifySound(ModSounds.ARTIFACT_CREDENTIAL_ISSUE.get(), SoundSource.BLOCKS, 1.0F, 1.0F);
             syncToClient(player);
             return true;
         }
@@ -547,8 +547,20 @@ public class ArtifactManager {
 
     /** 扣除能量(主动型神器预留接口;+ 维度锚/时间沙漏接入)。服务端判定与扣除。 */
     public static boolean spendEnergy(ServerPlayer player, int points) {
+        EnergyPayment payment = spendEnergyQuietly(player, points);
+        if (payment == null) {
+            return false;
+        }
+        if (payment.needsSync()) {
+            syncToClient(player);
+        }
+        return true;
+    }
+
+    /** 支付记录先返回调用方，再由调用方进入可能失败的同步或传送回调。 */
+    static EnergyPayment spendEnergyQuietly(ServerPlayer player, int points) {
         if (points <= 0) {
-            return true;
+            return new EnergyPayment(0, false);
         }
         if (hasPerpetualEchoCore(player)) {
             ArtifactData data = getData(player);
@@ -557,36 +569,33 @@ public class ArtifactManager {
                     || !player.getPersistentData().getBoolean(PERPETUAL_CORE_CARRIED_KEY);
             fillPerpetualEnergy(data, max20, gameTime(player));
             player.getPersistentData().putBoolean(PERPETUAL_CORE_CARRIED_KEY, true);
-            if (needsSync) {
-                syncToClient(player);
-            }
-            return true;
+            return new EnergyPayment(0, needsSync);
         }
         int cost20 = scaledEnergyCostTwentieths(points);
         int value = settleEnergy(player);
         if (value < cost20) {
             actionbar(player, "message.unknown_echoes.artifact.no_energy");
-            return false;
+            return null;
         }
         getData(player).setEnergyTwentieths(value - cost20);
-        syncToClient(player);
-        return true;
+        return new EnergyPayment(cost20, true);
     }
 
-    /** 传送被其他模组取消时，按扣除时使用的倍率精确撤销本次能量消费。 */
-    static void refundSpentEnergy(ServerPlayer player, int points) {
-        if (points <= 0 || hasPerpetualEchoCore(player)) {
+    /** 按支付记录退款，不重读倍率或永续核心；调用方在收尾时同步。 */
+    static void refundSpentEnergy(ServerPlayer player, EnergyPayment payment) {
+        if (payment.spentTwentieths() <= 0) {
             return;
         }
         int value = settleEnergy(player);
         int max20 = getMaxEnergy(player) * 20;
-        int refund20 = scaledEnergyCostTwentieths(points);
-        int next = (int) Math.min(max20, (long) value + refund20);
+        int next = (int) Math.min(max20, (long) value + payment.spentTwentieths());
         getData(player).setEnergyTwentieths(next);
         if (next >= max20) {
             getData(player).setEnergyRemainderHundredths(0);
         }
-        syncToClient(player);
+    }
+
+    record EnergyPayment(int spentTwentieths, boolean needsSync) {
     }
 
     /** 与实际扣除完全一致的耗能，供服务端同步 UI；单位为 1/20 点。 */
@@ -620,10 +629,15 @@ public class ArtifactManager {
 
     /** 启动服务端权威冷却，时长受 ServerConfig 全局倍率影响。 */
     public static void startCooldown(ServerPlayer player, ArtifactType type, int seconds) {
+        reserveCooldown(player, type, seconds);
+        syncToClient(player);
+    }
+
+    /** 支付前静默预留冷却；支付同步携带该状态，明确支付失败时由调用方释放。 */
+    public static void reserveCooldown(ServerPlayer player, ArtifactType type, int seconds) {
         long ticks = scaledCooldownTicks(seconds);
         long now = gameTime(player);
         getData(player).setCooldown(type, safeDeadline(now, ticks), ticks);
-        syncToClient(player);
     }
 
     private static long normalizedCooldownEnd(ServerPlayer player, ArtifactType type) {

@@ -365,6 +365,7 @@ public class SilentPriest extends MiniBossEntity {
             if (--this.markDelayTicks == 0) {
                 this.markZoneTicks = MARK_ZONE_TICKS;
                 if (this.markPos != null) {
+                    this.playCue(serverLevel, ModSounds.SILENT_PRIEST_ATTACK_MARK_RELEASE.get(), 1.1F, 1.0F);
                     BossFx.cinematicImpact(serverLevel, this.markPos,
                             24.0D, 0.34F, 5, this.combatImpactColor());
                 }
@@ -377,6 +378,7 @@ public class SilentPriest extends MiniBossEntity {
             this.tickWaveTelegraph(serverLevel);
             if (--this.waveTelegraphTicks == 0) {
                 this.waveRadius = 1.0D;
+                this.playCue(serverLevel, ModSounds.SILENT_PRIEST_ATTACK_WAVE_RELEASE.get(), 1.2F, 1.0F);
                 this.waveHitVictims.clear();
             }
             return;
@@ -415,7 +417,7 @@ public class SilentPriest extends MiniBossEntity {
             this.sweepCooldown = 90;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "attack");
-            this.playCue(serverLevel, ModSounds.SILENT_PRIEST_SWEEP.get(), 1.2F, 1.0F);
+            this.playCue(serverLevel, ModSounds.SILENT_PRIEST_ATTACK_SWEEP_WARN.get(), 1.2F, 1.0F);
         } else if (this.markCooldown <= 0 && this.markZoneTicks <= 0 && this.markDelayTicks <= 0
                 && distSq <= 14.0 * 14.0) {
 
@@ -513,6 +515,9 @@ public class SilentPriest extends MiniBossEntity {
             this.markZoneTicks = 0;
             return;
         }
+        if (this.markZoneTicks == MARK_ZONE_TICKS) {
+            MiniBossFx.sealRelease(serverLevel, this.markPos, this.fxTheme(), MARK_ZONE_RADIUS);
+        }
         this.markZoneTicks--;
         if (this.tickCount % 3 == 0) {
             MiniBossFx.groundRing(serverLevel, this.markPos, this.fxTheme(), MARK_ZONE_RADIUS);
@@ -545,23 +550,18 @@ public class SilentPriest extends MiniBossEntity {
         boolean hit = super.doHurtTarget(target);
         if (hit && !this.level().isClientSide) {
             this.triggerAnim("attack_controller", "attack");
+            if (this.level() instanceof ServerLevel serverLevel) {
+                this.playCue(serverLevel, ModSounds.SILENT_PRIEST_ATTACK_MELEE.get(), 1.1F, 1.0F);
+            }
         }
         return hit;
     }
 
     @Override
-    public void die(DamageSource source) {
-        boolean wasDead = this.dead;
-        super.die(source);
-        if (wasDead || !this.dead) {
-            return;
-        }
-        if (this.level() instanceof ServerLevel serverLevel) {
-
-            this.setDomainActive(false);
-            // 领域随死亡收束：环画在 DOMAIN_RADIUS 上，读成"静默解除了"。
-            MiniBossFx.expandingRing(serverLevel, this.position(), this.fxTheme(),
-                    DOMAIN_RADIUS, 1.0D);
+    protected void onDeathCommitted(ServerLevel serverLevel, Vec3 deathPos) {
+        this.setDomainActive(false);
+        if (isCurrentDeathPresentation(serverLevel, deathPos)) {
+            MiniBossFx.expandingRing(serverLevel, deathPos, this.fxTheme(), DOMAIN_RADIUS, 1.0D);
         }
     }
 
@@ -623,5 +623,9 @@ public class SilentPriest extends MiniBossEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
+    }
+    @Override
+    public int musicStage() {
+        return this.isStaggered() ? 1 : this.isVoicelessPhase() ? 2 : 0;
     }
 }

@@ -1,0 +1,39 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:gravity_hammer"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.deep_equipment.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.deep_equipment.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:oathblade",
+  "criteria": {
+    "has_item": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:gravity_hammer",
+              "unknown_echoes:rift_dagger",
+              "unknown_echoes:anchor_blade",
+              "unknown_echoes:folded_glaive",
+              "unknown_echoes:palimpsest_saber",
+              "unknown_echoes:orrery_lance",
+              "unknown_echoes:world_rift_greatsword",
+              "unknown_echoes:fivefold_star_spear"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

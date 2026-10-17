@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:enter_deep_echoes",
+  "parent": "unknown_echoes:all_biomes",
   "display": {
     "icon": {
       "id": "unknown_echoes:deep_alloy_ingot"
@@ -12,7 +12,7 @@
     },
     "frame": "goal",
     "show_toast": true,
-    "announce_to_chat": true,
+    "announce_to_chat": false,
     "hidden": false
   },
   "criteria": {

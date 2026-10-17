@@ -21,12 +21,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 三个维度的非主线综合巨构。每座结构都提供完整徒步路线、功能设施和可重复普通奖励。 */
-public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
+public class ThreeRealmLandmarkStructure extends TerrainAnchoredStructure {
     public static final MapCodec<ThreeRealmLandmarkStructure> FAR_ECHO_CARTOGRAPHY_COURT_CODEC =
             codec(Kind.FAR_ECHO_CARTOGRAPHY_COURT);
     public static final MapCodec<ThreeRealmLandmarkStructure> CHORUS_CONFLUENCE_COURT_CODEC =
@@ -129,7 +128,137 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                 case PRISMATIC_CANOPY_CONSERVATORY -> buildPrismaticConservatory(level, random, box);
                 case INTERLAYER_EXPEDITION_RING -> buildExpeditionRing(level, random, box);
             }
+            buildLandmarkSignature(level, box);
             addLandmarkGameplay(level, random, box);
+            BlockState foundation = switch (kind) {
+                case FAR_ECHO_CARTOGRAPHY_COURT -> Blocks.POLISHED_TUFF.defaultBlockState();
+                case CHORUS_CONFLUENCE_COURT, FAR_BELL_WAYFARER_HARBOR ->
+                        ModBlocks.ASHEN_BELLSTONE_BRICKS.get().defaultBlockState();
+                case PALIMPSEST_ECOLOGY_DOME, INTERLAYER_EXPEDITION_RING ->
+                        ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                case PRISMATIC_CANOPY_CONSERVATORY -> ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState();
+            };
+            anchorGroundColumns(level, box, 0, foundation);
+            dressStructure(level, box, kind.id);
+            finishConservatoryBeds(level, box);
+        }
+
+        private void finishConservatoryBeds(WorldGenLevel level, BoundingBox box) {
+            int c = kind.size / 2;
+            int offset = switch (kind) {
+                case CHORUS_CONFLUENCE_COURT -> 12;
+                case PALIMPSEST_ECOLOGY_DOME -> 21;
+                case PRISMATIC_CANOPY_CONSERVATORY -> 23;
+                default -> 0;
+            };
+            if (offset == 0) return;
+            int[][] centers = {{-offset, -offset}, {offset, -offset}, {-offset, offset}, {offset, offset}};
+            for (int i = 0; i < centers.length; i++) {
+                BlockState soil = kind == Kind.PALIMPSEST_ECOLOGY_DOME ? switch (i) {
+                    case 0 -> ModBlocks.FOLDED_SLATE.get().defaultBlockState();
+                    case 1 -> ModBlocks.GRAVITY_SHALE.get().defaultBlockState();
+                    case 2 -> ModBlocks.ABYSSAL_STONE.get().defaultBlockState();
+                    default -> ModBlocks.SILENT_MUDSTONE.get().defaultBlockState();
+                } : Blocks.MOSS_BLOCK.defaultBlockState();
+                restorePlantBed(level, box, c + centers[i][0], kind == Kind.CHORUS_CONFLUENCE_COURT ? 1 : 2,
+                        c + centers[i][1], kind == Kind.PALIMPSEST_ECOLOGY_DOME ? 5 : 3, soil,
+                        state -> isConservatoryPlant(state));
+            }
+        }
+
+        private boolean isConservatoryPlant(BlockState state) {
+            return state.is(ModBlocks.ECHO_FLOWER.get()) || state.is(ModBlocks.DREAM_FLOWER.get())
+                    || state.is(ModBlocks.STAR_MIST_BLOOM.get()) || state.is(ModBlocks.GLOW_FERN.get())
+                    || state.is(ModBlocks.ARCHIVE_FUNGUS.get()) || state.is(ModBlocks.SEAM_GRASS.get())
+                    || state.is(ModBlocks.WEIGHTLESS_BLOOM.get()) || state.is(ModBlocks.INVERSION_REED.get())
+                    || state.is(ModBlocks.VOIDCAP.get()) || state.is(ModBlocks.HUSH_GRASS.get())
+                    || state.is(ModBlocks.MIRE_BELL.get()) || state.is(ModBlocks.MUTE_REED.get());
+        }
+
+        /** 每座综合地标的专属远景构件:只补本结构的标志物,不复用完整楼体模板。 */
+        private void buildLandmarkSignature(WorldGenLevel level, BoundingBox box) {
+            int c = kind.size / 2;
+            switch (kind) {
+                case FAR_ECHO_CARTOGRAPHY_COURT -> {
+                    BlockState stone = Blocks.POLISHED_TUFF.defaultBlockState();
+                    BlockState ink = Blocks.CHISELED_TUFF_BRICKS.defaultBlockState();
+                    for (int arm = 0; arm < 4; arm++) {
+                        Direction direction = Direction.from2DDataValue(arm);
+                        for (int distance = 12; distance <= 28; distance++) {
+                            int y = 14 + (distance % 3 == 0 ? 1 : 0);
+                            placeCorniceBlock(level, box, distance % 4 == 0 ? ink : stone,
+                                    c + direction.getStepX() * distance, y,
+                                    c + direction.getStepZ() * distance);
+                        }
+                    }
+                    architecturalPillar(level, box, c, 14, c, 8, ink);
+                }
+                case CHORUS_CONFLUENCE_COURT -> {
+                    BlockState bell = ModBlocks.ASHEN_BELLSTONE_BRICKS.get().defaultBlockState();
+                    BlockState echo = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        for (int x = c - 24; x <= c + 24; x += 8) {
+                            int height = 10 + Math.floorMod(x + side * 3, 7);
+                            architecturalPillar(level, box, x, 8, c + side * 20, height, bell);
+                            placeCorniceBlock(level, box, echo, x, 8 + height,
+                                    c + side * 20);
+                        }
+                    }
+                }
+                case PALIMPSEST_ECOLOGY_DOME -> {
+                    BlockState slate = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState crystal = ModBlocks.SUSPENDED_CRYSTAL.get().defaultBlockState();
+                    for (int layer = 0; layer < 4; layer++) {
+                        int radius = 18 + layer * 5;
+                        int y = 15 + layer * 5;
+                        architecturalRing(level, box, c, y, c, radius,
+                                layer % 2 == 0 ? slate : crystal);
+                    }
+                    for (Direction direction : Direction.Plane.HORIZONTAL) {
+                        architecturalPillar(level, box,
+                                c + direction.getStepX() * 27, 15,
+                                c + direction.getStepZ() * 27, 12, slate);
+                    }
+                }
+                case FAR_BELL_WAYFARER_HARBOR -> {
+                    BlockState pier = Blocks.TUFF_BRICKS.defaultBlockState();
+                    BlockState copper = Blocks.WEATHERED_COPPER.defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        int z = c + side * 26;
+                        for (int x = c - 24; x <= c + 24; x += 6) {
+                            architecturalPillar(level, box, x, 7, z, 9, pier);
+                            placeCorniceBlock(level, box, copper, x, 16, z);
+                        }
+                    }
+                    architecturalRing(level, box, c, 18, c, 12, copper);
+                }
+                case PRISMATIC_CANOPY_CONSERVATORY -> {
+                    BlockState frame = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
+                    BlockState glass = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
+                    for (int i = 0; i < 12; i++) {
+                        double angle = i * Math.PI / 6.0D;
+                        int x = c + (int) Math.round(Math.cos(angle) * 31);
+                        int z = c + (int) Math.round(Math.sin(angle) * 31);
+                        architecturalPillar(level, box, x, 12, z, 14 + i % 3, frame);
+                        placeCorniceBlock(level, box, glass, x, 27 + i % 3, z);
+                    }
+                    architecturalRing(level, box, c, 29, c, 28, glass);
+                }
+                case INTERLAYER_EXPEDITION_RING -> {
+                    BlockState folded = ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState();
+                    BlockState gravity = ModBlocks.BANDED_GRAVITY_SHALE.get().defaultBlockState();
+                    for (int layer = 0; layer < 3; layer++) {
+                        int radius = 25 + layer * 6;
+                        int y = 12 + layer * 7;
+                        architecturalRing(level, box, c, y, c, radius, folded);
+                        for (Direction direction : Direction.Plane.HORIZONTAL) {
+                            placeCorniceBlock(level, box, gravity,
+                                    c + direction.getStepX() * radius, y + 1,
+                                    c + direction.getStepZ() * radius);
+                        }
+                    }
+                }
+            }
         }
 
         /**
@@ -147,7 +276,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                             Blocks.TUFF_BRICKS.defaultBlockState(), trim,
                             Blocks.SEA_LANTERN.defaultBlockState());
                     buildProjectionRelayGallery(level, random, box, c, 1, c + 19, Direction.SOUTH,
-                            floor, wall, trim, ModLootTables.FAR_ECHO_CARTOGRAPHY_CACHE);
+                            floor, wall, trim, ModLootTables.PUZZLE_FAR_ECHO_CARTOGRAPHY_CACHE);
                     placeStructureSpawner(level, random, box, c + 18, 1, c - 7,
                             ModEntities.LOST_RECORDER.get(), floor, trim);
                 }
@@ -159,7 +288,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                             ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState());
 
                     buildProjectionRelayGallery(level, random, box, c, 1, c + 19, Direction.SOUTH,
-                            bell, echo, rune, ModLootTables.CHORUS_CONFLUENCE_CACHE);
+                            bell, echo, rune, ModLootTables.PUZZLE_CHORUS_CONFLUENCE_CACHE);
                     buildSequenceSeal(level, random, box, c - 18, 1, c + 14, Direction.EAST,
                             echo, bell, rune, ModLootTables.T3_PUZZLE);
 
@@ -175,7 +304,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     buildOuterBailey(level, box, c, 1, c, 40, folded, chiseled,
                             ModBlocks.SUSPENDED_CRYSTAL.get().defaultBlockState());
                     buildProjectionRelayGallery(level, random, box, c, 1, c + 19, Direction.SOUTH,
-                            folded, gravity, chiseled, ModLootTables.PALIMPSEST_ECOLOGY_CACHE);
+                            folded, gravity, chiseled, ModLootTables.PUZZLE_PALIMPSEST_ECOLOGY_CACHE);
                     placeStructureSpawner(level, random, box, c + 26, 1, c - 10,
                             ModEntities.FOLDPAGE_BUG.get(), folded, chiseled);
                 }
@@ -187,7 +316,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                             Blocks.CHISELED_TUFF_BRICKS.defaultBlockState(),
                             Blocks.SEA_LANTERN.defaultBlockState());
                     buildProjectionRelayGallery(level, random, box, c, 1, c + 19, Direction.SOUTH,
-                            floor, wall, copper, ModLootTables.FAR_BELL_WAYFARER_CACHE);
+                            floor, wall, copper, ModLootTables.PUZZLE_FAR_BELL_WAYFARER_CACHE);
 
                     buildSequenceSeal(level, random, box, c + 14, 1, c, Direction.EAST,
                             floor, wall, copper, ModLootTables.T3_PUZZLE);
@@ -200,7 +329,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     BlockState glass = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
                     buildOuterBailey(level, box, c, 1, c, 39, echo, rune, glass);
                     buildProjectionRelayGallery(level, random, box, c, 1, c + 19, Direction.SOUTH,
-                            echo, echo, glass, ModLootTables.PRISMATIC_CANOPY_CACHE);
+                            echo, echo, glass, ModLootTables.PUZZLE_PRISMATIC_CANOPY_CACHE);
                     placeStructureSpawner(level, random, box, c + 26, 1, c - 10,
                             ModEntities.CRYSTAL_NOISE_WISP.get(), echo, glass);
                 }
@@ -211,7 +340,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     buildOuterBailey(level, box, c, 1, c, 43, folded, chiseled,
                             ModBlocks.MUTE_CRYSTAL.get().defaultBlockState());
                     buildProjectionRelayGallery(level, random, box, c, 1, c + 19, Direction.SOUTH,
-                            folded, gravity, chiseled, ModLootTables.INTERLAYER_EXPEDITION_CACHE);
+                            folded, gravity, chiseled, ModLootTables.PUZZLE_INTERLAYER_EXPEDITION_CACHE);
 
                     buildSequenceSeal(level, random, box, c - 16, 1, c, Direction.WEST,
                             folded, gravity, chiseled, ModLootTables.T3_PUZZLE);
@@ -240,8 +369,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
             }
             buildCircularColonnade(level, box, c, 1, c, 24, 16, 10, wall,
                     LIT_COPPER_BULB, trim);
-            buildStairCornice(level, box, c, 1, c, Footprint.square(26), Blocks.TUFF_BRICK_STAIRS.defaultBlockState(), Blocks.TUFF_BRICK_SLAB.defaultBlockState(), false);
-            buildParapet(level, box, c, 1, c, Footprint.square(27), 6, Blocks.TUFF_BRICK_WALL.defaultBlockState(), copper);
+            buildCircularPlinth(level, box, c, 0, c, 27, Blocks.TUFF_BRICKS.defaultBlockState(), Blocks.TUFF_BRICK_STAIRS.defaultBlockState());
 
             buildSteppedDisk(level, box, c, 1, c, 12, 4, foundation, Blocks.SMOOTH_STONE.defaultBlockState());
             buildSurveyRotunda(level, box, c, wall, copper, roof);
@@ -258,11 +386,14 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     ModLootTables.FAR_ECHO_CARTOGRAPHY_VAULT, foundation, copper);
 
             this.placeBlock(level, Blocks.CARTOGRAPHY_TABLE.defaultBlockState(), c - 3, 5, c, box);
-            this.placeBlock(level, Blocks.LECTERN.defaultBlockState(), c + 3, 5, c, box);
+            this.placeBlock(level, Blocks.LECTERN.defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH)), c + 3, 5, c, box);
 
+            this.placeBlock(level, foundation, c + 8, 1, c + 15, box);
             this.placeBlock(level, Blocks.SMITHING_TABLE.defaultBlockState(), c + 8, 2, c + 15, box);
             this.placeBlock(level, Blocks.CRAFTING_TABLE.defaultBlockState(), c + 15, 2, c, box);
-            this.placeBlock(level, Blocks.FURNACE.defaultBlockState(), c - 15, 2, c, box);
+            this.placeBlock(level, Blocks.FURNACE.defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH)), c - 15, 2, c, box);
             this.placeBlock(level, ModBlocks.REALM_SERVICE_PLINTH.get().defaultBlockState()
                     .setValue(RealmServicePlinthBlock.MODE, RealmServicePlinthBlock.Mode.WAYFARER),
                     c, 2, c - 15, box);
@@ -312,6 +443,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     BlockState plant = random.nextBoolean()
                             ? Blocks.AZURE_BLUET.defaultBlockState()
                             : Blocks.CORNFLOWER.defaultBlockState();
+                    if (x == c && z == c - 15 || z == c && Math.abs(x - c) == 15) continue;
                     this.placeBlock(level, plant, x, 2, z, box);
                 }
                 this.placeBlock(level, Blocks.CAMPFIRE.defaultBlockState(), cx, 2, cz, box);
@@ -350,8 +482,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
             architecturalRing(level, box, c, 1, c, 31, rune);
             buildCircularColonnade(level, box, c, 1, c, 29, 24, 13,
                     echo, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState(), rune);
-            buildStairCornice(level, box, c, 1, c, Footprint.square(30), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_SLAB.get().defaultBlockState(), false);
-            buildParapet(level, box, c, 1, c, Footprint.square(31), 6, ModBlocks.ECHO_STONE_BRICK_WALL.get().defaultBlockState(), rune);
+            buildCircularPlinth(level, box, c, 0, c, 31, ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState());
             for (Direction direction : Direction.Plane.HORIZONTAL) {
                 buildCardinalGateway(level, box, c, 1, c, 31, direction, 4, 12, echo, rune);
                 buildRuneCauseway(level, box, c, 1, c, direction, 8, 31, 3,
@@ -374,10 +505,11 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     ModLootTables.CHORUS_CONFLUENCE_VAULT, echo, rune);
             this.placeBlock(level, ModBlocks.ARTIFACT_RECORD_TABLE.get().defaultBlockState(), c - 4, 6, c, box);
             this.placeBlock(level, ModBlocks.ARTIFACT_TUNING_TABLE.get().defaultBlockState(), c + 4, 6, c, box);
-            this.placeBlock(level, Blocks.LECTERN.defaultBlockState(), c + 8, 2, c + 12, box);
+            this.placeBlock(level, Blocks.LECTERN.defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH)), c + 8, 2, c + 12, box);
             this.placeBlock(level, ModBlocks.REALM_SERVICE_PLINTH.get().defaultBlockState()
                     .setValue(RealmServicePlinthBlock.MODE, RealmServicePlinthBlock.Mode.CONFLUENCE),
-                    c, 2, c - 12, box);
+                    c + 2, 3, c - 12, box);
             decorateConfluenceBeds(level, random, box, c);
 
             buildSealedManor(level, box, c + 18, 1, c + 8, 4, 4, 2, 5,
@@ -396,7 +528,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     material, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState(), rune);
             architecturalRing(level, box, x, 13 + phase, z, 6, material);
             architecturalRing(level, box, x, 15 + phase, z, 4, Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState());
-            this.placeBlock(level, ModBlocks.RESONANCE_CANDLE.get().defaultBlockState(), x, 16 + phase, z, box);
+            this.placeBlock(level, ModBlocks.RESONANCE_CANDLE.get().defaultBlockState(), x + 4, 16 + phase, z, box);
         }
 
         private void buildConfluenceStage(WorldGenLevel level, BoundingBox box, int c,
@@ -418,14 +550,16 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
         }
 
         private void decorateConfluenceBeds(WorldGenLevel level, RandomSource random, BoundingBox box, int c) {
+            RandomSource plantingRandom = RandomSource.create((long) getWorldX(c, c) * 341873128712L
+                    ^ (long) getWorldZ(c, c) * 132897987541L);
             int[][] centers = {{-12, -12}, {12, -12}, {-12, 12}, {12, 12}};
             for (int i = 0; i < centers.length; i++) {
                 int cx = c + centers[i][0];
                 int cz = c + centers[i][1];
                 architecturalDisk(level, box, cx, 1, cz, 5, Blocks.MOSS_BLOCK.defaultBlockState());
                 for (int n = 0; n < 12; n++) {
-                    int x = cx - 3 + random.nextInt(7);
-                    int z = cz - 3 + random.nextInt(7);
+                    int x = cx - 3 + plantingRandom.nextInt(7);
+                    int z = cz - 3 + plantingRandom.nextInt(7);
                     BlockState plant = switch ((n + i) % 4) {
                         case 0 -> ModBlocks.ECHO_FLOWER.get().defaultBlockState();
                         case 1 -> ModBlocks.DREAM_FLOWER.get().defaultBlockState();
@@ -475,8 +609,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
             architecturalRing(level, box, c, 1, c, 35, ModBlocks.RESONANT_FOLDED_SLATE.get().defaultBlockState());
             buildCircularColonnade(level, box, c, 1, c, 33, 24, 16,
                     folded, ModBlocks.SUSPENDED_CRYSTAL.get().defaultBlockState(), chiseled);
-            buildStairCornice(level, box, c, 1, c, Footprint.square(34), ModBlocks.FOLDED_SLATE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.FOLDED_SLATE_BRICK_SLAB.get().defaultBlockState(), false);
-            buildParapet(level, box, c, 1, c, Footprint.square(35), 6, ModBlocks.FOLDED_SLATE_BRICK_WALL.get().defaultBlockState(), chiseled);
+            buildCircularPlinth(level, box, c, 0, c, 35, ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState(), ModBlocks.FOLDED_SLATE_BRICK_STAIRS.get().defaultBlockState());
             buildRadialButtresses(level, box, c, 1, c, 25, 34, 12,
                     gravity, ModBlocks.MUTE_CRYSTAL.get().defaultBlockState());
             for (Direction direction : Direction.Plane.HORIZONTAL) {
@@ -504,7 +637,9 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
             placeRewardChest(level, random, box, c, 32, c,
                     ModLootTables.PALIMPSEST_ECOLOGY_VAULT, abyss,
                     ModBlocks.CHISELED_FOLDED_SLATE.get().defaultBlockState());
-            this.placeBlock(level, Blocks.LECTERN.defaultBlockState(), c + 8, 2, c + 14, box);
+            this.placeBlock(level, folded, c + 8, 1, c + 14, box);
+            this.placeBlock(level, Blocks.LECTERN.defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH)), c + 8, 2, c + 14, box);
             this.placeBlock(level, ModBlocks.REALM_SERVICE_PLINTH.get().defaultBlockState()
                     .setValue(RealmServicePlinthBlock.MODE, RealmServicePlinthBlock.Mode.INTERLAYER),
                     c, 2, c - 14, box);
@@ -636,8 +771,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
             // 必须叠悬挑栈台:万声合奏庭已占用回响族柱环+阶台+封闭厅剪影。
             buildCantileverTerraces(level, box, c, 2, c,
                     Direction.SOUTH, 3, 9, 4, floor, foundation, copper, bulb);
-            buildStairCornice(level, box, c, 1, c, Footprint.square(30), Blocks.TUFF_BRICK_STAIRS.defaultBlockState(), Blocks.TUFF_BRICK_SLAB.defaultBlockState(), false);
-            buildParapet(level, box, c, 1, c, Footprint.square(30), 6, Blocks.TUFF_BRICK_WALL.defaultBlockState(), copper);
+            buildCircularPlinth(level, box, c, 0, c, 31, Blocks.TUFF_BRICKS.defaultBlockState(), Blocks.TUFF_BRICK_STAIRS.defaultBlockState());
             for (Direction direction : Direction.Plane.HORIZONTAL) {
                 buildCardinalGateway(level, box, c, 1, c, 30, direction, 4, 11, foundation, copper);
                 buildRuneCauseway(level, box, c, 1, c, direction, 11, 30, 3,
@@ -670,7 +804,8 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
             this.placeBlock(level, Blocks.CARTOGRAPHY_TABLE.defaultBlockState(), c - 5, 6, c, box);
             this.placeBlock(level, Blocks.CRAFTING_TABLE.defaultBlockState(), c + 5, 6, c, box);
             this.placeBlock(level, Blocks.SMITHING_TABLE.defaultBlockState(), c, 6, c - 5, box);
-            this.placeBlock(level, Blocks.ENDER_CHEST.defaultBlockState(), c - 4, 6, c + 4, box);
+            this.placeBlock(level, Blocks.ENDER_CHEST.defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH)), c - 4, 6, c + 4, box);
             this.placeBlock(level, ModBlocks.COMMUNAL_ECHO_TABLE.get().defaultBlockState(),
                     c + 3, 7, c + 3, box);
             this.placeBlock(level, ModBlocks.REALM_SERVICE_PLINTH.get().defaultBlockState()
@@ -696,14 +831,21 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     wall, LIT_COPPER_BULB, copper);
             architecturalRing(level, box, x, 11, z, 7, roof);
             architecturalRing(level, box, x, 13, z, 5, trim);
-            this.placeBlock(level, Blocks.LANTERN.defaultBlockState(), x, 14, z, box);
+            this.placeBlock(level, Blocks.LANTERN.defaultBlockState()
+                    .setValue(BlockStateProperties.HANGING, true), x, 14, z, box);
             BlockState workstation = switch (phase) {
-                case 0 -> Blocks.BLAST_FURNACE.defaultBlockState();
-                case 1 -> Blocks.SMOKER.defaultBlockState();
-                case 2 -> Blocks.LOOM.defaultBlockState();
-                default -> Blocks.STONECUTTER.defaultBlockState();
+                case 0 -> Blocks.BLAST_FURNACE.defaultBlockState()
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH));
+                case 1 -> Blocks.SMOKER.defaultBlockState()
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH));
+                case 2 -> Blocks.LOOM.defaultBlockState()
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH));
+                default -> Blocks.STONECUTTER.defaultBlockState()
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH));
             };
+            this.placeBlock(level, Blocks.POLISHED_TUFF.defaultBlockState(), x + 3, 2, z, box);
             this.placeBlock(level, workstation, x + 3, 3, z, box);
+            this.placeBlock(level, Blocks.POLISHED_TUFF.defaultBlockState(), x - 3, 2, z, box);
             this.placeBlock(level, Blocks.CRAFTING_TABLE.defaultBlockState(), x - 3, 3, z, box);
         }
 
@@ -734,6 +876,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                 for (int n = 0; n < 8; n++) {
                     int px = x - 3 + random.nextInt(7);
                     int pz = z - 3 + random.nextInt(7);
+                    if (px == x && pz == z) continue;
                     this.placeBlock(level, n % 2 == 0
                             ? Blocks.CORNFLOWER.defaultBlockState()
                             : Blocks.AZURE_BLUET.defaultBlockState(), px, 2, pz, box);
@@ -777,8 +920,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     echo, glass, rune);
             // 必须叠围合中庭:远鸣测绘院已占用回响石柱环+阶台剪影。
             buildCourtyardCloister(level, box, c, 1, c, Footprint.square(24), 11, 4, moss, echo, rune, glass);
-            buildStairCornice(level, box, c, 1, c, Footprint.square(33), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_SLAB.get().defaultBlockState(), false);
-            buildParapet(level, box, c, 1, c, Footprint.square(34), 6, ModBlocks.ECHO_STONE_BRICK_WALL.get().defaultBlockState(), rune);
+            buildCircularPlinth(level, box, c, 0, c, 34, ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState(), ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState());
             for (Direction direction : Direction.Plane.HORIZONTAL) {
                 buildCardinalGateway(level, box, c, 1, c, 34, direction, 4, 13, echo, rune);
                 buildRuneCauseway(level, box, c, 1, c, direction, 10, 34, 3,
@@ -808,12 +950,20 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
             placeRewardChest(level, random, box, c, 30, c + 7,
                     ModLootTables.PRISMATIC_CANOPY_VAULT, echo, glass);
 
+            this.placeBlock(level, moss, c - 5, 6, c, box);
             this.placeBlock(level, ModBlocks.ARTIFACT_RECORD_TABLE.get().defaultBlockState(), c - 5, 7, c, box);
+            this.placeBlock(level, moss, c + 5, 6, c, box);
             this.placeBlock(level, ModBlocks.ARTIFACT_TUNING_TABLE.get().defaultBlockState(), c + 5, 7, c, box);
+            this.placeBlock(level, moss, c, 6, c - 5, box);
             this.placeBlock(level, Blocks.COMPOSTER.defaultBlockState(), c, 7, c - 5, box);
-            this.placeBlock(level, Blocks.SMOKER.defaultBlockState(), c + 5, 7, c - 5, box);
+            this.placeBlock(level, echo, c + 5, 5, c - 5, box);
+            this.placeBlock(level, moss, c + 5, 6, c - 5, box);
+            this.placeBlock(level, Blocks.SMOKER.defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH)), c + 5, 7, c - 5, box);
+            this.placeBlock(level, moss, c + 3, 6, c + 3, box);
             this.placeBlock(level, ModBlocks.COMMUNAL_ECHO_TABLE.get().defaultBlockState(),
                     c + 3, 7, c + 3, box);
+            this.placeBlock(level, moss, c - 3, 6, c + 3, box);
             this.placeBlock(level, ModBlocks.REALM_SERVICE_PLINTH.get().defaultBlockState()
                     .setValue(RealmServicePlinthBlock.MODE, RealmServicePlinthBlock.Mode.CONFLUENCE),
                     c - 3, 7, c + 3, box);
@@ -823,6 +973,8 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
         private void buildPrismaticGallery(WorldGenLevel level, RandomSource random, BoundingBox box,
                                            int x, int z, int phase, BlockState material,
                                            BlockState rune, BlockState glass) {
+            RandomSource plantingRandom = RandomSource.create((long) getWorldX(x, z) * 341873128712L
+                    ^ (long) getWorldZ(x, z) * 132897987541L);
             architecturalDisk(level, box, x, 1, z, 9, material);
             architecturalDisk(level, box, x, 2, z, 5, Blocks.MOSS_BLOCK.defaultBlockState());
             buildCircularColonnade(level, box, x, 2, z, 8, 12, 10,
@@ -832,8 +984,8 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                         y % 4 == 0 ? glass : material);
             }
             for (int n = 0; n < 16; n++) {
-                int px = x - 3 + random.nextInt(7);
-                int pz = z - 3 + random.nextInt(7);
+                int px = x - 3 + plantingRandom.nextInt(7);
+                int pz = z - 3 + plantingRandom.nextInt(7);
                 BlockState plant = switch ((n + phase) % 4) {
                     case 0 -> ModBlocks.ECHO_FLOWER.get().defaultBlockState();
                     case 1 -> ModBlocks.DREAM_FLOWER.get().defaultBlockState();
@@ -910,8 +1062,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
             architecturalRing(level, box, c, 1, c, 30, gravity);
             buildCircularColonnade(level, box, c, 1, c, 36, 32, 16,
                     folded, crystal, chiseled);
-            buildStairCornice(level, box, c, 1, c, Footprint.square(37), ModBlocks.FOLDED_SLATE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.FOLDED_SLATE_BRICK_SLAB.get().defaultBlockState(), false);
-            buildParapet(level, box, c, 1, c, Footprint.square(38), 6, ModBlocks.FOLDED_SLATE_BRICK_WALL.get().defaultBlockState(), chiseled);
+            buildCircularPlinth(level, box, c, 0, c, 38, ModBlocks.FOLDED_SLATE_BRICKS.get().defaultBlockState(), ModBlocks.FOLDED_SLATE_BRICK_STAIRS.get().defaultBlockState());
             buildRadialButtresses(level, box, c, 1, c, 29, 38, 14,
                     gravity, ModBlocks.MUTE_CRYSTAL.get().defaultBlockState());
             // 必须叠退台营垒:残卷生态穹顶已占用折叠板岩柱环+扶壁+阶台剪影。
@@ -931,6 +1082,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                 buildExpeditionBastion(level, box, x, z, i, folded, chiseled, gravity, crystal);
                 placeRewardChest(level, random, box, x, 3, z + 5,
                         ModLootTables.INTERLAYER_EXPEDITION_CACHE, folded, chiseled);
+                this.placeBlock(level, folded, x + (i % 2 == 0 ? 5 : -5), 2, z, box);
                 this.placeBlock(level, ModBlocks.DEEP_PROVISION_BRAZIER.get().defaultBlockState(),
                         x + (i % 2 == 0 ? 5 : -5), 3, z, box);
             }
@@ -944,9 +1096,11 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     ModLootTables.INTERLAYER_EXPEDITION_VAULT, folded, crystal);
 
             this.placeBlock(level, Blocks.CRAFTING_TABLE.defaultBlockState(), c - 6, 7, c, box);
-            this.placeBlock(level, Blocks.ENDER_CHEST.defaultBlockState(), c + 6, 7, c, box);
+            this.placeBlock(level, Blocks.ENDER_CHEST.defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH)), c + 6, 7, c, box);
             this.placeBlock(level, Blocks.ANVIL.defaultBlockState(), c, 7, c - 6, box);
-            this.placeBlock(level, Blocks.GRINDSTONE.defaultBlockState(), c + 5, 7, c + 5, box);
+            this.placeBlock(level, Blocks.GRINDSTONE.defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH)), c + 5, 7, c + 5, box);
             this.placeBlock(level, ModBlocks.COMMUNAL_ECHO_TABLE.get().defaultBlockState(),
                     c + 4, 8, c + 4, box);
             this.placeBlock(level, ModBlocks.REALM_SERVICE_PLINTH.get().defaultBlockState()
@@ -975,11 +1129,15 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
             architecturalPillar(level, box, x, 2, z, 17, phase % 2 == 0 ? gravity : folded);
             this.placeBlock(level, crystal, x, 20, z, box);
             BlockState station = switch (phase) {
-                case 0 -> Blocks.BLAST_FURNACE.defaultBlockState();
-                case 1 -> Blocks.SMOKER.defaultBlockState();
-                case 2 -> Blocks.STONECUTTER.defaultBlockState();
+                case 0 -> Blocks.BLAST_FURNACE.defaultBlockState()
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH));
+                case 1 -> Blocks.SMOKER.defaultBlockState()
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH));
+                case 2 -> Blocks.STONECUTTER.defaultBlockState()
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH));
                 default -> Blocks.CARTOGRAPHY_TABLE.defaultBlockState();
             };
+            this.placeBlock(level, folded, x - 4, 2, z, box);
             this.placeBlock(level, station, x - 4, 3, z, box);
         }
 
@@ -1055,7 +1213,7 @@ public class ThreeRealmLandmarkStructure extends SinglePieceStructure {
                     }
                 }
             }
-            this.createChest(level, box, random, x, y, z, loot); // audit-ok: themed helper clears a 3x3x3 pocket
+            this.createChest(level, box, random, x, y, z, loot, null); // audit-ok: themed helper clears a 3x3x3 pocket
         }
 
         private void clearPlayableVolume(WorldGenLevel level, BoundingBox box) {

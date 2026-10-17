@@ -3,23 +3,33 @@
   "temperature": 0.45,
   "downfall": 0.35,
   "effects": {
-    "fog_color": 11262207,
-    "sky_color": 8561384,
-    "water_color": 5748426,
-    "water_fog_color": 1588314,
-    "grass_color": 7913378,
-    "foliage_color": 7189908,
+    "fog_color": 12835294,
+    "sky_color": 10009300,
+    "water_color": 7839689,
+    "water_fog_color": 5068158,
+    "grass_color": 8764081,
+    "foliage_color": 8764081,
     "ambient_particle": {
       "options": {
         "type": "minecraft:glow"
       },
-      "probability": 0.009
+      "probability": 0.0018
     },
     "mood_sound": {
       "sound": "minecraft:ambient.cave",
-      "tick_delay": 8000,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.lush_caves",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": "minecraft:block.amethyst_block.chime",
+      "tick_chance": 0.0007
     }
   },
   "carvers": {
@@ -41,7 +51,9 @@
       "unknown_echoes:crystal_song_cluster_disk"
     ],
     [],
-    [],
+    [
+      "unknown_echoes:crystal_song_grove_landform"
+    ],
     [
       "unknown_echoes:tuning_grass_patch",
       "unknown_echoes:crystal_bellflower_patch",
@@ -66,6 +78,24 @@
         "weight": 16,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:bell_needle_wasp",
+        "weight": 6,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:crystal_spine_urchin",
+        "weight": 5,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:amberback_beetle",
+        "weight": 6,
+        "minCount": 1,
+        "maxCount": 2
       }
     ],
     "creature": [
@@ -80,6 +110,24 @@
         "weight": 16,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:petalwing_butterfly",
+        "weight": 12,
+        "minCount": 2,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:moss_sail_snail",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:mossback_hedgehog",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 3
       }
     ],
     "ambient": [],

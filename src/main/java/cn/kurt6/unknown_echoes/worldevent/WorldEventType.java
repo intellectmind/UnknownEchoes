@@ -24,6 +24,10 @@ public enum WorldEventType {
     STRATA_AFTERSHOCK("strata_aftershock", false, null,
             true, 3, false),
 
+    RIFT_STORM("rift_storm", true, null),
+
+    STRATA_RUPTURE("strata_rupture", false, null, true, 0),
+
     FAR_BELL_PROCESSION("far_bell_procession", false, null,
             false, 2, true),
 

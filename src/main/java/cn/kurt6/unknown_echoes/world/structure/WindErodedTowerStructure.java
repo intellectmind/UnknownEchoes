@@ -17,16 +17,15 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 风蚀塔:漂浮群岛垂直谜题(地面结构)。 */
-public class WindErodedTowerStructure extends SinglePieceStructure {
+public class WindErodedTowerStructure extends TerrainAnchoredStructure {
     public static final MapCodec<WindErodedTowerStructure> CODEC = simpleCodec(WindErodedTowerStructure::new);
 
     private static final int SIZE = 25;
-    private static final int HEIGHT = 40;
+    private static final int HEIGHT = 47;
 
     public WindErodedTowerStructure(StructureSettings settings) {
         super(Piece::new, SIZE, SIZE, settings);
@@ -96,23 +95,15 @@ public class WindErodedTowerStructure extends SinglePieceStructure {
                 }
             }
 
-            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, 2, c - towerRadius, box);
-            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, 3, c - towerRadius, box);
+            this.generateBox(level, box, c - 1, 2, c - towerRadius + 1, c, 4, c - towerRadius + 1,
+                    air, air, false);
+            buildConnectedDoor(level, box, ModBlocks.WIND_DOOR.get().defaultBlockState(),
+                    c, 2, c - towerRadius, Direction.NORTH, 1, 2);
 
             this.placeBlock(level, ModBlocks.WIND_CURRENT_PLATFORM.get().defaultBlockState(),
                     c, 2, c, box);
 
-            int[][] ring = ringPath(c, 5);
-            int step = 0;
             int midY = topY / 2;
-            for (int y = 2; y <= topY - 1; y++) {
-                int[] spot = ring[step % ring.length];
-                this.placeBlock(level, bricks, spot[0], y, spot[1], box);
-                if (y != midY && random.nextFloat() < 0.15F) {
-                    this.placeBlock(level, Blocks.COBWEB.defaultBlockState(), spot[0], y + 1, spot[1], box);
-                }
-                step++;
-            }
 
             for (int x = c - 5; x <= c - 1; x++) {
                 for (int z = c - 3; z <= c + 3; z++) {
@@ -122,6 +113,7 @@ public class WindErodedTowerStructure extends SinglePieceStructure {
             buildAccessibleChest(level, random, box, c - 3, midY + 1, c,
                     ModLootTables.SKY_OBSERVATORY_CHEST);
             buildTrueSightVaultNiche(level, random, box, c + 8, midY + 1, c, Direction.WEST);
+            this.placeBlock(level, windStone, c, midY, c + 2, box);
             this.placeBlock(level, ModBlocks.WIND_CURRENT_PLATFORM.get().defaultBlockState(),
                     c, midY + 1, c + 2, box);
             for (int z = c - 3; z <= c + 3; z++) {
@@ -136,7 +128,7 @@ public class WindErodedTowerStructure extends SinglePieceStructure {
             // 收边必须用风蚀岩砖族:借用青色回响石砖会与浅灰风蚀岩撞色。
             BlockState windStairs = ModBlocks.WIND_ETCHED_BRICK_STAIRS.get().defaultBlockState();
             BlockState windSlab = ModBlocks.WIND_ETCHED_BRICK_SLAB.get().defaultBlockState();
-            buildStairCornice(level, box, c, topY, c, Footprint.square(8), windStairs, windSlab, false);
+            buildStairCornice(level, box, c, topY, c, Footprint.square(8), windStairs, windSlab, true);
             buildParapet(level, box, c, topY + 1, c, Footprint.square(9), 4, ModBlocks.WIND_ETCHED_BRICK_WALL.get().defaultBlockState(), chiseled);
             buildStairCornice(level, box, c - 3, midY, c, Footprint.of(3, 4), windStairs, windSlab, false);
             this.placeBlock(level, ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState(),
@@ -145,6 +137,17 @@ public class WindErodedTowerStructure extends SinglePieceStructure {
                     ModLootTables.WIND_VAULT_CHEST);
 
             buildCornice(level, box, c, topY + 5, c, Footprint.square(6), chiseled, windStone);
+
+            // 风向翼片：顶环外伸四片不同高度的脊翼，强化风蚀塔的远景剪影。
+            for (int[] wing : new int[][]{{-6, -2, 35}, {6, -1, 37}, {-2, 6, 34}, {2, 6, 36}}) {
+                int length = wing[2] - topY;
+                for (int wingStep = 0; wingStep <= length; wingStep++) {
+                    int x = c + (wing[0] == 0 ? 0 : Integer.signum(wing[0]) * Math.min(Math.abs(wing[0]), wingStep));
+                    int z = c + (wing[1] == 0 ? 0 : Integer.signum(wing[1]) * Math.min(Math.abs(wing[1]), wingStep));
+                    this.placeBlock(level, wingStep % 2 == 0 ? windStone : chiseled, x, topY + wingStep, z, box);
+                }
+                this.placeBlock(level, lamp, c + wing[0], wing[2], c + wing[1], box);
+            }
 
             int[][] diagonalDirections = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
             for (int[] diagonal : diagonalDirections) {
@@ -164,29 +167,24 @@ public class WindErodedTowerStructure extends SinglePieceStructure {
                     this.placeBlock(level, lamp, x, 15, z, box);
                 }
             }
-            scatterArchitecturalDebris(level, random, box, c, 1, c,
-                    8, 11, 24, cracked, windStone);
+            scatterArchitecturalDebris(level, box, "wind_eroded_tower", c, 1, c,
+                    cracked, windStone);
 
             placeStructureSpawner(level, random, box, c + 8, 1, c - 4,
                     ModEntities.WIND_ERODED_SENTINEL.get(), windStone, chiseled);
+            buildWalkableSpiral(level, box, c, 1, c, topY, 4, windStone, windStairs);
+            for (int x = c - 1; x <= c + 5; x++) {
+                for (int z = c - 1; z <= c + 1; z++) {
+                    placeCorniceBlock(level, box, windStone, x, midY, z);
+                    for (int head = 1; head <= 3; head++) {
+                        placeCorniceBlock(level, box, air, x, midY + head, z);
+                    }
+                }
+            }
+            anchorGroundColumns(level, box, 0, windStone);
+            dressStructure(level, box, "wind_eroded_tower");
         }
 
-        private static int[][] ringPath(int center, int radius) {
-            java.util.List<int[]> path = new java.util.ArrayList<>();
-            for (int x = center - radius; x <= center + radius; x++) {
-                path.add(new int[]{x, center - radius});
-            }
-            for (int z = center - radius + 1; z <= center + radius; z++) {
-                path.add(new int[]{center + radius, z});
-            }
-            for (int x = center + radius - 1; x >= center - radius; x--) {
-                path.add(new int[]{x, center + radius});
-            }
-            for (int z = center + radius - 1; z > center - radius; z--) {
-                path.add(new int[]{center - radius, z});
-            }
-            return path.toArray(int[][]::new);
-        }
 
         @Override
         protected void addAdditionalSaveData(StructurePieceSerializationContext context, CompoundTag tag) {

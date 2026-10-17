@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.item;
 
+import cn.kurt6.unknown_echoes.fx.PlayerSoundFeedback;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.entity.projection.EchoProjectionEntity;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
@@ -9,7 +11,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
@@ -38,52 +39,71 @@ public class EchoProjectorItem extends Item {
                 || !(context.getLevel() instanceof ServerLevel level)) {
             return InteractionResult.CONSUME;
         }
-
-        if (player.getCooldowns().isOnCooldown(this)) {
+        if (player.getCooldowns().isOnCooldown(this) || !canProject(context, player, level)) {
             return InteractionResult.CONSUME;
         }
-
         if (EchoAbilityManager.getData(player).getUnlockedAbilities().isEmpty()) {
             player.displayClientMessage(
                     Component.translatable("message.unknown_echoes.projector.no_ability"), true);
-            level.playSound(null, player.blockPosition(),
-                    SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 0.8F, 0.5F);
+            PlayerSoundFeedback.deny(player);
             return InteractionResult.CONSUME;
         }
 
-        java.util.UUID previousId = player.getPersistentData().hasUUID(PROJECTION_ID_KEY)
-                ? player.getPersistentData().getUUID(PROJECTION_ID_KEY) : null;
+        EchoProjectionEntity projection = null;
+        boolean committed = false;
+        try {
+            // 构造、入世和声音都可能同步回调，先预留本次冷却。
+            player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
+            UUID previousId = player.getPersistentData().hasUUID(PROJECTION_ID_KEY)
+                    ? player.getPersistentData().getUUID(PROJECTION_ID_KEY) : null;
+            BlockPos spawnPos = context.getClickedPos().relative(context.getClickedFace());
+            projection = ModEntities.ECHO_PROJECTION.get().create(level);
+            if (projection == null) {
+                return InteractionResult.CONSUME;
+            }
+            projection.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5,
+                    player.getYRot(), 0.0F);
+            projection.setOwner(player.getUUID());
+            if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, projection)
+                    || !canProject(context, player, level)) {
+                return InteractionResult.CONSUME;
+            }
+            if (!level.addFreshEntity(projection)
+                    || !projection.isAlive() || !canProject(context, player, level)) {
+                return InteractionResult.CONSUME;
+            }
 
-        BlockPos spawnPos = context.getClickedPos().relative(context.getClickedFace());
-        EchoProjectionEntity projection = ModEntities.ECHO_PROJECTION.get().create(level);
-        if (projection == null) {
+            player.getPersistentData().putUUID(PROJECTION_ID_KEY, projection.getUUID());
+            committed = true;
+            if (previousId != null) {
+                for (ServerLevel anyLevel : level.getServer().getAllLevels()) {
+                    if (anyLevel.getEntity(previousId) instanceof EchoProjectionEntity old
+                            && old.getOwner().map(player.getUUID()::equals).orElse(false)) {
+                        old.dissipate();
+                        break;
+                    }
+                }
+            }
+            level.playSound(null, spawnPos, ModSounds.ITEM_ECHO_PROJECTOR_ACTIVATE.get(),
+                    SoundSource.PLAYERS, 1.0F, 1.0F);
             return InteractionResult.CONSUME;
-        }
-        projection.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5,
-                player.getYRot(), 0.0F);
-        projection.setOwner(player.getUUID());
-        if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, projection)) {
-            projection.discard();
-            return InteractionResult.CONSUME;
-        }
-        if (!level.addFreshEntity(projection)) {
-            projection.discard();
-            return InteractionResult.CONSUME;
-        }
-        if (previousId != null) {
-            for (ServerLevel anyLevel : level.getServer().getAllLevels()) {
-                if (anyLevel.getEntity(previousId) instanceof EchoProjectionEntity old
-                        && old.getOwner().map(player.getUUID()::equals).orElse(false)) {
-                    old.dissipate();
-                    break;
+        } finally {
+            if (!committed) {
+                try {
+                    if (projection != null) {
+                        projection.discard();
+                    }
+                } finally {
+                    player.getCooldowns().removeCooldown(this);
                 }
             }
         }
-        player.getPersistentData().putUUID(PROJECTION_ID_KEY, projection.getUUID());
-        level.playSound(null, spawnPos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 0.9F);
+    }
 
-        player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
-        return InteractionResult.CONSUME;
+    private boolean canProject(UseOnContext context, ServerPlayer player, ServerLevel level) {
+        return player.level() == level && !player.isSpectator()
+                && player.getItemInHand(context.getHand()) == context.getItemInHand()
+                && context.getItemInHand().is(this);
     }
 
     public static boolean isCurrentProjection(ServerPlayer player, UUID projectionId) {

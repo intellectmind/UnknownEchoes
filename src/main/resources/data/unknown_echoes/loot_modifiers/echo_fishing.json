@@ -1,0 +1,10 @@
+{
+  "type": "unknown_echoes:echo_fishing",
+  "conditions": [
+    {
+      "condition": "neoforge:loot_table_id",
+      "loot_table_id": "minecraft:gameplay/fishing"
+    }
+  ],
+  "bonus_table": "unknown_echoes:gameplay/echo_fishing_bonus"
+}

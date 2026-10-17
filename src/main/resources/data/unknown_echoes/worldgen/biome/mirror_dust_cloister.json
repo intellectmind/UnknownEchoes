@@ -3,23 +3,33 @@
   "temperature": 0.48,
   "downfall": 0.35,
   "effects": {
-    "fog_color": 10194648,
-    "sky_color": 6252728,
-    "water_color": 8559832,
-    "water_fog_color": 2830682,
-    "grass_color": 6318478,
-    "foliage_color": 5923712,
+    "fog_color": 13815012,
+    "sky_color": 11313870,
+    "water_color": 8887236,
+    "water_fog_color": 5659513,
+    "grass_color": 10005161,
+    "foliage_color": 10005161,
     "ambient_particle": {
       "options": {
         "type": "minecraft:end_rod"
       },
-      "probability": 0.007
+      "probability": 0.0005
     },
     "mood_sound": {
       "sound": "minecraft:ambient.cave",
-      "tick_delay": 7000,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.snowy_slopes",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": "minecraft:block.amethyst_block.chime",
+      "tick_chance": 0.0003
     }
   },
   "carvers": {
@@ -42,7 +52,9 @@
       "unknown_echoes:mirror_stone_disk"
     ],
     [],
-    [],
+    [
+      "unknown_echoes:mirror_dust_cloister_landform"
+    ],
     [
       "unknown_echoes:glassveil_grass_patch",
       "unknown_echoes:reflection_orchid_patch",

@@ -1,6 +1,9 @@
 package cn.kurt6.unknown_echoes.client;
 
+import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.network.TradeListPayload;
+import cn.kurt6.unknown_echoes.network.TradeRequestPayload;
+import cn.kurt6.unknown_echoes.entity.mob.LostTraveler;
 import cn.kurt6.unknown_echoes.registry.ModDataComponents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -8,10 +11,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 public class ClientTradeCache {
 
@@ -19,20 +24,31 @@ public class ClientTradeCache {
     public record Entry(List<ItemStack> costs, ItemStack result, int usesLeft) {}
 
     private static int travelerEntityId = -1;
-    private static final double CLIENT_TRADE_RANGE_SQR = 6.0D * 6.0D;
+    private static UUID sessionId;
     private static final List<Entry> ENTRIES = new ArrayList<>();
     private static final List<Entry> ENTRIES_VIEW = Collections.unmodifiableList(ENTRIES);
 
     public static void openFromServer(TradeListPayload payload) {
-        travelerEntityId = payload.entityId();
-        ENTRIES.clear();
-        for (String line : payload.trades()) {
-            try {
-                ENTRIES.add(parseEntry(line));
-            } catch (NumberFormatException ignored) {
+        List<Entry> parsed = new ArrayList<>();
+        try {
+            for (String line : payload.trades()) {
+                parsed.add(parseEntry(line));
             }
+        } catch (NumberFormatException ignored) {
+            clearSession();
+            return;
         }
+        travelerEntityId = payload.entityId();
+        sessionId = payload.sessionId();
+        ENTRIES.clear();
+        ENTRIES.addAll(parsed);
         cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.openTrades();
+    }
+
+    public static void requestTrade(int index) {
+        if (hasSession() && index >= 0 && index < ENTRIES.size() && ENTRIES.get(index).usesLeft() != 0) {
+            PacketDistributor.sendToServer(new TradeRequestPayload(travelerEntityId, sessionId, index));
+        }
     }
 
     private static Entry parseEntry(String line) {
@@ -98,11 +114,12 @@ public class ClientTradeCache {
     /** 是否存在进行中的交易会话(旅者还在跟前才有意义,展示层判断)。 */
     public static boolean hasSession() {
         clearIfTravelerUnavailable();
-        return travelerEntityId >= 0 && !ENTRIES.isEmpty();
+        return travelerEntityId >= 0 && sessionId != null && !ENTRIES.isEmpty();
     }
 
     public static void clearSession() {
         travelerEntityId = -1;
+        sessionId = null;
         ENTRIES.clear();
     }
 
@@ -111,13 +128,16 @@ public class ClientTradeCache {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null || minecraft.player == null) {
+        if (minecraft.level == null || minecraft.player == null
+                || !minecraft.player.isAlive() || minecraft.player.isSpectator()) {
             clearSession();
             return;
         }
         var traveler = minecraft.level.getEntity(travelerEntityId);
-        if (traveler == null || !traveler.isAlive()
-                || minecraft.player.distanceToSqr(traveler) > CLIENT_TRADE_RANGE_SQR) {
+        double range = ServerConfig.TRADE_RANGE.get();
+        if (!ServerConfig.TRADES_ENABLED.get()
+                || !(traveler instanceof LostTraveler) || !traveler.isAlive() || traveler.isRemoved()
+                || minecraft.player.distanceToSqr(traveler) > range * range) {
             clearSession();
         }
     }

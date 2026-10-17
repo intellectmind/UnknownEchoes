@@ -211,7 +211,7 @@ public class BrokenBellKeeper extends MiniBossEntity {
     private void startWindup(ServerLevel serverLevel) {
         this.windupTicks = WINDUP_TICKS;
         this.triggerAnim("attack_controller", "toll");
-        serverLevel.playSound(null, this.blockPosition(), SoundEvents.BELL_BLOCK, SoundSource.HOSTILE, 2.0F, 0.5F);
+        serverLevel.playSound(null, this.blockPosition(), ModSounds.BROKEN_BELL_KEEPER_ATTACK_TOLL_WARN.get(), SoundSource.HOSTILE, 2.0F, 1.0F);
         this.broadcastHint(serverLevel, "message.unknown_echoes.broken_bell_keeper.windup");
     }
 
@@ -232,7 +232,7 @@ public class BrokenBellKeeper extends MiniBossEntity {
                 MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
             }
         }
-        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), TOLL_RADIUS);
+        MiniBossFx.releasePulse(serverLevel, this.position(), this.fxTheme(), TOLL_RADIUS);
         BossFx.cinematicImpact(serverLevel, this.position().add(0, 0.6, 0),
                 30.0D, 0.72F, 9, this.combatImpactColor());
     }
@@ -292,11 +292,11 @@ public class BrokenBellKeeper extends MiniBossEntity {
                 return false;
             }
 
-            MiniBossFx.groundRing(serverLevel, bomb.pos, this.fxTheme(), GEAR_BLAST_RADIUS);
+            MiniBossFx.groundImpact(serverLevel, bomb.pos, this.fxTheme(), GEAR_BLAST_RADIUS, 0.7D);
             BossFx.cinematicImpact(serverLevel, bomb.pos.add(0, 0.45, 0),
                     20.0D, 0.34F, 4, this.combatImpactColor());
             serverLevel.playSound(null, net.minecraft.core.BlockPos.containing(bomb.pos),
-                    SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 0.8F, 1.2F);
+                    ModSounds.BROKEN_BELL_KEEPER_ATTACK_GEAR_HIT.get(), SoundSource.HOSTILE, 0.8F, 1.0F);
             for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                     new AABB(bomb.pos.x - GEAR_BLAST_RADIUS, bomb.pos.y - 1.5,
                             bomb.pos.z - GEAR_BLAST_RADIUS,
@@ -336,8 +336,8 @@ public class BrokenBellKeeper extends MiniBossEntity {
                     }
                 }
                 // 溅射是以被击者为心的球，所以环画在它脚下而不是看守脚下。
-                MiniBossFx.groundRing(serverLevel, primary.position(), this.fxTheme(),
-                        HAMMER_SPLASH_RADIUS);
+                MiniBossFx.groundImpact(serverLevel, primary.position(), this.fxTheme(),
+                        HAMMER_SPLASH_RADIUS, 0.9D);
             }
         }
         return hit;
@@ -398,5 +398,9 @@ public class BrokenBellKeeper extends MiniBossEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return geoCache;
+    }
+    @Override
+    public int musicStage() {
+        return this.exposedTicks > 0 ? 1 : 0;
     }
 }

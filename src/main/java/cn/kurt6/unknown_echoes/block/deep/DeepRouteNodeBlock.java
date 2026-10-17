@@ -1,5 +1,8 @@
 package cn.kurt6.unknown_echoes.block.deep;
 
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
+import cn.kurt6.unknown_echoes.fx.ProgressionFx;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
@@ -7,11 +10,10 @@ import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import cn.kurt6.unknown_echoes.block.beacon.DeepEchoTeleporter;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionResult;
@@ -62,7 +64,9 @@ public class DeepRouteNodeBlock extends Block {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(player instanceof ServerPlayer serverPlayer) || serverPlayer.isSpectator()) {
+        if (!(level instanceof ServerLevel serverLevel)
+                || !(player instanceof ServerPlayer serverPlayer)
+                || !isCurrentInteraction(serverLevel, pos, state, serverPlayer)) {
             return InteractionResult.CONSUME;
         }
         if (!level.dimension().equals(DeepEchoTeleporter.DEEP_ECHOES)
@@ -95,9 +99,11 @@ public class DeepRouteNodeBlock extends Block {
             return InteractionResult.CONSUME;
         }
         EchoAbilityManager.syncToClient(serverPlayer);
-        playFeedback((ServerLevel) level, pos, route, completedHall);
         if (completedHall) {
             ModAdvancements.award(serverPlayer, ModAdvancements.FRACTURE_HALL);
+        }
+        playFeedback(serverLevel, pos, state, serverPlayer, route, completedHall);
+        if (completedHall) {
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.deep_route.hall_complete"), true);
         }
@@ -138,32 +144,54 @@ public class DeepRouteNodeBlock extends Block {
                 HALL_COMPLETE_KEY);
     }
 
-    private static void playFeedback(ServerLevel level, BlockPos pos, Route route, boolean completedHall) {
-        var particle = switch (route) {
-            case WIND -> ParticleTypes.CLOUD;
-            case TIDE -> ParticleTypes.SPLASH;
-            case TRUE_SIGHT -> ParticleTypes.ENCHANT;
-        };
-        level.sendParticles(particle, pos.getX() + 0.5, pos.getY() + 0.8,
-                pos.getZ() + 0.5, completedHall ? 42 : 24, 0.35, 0.4, 0.35, 0.04);
-        level.playSound(null, pos, completedHall ? SoundEvents.RESPAWN_ANCHOR_CHARGE
-                        : SoundEvents.AMETHYST_BLOCK_CHIME,
-                SoundSource.BLOCKS, 0.9F, completedHall ? 0.75F : route.pitch);
+    // 交互事件或进度通知可能已改变现场；已提交记录保留，旧节点不再继续演出。
+    private static boolean isCurrentInteraction(ServerLevel level, BlockPos pos, BlockState state,
+                                                ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.canInteractWithBlock(pos, 1.0D)
+                && state.getBlock() instanceof DeepRouteNodeBlock
+                && DeepArrayBlockAccess.getIfReady(level, pos) == state;
+    }
+
+    private static void playFeedback(ServerLevel level, BlockPos pos, BlockState state,
+                                     ServerPlayer player, Route route, boolean completedHall) {
+        if (!isCurrentInteraction(level, pos, state, player)) {
+            return;
+        }
+        MechanismFx.emit(level, ProgressionFx.node(Vec3.atBottomCenterOf(pos).add(0, .8, 0),
+                route.theme, completedHall));
+        if (!isCurrentInteraction(level, pos, state, player)) {
+            return;
+        }
+        if (completedHall) {
+            level.playSound(null, pos, ModSounds.BLOCK_DEEP_ROUTE_COMPLETE.get(),
+                    SoundSource.BLOCKS, 0.9F, 1.0F);
+        } else {
+            switch (route) {
+                case WIND -> level.playSound(null, pos, ModSounds.BLOCK_DEEP_ROUTE_WIND.get(),
+                        SoundSource.BLOCKS, 0.9F, 1.0F);
+                case TIDE -> level.playSound(null, pos, ModSounds.BLOCK_DEEP_ROUTE_TIDE.get(),
+                        SoundSource.BLOCKS, 0.9F, 1.0F);
+                case TRUE_SIGHT -> level.playSound(null, pos, ModSounds.BLOCK_DEEP_ROUTE_SIGHT.get(),
+                        SoundSource.BLOCKS, 0.9F, 1.0F);
+            }
+        }
     }
 
     public enum Route implements StringRepresentable {
-        WIND("wind", EchoAbilityType.WIND_ECHO, 1.25F),
-        TIDE("tide", EchoAbilityType.TIDE_ECHO, 0.9F),
-        TRUE_SIGHT("true_sight", EchoAbilityType.TRUE_SIGHT_ECHO, 1.5F);
+        WIND("wind", EchoAbilityType.WIND_ECHO, ProgressionFx.Theme.WIND),
+        TIDE("tide", EchoAbilityType.TIDE_ECHO, ProgressionFx.Theme.TIDE),
+        TRUE_SIGHT("true_sight", EchoAbilityType.TRUE_SIGHT_ECHO, ProgressionFx.Theme.TRUE_SIGHT);
 
         private final String name;
         private final EchoAbilityType ability;
-        private final float pitch;
+        private final ProgressionFx.Theme theme;
 
-        Route(String name, EchoAbilityType ability, float pitch) {
+        Route(String name, EchoAbilityType ability, ProgressionFx.Theme theme) {
             this.name = name;
             this.ability = ability;
-            this.pitch = pitch;
+            this.theme = theme;
         }
 
         @Override

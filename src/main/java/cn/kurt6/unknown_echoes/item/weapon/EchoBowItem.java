@@ -1,11 +1,11 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.BowItem;
@@ -33,6 +33,11 @@ public class EchoBowItem extends BowItem implements WeaponSkill {
 
     public String tooltipKey() {
         return tooltipKey;
+    }
+
+    @Override
+    public boolean isFoil(ItemStack stack) {
+        return cn.kurt6.unknown_echoes.particle.ParticleRules.data(stack).total() == 50 || super.isFoil(stack);
     }
 
     @Override
@@ -64,8 +69,8 @@ public class EchoBowItem extends BowItem implements WeaponSkill {
                     }
                 }
             }
-            level.playSound(null, player.blockPosition(), SoundEvents.ARROW_SHOOT,
-                    SoundSource.PLAYERS, 0.9F, 0.75F);
+            level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_LONGBOW_PRIMARY.get(),
+                    SoundSource.PLAYERS, 0.9F, 1.0F);
         } else {
             for (LivingEntity target : WeaponSkillSupport.lineTargets(level, player, 24.0D, 0.8D, 1)) {
                 if (WeaponSkillSupport.hurt(player, target, 22.0F)) {
@@ -76,8 +81,8 @@ public class EchoBowItem extends BowItem implements WeaponSkill {
                     }
                 }
             }
-            level.playSound(null, player.blockPosition(), SoundEvents.ARROW_SHOOT,
-                    SoundSource.PLAYERS, 1.0F, 0.55F);
+            level.playSound(null, player.blockPosition(), ModSounds.WEAPON_DREAM_BLOOM_BOW_PRIMARY.get(),
+                    SoundSource.PLAYERS, 1.0F, 1.0F);
         }
         WeaponFx.pierceBeam(level, player, fx, eye, look,
                 WeaponFx.clippedBeamLength(level, player, eye, look, range));
@@ -107,6 +112,13 @@ public class EchoBowItem extends BowItem implements WeaponSkill {
             WeaponFx.hitMark(level, target, WeaponFxTheme.of(tooltipKey));
         }
         WeaponFx.groundRing(level, player, WeaponFxTheme.of(tooltipKey), 7.0D);
+        if (tooltipKey.equals("echo_longbow")) {
+            level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_LONGBOW_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
+        } else {
+            level.playSound(null, player.blockPosition(), ModSounds.WEAPON_DREAM_BLOOM_BOW_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
+        }
         WeaponSkillSupport.finish(player, stack, hand, 2);
         return true;
     }
@@ -137,5 +149,14 @@ public class EchoBowItem extends BowItem implements WeaponSkill {
         tooltip.add(Component.translatable("tooltip.unknown_echoes.weapon." + tooltipKey + ".passive")
                 .withStyle(ChatFormatting.GRAY));
         super.appendHoverText(stack, context, tooltip, flag);
+    }
+
+    @Override
+    protected void shoot(net.minecraft.server.level.ServerLevel level, LivingEntity shooter,
+                         net.minecraft.world.InteractionHand hand, ItemStack weapon,
+                         java.util.List<ItemStack> projectiles, float velocity, float inaccuracy,
+                         boolean critical, LivingEntity target) {
+        cn.kurt6.unknown_echoes.particle.ParticleAttack.shoot(shooter, weapon,
+                () -> super.shoot(level, shooter, hand, weapon, projectiles, velocity, inaccuracy, critical, target));
     }
 }

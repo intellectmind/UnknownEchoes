@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.item;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -56,29 +57,31 @@ public class WorldtreeFruitItem extends Item {
 
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof Player player && !canBenefit(player)) {
-            return stack;
-        }
-        ItemStack result = super.finishUsingItem(stack, level, entity);
-        if (!level.isClientSide && entity instanceof ServerPlayer player) {
-            int currentUses = getUses(player);
-            if (currentUses < MAX_USES) {
-                int uses = currentUses + 1;
-                player.getPersistentData().putInt(USES_KEY, uses);
-                applyHealthBonus(player);
-                player.heal((float) HEALTH_PER_USE);
-                player.displayClientMessage(Component.translatable(
-                        "message.unknown_echoes.worldtree_fruit.used", uses, MAX_USES), true);
-            } else {
-                player.heal(SURPLUS_HEAL);
-                player.addEffect(new MobEffectInstance(
-                        MobEffects.REGENERATION, SURPLUS_REGEN_TICKS, 1, true, false, true));
-                FoodEffectSupport.applyAbsorption(
-                        player, SURPLUS_ABSORPTION_TICKS, 1, 8.0F);
+        return ConsumableCompletion.finish(this, stack, entity, () -> {
+            if (entity instanceof Player player && !canBenefit(player)) {
+                return stack;
             }
-            playConsumptionEffects(player);
-        }
-        return result;
+            ItemStack result = super.finishUsingItem(stack, level, entity);
+            if (!level.isClientSide && entity instanceof ServerPlayer player) {
+                int currentUses = getUses(player);
+                if (currentUses < MAX_USES) {
+                    int uses = currentUses + 1;
+                    player.getPersistentData().putInt(USES_KEY, uses);
+                    applyHealthBonus(player);
+                    player.heal((float) HEALTH_PER_USE);
+                    player.displayClientMessage(Component.translatable(
+                            "message.unknown_echoes.worldtree_fruit.used", uses, MAX_USES), true);
+                } else {
+                    player.heal(SURPLUS_HEAL);
+                    player.addEffect(new MobEffectInstance(
+                            MobEffects.REGENERATION, SURPLUS_REGEN_TICKS, 1, true, false, true));
+                    FoodEffectSupport.applyAbsorption(
+                            player, SURPLUS_ABSORPTION_TICKS, 1, 8.0F);
+                }
+                playConsumptionEffects(player);
+            }
+            return result;
+        });
     }
 
     private static boolean canBenefit(Player player) {
@@ -149,7 +152,7 @@ public class WorldtreeFruitItem extends Item {
         level.sendParticles(ParticleTypes.HEART,
                 player.getX(), player.getY() + 1.1D, player.getZ(),
                 8, 0.5D, 0.65D, 0.5D, 0.02D);
-        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
-                SoundSource.PLAYERS, 1.0F, 0.85F);
+        level.playSound(null, player.blockPosition(), ModSounds.ITEM_WORLDTREE_FRUIT_CONSUME.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 }

@@ -1,10 +1,13 @@
 package cn.kurt6.unknown_echoes.artifact;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.network.OpenArtifactStationPayload;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -13,6 +16,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -82,24 +86,46 @@ public class ArtifactStationBlock extends Block {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (player instanceof ServerPlayer serverPlayer) {
-            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.8F, 1.1F);
-
+        BlockPos source = pos.immutable();
+        if (player instanceof ServerPlayer serverPlayer
+                && serverPlayer.level() == level
+                && validateStation(serverPlayer, level.dimension().location(), source, mode)) {
+            serverPlayer.playNotifySound(ModSounds.ARTIFACT_STATION_USE.get(), SoundSource.BLOCKS, 0.8F, 1.0F);
+            if (serverPlayer.level() != level
+                    || !validateStation(serverPlayer, level.dimension().location(), source, mode)) {
+                return InteractionResult.CONSUME;
+            }
             ArtifactManager.syncToClient(serverPlayer);
+            if (serverPlayer.level() != level
+                    || !validateStation(serverPlayer, level.dimension().location(), source, mode)) {
+                return InteractionResult.CONSUME;
+            }
             PacketDistributor.sendToPlayer(serverPlayer, new OpenArtifactStationPayload(
                     mode == Mode.RECORD ? OpenArtifactStationPayload.MODE_RECORD
-                            : OpenArtifactStationPayload.MODE_TUNING, pos));
+                            : OpenArtifactStationPayload.MODE_TUNING, source, level.dimension().location()));
         }
         return InteractionResult.CONSUME;
     }
 
-    /** 服务端校验:玩家附近 pos 处确实是要求模式的台座(防伪造坐标的操作包)。 */
-    public static boolean validateStation(ServerPlayer player, BlockPos pos, Mode requiredMode) {
-        if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)
-                > USE_RANGE * USE_RANGE) {
+    public static boolean validateStation(ServerPlayer player, ResourceLocation dimension,
+                                          BlockPos pos, Mode requiredMode) {
+        ServerLevel source = player.serverLevel();
+        if (!isActorCurrent(player, source, dimension, pos)) {
             return false;
         }
-        return player.level().getBlockState(pos).getBlock() instanceof ArtifactStationBlock station
-                && station.getMode() == requiredMode;
+        LevelChunk chunk = source.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk != null && chunk.getBlockState(pos).getBlock() instanceof ArtifactStationBlock station
+                && station.getMode() == requiredMode && isActorCurrent(player, source, dimension, pos);
+    }
+
+    private static boolean isActorCurrent(ServerPlayer player, ServerLevel source,
+                                           ResourceLocation dimension, BlockPos pos) {
+        return player.isAlive() && !player.isSpectator() && !player.isRemoved() && !player.hasDisconnected()
+                && player.level() == source && source.dimension().location().equals(dimension)
+                && player.server.getLevel(source.dimension()) == source
+                && player.server.getPlayerList().getPlayer(player.getUUID()) == player
+                && !source.isOutsideBuildHeight(pos)
+                && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)
+                <= USE_RANGE * USE_RANGE;
     }
 }

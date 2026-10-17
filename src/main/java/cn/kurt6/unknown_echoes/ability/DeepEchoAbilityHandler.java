@@ -1,5 +1,8 @@
 package cn.kurt6.unknown_echoes.ability;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
+import cn.kurt6.unknown_echoes.fx.CombatFx;
+import cn.kurt6.unknown_echoes.network.CombatFxPayload.Shape;
 import cn.kurt6.unknown_echoes.artifact.ArtifactManager;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.network.AbilityCooldownSyncPayload;
@@ -12,7 +15,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -59,6 +61,10 @@ public final class DeepEchoAbilityHandler {
         if (state == null) {
             return;
         }
+        if (!player.isAlive() || player.isSpectator()) {
+            STATES.remove(player.getUUID());
+            return;
+        }
         long now = globalGameTime(player);
         if (state.gravityEnd > now) {
             if (player.tickCount % 4 == 0) {
@@ -72,11 +78,6 @@ public final class DeepEchoAbilityHandler {
             player.removeEffect(MobEffects.DARKNESS);
             player.removeEffect(MobEffects.WEAKNESS);
             player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
-            if (player.tickCount % 5 == 0 && player.level() instanceof ServerLevel level) {
-                level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                        player.getX(), player.getY() + player.getBbHeight() * 0.5D, player.getZ(),
-                        7, 0.35D, 0.55D, 0.35D, 0.03D);
-            }
         }
 
         if (state.gravityEnd <= now && state.voidWardEnd <= now) {
@@ -86,12 +87,34 @@ public final class DeepEchoAbilityHandler {
 
     public static boolean isGravityAttuned(ServerPlayer player) {
         State state = STATES.get(player.getUUID());
-        return state != null && state.gravityEnd > globalGameTime(player);
+        return state != null && player.isAlive() && !player.isSpectator()
+                && state.gravityEnd > globalGameTime(player);
     }
 
     public static boolean isVoidWardActive(ServerPlayer player) {
         State state = STATES.get(player.getUUID());
-        return state != null && state.voidWardEnd > globalGameTime(player);
+        return state != null && player.isAlive() && !player.isSpectator()
+                && state.voidWardEnd > globalGameTime(player);
+    }
+
+    /** 撤销单项能力时停止其持续效果，保留另一项能力及已付出的冷却。 */
+    public static void onAbilityRevoked(ServerPlayer player, EchoAbilityType ability) {
+        if (ability != EchoAbilityType.GRAVITY_ECHO && ability != EchoAbilityType.VOID_ECHO) {
+            return;
+        }
+        State state = STATES.get(player.getUUID());
+        if (state == null) {
+            return;
+        }
+        if (ability == EchoAbilityType.GRAVITY_ECHO) {
+            state.gravityEnd = 0L;
+        } else {
+            state.voidWardEnd = 0L;
+        }
+        long now = globalGameTime(player);
+        if (state.gravityEnd <= now && state.voidWardEnd <= now) {
+            STATES.remove(player.getUUID());
+        }
     }
 
     public static void clear(UUID playerId) {
@@ -165,8 +188,8 @@ public final class DeepEchoAbilityHandler {
         syncCooldowns(player);
         if (player.level() instanceof ServerLevel level) {
             sendGravityCalibration(level, player.position(), radius);
-            level.playSound(null, player.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                    SoundSource.PLAYERS, 0.9F, 0.75F);
+            level.playSound(null, player.blockPosition(), ModSounds.ABILITY_GRAVITY_ECHO_ATTUNE.get(),
+                    SoundSource.PLAYERS, 0.9F, 1.0F);
         }
     }
 
@@ -228,10 +251,10 @@ public final class DeepEchoAbilityHandler {
         syncCooldowns(player);
         level.sendParticles(ParticleTypes.END_ROD,
                 destination.x, destination.y + player.getBbHeight() * 0.5D, destination.z,
-                24, 0.4D, 0.7D, 0.4D, 0.08D);
-        sendCalibrationBurst(level, destination, 18, 0.55D);
-        level.playSound(null, BlockPos.containing(destination), SoundEvents.ENDERMAN_TELEPORT,
-                SoundSource.PLAYERS, 0.9F, 1.25F);
+                6, 0.25D, 0.35D, 0.25D, 0.02D);
+        sendCalibrationBurst(level, destination, 6, 0.4D);
+        level.playSound(null, BlockPos.containing(destination), ModSounds.ABILITY_VOID_ECHO_STEP.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private static Vec3 findSafeVoidStep(ServerLevel level, ServerPlayer player, double range) {
@@ -293,6 +316,8 @@ public final class DeepEchoAbilityHandler {
 
     /** 重力场边界环：环半径与实际压制范围相同，持续旋转显示研究强化后的覆盖范围。 */
     private static void sendGravityRing(ServerLevel level, Vec3 center, double radius, int phase) {
+        CombatFx.emit(level, Shape.SIGIL, center.add(0, 0.12, 0), Vec3.ZERO,
+                radius, 0, 0, 0xA59CFF, 0x514CC8, 10, false);
         int points = 18;
         double offset = (phase % 24) * (Math.PI * 2.0D / 24.0D);
         for (int i = 0; i < points; i++) {
@@ -317,6 +342,12 @@ public final class DeepEchoAbilityHandler {
     /** 虚空路径标定：只在安全落点已通过服务端校验后绘制。 */
     private static void sendVoidPath(ServerLevel level, Vec3 origin, Vec3 destination) {
         Vec3 delta = destination.subtract(origin);
+        CombatFx.emit(level, Shape.WAKE, origin.add(0, 0.55, 0), delta,
+                .16, delta.length(), 0, 0xDBB6FF, 0x6150C9, 12, false);
+        CombatFx.emit(level, Shape.COLLAPSE, origin.add(0, 1.1, 0), Vec3.ZERO,
+                0.85, 2.2, 0, 0xDBB6FF, 0x6150C9, 10, false);
+        CombatFx.emit(level, Shape.ARRIVAL, destination.add(0, 1.1, 0), Vec3.ZERO,
+                0.85, 2.2, 0, 0xDBB6FF, 0x6150C9, 16, false);
         int points = Math.max(6, (int) Math.ceil(delta.length() * 2.0D));
         for (int i = 0; i <= points; i++) {
             double t = (double) i / points;
@@ -328,6 +359,8 @@ public final class DeepEchoAbilityHandler {
     }
 
     private static void sendCalibrationBurst(ServerLevel level, Vec3 center, int count, double spread) {
+        CombatFx.emit(level, Shape.BURST, center, Vec3.ZERO,
+                spread * 1.5, 0, 0, 0xC7CCFF, 0x616BD2, 10, false);
         level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                 center.x, center.y, center.z, count,
                 spread, spread * 0.7D, spread, 0.04D);

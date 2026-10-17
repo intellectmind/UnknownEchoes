@@ -1,6 +1,5 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
-import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.damagesource.DamageSource;
@@ -8,7 +7,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.AbstractSchoolingFish;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -20,7 +18,7 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /** 回声墨鱼:以短促脉冲和腕足摆动在镜湖礁区游弋的水生动物。 */
-public class EchoCuttlefish extends AbstractSchoolingFish implements GeoEntity {
+public class EchoCuttlefish extends EchoSchoolingFish implements GeoEntity {
     private static final RawAnimation SWIM_ANIM =
             RawAnimation.begin().thenLoop("animation.echo_cuttlefish.swim");
     private static final RawAnimation IDLE_ANIM =
@@ -30,7 +28,7 @@ public class EchoCuttlefish extends AbstractSchoolingFish implements GeoEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    public EchoCuttlefish(EntityType<? extends AbstractSchoolingFish> type, Level level) {
+    public EchoCuttlefish(EntityType<? extends EchoSchoolingFish> type, Level level) {
         super(type, level);
     }
 
@@ -43,11 +41,6 @@ public class EchoCuttlefish extends AbstractSchoolingFish implements GeoEntity {
     @Override
     public int getMaxSchoolSize() {
         return 3;
-    }
-
-    @Override
-    public ItemStack getBucketItemStack() {
-        return new ItemStack(ModItems.ECHO_CUTTLEFISH_BUCKET.get());
     }
 
     @Override

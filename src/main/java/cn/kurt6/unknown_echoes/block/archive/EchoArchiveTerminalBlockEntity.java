@@ -11,9 +11,23 @@ import net.minecraft.world.level.block.state.BlockState;
 public class EchoArchiveTerminalBlockEntity extends BlockEntity {
     private int accessCount;
     private long lastAccessGameTime;
+    // 只保护当前同步交互，不能随终端访问痕迹存档。
+    private boolean handlingAccess;
 
     public EchoArchiveTerminalBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ECHO_ARCHIVE_TERMINAL.get(), pos, state);
+    }
+
+    public boolean tryBeginAccess() {
+        if (handlingAccess) {
+            return false;
+        }
+        handlingAccess = true;
+        return true;
+    }
+
+    public void endAccess() {
+        handlingAccess = false;
     }
 
     public void recordAccess() {

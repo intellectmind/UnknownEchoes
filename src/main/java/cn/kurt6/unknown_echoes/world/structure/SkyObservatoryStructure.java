@@ -17,12 +17,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 天空观测站:漂浮群岛主结构(漂浮空岛,固定高度生成,不贴地)。 */
-public class SkyObservatoryStructure extends SinglePieceStructure {
+public class SkyObservatoryStructure extends TerrainAnchoredStructure {
     public static final MapCodec<SkyObservatoryStructure> CODEC = simpleCodec(SkyObservatoryStructure::new);
 
     private static final int SIZE = 41;
@@ -50,9 +49,15 @@ public class SkyObservatoryStructure extends SinglePieceStructure {
         }
 
         @Override
+        protected boolean usesSurfaceAnchor() {
+            return false;
+        }
+
+        @Override
         public void postProcess(WorldGenLevel level, StructureManager structureManager,
                                 ChunkGenerator generator, RandomSource random, BoundingBox box,
                                 ChunkPos chunkPos, BlockPos pos) {
+            clearStructureSpace(level, box, 7);
             BlockState windStone = ModBlocks.WIND_ETCHED_STONE.get().defaultBlockState();
             BlockState stone = Blocks.STONE.defaultBlockState();
             BlockState bricks = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
@@ -111,14 +116,14 @@ public class SkyObservatoryStructure extends SinglePieceStructure {
             buildStairCornice(level, box, c, top, c, Footprint.square(12), windStairs, windSlab, false);
             buildParapet(level, box, c, top + 2, c, Footprint.square(13), 5, ModBlocks.WIND_ETCHED_BRICK_WALL.get().defaultBlockState(), chiseled);
 
-            buildStairCornice(level, box, c, top + 12, c, Footprint.square(10), windStairs, windSlab, true);
+            buildCircularCornice(level, box, c, top + 12, c, 11, windStairs, windSlab, true);
             for (Direction direction : Direction.Plane.HORIZONTAL) {
                 buildCardinalGateway(level, box, c, top + 2, c, 11, direction,
                         3, 8, windStone, chiseled);
             }
 
-            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, top + 2, c - 10, box);
-            this.placeBlock(level, ModBlocks.WIND_DOOR.get().defaultBlockState(), c, top + 3, c - 10, box);
+            buildConnectedDoor(level, box, ModBlocks.WIND_DOOR.get().defaultBlockState(),
+                    c, top + 2, c - 10, Direction.NORTH, 1, 2);
 
             architecturalDisk(level, box, c, top + 2, c, 4, chiseled);
             this.placeBlock(level, bricks, c, top + 3, c, box);
@@ -127,8 +132,10 @@ public class SkyObservatoryStructure extends SinglePieceStructure {
                     ModLootTables.SKY_OBSERVATORY_CHEST);
             buildTrueSightVaultNiche(level, random, box, c + 10, top + 3, c - 6, Direction.WEST);
 
+            this.placeBlock(level, chiseled, c - 3, top + 2, c + 3, box);
             this.placeBlock(level, ModBlocks.ARTIFACT_RECORD_TABLE.get().defaultBlockState(),
                     c - 3, top + 3, c + 3, box);
+            this.placeBlock(level, chiseled, c - 3, top + 2, c - 3, box);
             this.placeBlock(level, ModBlocks.ARTIFACT_TUNING_TABLE.get().defaultBlockState(),
                     c - 3, top + 3, c - 3, box);
 
@@ -151,6 +158,20 @@ public class SkyObservatoryStructure extends SinglePieceStructure {
             }
             architecturalRing(level, box, c, top + 20, c, 14, lamp);
 
+            // 星轨冠：观测站顶部保留一根轴心与三段偏心轨道，远景不会读成普通圆台。
+            for (int y = top + 16; y <= top + 22; y++) {
+                this.placeBlock(level, y % 2 == 0 ? chiseled : windStone, c, y, c, box);
+            }
+            for (int[] arm : new int[][]{{-8, 0}, {8, 0}, {0, 8}}) {
+                for (int step = 0; step <= 4; step++) {
+                    int x = c + (arm[0] == 0 ? 0 : Integer.signum(arm[0]) * step * 2);
+                    int z = c + (arm[1] == 0 ? 0 : Integer.signum(arm[1]) * step * 2);
+                    this.placeBlock(level, step % 2 == 0 ? windStone : chiseled,
+                            x, top + 19, z, box);
+                }
+            }
+            this.placeBlock(level, lamp, c, top + 23, c, box);
+
             placeStructureSpawner(level, random, box, c + 13, top + 2, c - 5,
                     ModEntities.WIND_ERODED_SENTINEL.get(), windStone, chiseled);
 
@@ -161,6 +182,9 @@ public class SkyObservatoryStructure extends SinglePieceStructure {
 
                 spawner.configure(cn.kurt6.unknown_echoes.UnknownEchoes.id("storm_weaver"), top + 13);
             }
+            dressStructure(level, box, "sky_observatory");
+            restorePlantBed(level, box, c, top - 1, c, 15, moss,
+                    state -> state.is(ModBlocks.GLOW_GRASS.get()));
         }
 
         @Override

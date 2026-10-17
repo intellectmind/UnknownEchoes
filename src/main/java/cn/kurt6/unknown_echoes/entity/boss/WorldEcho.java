@@ -1,5 +1,9 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import cn.kurt6.unknown_echoes.fx.BossLifecycleFx;
+import cn.kurt6.unknown_echoes.fx.BossLifecycleStyle;
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
+import cn.kurt6.unknown_echoes.fx.ProgressionFx;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
@@ -68,7 +72,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /** 世界回响体最终 Boss。四道生命地板强制完成五重共鸣转相，高伤害不能跨阶段。 */
-public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, BossVisualState {
+public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, BossVisualState, BossMusicSource {
     private static final EntityDataAccessor<Integer> DATA_ATTACK_MODE =
             SynchedEntityData.defineId(WorldEcho.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_ATTACK_AGE =
@@ -187,6 +191,28 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     private final ServerBossEvent bossEvent = new ServerBossEvent(
             this.getDisplayName(), BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.NOTCHED_20);
     private final Set<UUID> participants = new HashSet<>();
+    private boolean handlingDeath = false;
+    private boolean handlingDeathTick = false;
+    private boolean pausingForUnavailableAltar = false;
+    private boolean handlingEntranceTick = false;
+    private boolean handlingEncounterContinuity = false;
+    private boolean handlingDynamicScaling = false;
+    private boolean handlingArenaBoundary = false;
+
+    private record ScalingContext(ServerLevel level, UUID arenaId, BlockPos altarPos,
+                                  AltarBindingState bindingState, int emptyTicks, boolean dormant,
+                                  int entranceTicks, int phaseStage) {}
+
+    private record EncounterContext(ServerLevel level, UUID arenaId, BlockPos altarPos,
+                                    int emptyTicks, boolean dormant, int entranceTicks, int phaseStage) {}
+
+    private record EntranceTickContext(ServerLevel level, UUID arenaId, BlockPos altarPos,
+                                       int remainingTicks, boolean dormant, AltarBindingState bindingState) {}
+    private DeathContext deathContext = null;
+
+    private record DeathContext(ServerLevel level, Vec3 position, BlockPos altarPos, UUID arenaId,
+                                UUID bossUuid, double radius, Set<UUID> participants, boolean validBinding) {}
+
 
     private AttackMode attackMode = AttackMode.NONE;
     private int attackAge;
@@ -244,12 +270,13 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     @Override
     public void onAddedToLevel() {
         super.onAddedToLevel();
-        if (this.level() instanceof ServerLevel level && this.altarPos != null
-                && level.hasChunkAt(this.altarPos)
-                && level.getBlockEntity(this.altarPos)
-                instanceof WorldResonanceAltarBlockEntity altar
-                && !altar.registerLoadedBoss(this)) {
-            this.discard();
+        if (this.level() instanceof ServerLevel level && this.altarPos != null) {
+            var chunk = level.getChunkSource().getChunkNow(this.altarPos.getX() >> 4, this.altarPos.getZ() >> 4);
+            if (chunk != null && chunk.getBlockEntity(this.altarPos)
+                    instanceof WorldResonanceAltarBlockEntity altar
+                    && !altar.registerLoadedBoss(this)) {
+                this.discard();
+            }
         }
     }
 
@@ -284,7 +311,13 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
 
     @Override
     public void aiStep() {
+        if (this.handlingDeath || this.dead || !this.isAlive()) {
+            return;
+        }
         super.aiStep();
+        if (this.handlingDeath || this.dead || !this.isAlive()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel level)) {
             return;
         }
@@ -295,7 +328,9 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         if (this.tickCount % 20 == 0) {
             cn.kurt6.unknown_echoes.event.CommonEvents.noteMainBossPresence(level);
         }
-        this.enforceArenaBoundary(level);
+        if (this.enforceArenaBoundary(level)) {
+            return;
+        }
         if (this.tickCount % 5 == 0) {
             this.syncBossEventViewers(level);
         }
@@ -304,7 +339,9 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
             this.playEntranceFx(level);
         }
         if (this.tickCount % 5 == 0 && ServerConfig.BOSS_DYNAMIC_SCALING.get()) {
-            this.updateDynamicScaling(level);
+            if (this.updateDynamicScaling(level)) {
+                return;
+            }
         }
         this.bossEvent.setProgress(Math.max(0.0F, this.getHealth() / this.getMaxHealth()));
         this.protectedMessageCooldown = decrement(this.protectedMessageCooldown);
@@ -682,9 +719,9 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         if (this.attackAge == 0) {
             level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_FLAP.get(),
                     SoundSource.HOSTILE, 2.8F, 1.0F);
-            level.sendParticles(ParticleTypes.GUST_EMITTER_LARGE,
+            level.sendParticles(this.currentSpark(),
                     this.getX(), this.getY() + 0.4D, this.getZ(),
-                    1, 0.0D, 0.0D, 0.0D, 0.0D);
+                    6, 0.65D, 0.12D, 0.65D, 0.025D);
         }
         if (this.attackAge < SKYFALL_DIVE_TICK) {
             Vec3 movement = this.getDeltaMovement();
@@ -723,14 +760,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseSkyfall(ServerLevel level, Vec3 impact) {
-        level.playSound(null, BlockPos.containing(impact), SoundEvents.GENERIC_EXPLODE.value(),
-                SoundSource.HOSTILE, 3.0F, 0.58F);
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                impact.x, impact.y + 0.2D, impact.z,
-                1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.sendParticles(ParticleTypes.GUST_EMITTER_LARGE,
-                impact.x, impact.y + 0.3D, impact.z,
-                1, 0.0D, 0.0D, 0.0D, 0.0D);
+        level.playSound(null, BlockPos.containing(impact), ModSounds.WORLD_ECHO_ATTACK_SKYFALL_HIT.get(),
+                SoundSource.HOSTILE, 3.0F, 1.0F);
         BossFx.groundShockwave(level, impact, SKYFALL_RADIUS, this.currentEmber());
         BossFx.areaBurst(level, impact, this.currentSpark());
         BossFx.pillar(level, impact, 12.0D, this.currentBody());
@@ -758,8 +789,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
 
     private void tickWingStorm(ServerLevel level) {
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.ENDER_DRAGON_FLAP,
-                    SoundSource.HOSTILE, 2.6F, 1.05F);
+            level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_WINGS_WARN.get(),
+                    SoundSource.HOSTILE, 2.6F, 1.0F);
         }
         for (int wave = 0; wave < WING_STORM_RELEASE_TICKS.length; wave++) {
             if (this.attackAge == WING_STORM_RELEASE_TICKS[wave]) {
@@ -777,8 +808,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         Vec3 side = new Vec3(-forward.z, 0.0D, forward.x);
         Vec3 origin = this.position().add(0.0D, this.getBbHeight() * 0.42D, 0.0D);
 
-        level.playSound(null, this.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.HOSTILE, 2.3F, 0.78F + wave * 0.16F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_WINGS_RELEASE.get(),
+                SoundSource.HOSTILE, 2.3F, 1.0F);
         BossFx.sweepArc(level, origin, forward, radius, theme);
         BossFx.sweepArc(level, origin, forward.scale(-1.0D), radius, theme);
         BossFx.sweepArc(level, origin, side, radius, ParticleTypes.GLOW);
@@ -812,11 +843,11 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         LivingEntity target = this.resolveAttackTarget(level);
 
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.ENDER_DRAGON_FLAP,
-                    SoundSource.HOSTILE, 2.8F, 0.9F);
-            level.sendParticles(ParticleTypes.GUST_EMITTER_LARGE,
+            level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_AERIAL_WARN.get(),
+                    SoundSource.HOSTILE, 2.8F, 1.0F);
+            level.sendParticles(this.currentSpark(),
                     this.getX(), this.getY() + 0.5D, this.getZ(),
-                    1, 0.0D, 0.0D, 0.0D, 0.0D);
+                    6, 0.65D, 0.12D, 0.65D, 0.025D);
         }
         if (this.attackAge < AERIAL_BARRAGE_TAKEOFF_TICKS) {
             Vec3 movement = this.getDeltaMovement();
@@ -889,8 +920,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         double reach = origin.distanceTo(end);
         this.lockedAttackAim = aim;
 
-        level.playSound(null, this.blockPosition(), SoundEvents.SHULKER_SHOOT,
-                SoundSource.HOSTILE, 2.2F, 0.78F + volley * 0.18F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_AERIAL_RELEASE.get(),
+                SoundSource.HOSTILE, 2.2F, 1.0F);
         BossFx.sparkSpray(level, origin, direction, reach, this.currentSpark());
         BossFx.helix(level, origin, end, 0.32D,
                 volley == 1 ? ParticleTypes.GLOW : this.currentBody());
@@ -922,11 +953,11 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         LivingEntity target = this.resolveAttackTarget(level);
 
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.ENDER_DRAGON_FLAP,
-                    SoundSource.HOSTILE, 3.0F, 0.68F);
-            level.sendParticles(ParticleTypes.GUST_EMITTER_LARGE,
+            level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_REAP_WARN.get(),
+                    SoundSource.HOSTILE, 3.0F, 1.0F);
+            level.sendParticles(this.currentSpark(),
                     this.getX(), this.getY() + 0.4D, this.getZ(),
-                    1, 0.0D, 0.0D, 0.0D, 0.0D);
+                    6, 0.65D, 0.12D, 0.65D, 0.025D);
         }
         if (this.attackAge < AERIAL_REAP_TAKEOFF_TICKS) {
             Vec3 movement = this.getDeltaMovement();
@@ -953,8 +984,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
             if (target != null) {
                 this.lockedAttackAim = target.getBoundingBox().getCenter();
             }
-            level.playSound(null, this.blockPosition(), SoundEvents.TRIDENT_RIPTIDE_3.value(),
-                    SoundSource.HOSTILE, 2.8F, 0.72F);
+            level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_REAP_DASH.get(),
+                    SoundSource.HOSTILE, 2.8F, 1.0F);
         }
         if (this.attackAge <= AERIAL_REAP_STRIKE_TICK && this.lockedAttackAim != null) {
             this.faceAttackPosition(this.lockedAttackAim);
@@ -990,8 +1021,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         forward = forward.lengthSqr() < 1.0E-4D
                 ? new Vec3(0.0D, 0.0D, 1.0D) : forward.normalize();
         Vec3 side = new Vec3(-forward.z, 0.0D, forward.x);
-        level.playSound(null, this.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.HOSTILE, 3.0F, 0.58F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_REAP_HIT.get(),
+                SoundSource.HOSTILE, 3.0F, 1.0F);
         BossFx.sweepArc(level, origin, forward, AERIAL_REAP_RADIUS, this.currentSpark());
         BossFx.sweepArc(level, origin, side, AERIAL_REAP_RADIUS, this.currentSpark());
         BossFx.impactBurst(level, origin, ParticleTypes.GLOW);
@@ -1054,8 +1085,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         Vec3 origin = this.attackOrigin();
         Vec3 telegraphEnd = this.clipRay(level, origin, this.lockedAttackAim);
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_CHARGE,
-                    SoundSource.HOSTILE, 2.4F, 0.65F);
+            level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_BEAM_WARN.get(),
+                    SoundSource.HOSTILE, 2.4F, 1.0F);
         }
         if (this.attackAge <= 32 && this.attackAge % 2 == 0) {
             BossFx.guidanceFlow(level, origin, telegraphEnd,
@@ -1083,8 +1114,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         Vec3 beamEnd = this.clipRay(level, origin, origin.add(direction.scale(BEAM_RANGE)));
         double reach = origin.distanceTo(beamEnd);
 
-        level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
-                SoundSource.HOSTILE, 3.0F, 0.72F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_BEAM_RELEASE.get(),
+                SoundSource.HOSTILE, 3.0F, 1.0F);
         BossFx.sparkSpray(level, origin, direction, reach, this.currentSpark());
         BossFx.helix(level, origin, beamEnd, 0.5D, this.currentBody());
         int step = 0;
@@ -1117,16 +1148,12 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
                 player.hurtMarked = true;
             }
         }
-        level.sendParticles(ParticleTypes.SONIC_BOOM,
-                beamEnd.x, beamEnd.y, beamEnd.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         BossFx.impactBurst(level, beamEnd, this.currentSpark());
     }
 
     private void releaseFlameImpact(ServerLevel level) {
-        level.playSound(null, this.blockPosition(), SoundEvents.BLAZE_SHOOT,
-                SoundSource.HOSTILE, 2.6F, 0.55F);
-        level.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),
-                SoundSource.HOSTILE, 2.5F, 0.75F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_FLAME_RELEASE.get(),
+                SoundSource.HOSTILE, 2.6F, 1.0F);
         Vec3 center = this.position().add(0.0D, 0.2D, 0.0D);
         BossFx.groundShockwave(level, center, 5.0D, ParticleTypes.FLAME);
         BossFx.groundShockwave(level, center, 9.0D, ParticleTypes.SOUL_FIRE_FLAME);
@@ -1190,8 +1217,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
 
     private void tickMeteor(ServerLevel level) {
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL,
-                    SoundSource.HOSTILE, 2.2F, 0.55F);
+            level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_METEOR_WARN.get(),
+                    SoundSource.HOSTILE, 2.2F, 1.0F);
         }
         if (this.attackAge == 2) {
             this.prepareMeteorImpacts(level);
@@ -1239,13 +1266,11 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseMeteor(ServerLevel level) {
-        level.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),
-                SoundSource.HOSTILE, 2.8F, 0.6F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_METEOR_HIT.get(),
+                SoundSource.HOSTILE, 2.8F, 1.0F);
         for (Vec3 impact : this.meteorImpacts) {
-            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                    impact.x, impact.y + 0.2D, impact.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
             level.sendParticles(this.currentBody(),
-                    impact.x, impact.y + 0.4D, impact.z, 48, 1.5D, 1.2D, 1.5D, 0.22D);
+                    impact.x, impact.y + 0.4D, impact.z, 12, 0.65D, 0.45D, 0.65D, 0.05D);
             BossFx.impactBurst(level, impact, ParticleTypes.DRAGON_BREATH);
             BossFx.pillar(level, impact, 6.0D, ParticleTypes.DRAGON_BREATH);
         }
@@ -1285,8 +1310,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
 
     private void releaseNova(ServerLevel level, int wave, ParticleOptions theme) {
         double radius = NOVA_RADII[wave];
-        level.playSound(null, this.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.HOSTILE, 2.1F, 0.75F + wave * 0.22F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_NOVA_RELEASE.get(),
+                SoundSource.HOSTILE, 2.1F, 1.0F);
         BossFx.groundShockwave(level, this.position().add(0.0D, 0.15D, 0.0D), radius, theme);
         BossFx.pillar(level, this.position().add(0.0D, 0.15D, 0.0D), 5.0D + wave * 1.5D, theme);
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * (0.28F + wave * 0.06F);
@@ -1374,8 +1399,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseLance(ServerLevel level) {
-        level.playSound(null, this.blockPosition(), SoundEvents.TRIDENT_THUNDER.value(),
-                SoundSource.HOSTILE, 2.0F, 1.4F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_LANCE_RELEASE.get(),
+                SoundSource.HOSTILE, 2.0F, 1.0F);
         Vec3 origin = this.attackOrigin();
         LivingEntity target = this.resolveAttackTarget(level);
         Vec3 aim = target == null ? this.lockedAttackAim : target.getEyePosition();
@@ -1397,8 +1422,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseSlam(ServerLevel level) {
-        level.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),
-                SoundSource.HOSTILE, 2.6F, 0.5F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_SLAM_HIT.get(),
+                SoundSource.HOSTILE, 2.6F, 1.0F);
         Vec3 ground = this.position().add(0.0D, 0.15D, 0.0D);
         BossFx.groundShockwave(level, ground, 7.0D, ParticleTypes.WAX_OFF);
         BossFx.groundShockwave(level, ground, 13.0D, this.currentEmber());
@@ -1418,8 +1443,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseBarrage(ServerLevel level, int wave) {
-        level.playSound(null, this.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.HOSTILE, 2.0F, 1.0F + wave * 0.25F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_BARRAGE_RELEASE.get(),
+                SoundSource.HOSTILE, 2.0F, 1.0F);
         for (ServerPlayer player : targets(level, 12.0D)) {
             Vec3 toPlayer = player.position().subtract(this.position());
             BossFx.sweepArc(level, this.position(), toPlayer, 10.0D, this.currentSpark());
@@ -1431,15 +1456,13 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseWind(ServerLevel level) {
-        level.playSound(null, this.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.HOSTILE, 2.2F, 0.6F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_WIND_RELEASE.get(),
+                SoundSource.HOSTILE, 2.2F, 1.0F);
         ring(level, 5.0D, BossParticleTheme.COLOSSUS.body());
         ring(level, 10.0D, BossParticleTheme.COLOSSUS.body());
         Vec3 ground = this.position().add(0.0D, 0.2D, 0.0D);
         BossFx.pillar(level, ground, 9.0D, BossParticleTheme.COLOSSUS.body());
         BossFx.vortex(level, ground, 6.0D, 7.0D, this.tickCount, BossParticleTheme.COLOSSUS.body());
-        level.sendParticles(ParticleTypes.GUST_EMITTER_LARGE,
-                ground.x, ground.y + 0.4D, ground.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         for (ServerPlayer player : targets(level, 14.0D)) {
             double distance = horizontalDistanceFromBoss(player);
             if (distance < WIND_EYE_RADIUS) {
@@ -1460,8 +1483,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseTide(ServerLevel level) {
-        level.playSound(null, this.blockPosition(), SoundEvents.CONDUIT_ACTIVATE,
-                SoundSource.HOSTILE, 2.0F, 0.65F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_TIDE_RELEASE.get(),
+                SoundSource.HOSTILE, 2.0F, 1.0F);
         ring(level, 7.0D, BossParticleTheme.ABYSS.body());
         ring(level, 13.0D, ParticleTypes.DOLPHIN);
         Vec3 ground = this.position().add(0.0D, 0.2D, 0.0D);
@@ -1494,8 +1517,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseTrueSight(ServerLevel level) {
-        level.playSound(null, this.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
-                SoundSource.HOSTILE, 2.2F, 1.6F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_SIGHT_RELEASE.get(),
+                SoundSource.HOSTILE, 2.2F, 1.0F);
         ring(level, 6.0D, BossParticleTheme.MIRROR.body());
         level.sendParticles(ParticleTypes.FLASH,
                 this.getX(), this.getY() + 2.5D, this.getZ(),
@@ -1522,8 +1545,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseGravity(ServerLevel level) {
-        level.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),
-                SoundSource.HOSTILE, 2.5F, 0.55F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_GRAVITY_RELEASE.get(),
+                SoundSource.HOSTILE, 2.5F, 1.0F);
         BossFx.groundShockwave(level, this.position().add(0.0D, 0.15D, 0.0D),
                 12.0D, BossParticleTheme.VOID_PROPHET.ember());
 
@@ -1549,8 +1572,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     private void releaseVoid(ServerLevel level) {
-        level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
-                SoundSource.HOSTILE, 2.4F, 0.8F);
+        level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_VOID_RELEASE.get(),
+                SoundSource.HOSTILE, 2.4F, 1.0F);
         for (double radius : VOID_RING_RADII) {
             ring(level, radius, BossParticleTheme.RIFT.body());
         }
@@ -1616,7 +1639,7 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     private void renderVoidRingTelegraph(ServerLevel level, Vec3 ground) {
         for (double radius : VOID_RING_RADII) {
             BossFx.ring(level, ground, radius,
-                    Math.max(28, (int) (radius * 4.0D)), 0.12D, ParticleTypes.REVERSE_PORTAL);
+                    Math.max(28, (int) (radius * 4.0D)), 0.12D, BossParticleTheme.RIFT.body());
         }
     }
 
@@ -1666,8 +1689,15 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         float pitch = 0.8F + Math.min(5, mode.ordinal()) * 0.1F;
         for (ServerPlayer player : this.combatAudience(level)) {
             player.displayClientMessage(message, true);
-            player.playNotifySound(SoundEvents.AMETHYST_BLOCK_RESONATE,
-                    SoundSource.HOSTILE, 0.75F, pitch);
+            switch (mode) {
+                case WIND -> player.playNotifySound(ModSounds.WORLD_ECHO_ATTACK_WIND_WARN.get(), SoundSource.HOSTILE, 0.75F, 1.0F);
+                case TIDE -> player.playNotifySound(ModSounds.WORLD_ECHO_ATTACK_TIDE_WARN.get(), SoundSource.HOSTILE, 0.75F, 1.0F);
+                case TRUE_SIGHT -> player.playNotifySound(ModSounds.WORLD_ECHO_ATTACK_SIGHT_WARN.get(), SoundSource.HOSTILE, 0.75F, 1.0F);
+                case GRAVITY -> player.playNotifySound(ModSounds.WORLD_ECHO_ATTACK_GRAVITY_WARN.get(), SoundSource.HOSTILE, 0.75F, 1.0F);
+                case VOID -> player.playNotifySound(ModSounds.WORLD_ECHO_ATTACK_VOID_WARN.get(), SoundSource.HOSTILE, 0.75F, 1.0F);
+                default -> player.playNotifySound(SoundEvents.AMETHYST_BLOCK_RESONATE,
+                        SoundSource.HOSTILE, 0.75F, pitch);
+            }
         }
     }
 
@@ -1795,6 +1825,8 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         this.phaseGateStage = Math.min(PHASE_FLOORS.length, this.phaseGateStage + 1);
         this.attackCycle = 0;
         this.attackCooldown = 30;
+        BossLifecycleFx.phase(level, this.position(), this.getBbWidth(), this.getBbHeight(),
+                aspectParticle(this.currentAspectIndex() - 1), aspectParticle(this.currentAspectIndex()), BossLifecycleStyle.WORLD);
         level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_PHASE.get(),
                 SoundSource.HOSTILE, 2.2F, 1.0F);
         this.broadcastNearby(Component.translatable("message.unknown_echoes.world_echo.phase_open",
@@ -1802,7 +1834,7 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
     }
 
     public void onPhasePylonActivated(ServerLevel level, BlockPos pylonPos) {
-        if (!this.phaseTransitionPending || !this.isAlive() || this.altarPos == null) {
+        if (this.handlingDeath || this.dead || this.isRemoved() || !this.phaseTransitionPending || !this.isAlive() || this.altarPos == null) {
             return;
         }
         if (!this.altarPos.equals(pylonPos)) {
@@ -1872,6 +1904,10 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         if (this.combatAudienceCacheTick == this.tickCount) {
             return this.combatAudienceCache;
         }
+        return this.refreshCombatAudience(level);
+    }
+
+    private List<ServerPlayer> refreshCombatAudience(ServerLevel level) {
         this.combatAudienceCacheTick = this.tickCount;
         this.combatAudienceCache = level.getEntitiesOfClass(ServerPlayer.class,
                 this.combatAudienceBounds(), this::isCombatAudiencePlayer);
@@ -1907,10 +1943,51 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         }
     }
 
+    private EncounterContext captureEncounterContext(ServerLevel level) {
+        return new EncounterContext(level, this.altarArenaId, this.altarPos,
+                this.arenaEmptyTicks, this.encounterDormant, this.entranceTicksRemaining, this.phaseGateStage);
+    }
+
+    private EncounterContext refreshEncounterProgress(EncounterContext context) {
+        return new EncounterContext(context.level(), context.arenaId(), context.altarPos(),
+                this.arenaEmptyTicks, this.encounterDormant, this.entranceTicksRemaining, this.phaseGateStage);
+    }
+
+    private boolean isCurrentEncounter(EncounterContext context) {
+        return !this.handlingDeath && !this.dead && this.isAlive() && !this.isRemoved()
+                && this.level() == context.level() && context.level().getEntity(this.getUUID()) == this
+                && this.matchesAltar(context.arenaId(), context.altarPos())
+                && this.arenaEmptyTicks == context.emptyTicks() && this.encounterDormant == context.dormant()
+                && this.entranceTicksRemaining == context.entranceTicks() && this.phaseGateStage == context.phaseStage()
+                && this.altarBindingState(context.level()) == AltarBindingState.VALID;
+    }
+
+    private boolean isCurrentEmptyEncounter(EncounterContext context) {
+        return this.isCurrentEncounter(context) && this.refreshCombatAudience(context.level()).isEmpty()
+                && this.isCurrentEncounter(context);
+    }
+
+    private boolean isCurrentOccupiedEncounter(EncounterContext context) {
+        return this.isCurrentEncounter(context) && !this.refreshCombatAudience(context.level()).isEmpty()
+                && this.isCurrentEncounter(context);
+    }
+
     private boolean tickEncounterContinuity(ServerLevel level) {
+        if (this.handlingEncounterContinuity) {
+            return true;
+        }
+        this.handlingEncounterContinuity = true;
+        try {
+            return this.updateEncounterContinuity(level);
+        } finally {
+            this.handlingEncounterContinuity = false;
+        }
+    }
+
+    private boolean updateEncounterContinuity(ServerLevel level) {
         AltarBindingState bindingState = this.altarBindingState(level);
         if (bindingState == AltarBindingState.UNAVAILABLE) {
-            this.pauseForUnavailableAltar();
+            this.pauseForUnavailableAltar(level);
             return true;
         }
         if (bindingState == AltarBindingState.INVALID) {
@@ -1920,17 +1997,25 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         if (bindingState != AltarBindingState.VALID) {
             return false;
         }
-        List<ServerPlayer> audience = this.combatAudience(level);
+        EncounterContext context = this.captureEncounterContext(level);
+        if (!this.isCurrentEncounter(context)) {
+            return true;
+        }
+        List<ServerPlayer> audience = this.refreshCombatAudience(level);
+        if (!this.isCurrentEncounter(context)) {
+            return true;
+        }
         if (!audience.isEmpty()) {
             int recoveredTicks = this.arenaEmptyTicks;
             this.arenaEmptyTicks = 0;
+            context = this.refreshEncounterProgress(context);
             for (ServerPlayer player : audience) {
                 this.registerParticipant(player);
-        }
-        if (this.encounterDormant) {
-            this.wakeDormantEncounter(level, audience);
-            return true;
-        }
+            }
+            if (this.encounterDormant) {
+                this.wakeDormantEncounter(context);
+                return true;
+            }
             if (recoveredTicks >= ARENA_RECOVERY_INTERVAL_TICKS) {
                 for (ServerPlayer player : audience) {
                     player.displayClientMessage(Component.translatable(
@@ -1941,6 +2026,9 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         }
 
         this.setTarget(null);
+        if (!this.isCurrentEmptyEncounter(context)) {
+            return true;
+        }
         this.getNavigation().stop();
         if (this.encounterDormant) {
             return true;
@@ -1951,39 +2039,62 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
             this.phaseTransitionPending = true;
             this.finishAttack();
         }
+        context = this.refreshEncounterProgress(context);
         if (this.arenaEmptyTicks < ARENA_RESET_GRACE_TICKS
                 && this.arenaEmptyTicks % ARENA_RECOVERY_INTERVAL_TICKS == 0
                 && this.getHealth() < this.getMaxHealth()) {
             this.heal(this.getMaxHealth() * ARENA_RECOVERY_FRACTION);
+            if (!this.isCurrentEmptyEncounter(context)) {
+                return true;
+            }
             BossFx.ring(level, this.attackOrigin(), 4.0D + this.arenaEmptyTicks / 20.0D,
                     44, 0.08D, aspectParticle(this.currentAspectIndex()));
             level.playSound(null, this.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE,
                     SoundSource.HOSTILE, 1.4F, 0.65F);
+            if (!this.isCurrentEmptyEncounter(context)) {
+                return true;
+            }
         }
         if (this.arenaEmptyTicks >= ARENA_RESET_GRACE_TICKS) {
-            this.resetDormantEncounter(level);
+            this.resetDormantEncounter(context);
             return true;
         }
         return this.attackMode == AttackMode.NONE;
     }
 
-    private void resetDormantEncounter(ServerLevel level) {
+    private void resetDormantEncounter(EncounterContext context) {
+        if (!this.isCurrentEmptyEncounter(context)) {
+            return;
+        }
+        ServerLevel level = context.level();
         Set<UUID> previousParticipants = Set.copyOf(this.participants);
         Vec3 collapseOrigin = this.attackOrigin();
         for (int aspect = 0; aspect < 5; aspect++) {
             Vec3 pylonTop = this.resonancePylonTop(level, aspect);
             if (pylonTop != null) {
                 BossFx.guidanceFlow(level, collapseOrigin, pylonTop,
-                        ParticleTypes.REVERSE_PORTAL, aspectParticle(aspect), this.tickCount + aspect * 7);
+                        this.currentBody(), aspectParticle(aspect), this.tickCount + aspect * 7);
             }
         }
         BossFx.ring(level, collapseOrigin, Math.min(18.0D, this.arenaRadius() - 2.0D),
-                80, 0.16D, ParticleTypes.REVERSE_PORTAL);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                80, 0.16D, this.currentBody());
+        level.sendParticles(this.currentBody(),
                 collapseOrigin.x, collapseOrigin.y, collapseOrigin.z,
                 180, 2.5D, 3.0D, 2.5D, 0.28D);
         level.playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE,
                 SoundSource.HOSTILE, 2.8F, 0.52F);
+        if (!this.isCurrentEmptyEncounter(context)) {
+            return;
+        }
+        this.setTarget(null);
+        if (!this.isCurrentEmptyEncounter(context)) {
+            return;
+        }
+        // 可取消的效果移除先完成；异常或玩家返回时，不提交半套休眠状态。
+        this.removeAllEffects();
+        if (!this.isCurrentEmptyEncounter(context)) {
+            return;
+        }
 
         this.phaseGateStage = 0;
         this.phaseTransitionPending = false;
@@ -1996,11 +2107,9 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         this.entranceFxPlayed = true;
         this.protectedMessageCooldown = 0;
         this.finishAttack();
-        this.setTarget(null);
         this.getNavigation().stop();
         this.setDeltaMovement(Vec3.ZERO);
         this.setAggressive(false);
-        this.removeAllEffects();
         this.participants.clear();
         this.scaledParticipants = 1;
         var maxHealth = this.getAttribute(Attributes.MAX_HEALTH);
@@ -2011,10 +2120,18 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         }
         this.setHealth(this.getMaxHealth());
         this.bossEvent.setProgress(1.0F);
+        context = this.refreshEncounterProgress(context);
 
         Vec3 returnPoint = this.findArenaReturnPoint(level);
+        if (!this.isCurrentEmptyEncounter(context)) {
+            return;
+        }
         if (returnPoint != null) {
             this.teleportTo(returnPoint.x, returnPoint.y, returnPoint.z);
+            if (!this.isCurrentEmptyEncounter(context)
+                    || this.position().distanceToSqr(returnPoint) >= 0.0001D) {
+                return;
+            }
             level.sendParticles(this.currentBody(),
                     returnPoint.x, returnPoint.y + this.getBbHeight() * 0.5D, returnPoint.z,
                     80, 1.4D, 2.0D, 1.4D, 0.12D);
@@ -2028,16 +2145,28 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         }
     }
 
-    private void wakeDormantEncounter(ServerLevel level, List<ServerPlayer> audience) {
+    private void wakeDormantEncounter(EncounterContext context) {
+        if (!this.isCurrentOccupiedEncounter(context)) {
+            return;
+        }
+        ServerLevel level = context.level();
+        this.setTarget(null);
+        if (!this.isCurrentOccupiedEncounter(context)) {
+            return;
+        }
         this.encounterDormant = false;
         this.arenaEmptyTicks = 0;
         this.entranceTicksRemaining = ENTRANCE_DURATION_TICKS;
         this.entranceFxPlayed = true;
         this.attackCooldown = 50;
-        this.setTarget(null);
+        context = this.refreshEncounterProgress(context);
         this.getNavigation().stop();
         this.playEntranceFx(level);
-        for (ServerPlayer player : audience) {
+        if (!this.isCurrentOccupiedEncounter(context)) {
+            return;
+        }
+        for (ServerPlayer player : this.refreshCombatAudience(level)) {
+            this.registerParticipant(player);
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.world_echo.reawakened"), true);
         }
@@ -2073,31 +2202,56 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
                 && Math.abs(player.getY() - this.altarPos.getY()) <= 40.0D;
     }
 
-    private void enforceArenaBoundary(ServerLevel level) {
-        if (this.altarPos == null || this.altarArenaId == null) {
-            return;
+    private boolean enforceArenaBoundary(ServerLevel level) {
+        if (this.handlingArenaBoundary) {
+            return true;
         }
-        if (this.getTarget() instanceof ServerPlayer player && !this.isEligibleCombatPlayer(player)) {
-            this.setTarget(null);
+        this.handlingArenaBoundary = true;
+        try {
+            // 初始不可验证的绑定交给后续暂停/清理入口，边界逻辑不抢先移动实体。
+            if (this.altarPos == null || this.altarArenaId == null
+                    || this.altarBindingState(level) != AltarBindingState.VALID) {
+                return false;
+            }
+            EncounterContext context = this.captureEncounterContext(level);
+            if (!this.isCurrentEncounter(context)) {
+                return true;
+            }
+            if (this.getTarget() instanceof ServerPlayer player && !this.isEligibleCombatPlayer(player)) {
+                this.setTarget(null);
+                if (!this.isCurrentEncounter(context)) {
+                    return true;
+                }
+            }
+            double radius = this.arenaRadius();
+            if (this.tickCount % 100 == 0) {
+                this.restrictTo(this.altarPos, (int) Math.ceil(radius));
+            }
+            if (this.tickCount % 5 != 0
+                    || (this.horizontalDistanceSqr(this.position()) <= square(radius + 4.0D)
+                    && Math.abs(this.getY() - this.altarPos.getY()) <= 24.0D)) {
+                return false;
+            }
+            Vec3 returnPoint = this.findArenaReturnPoint(level);
+            if (!this.isCurrentEncounter(context)) {
+                return true;
+            }
+            if (returnPoint == null) {
+                return false;
+            }
+            this.teleportTo(returnPoint.x, returnPoint.y, returnPoint.z);
+            if (!this.isCurrentEncounter(context)
+                    || this.position().distanceToSqr(returnPoint) >= 0.0001D) {
+                return true;
+            }
+            this.getNavigation().stop();
+            level.sendParticles(this.currentBody(),
+                    returnPoint.x, returnPoint.y + this.getBbHeight() * 0.5D, returnPoint.z,
+                    90, 2.0D, 2.5D, 2.0D, 0.2D);
+            return false;
+        } finally {
+            this.handlingArenaBoundary = false;
         }
-        double radius = this.arenaRadius();
-        if (this.tickCount % 100 == 0) {
-            this.restrictTo(this.altarPos, (int) Math.ceil(radius));
-        }
-        if (this.tickCount % 5 != 0
-                || (this.horizontalDistanceSqr(this.position()) <= square(radius + 4.0D)
-                && Math.abs(this.getY() - this.altarPos.getY()) <= 24.0D)) {
-            return;
-        }
-        Vec3 returnPoint = this.findArenaReturnPoint(level);
-        if (returnPoint == null) {
-            return;
-        }
-        this.teleportTo(returnPoint.x, returnPoint.y, returnPoint.z);
-        this.getNavigation().stop();
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                returnPoint.x, returnPoint.y + this.getBbHeight() * 0.5D, returnPoint.z,
-                90, 2.0D, 2.5D, 2.0D, 0.2D);
     }
 
     @javax.annotation.Nullable
@@ -2198,18 +2352,42 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         return state != AltarBindingState.UNBOUND && state != AltarBindingState.VALID;
     }
 
-    private void pauseForUnavailableAltar() {
-        this.setTarget(null);
-        this.getNavigation().stop();
-        if (this.phaseTransitionActive) {
-            this.phaseTransitionActive = false;
-            this.phaseTransitionPending = true;
+    private void pauseForUnavailableAltar(ServerLevel level) {
+        if (this.pausingForUnavailableAltar) {
+            return;
         }
-        if (this.attackMode != AttackMode.NONE) {
-            this.finishAttack();
-        } else {
-            this.resetFlightState();
+        this.pausingForUnavailableAltar = true;
+        try {
+            UUID arenaId = this.altarArenaId;
+            BlockPos pos = this.altarPos;
+            if (!this.canPauseForUnavailableAltar(level, arenaId, pos)) {
+                return;
+            }
+            this.setTarget(null);
+            // 目标事件可能恢复场地、改变绑定或触发死亡，不能沿用旧的阶段重置决定。
+            if (!this.canPauseForUnavailableAltar(level, arenaId, pos)) {
+                return;
+            }
+            this.getNavigation().stop();
+            if (this.phaseTransitionActive) {
+                this.phaseTransitionActive = false;
+                this.phaseTransitionPending = true;
+            }
+            if (this.attackMode != AttackMode.NONE) {
+                this.finishAttack();
+            } else {
+                this.resetFlightState();
+            }
+        } finally {
+            this.pausingForUnavailableAltar = false;
         }
+    }
+
+    private boolean canPauseForUnavailableAltar(ServerLevel level, UUID arenaId, BlockPos pos) {
+        return !this.handlingDeath && !this.dead && this.isAlive() && !this.isRemoved()
+                && this.level() == level && level.getEntity(this.getUUID()) == this
+                && this.matchesAltar(arenaId, pos)
+                && this.altarBindingState(level) == AltarBindingState.UNAVAILABLE;
     }
 
     @Override
@@ -2295,32 +2473,67 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         }
     }
 
-    private void updateDynamicScaling(ServerLevel level) {
-        int count = Math.max(1, this.participants.size());
-        if (count <= this.scaledParticipants) {
-            return;
+    /** 返回 true 时，本次 AI 不能继续消费回调之前的战斗状态。 */
+    private boolean updateDynamicScaling(ServerLevel level) {
+        if (this.handlingDynamicScaling) {
+            return true;
         }
-        var maxHealth = this.getAttribute(Attributes.MAX_HEALTH);
-        if (maxHealth == null) {
-            return;
+        this.handlingDynamicScaling = true;
+        try {
+            ScalingContext context = new ScalingContext(level, this.altarArenaId, this.altarPos,
+                    this.altarBindingState(level), this.arenaEmptyTicks, this.encounterDormant,
+                    this.entranceTicksRemaining, this.phaseGateStage);
+            if (!this.isCurrentDynamicScaling(context, this.scaledParticipants, this.getMaxHealth())) {
+                return true;
+            }
+            int count = Math.max(1, this.participants.size());
+            if (count <= this.scaledParticipants) {
+                return false;
+            }
+            var maxHealth = this.getAttribute(Attributes.MAX_HEALTH);
+            if (maxHealth == null) {
+                return false;
+            }
+            int addedParticipants = count - this.scaledParticipants;
+            // 两档倍率与入场缩放一致；治疗前预留人数，取消或异常后不重复补发。
+            double multiplier = ServerConfig.WORLD_ECHO_HEALTH_MULTIPLIER.get()
+                    * ServerConfig.DEEP_BOSS_HEALTH_MULTIPLIER.get();
+            maxHealth.setBaseValue((BASE_MAX_HEALTH + HEALTH_PER_EXTRA_PLAYER * (count - 1)) * multiplier);
+            this.scaledParticipants = count;
+            float maximum = this.getMaxHealth();
+            this.heal((float) (HEALTH_PER_EXTRA_PLAYER * addedParticipants * multiplier));
+            if (!this.isCurrentDynamicScaling(context, count, maximum)) {
+                return true;
+            }
+            Vec3 core = this.attackOrigin();
+            BossFx.ring(level, core, Math.min(12.0D, 4.0D + count),
+                    56, 0.12D, this.currentEmber());
+            level.playSound(null, this.blockPosition(), SoundEvents.BEACON_ACTIVATE,
+                    SoundSource.HOSTILE, 1.8F, Math.max(0.55F, 1.05F - count * 0.035F));
+            if (!this.isCurrentDynamicScaling(context, count, maximum)) {
+                return true;
+            }
+            for (ServerPlayer player : this.refreshCombatAudience(level)) {
+                player.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.world_echo.scaled", count), true);
+            }
+            return false;
+        } finally {
+            this.handlingDynamicScaling = false;
         }
-        int addedParticipants = count - this.scaledParticipants;
-        // 必须同时吃深层与自身两档倍率(DEEP × WORLD_ECHO),与 CommonEvents 的入场缩放同口径;
-        // 只乘一档会让这只 Boss 的血量与入场缩放对不上。
-        double multiplier = ServerConfig.WORLD_ECHO_HEALTH_MULTIPLIER.get()
-                * ServerConfig.DEEP_BOSS_HEALTH_MULTIPLIER.get();
-        maxHealth.setBaseValue((BASE_MAX_HEALTH + HEALTH_PER_EXTRA_PLAYER * (count - 1)) * multiplier);
-        this.heal((float) (HEALTH_PER_EXTRA_PLAYER * addedParticipants * multiplier));
-        this.scaledParticipants = count;
-        Vec3 core = this.attackOrigin();
-        BossFx.ring(level, core, Math.min(12.0D, 4.0D + count),
-                56, 0.12D, this.currentEmber());
-        level.playSound(null, this.blockPosition(), SoundEvents.BEACON_ACTIVATE,
-                SoundSource.HOSTILE, 1.8F, Math.max(0.55F, 1.05F - count * 0.035F));
-        for (ServerPlayer player : this.combatAudience(level)) {
-            player.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.world_echo.scaled", count), true);
-        }
+    }
+
+    private boolean isCurrentDynamicScaling(ScalingContext context, int count, float maximum) {
+        return !this.handlingDeath && !this.dead && this.isAlive() && !this.isRemoved()
+                && this.level() == context.level() && context.level().getEntity(this.getUUID()) == this
+                && java.util.Objects.equals(this.altarArenaId, context.arenaId())
+                && java.util.Objects.equals(this.altarPos, context.altarPos())
+                && (context.bindingState() == AltarBindingState.UNBOUND
+                    || context.bindingState() == AltarBindingState.VALID)
+                && this.altarBindingState(context.level()) == context.bindingState()
+                && this.scaledParticipants == count && this.getMaxHealth() == maximum
+                && this.arenaEmptyTicks == context.emptyTicks() && this.encounterDormant == context.dormant()
+                && this.entranceTicksRemaining == context.entranceTicks() && this.phaseGateStage == context.phaseStage();
     }
 
     private LivingEntity findNearestPlayer(ServerLevel level) {
@@ -2434,64 +2647,136 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
                     impact.x, impact.y, impact.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
             level.sendParticles(ParticleTypes.CRIT,
                     impact.x, impact.y, impact.z, 14, 0.45D, 0.55D, 0.45D, 0.12D);
-            level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG,
-                    SoundSource.HOSTILE, 1.5F, 0.65F);
+            level.playSound(null, target.blockPosition(), ModSounds.WORLD_ECHO_ATTACK_MELEE.get(),
+                    SoundSource.HOSTILE, 1.5F, 1.0F);
         }
         return hit;
     }
 
     @Override
     public void die(DamageSource source) {
-        boolean wasDead = this.dead;
-        super.die(source);
-        if (wasDead || !this.dead) {
+        if (this.handlingDeath || this.dead) {
             return;
         }
-        this.resetFlightState();
-        this.triggerAnim("attack_controller", "death");
-        if (!(this.level() instanceof ServerLevel level)) {
-            return;
-        }
-        boolean validSettlement = this.hasValidAltarBinding(level);
-        if (validSettlement) {
-            boolean hasEligibleParticipant = false;
-            boolean firstKillDrop = false;
-            for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class,
-                    this.combatAudienceBounds(), player -> !player.isSpectator())) {
-                if (this.participants.contains(player.getUUID())
-                        && this.isInsideBoundArena(player, 2.0D)
-                        && EchoPermission.canSummonWorldEcho(player)) {
-                    boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(
-                            player, EchoPermission.WORLD_ECHO_ID);
-                    hasEligibleParticipant = true;
-                    if (!EchoAbilityManager.markBossDefeatedWithMechanisms(
-                            player, EchoPermission.WORLD_ECHO_ID,
-                            EchoPermission.WORLD_ECHO_REWARD_READY_KEY)) {
-                        player.sendSystemMessage(Component.translatable(
-                                "message.unknown_echoes.progress_record.full"));
-                        continue;
-                    }
-                    firstKillDrop |= firstKill;
+        this.handlingDeath = true;
+        try {
+            if (!(this.level() instanceof ServerLevel level)) {
+                super.die(source);
+                if (this.dead) {
+                    this.resetFlightState();
+                    this.triggerAnim("attack_controller", "death");
+                }
+                return;
+            }
+            DeathContext context = captureDeathContext(level);
+            try {
+                super.die(source);
+            } finally {
+                if (this.dead) {
+                    this.deathContext = context;
+                    settleWorldEchoDeath(context);
                 }
             }
-            if (hasEligibleParticipant) {
-                grantSharedCombatRewards(firstKillDrop);
-            }
+        } finally {
+            this.handlingDeath = false;
         }
-        this.bossEvent.setProgress(0.0F);
-        this.bossEvent.setName(Component.translatable(
-                "gui.unknown_echoes.world_echo.cast.silencing", this.getDisplayName()));
-        Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.55D, 0.0D);
-        level.sendParticles(ParticleTypes.FLASH,
-                core.x, core.y, core.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                core.x, core.y, core.z, 64, 1.8D, 2.4D, 1.8D, 0.18D);
-        level.playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE,
-                SoundSource.HOSTILE, 2.6F, 0.55F);
-        this.notifyAltarSettled(level);
     }
 
-    private void grantSharedCombatRewards(boolean firstKill) {
+    private DeathContext captureDeathContext(ServerLevel level) {
+        boolean validBinding = this.hasValidAltarBinding(level);
+        double radius = validBinding ? this.arenaRadius() : WorldResonanceLayout.arenaRadius(false);
+        return new DeathContext(level, this.position(), this.altarPos, this.altarArenaId,
+                this.getUUID(), radius, Set.copyOf(this.participants), validBinding);
+    }
+
+    private void settleWorldEchoDeath(DeathContext context) {
+        try {
+            if (context.validBinding()) {
+                boolean hasEligibleParticipant = false;
+                boolean firstKillDrop = false;
+                for (ServerPlayer player : nearbyDeathPlayers(context)) {
+                    if (context.participants().contains(player.getUUID())
+                            && isDeathParticipant(context, player)) {
+                        boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(
+                                player, EchoPermission.WORLD_ECHO_ID);
+                        hasEligibleParticipant = true;
+                        firstKillDrop |= firstKill;
+                        runDeathStep("personal progress", () -> {
+                            if (!EchoAbilityManager.markBossDefeatedWithMechanisms(
+                                    player, EchoPermission.WORLD_ECHO_ID,
+                                    EchoPermission.WORLD_ECHO_REWARD_READY_KEY)
+                                    && isDeathParticipant(context, player)) {
+                                player.sendSystemMessage(Component.translatable(
+                                        "message.unknown_echoes.progress_record.full"));
+                            }
+                        });
+                    }
+                }
+                if (hasEligibleParticipant) {
+                    grantSharedCombatRewards(context, firstKillDrop);
+                }
+            }
+        } finally {
+            runDeathStep("altar settlement", () -> notifyAltarSettled(context));
+        }
+        runDeathStep("flight reset", this::resetFlightState);
+        runDeathStep("death presentation", () -> playDeathEffects(context));
+    }
+
+    private List<ServerPlayer> nearbyDeathPlayers(DeathContext context) {
+        double radius = context.radius() + 2.0D;
+        return context.level().getEntitiesOfClass(ServerPlayer.class,
+                new AABB(context.altarPos()).inflate(radius, 40.0D, radius),
+                player -> isDeathParticipant(context, player));
+    }
+
+    private boolean isDeathParticipant(DeathContext context, ServerPlayer player) {
+        if (context.altarPos() == null || player.level() != context.level() || !player.isAlive()
+                || player.isSpectator() || player.isRemoved() || player.hasDisconnected()
+                || !EchoPermission.canSummonWorldEcho(player)) {
+            return false;
+        }
+        double dx = player.position().x - (context.altarPos().getX() + 0.5D);
+        double dz = player.position().z - (context.altarPos().getZ() + 0.5D);
+        return dx * dx + dz * dz <= square(context.radius() + 2.0D)
+                && Math.abs(player.getY() - context.altarPos().getY()) <= 40.0D;
+    }
+
+    private void runDeathStep(String step, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException failure) {
+            cn.kurt6.unknown_echoes.UnknownEchoes.LOGGER.error("World echo death {} failed for {}", step, this.getUUID(), failure);
+        }
+    }
+
+    private boolean isCurrentDeathPresentation(DeathContext context) {
+        return this.dead && !this.isRemoved() && this.level() == context.level()
+                && context.level().getEntity(context.bossUuid()) == this
+                && this.position().distanceToSqr(context.position()) < 0.0001D;
+    }
+
+    private void playDeathEffects(DeathContext context) {
+        if (!isCurrentDeathPresentation(context)) return;
+        this.triggerAnim("attack_controller", "death");
+        if (!isCurrentDeathPresentation(context)) return;
+        this.bossEvent.setProgress(0.0F);
+        if (!isCurrentDeathPresentation(context)) return;
+        this.bossEvent.setName(Component.translatable(
+                "gui.unknown_echoes.world_echo.cast.silencing", this.getDisplayName()));
+        if (!isCurrentDeathPresentation(context)) return;
+        Vec3 core = context.position().add(0.0D, this.getBbHeight() * 0.55D, 0.0D);
+        context.level().sendParticles(ParticleTypes.FLASH,
+                core.x, core.y, core.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        if (!isCurrentDeathPresentation(context)) return;
+        context.level().sendParticles(this.currentEmber(),
+                core.x, core.y, core.z, 64, 1.8D, 2.4D, 1.8D, 0.18D);
+        if (!isCurrentDeathPresentation(context)) return;
+        context.level().playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE,
+                SoundSource.HOSTILE, 2.6F, 0.55F);
+    }
+
+    private void grantSharedCombatRewards(DeathContext context, boolean firstKill) {
         ItemStack relic = new ItemStack(switch (this.random.nextInt(5)) {
             case 0 -> ModItems.WORLD_ECHO_WINGS.get();
             case 1 -> ModItems.RIFTWING_RELAY.get();
@@ -2505,52 +2790,85 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
             case 2 -> ModItems.ANCHOR_BLADE.get();
             default -> ModItems.FOLDED_GLAIVE.get();
         });
-        BossMaterialRewards.drop(this, relic);
-        BossMaterialRewards.drop(this, weapon);
-        BossMaterialRewards.drop(this, new ItemStack(ModItems.WORLD_ECHO_RESIDUE.get(),
-                firstKill ? 4 : 2));
-        BossMaterialRewards.drop(this, new ItemStack(ModItems.DEEP_ALLOY_INGOT.get(),
-                6 + this.random.nextInt(5)));
-        BossMaterialRewards.drop(this, new ItemStack(ModItems.WORLD_ECHO_RESIDUE.get(),
-                5 + this.random.nextInt(4)));
-        BossMaterialRewards.drop(this, new ItemStack(ModItems.VOID_RIFT_SHARD.get(),
-                3 + this.random.nextInt(4)));
-        BossMaterialRewards.drop(this, new ItemStack(ModItems.GRAVITY_CORE_FRAGMENT.get(),
-                2 + this.random.nextInt(4)));
-        BossMaterialRewards.drop(this, new ItemStack(ModItems.ECHO_ARMOR_PLATE.get(),
-                2 + this.random.nextInt(3)));
-        BossMaterialRewards.drop(this, new ItemStack(ModItems.ECHO_WEAPON_FRAME.get(),
-                1 + this.random.nextInt(2)));
-        BossMaterialRewards.drop(this, new ItemStack(Items.DIAMOND,
-                4 + this.random.nextInt(5)));
+        runDeathStep("reward 1", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, relic));
+        runDeathStep("reward 2", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, weapon));
+        runDeathStep("reward 3", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(ModItems.WORLD_ECHO_RESIDUE.get(),
+                firstKill ? 4 : 2)));
+        runDeathStep("reward 4", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(ModItems.DEEP_ALLOY_INGOT.get(),
+                6 + this.random.nextInt(5))));
+        runDeathStep("reward 5", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(ModItems.WORLD_ECHO_RESIDUE.get(),
+                5 + this.random.nextInt(4))));
+        runDeathStep("reward 6", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(ModItems.VOID_RIFT_SHARD.get(),
+                3 + this.random.nextInt(4))));
+        runDeathStep("reward 7", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(ModItems.GRAVITY_CORE_FRAGMENT.get(),
+                2 + this.random.nextInt(4))));
+        runDeathStep("reward 8", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(ModItems.ECHO_ARMOR_PLATE.get(),
+                2 + this.random.nextInt(3))));
+        runDeathStep("reward 9", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(ModItems.ECHO_WEAPON_FRAME.get(),
+                1 + this.random.nextInt(2))));
+        runDeathStep("reward 10", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(Items.DIAMOND,
+                4 + this.random.nextInt(5))));
         if (this.random.nextFloat() < 0.45F) {
-            BossMaterialRewards.drop(this, new ItemStack(Items.NETHERITE_INGOT,
-                    1 + this.random.nextInt(2)));
+            runDeathStep("reward 11", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(Items.NETHERITE_INGOT,
+                    1 + this.random.nextInt(2))));
         }
         if (this.random.nextFloat() < 0.30F) {
-            BossMaterialRewards.drop(this, new ItemStack(Items.ENCHANTED_GOLDEN_APPLE));
+            runDeathStep("reward 12", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)));
         }
         if (this.random.nextFloat() < 0.35F) {
-            BossMaterialRewards.drop(this, new ItemStack(this.random.nextBoolean()
+            runDeathStep("reward 13", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, new ItemStack(this.random.nextBoolean()
                     ? ModItems.GRAVITY_RESEARCH_RUBBING.get()
-                    : ModItems.VOID_RESEARCH_RUBBING.get()));
+                    : ModItems.VOID_RESEARCH_RUBBING.get())));
         }
     }
 
     @Override
     protected void tickDeath() {
-        this.deathTime++;
-        if (!this.level().isClientSide() && !this.isRemoved()
-                && this.level() instanceof ServerLevel level) {
-            this.tickDeathCinematic(level);
-            if (this.deathTime >= DEATH_CINEMATIC_TICKS) {
-                this.level().broadcastEntityEvent(this, (byte) 60);
-                this.remove(Entity.RemovalReason.KILLED);
+        if (this.handlingDeathTick || this.handlingDeath || !this.dead) {
+            return;
+        }
+        this.handlingDeathTick = true;
+        try {
+            this.deathTime++;
+            if (!this.isRemoved() && this.level() instanceof ServerLevel level) {
+                try {
+                    runDeathStep("cinematic", () -> {
+                        if (this.deathContext != null && isCurrentDeathPresentation(this.deathContext)) {
+                            this.tickDeathCinematic(level);
+                        }
+                    });
+                } finally {
+                    if (this.deathTime >= DEATH_CINEMATIC_TICKS && !this.isRemoved()) {
+                        try {
+                            runDeathStep("removal event", () -> this.level().broadcastEntityEvent(this, (byte) 60));
+                        } finally {
+                            this.remove(Entity.RemovalReason.KILLED);
+                        }
+                    }
+                }
             }
+        } finally {
+            this.handlingDeathTick = false;
         }
     }
 
     private void tickDeathCinematic(ServerLevel level) {
+        if (this.deathTime == 63) {
+            BossLifecycleFx.death(level, this.position(), this.getBbWidth(), this.getBbHeight(), this.currentBody(), BossLifecycleStyle.WORLD);
+        }
         Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.55D, 0.0D);
         if (this.deathTime <= 72 && (this.deathTime & 1) == 0) {
             double progress = this.deathTime / (double) DEATH_CINEMATIC_TICKS;
@@ -2564,7 +2882,7 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
                         core.z + Math.sin(angle) * radius,
                         2, 0.06D, 0.08D, 0.06D, 0.01D);
             }
-            level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+            level.sendParticles(this.currentEmber(),
                     core.x, core.y, core.z, 8, radius * 0.12D, 1.0D,
                     radius * 0.12D, 0.08D);
         }
@@ -2576,7 +2894,7 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
                     core.x, core.y, core.z, 4, 0.0D, 0.0D, 0.0D, 0.0D);
             level.sendParticles(this.currentBody(),
                     core.x, core.y, core.z, 240, 4.0D, 4.2D, 4.0D, 0.34D);
-            level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+            level.sendParticles(this.currentEmber(),
                     core.x, core.y, core.z, 320, 4.4D, 4.5D, 4.4D, 0.46D);
             BossFx.ring(level, this.position().add(0.0D, 0.25D, 0.0D),
                     Math.min(24.0D, this.arenaRadius() - 2.0D), 96, 0.18D,
@@ -2628,12 +2946,13 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
                 && pos != null && pos.equals(this.altarPos);
     }
 
-    private void notifyAltarSettled(ServerLevel level) {
-        if (this.altarArenaId == null || this.altarPos == null) {
+    private void notifyAltarSettled(DeathContext context) {
+        ServerLevel level = context.level();
+        if (context.arenaId() == null || context.altarPos() == null || !level.hasChunkAt(context.altarPos())) {
             return;
         }
-        if (level.getBlockEntity(this.altarPos) instanceof WorldResonanceAltarBlockEntity altar) {
-            altar.onBossSettled(this.altarArenaId, this.getUUID());
+        if (level.getBlockEntity(context.altarPos()) instanceof WorldResonanceAltarBlockEntity altar) {
+            altar.onBossSettled(context.arenaId(), context.bossUuid());
         }
     }
 
@@ -2655,49 +2974,69 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         this.bossEvent.setName(Component.translatable(
                 "gui.unknown_echoes.world_echo.cast.manifesting", this.getDisplayName()));
         this.triggerAnim("attack_controller", "spawn");
-        Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.5D, 0.0D);
-        level.playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_SPAWN,
-                SoundSource.HOSTILE, 2.8F, 0.75F);
-        for (double radius : new double[]{3.0D, 6.0D, 9.0D}) {
-            ring(level, radius, radius == 6.0D ? this.currentBody() : ParticleTypes.REVERSE_PORTAL);
-        }
-        level.sendParticles(ParticleTypes.GLOW,
-                core.x, core.y, core.z, 120, 2.2D, 2.8D, 2.2D, 0.14D);
+        MechanismFx.emit(level, ProgressionFx.summon(this.position(),
+                this.getBbWidth(), this.getBbHeight(), ProgressionFx.Theme.WORLD));
+        level.playSound(null, this.blockPosition(), ModSounds.BLOCK_WORLD_RESONANCE_MANIFEST.get(),
+                SoundSource.HOSTILE, 2.0F, 1.0F);
     }
 
     private boolean tickEntrance(ServerLevel level) {
+        if (this.handlingEntranceTick) {
+            return true;
+        }
         if (this.entranceTicksRemaining <= 0) {
             return false;
         }
-        this.getNavigation().stop();
-        this.setTarget(null);
-        Vec3 movement = this.getDeltaMovement();
-        this.setDeltaMovement(0.0D, movement.y, 0.0D);
-        if (this.tickCount % 5 == 0) {
-            this.renderEntranceConvergence(level);
+        this.handlingEntranceTick = true;
+        try {
+            EntranceTickContext context = new EntranceTickContext(level, this.altarArenaId, this.altarPos,
+                    this.entranceTicksRemaining, this.encounterDormant, this.altarBindingState(level));
+            if (!this.isCurrentEntranceTick(context)) {
+                return true;
+            }
+            this.setTarget(null);
+            if (!this.isCurrentEntranceTick(context)) {
+                return true;
+            }
+            this.getNavigation().stop();
+            Vec3 movement = this.getDeltaMovement();
+            this.setDeltaMovement(0.0D, movement.y, 0.0D);
+            if (this.tickCount % 8 == 0) {
+                this.renderEntranceConvergence(level);
+            }
+            if (this.entranceTicksRemaining == 40
+                    || this.entranceTicksRemaining == 24
+                    || this.entranceTicksRemaining == 8) {
+                MechanismFx.emit(level, ProgressionFx.entrancePulse(this.position(), this.getBbWidth(), false));
+                level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ENTRANCE_PULSE.get(),
+                        SoundSource.HOSTILE, 1.6F, 1.0F);
+                // 声音事件可能重设出场或触发死亡，不能继续消费旧倒计时。
+                if (!this.isCurrentEntranceTick(context)) {
+                    return true;
+                }
+            }
+            this.entranceTicksRemaining--;
+            if (this.entranceTicksRemaining == 0) {
+                this.attackCooldown = Math.max(this.attackCooldown, 20);
+                this.updateBossEventName();
+                MechanismFx.emit(level, ProgressionFx.entrancePulse(this.position(), this.getBbWidth(), true));
+                level.playSound(null, this.blockPosition(), ModSounds.WORLD_ECHO_ENTRANCE_READY.get(),
+                        SoundSource.HOSTILE, 2.0F, 1.0F);
+            }
+            return true;
+        } finally {
+            this.handlingEntranceTick = false;
         }
-        if (this.entranceTicksRemaining == 40
-                || this.entranceTicksRemaining == 24
-                || this.entranceTicksRemaining == 8) {
-            double radius = 4.0D + (ENTRANCE_DURATION_TICKS - this.entranceTicksRemaining) * 0.18D;
-            BossFx.ring(level, this.position().add(0.0D, 0.25D, 0.0D),
-                    radius, 56, 0.12D, this.currentEmber());
-            level.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                    SoundSource.HOSTILE, 2.4F, 0.65F + (float) radius * 0.025F);
-        }
-        this.entranceTicksRemaining--;
-        if (this.entranceTicksRemaining == 0) {
-            this.attackCooldown = Math.max(this.attackCooldown, 20);
-            this.updateBossEventName();
-            Vec3 core = this.attackOrigin();
-            level.sendParticles(ParticleTypes.FLASH,
-                    core.x, core.y, core.z, 3, 0.0D, 0.0D, 0.0D, 0.0D);
-            level.sendParticles(this.currentBody(),
-                    core.x, core.y, core.z, 180, 3.0D, 3.6D, 3.0D, 0.24D);
-            level.playSound(null, this.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL,
-                    SoundSource.HOSTILE, 3.2F, 0.82F);
-        }
-        return true;
+    }
+
+    private boolean isCurrentEntranceTick(EntranceTickContext context) {
+        return !this.handlingDeath && !this.dead && this.isAlive() && !this.isRemoved()
+                && this.level() == context.level() && context.level().getEntity(this.getUUID()) == this
+                && this.entranceTicksRemaining == context.remainingTicks()
+                && this.encounterDormant == context.dormant()
+                && java.util.Objects.equals(this.altarArenaId, context.arenaId())
+                && java.util.Objects.equals(this.altarPos, context.altarPos())
+                && this.altarBindingState(context.level()) == context.bindingState();
     }
 
     private void renderEntranceConvergence(ServerLevel level) {
@@ -2706,12 +3045,7 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
                 || !this.matchesAltar(altar.getArenaId(), this.altarPos)) {
             return;
         }
-        List<Vec3> pylons = altar.resonancePylonTops();
-        Vec3 core = this.attackOrigin();
-        for (int aspect = 0; aspect < pylons.size(); aspect++) {
-            BossFx.guidanceFlow(level, pylons.get(aspect), core,
-                    ParticleTypes.GLOW, aspectParticle(aspect), this.tickCount + aspect * 7);
-        }
+        MechanismFx.emit(level, ProgressionFx.entranceLinks(altar.resonancePylonTops(), this.attackOrigin()));
     }
 
     private static int duration(AttackMode mode) {
@@ -3009,5 +3343,9 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         public static AttackMode byNetworkId(int networkId) {
             return networkId >= 0 && networkId < VALUES.length ? VALUES[networkId] : NONE;
         }
+    }
+    @Override
+    public int musicStage() {
+        return this.currentAspectIndex();
     }
 }

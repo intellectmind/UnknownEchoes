@@ -43,10 +43,14 @@ public final class LandmarkPickaxeItem extends PickaxeItem implements ItemActive
     @Override
     public boolean activateItemSkill(ServerLevel level, ServerPlayer player,
                                      ItemStack stack, InteractionHand hand) {
-        return activate(level, player);
+        if (!canActivate(level, player, stack, hand)) {
+            return false;
+        }
+        return activate(level, player, stack, hand);
     }
 
-    private boolean activate(ServerLevel level, ServerPlayer player) {
+    private boolean activate(ServerLevel level, ServerPlayer player,
+                             ItemStack stack, InteractionHand hand) {
         String cooldownKey = "ue_" + tooltipKey + "_active_until";
         long now = player.server.overworld().getGameTime();
         long readyAt = player.getPersistentData().getLong(cooldownKey);
@@ -64,14 +68,21 @@ public final class LandmarkPickaxeItem extends PickaxeItem implements ItemActive
         if (!canBenefit(player)) {
             return false;
         }
+        player.getPersistentData().putLong(cooldownKey, safeDeadline(now, COOLDOWN_TICKS));
         if (!ArtifactManager.spendEnergy(player, ENERGY_COST)) {
+            player.getPersistentData().putLong(cooldownKey, readyAt);
             return false;
         }
 
-        player.getPersistentData().putLong(cooldownKey, safeDeadline(now, COOLDOWN_TICKS));
+        if (!canActivate(level, player, stack, hand)) {
+            return true;
+        }
         if (kind == Kind.ARCHIVE_CHISEL) {
             player.addEffect(new MobEffectInstance(MobEffects.DIG_SPEED,
                     500, 1, true, false, true));
+            if (!canActivate(level, player, stack, hand)) {
+                return true;
+            }
             level.sendParticles(ParticleTypes.ENCHANT,
                     player.getX(), player.getY() + 0.8D, player.getZ(),
                     54, 0.6D, 0.8D, 0.6D, 0.12D);
@@ -80,8 +91,14 @@ public final class LandmarkPickaxeItem extends PickaxeItem implements ItemActive
         } else {
             player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING,
                     500, 0, true, false, true));
+            if (!canActivate(level, player, stack, hand)) {
+                return true;
+            }
             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED,
                     320, 1, true, false, true));
+            if (!canActivate(level, player, stack, hand)) {
+                return true;
+            }
             level.sendParticles(ParticleTypes.END_ROD,
                     player.getX(), player.getY() + 0.8D, player.getZ(),
                     64, 0.8D, 1.0D, 0.8D, 0.1D);
@@ -89,6 +106,12 @@ public final class LandmarkPickaxeItem extends PickaxeItem implements ItemActive
                     SoundSource.PLAYERS, 0.9F, 1.35F);
         }
         return true;
+    }
+
+    private boolean canActivate(ServerLevel level, ServerPlayer player,
+                                ItemStack stack, InteractionHand hand) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && stack.is(this) && player.getItemInHand(hand) == stack;
     }
 
     private boolean canBenefit(Player player) {

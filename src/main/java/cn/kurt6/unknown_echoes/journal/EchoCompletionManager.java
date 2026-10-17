@@ -19,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 /**
  * 第一维度闭环判定与 T7 个人奖励。
@@ -68,16 +69,33 @@ public final class EchoCompletionManager {
         return showSummaryAndClaim(player);
     }
 
-    public static boolean handleArchiveTerminalUse(ServerPlayer player) {
+    public static boolean handleArchiveTerminalUse(ServerPlayer player, BooleanSupplier isCurrentTerminal) {
+        if (!isCurrentTerminal.getAsBoolean()) {
+            return false;
+        }
         if (!EchoAbilityManager.activateMechanism(player, ARCHIVE_TERMINAL_KEY)) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.progress_record.full"), true);
             return false;
         }
+        // 个人记录已提交；成就或日志回调改变现场后，停止后续现场操作，允许稍后重试。
+        if (!isCurrentTerminal.getAsBoolean()) {
+            return false;
+        }
         JournalManager.recordStructure(player, ARCHIVE_STRUCTURE, player.blockPosition());
-        if (refreshMainlineCompletion(player)) {
+        if (!isCurrentTerminal.getAsBoolean()) {
+            return false;
+        }
+        boolean mainlineComplete = refreshMainlineCompletion(player);
+        if (!isCurrentTerminal.getAsBoolean()) {
+            return false;
+        }
+        if (mainlineComplete) {
             AbyssBeaconClueSearch.RequestResult result =
                     AbyssBeaconClueSearch.request(player, ABYSS_BEACON_STRUCTURE);
+            if (!isCurrentTerminal.getAsBoolean()) {
+                return false;
+            }
             String messageKey = switch (result) {
                 case ADDED -> "message.unknown_echoes.completion.abyss_clue_added";
                 case ALREADY_KNOWN -> "message.unknown_echoes.completion.abyss_clue_known";
@@ -85,6 +103,9 @@ public final class EchoCompletionManager {
                 case UNAVAILABLE -> "message.unknown_echoes.completion.abyss_clue_unavailable";
             };
             player.displayClientMessage(Component.translatable(messageKey), true);
+        }
+        if (!isCurrentTerminal.getAsBoolean()) {
+            return false;
         }
         return showSummaryAndClaim(player);
     }
@@ -431,15 +452,16 @@ public final class EchoCompletionManager {
                     "message.unknown_echoes.completion.need_space"), true);
             return false;
         }
-        if (!EchoAbilityManager.activateMechanisms(player,
+        if (!EchoAbilityManager.activateMechanisms(player, () -> {
+            for (ItemStack reward : rewards) {
+                player.getInventory().add(reward);
+            }
+        },
                 T7_REWARD_KEY, INDEX_UNLOCK_KEY, T7_CORE_KEY, T7_INGOTS_KEY,
                 T7_CLUE_MAP_KEY)) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.progress_record.full"), true);
             return false;
-        }
-        for (ItemStack reward : rewards) {
-            player.getInventory().add(reward);
         }
         ModAdvancements.award(player, ModAdvancements.ECHO_REALM_COMPLETE);
         ModAdvancements.checkIndexAdvancements(player);
@@ -496,13 +518,14 @@ public final class EchoCompletionManager {
             player.displayClientMessage(Component.translatable("message.unknown_echoes.index.need_space"), true);
             return false;
         }
-        if (!EchoAbilityManager.activateMechanism(player, key)) {
+        if (!EchoAbilityManager.activateMechanisms(player, () -> {
+            for (ItemStack stack : rewards) {
+                player.getInventory().add(stack);
+            }
+        }, key)) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.progress_record.full"), true);
             return false;
-        }
-        for (ItemStack stack : rewards) {
-            player.getInventory().add(stack);
         }
         player.level().playSound(null, player.blockPosition(),
                 SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.7F, 0.8F);
@@ -547,13 +570,14 @@ public final class EchoCompletionManager {
             player.displayClientMessage(Component.translatable("message.unknown_echoes.completion.need_space"), true);
             return false;
         }
-        if (!EchoAbilityManager.activateMechanisms(player, keys.toArray(String[]::new))) {
+        if (!EchoAbilityManager.activateMechanisms(player, () -> {
+            for (ItemStack reward : rewards) {
+                player.getInventory().add(reward);
+            }
+        }, keys.toArray(String[]::new))) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.progress_record.full"), true);
             return false;
-        }
-        for (ItemStack reward : rewards) {
-            player.getInventory().add(reward);
         }
         EchoAbilityManager.syncToClient(player);
         JournalManager.syncJournal(player);

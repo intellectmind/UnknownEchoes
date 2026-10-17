@@ -11,17 +11,20 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.level.block.state.properties.WallSide;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceType;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.loot.LootTable;
 
 abstract class EchoStructurePiece extends ScatteredFeaturePiece {
@@ -35,17 +38,99 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         super(type, tag);
     }
 
+    /** 登记生成范围前从原始噪声列锚定，不依赖区块生成顺序。 */
+    final boolean prepareTerrain(net.minecraft.world.level.levelgen.structure.Structure.GenerationContext context) {
+        if (usesSurfaceAnchor() && heightPosition < 0) {
+            int groundY = sampleGroundHeight(context);
+            int baseY = groundY + surfaceAnchorOffset();
+            if (baseY <= context.heightAccessor().getMinBuildHeight()
+                    || baseY + boundingBox.getYSpan() > context.heightAccessor().getMaxBuildHeight()) {
+                return false;
+            }
+            heightPosition = groundY;
+            boundingBox.move(0, baseY - boundingBox.minY(), 0);
+        }
+        return boundingBox.minY() > context.heightAccessor().getMinBuildHeight()
+                && boundingBox.maxY() < context.heightAccessor().getMaxBuildHeight();
+    }
+
+    protected int sampleGroundHeight(net.minecraft.world.level.levelgen.structure.Structure.GenerationContext context) {
+        long total = 0L;
+        int samplesX = Math.min(5, boundingBox.getXSpan());
+        int samplesZ = Math.min(5, boundingBox.getZSpan());
+        for (int ix = 0; ix < samplesX; ix++) {
+            int x = boundingBox.minX() + (boundingBox.getXSpan() - 1) * ix / Math.max(1, samplesX - 1);
+            for (int iz = 0; iz < samplesZ; iz++) {
+                int z = boundingBox.minZ() + (boundingBox.getZSpan() - 1) * iz / Math.max(1, samplesZ - 1);
+                total += context.chunkGenerator().getBaseHeight(x, z,
+                        net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE_WG,
+                        context.heightAccessor(), context.randomState());
+            }
+        }
+        return (int) Math.floorDiv(total, samplesX * samplesZ);
+    }
+
+    protected boolean usesSurfaceAnchor() {
+        return true;
+    }
+
+    protected int surfaceAnchorOffset() {
+        return 0;
+    }
+
     /** 结构装饰不得覆盖世界最低层基岩;水下结构下沉时也保留自然底层。 */
     @Override
     protected void placeBlock(WorldGenLevel level, BlockState state, int x, int y, int z,
                                BoundingBox box) {
-        BlockPos worldPos = this.getWorldPos(x, y, z);
-        if (!box.isInside(worldPos)
-                || worldPos.getY() <= level.getMinBuildHeight()
-                || level.getBlockState(worldPos).is(Blocks.BEDROCK)) {
+        // Most giant pieces are replayed once per intersecting chunk. Rejecting by integer
+        // coordinates first avoids allocating a BlockPos for every out-of-chunk attempt.
+        int worldX = this.getWorldX(x, z);
+        int worldY = this.getWorldY(y);
+        int worldZ = this.getWorldZ(x, z);
+        if (!box.isInside(worldX, worldY, worldZ)
+                || worldY <= level.getMinBuildHeight()) {
+            return;
+        }
+        BlockPos worldPos = new BlockPos(worldX, worldY, worldZ);
+        if (level.getBlockState(worldPos).is(Blocks.BEDROCK)) {
             return;
         }
         super.placeBlock(level, state, x, y, z, box);
+    }
+
+    /** 原版宝箱直接写世界，不经过构件放置出口；显式朝向必须保留。 */
+    @Override
+    protected boolean createChest(ServerLevelAccessor level, BoundingBox box, RandomSource random,
+                                  BlockPos pos, ResourceKey<LootTable> loot,
+                                  @javax.annotation.Nullable BlockState state) {
+        if (!box.isInside(pos)) {
+            return false;
+        }
+        BlockState existing = level.getBlockState(pos);
+        if (existing.is(Blocks.CHEST)) {
+            return false;
+        }
+        BlockState chest = state == null ? reorient(level, pos, Blocks.CHEST.defaultBlockState()) : state;
+        chest = inheritWaterlogging(chest, existing);
+        boolean created = super.createChest(level, box, random, pos, loot, chest);
+        if (created && chest.getValue(BlockStateProperties.WATERLOGGED)) {
+            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+        return created;
+    }
+
+    /** 朝向以局部坐标指定；未指定时使用世界北向，不读取未生成的邻区块。 */
+    protected boolean createChest(WorldGenLevel level, BoundingBox box, RandomSource random,
+                                  int x, int y, int z, ResourceKey<LootTable> loot, Direction facing) {
+        BlockState chest = Blocks.CHEST.defaultBlockState();
+        if (facing != null) {
+            int nextX = x + facing.getStepX();
+            int nextZ = z + facing.getStepZ();
+            Direction worldFacing = Direction.fromDelta(this.getWorldX(nextX, nextZ) - this.getWorldX(x, z), 0,
+                    this.getWorldZ(nextX, nextZ) - this.getWorldZ(x, z));
+            chest = chest.setValue(BlockStateProperties.HORIZONTAL_FACING, worldFacing);
+        }
+        return this.createChest(level, box, random, this.getWorldPos(x, y, z), loot, chest);
     }
 
     /**
@@ -64,6 +149,492 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
     /** 本片区的方形足印边长(局部坐标)。壁龛靠它判断朝内开门,取错会把门开在外墙上。 */
     protected int siteFootprint() {
         return Math.max(this.boundingBox.getXSpan(), this.boundingBox.getZSpan());
+    }
+
+    protected void dressStructure(WorldGenLevel level, BoundingBox box, String id) {
+        dressStructure(level, box, id, 0);
+    }
+
+    protected void dressStructure(WorldGenLevel level, BoundingBox box, String id, int floorOffset) {
+        BoundingBox local = localGenerationBounds(box);
+        for (StructureInteriorLayouts.Bay bay : StructureInteriorLayouts.bays(id)) {
+            // 家具模板包含地面灯和前伸一格的座椅，包络必须同时保留高度 0..3 与横向一格。
+            if (!intersectsDecoration(local, bay.x(), bay.y() + floorOffset, bay.z(), 1, 4)) {
+                continue;
+            }
+            buildInteriorBay(level, box, floorOffset == 0 ? bay : new StructureInteriorLayouts.Bay(
+                    bay.x(), bay.y() + floorOffset, bay.z(), bay.facing(), bay.theme(), bay.role(), bay.openFront(), bay.noteInstrument()));
+        }
+        for (StructureInteriorLayouts.Surface surface : StructureInteriorLayouts.surfaces(id)) {
+            boolean floor = surface.kind() == 1 || surface.kind() == 2;
+            int radius = surface.kind() == 1 ? 2 : 1;
+            int height = floor ? 1 : surface.kind() >= 4 ? 3 : 5;
+            if (!intersectsDecoration(local, surface.x(), surface.y() + floorOffset, surface.z(), radius, height)) {
+                continue;
+            }
+            buildSurfaceDetail(level, box, surface, floorOffset);
+        }
+        buildExteriorLayout(level, box, id, floorOffset);
+    }
+
+    private static boolean intersectsDecoration(BoundingBox local, int x, int y, int z, int radius, int height) {
+        return x + radius >= local.minX() && x - radius <= local.maxX()
+                && y + height - 1 >= local.minY() && y <= local.maxY()
+                && z + radius >= local.minZ() && z - radius <= local.maxZ();
+    }
+
+    /** 砌体完成后恢复现存植株的同列土层；裁剪盒须同时包含土层与上方花位。 */
+    protected void restorePlantBed(WorldGenLevel level, BoundingBox box, int centerX, int soilY,
+                                   int centerZ, int radius, BlockState soil,
+                                   java.util.function.Predicate<BlockState> isPlant) {
+        BoundingBox local = localGenerationBounds(box);
+        if (soilY < local.minY() || soilY + 1 > local.maxY()) {
+            return;
+        }
+        for (int x = Math.max(centerX - radius, local.minX()); x <= Math.min(centerX + radius, local.maxX()); x++) {
+            for (int z = Math.max(centerZ - radius, local.minZ()); z <= Math.min(centerZ + radius, local.maxZ()); z++) {
+                if (isPlant.test(getBlock(level, x, soilY + 1, z, box))) {
+                    placeBlock(level, soil, x, soilY, z, box);
+                }
+            }
+        }
+    }
+
+    private void buildExteriorLayout(WorldGenLevel level, BoundingBox box, String id, int floorOffset) {
+        StructureExteriorLayouts.Layout layout = StructureExteriorLayouts.layout(id);
+        if (layout == null) {
+            return;
+        }
+        BoundingBox local = localGenerationBounds(box);
+        StructureInteriorLayouts.Palette palette = StructureInteriorLayouts.palette(layout.theme());
+        BlockState crest = (layout.theme() == 0
+                ? ModBlocks.WIND_ETCHED_BRICK_SLAB.get().defaultBlockState() : palette.slab())
+                .setValue(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM);
+        BlockState eave = crest.setValue(BlockStateProperties.SLAB_TYPE, SlabType.TOP);
+        BlockState bracket = (layout.theme() == 0
+                ? ModBlocks.WIND_ETCHED_BRICK_STAIRS.get().defaultBlockState() : palette.stairs())
+                .setValue(BlockStateProperties.HALF, Half.TOP);
+        BlockState[] materials = {palette.stone(), palette.trim(), palette.inset(), layout.glazing(),
+                palette.lamp(), palette.slab(), palette.wood(), palette.inset(),
+                palette.stairs().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST),
+                palette.stairs().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST)};
+        // 仅在当前调用首次用到时解析；未进入裁剪范围的槽位不能提前读取注册项。
+        BlockState surfaceBase = null, surfaceRelief = null, composition = null;
+        for (StructureExteriorLayouts.Layer layer : layout.layers()) {
+            int y = layer.y() + floorOffset;
+            if (y < local.minY() || y > local.maxY()) {
+                continue;
+            }
+            int first = layer.firstZ(local.minZ());
+            int after = layer.afterZ(local.maxZ());
+            for (int index = first; index < after; index++) {
+                StructureExteriorLayouts.Course course = layer.courses().get(index);
+                int fromX = Math.max(course.x(), local.minX());
+                int toX = Math.min(course.x() + course.length() - 1, local.maxX());
+                if (fromX > toX) {
+                    continue;
+                }
+                // 开口仅清普通砌体，仍走装饰白名单保护封印与机关。
+                BlockState state = switch (course.slot()) {
+                    case 20 -> Blocks.AIR.defaultBlockState();
+                    case 22 -> crest;
+                    case 23 -> eave;
+                    case 28 -> palette.trim();
+                    case 24 -> orientStairs(bracket, Direction.NORTH, Half.TOP);
+                    case 25 -> orientStairs(bracket, Direction.EAST, Half.TOP);
+                    case 26 -> orientStairs(bracket, Direction.SOUTH, Half.TOP);
+                    case 27 -> orientStairs(bracket, Direction.WEST, Half.TOP);
+                    case 30 -> {
+                        if (surfaceBase == null) surfaceBase = StructureExteriorLayouts.surfaceState(layout.theme(), 30);
+                        yield surfaceBase;
+                    }
+                    case 31 -> {
+                        if (surfaceRelief == null) surfaceRelief = StructureExteriorLayouts.surfaceState(layout.theme(), 31);
+                        yield surfaceRelief;
+                    }
+                    case 40, 50 -> {
+                        if (composition == null) composition = StructureExteriorLayouts.compositionState(layout.theme());
+                        yield composition;
+                    }
+                    default -> materials[course.slot() % 10];
+                };
+                if (course.slot() == 6 && state.hasProperty(BlockStateProperties.AXIS)) {
+                    state = state.setValue(BlockStateProperties.AXIS, course.axis());
+                }
+                boolean fillSpace = course.slot() < 10 || course.slot() == 22 || course.slot() == 23
+                        || course.slot() == 28 || course.slot() == 40
+                        || (course.slot() >= 24 && course.slot() <= 27);
+                for (int x = fromX; x <= toX; x++) {
+                    if (course.slot() == 21) {
+                        BlockState existing = getBlock(level, x, y, course.z(), box);
+                        if (existing.is(ModBlocks.GRAVITY_SHALE_BRICK_STAIRS.get())
+                                || existing.is(ModBlocks.GRAVITY_SHALE_BRICK_WALL.get())
+                                || existing.is(ModBlocks.WIND_ETCHED_BRICK_WALL.get())
+                                || existing.is(ModBlocks.TIDEWOOD_PLANKS.get())) {
+                            placeKnownCorniceBlock(level, box, Blocks.AIR.defaultBlockState(), existing,
+                                    x, y, course.z());
+                        }
+                        continue;
+                    }
+                    placeExteriorBlock(level, box, x, y, course.z(), state, fillSpace);
+                }
+            }
+        }
+        repairSlabContacts(level, box, id, floorOffset);
+        repairWallEnds(level, box, id, floorOffset);
+    }
+
+    private void placeExteriorBlock(WorldGenLevel level, BoundingBox box, int x, int y, int z,
+                                    BlockState state, boolean fillSpace) {
+        BlockState existing = getBlock(level, x, y, z, box);
+        if (StructureInteriorLayouts.decoratable(existing)) {
+            placeKnownCorniceBlock(level, box, state, existing, x, y, z);
+            if (!fillSpace) {
+                return;
+            }
+            // 尝试写入后须重新读取，拒写或写入回调可能改变填空判定。
+            existing = getBlock(level, x, y, z, box);
+        }
+        if (fillSpace && (existing.isAir() || existing.is(Blocks.WATER))) {
+            placeKnownCorniceBlock(level, box, state, existing, x, y, z);
+        }
+    }
+
+    private void repairWallEnds(WorldGenLevel level, BoundingBox box, String id, int floorOffset) {
+        BoundingBox local = localGenerationBounds(box);
+        for (StructureExteriorLayouts.WallEnd end : StructureExteriorLayouts.wallEnds(id)) {
+            int y = end.y() + floorOffset;
+            if (!local.isInside(end.x(), y, end.z())) {
+                continue;
+            }
+            BlockState existing = getBlock(level, end.x(), y, end.z(), box);
+            if (existing.is(end.wall())) {
+                Direction facing = end.facing();
+                // 开口端头由局部配方固定；只读取目标墙段，不依赖邻区块是否已生成。
+                BlockState state = connectWall(existing, facing == Direction.NORTH, facing == Direction.EAST,
+                        facing == Direction.SOUTH, facing == Direction.WEST, true);
+                placeKnownCorniceBlock(level, box, state, existing, end.x(), y, end.z());
+            }
+        }
+    }
+
+    private void repairSlabContacts(WorldGenLevel level, BoundingBox box, String id, int floorOffset) {
+        BoundingBox local = localGenerationBounds(box);
+        // 只转换固定登记的原台阶，机关和其他构件不能被接触修整覆盖。
+        for (StructureExteriorLayouts.SlabContact contact : StructureExteriorLayouts.slabContacts(id)) {
+            int y = contact.y() + floorOffset;
+            if (!local.isInside(contact.x(), y, contact.z())) {
+                continue;
+            }
+            BlockState existing = getBlock(level, contact.x(), y, contact.z(), box);
+            if (existing.is(contact.slab())) {
+                placeKnownCorniceBlock(level, box, contact.state(), existing, contact.x(), y, contact.z());
+            }
+        }
+    }
+
+    protected final BoundingBox localGenerationBounds(BoundingBox box) {
+        int originX = getWorldX(0, 0);
+        int originY = getWorldY(0);
+        int originZ = getWorldZ(0, 0);
+        int xx = getWorldX(1, 0) - originX;
+        int xz = getWorldZ(1, 0) - originZ;
+        int zx = getWorldX(0, 1) - originX;
+        int zz = getWorldZ(0, 1) - originZ;
+        // 原版局部轴为正交单位轴；反投影后取两端，兼容旋转、镜像与空朝向。
+        int ax = (box.minX() - originX) * xx + (box.minZ() - originZ) * xz;
+        int bx = (box.maxX() - originX) * xx + (box.maxZ() - originZ) * xz;
+        int az = (box.minX() - originX) * zx + (box.minZ() - originZ) * zz;
+        int bz = (box.maxX() - originX) * zx + (box.maxZ() - originZ) * zz;
+        return new BoundingBox(Math.min(ax, bx), box.minY() - originY, Math.min(az, bz),
+                Math.max(ax, bx), box.maxY() - originY, Math.max(az, bz));
+    }
+
+    private void buildInteriorBay(WorldGenLevel level, BoundingBox box, StructureInteriorLayouts.Bay bay) {
+        StructureInteriorLayouts.Palette palette = StructureInteriorLayouts.palette(bay.theme());
+        BlockState wood = palette.wood();
+        BlockState shelf = palette.slab().setValue(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM);
+        BlockState worktop = palette.slab().setValue(BlockStateProperties.SLAB_TYPE, SlabType.TOP);
+        // 楼梯高半块是椅背，朝向过道；承灯托架独立朝向墙面。
+        BlockState seat = orientStairs(palette.stairs(), bay.facing(), Half.BOTTOM);
+        BlockState bracket = orientStairs(palette.stairs(), bay.facing().getOpposite(), Half.TOP);
+        BlockState lamp = palette.lamp();
+        BlockState metal = palette.trim();
+        BlockState crate = Blocks.BARREL.defaultBlockState()
+                .setValue(BlockStateProperties.FACING, localFurnitureFacing(bay.facing()));
+        switch (bay.role()) {
+            case 0 -> {
+                for (int side : new int[]{-1, 1}) {
+                    interiorBlock(level, box, bay, side, 1, 0, Blocks.BOOKSHELF.defaultBlockState());
+                    interiorBlock(level, box, bay, side, 2, 0, Blocks.BOOKSHELF.defaultBlockState());
+                    interiorBlock(level, box, bay, side, 3, 0, shelf);
+                }
+                interiorBlock(level, box, bay, 0, 1, 0, Blocks.LECTERN.defaultBlockState()
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(bay.facing())));
+                interiorBlock(level, box, bay, -1, 1, 1, seat);
+                if (!bay.openFront()) {
+                    interiorBlock(level, box, bay, 0, 1, 1, worktop);
+                }
+                interiorBlock(level, box, bay, 1, 1, 1, Blocks.CARTOGRAPHY_TABLE.defaultBlockState());
+                interiorBlock(level, box, bay, 1, 2, 1, lamp);
+                interiorBlock(level, box, bay, 1, 3, 1, shelf);
+            }
+            case 1 -> {
+                interiorBlock(level, box, bay, -1, 1, 0, bracket);
+                interiorBlock(level, box, bay, 0, 1, 0, Blocks.WHITE_WOOL.defaultBlockState());
+                interiorBlock(level, box, bay, 0, 1, 1, palette.cloth());
+                interiorBlock(level, box, bay, 1, 1, 0, crate);
+                interiorBlock(level, box, bay, 1, 2, 0, lamp);
+                interiorBlock(level, box, bay, -1, 1, 1, Blocks.CRAFTING_TABLE.defaultBlockState());
+                interiorBlock(level, box, bay, -1, 2, 1, palette.plant());
+            }
+            case 2 -> {
+                interiorBlock(level, box, bay, 0, 1, 0, Blocks.CARTOGRAPHY_TABLE.defaultBlockState());
+                interiorBlock(level, box, bay, -1, 1, 0, crate);
+                interiorBlock(level, box, bay, 1, 1, 0, wood);
+                interiorBlock(level, box, bay, 1, 2, 0, bracket);
+                interiorBlock(level, box, bay, 1, 3, 0, lamp);
+                interiorBlock(level, box, bay, -1, 2, 0, Blocks.DECORATED_POT.defaultBlockState());
+                interiorBlock(level, box, bay, 0, 1, 1, seat);
+                if (!bay.openFront()) {
+                    interiorBlock(level, box, bay, -1, 1, 1, shelf);
+                    interiorBlock(level, box, bay, 1, 1, 1, shelf);
+                }
+            }
+            case 3 -> {
+                interiorBlock(level, box, bay, 0, 1, 0, Blocks.SMITHING_TABLE.defaultBlockState());
+                interiorBlock(level, box, bay, 1, 1, 0, Blocks.STONECUTTER.defaultBlockState()
+                        .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(bay.facing())));
+                interiorBlock(level, box, bay, -1, 1, 0, crate);
+                interiorBlock(level, box, bay, -1, 2, 0, bracket);
+                interiorBlock(level, box, bay, -1, 3, 0, lamp);
+                interiorBlock(level, box, bay, 1, 1, 1, Blocks.CAULDRON.defaultBlockState());
+                interiorBlock(level, box, bay, -1, 1, 1, seat);
+            }
+            case 4 -> {
+                for (int side : new int[]{-1, 1}) {
+                    interiorBlock(level, box, bay, side, 1, 0, bracket);
+                    interiorBlock(level, box, bay, side, 2, 0, Blocks.DECORATED_POT.defaultBlockState());
+                    interiorBlock(level, box, bay, side, 1, 1, seat);
+                }
+                interiorBlock(level, box, bay, 0, 1, 0, metal);
+                interiorBlock(level, box, bay, 0, 2, 0, lamp);
+                interiorBlock(level, box, bay, 0, 3, 0, shelf);
+            }
+            case 5 -> {
+                for (int side = -1; side <= 1; side++) {
+                    interiorBlock(level, box, bay, side, 1, 0, side == 0
+                            ? Blocks.MOSS_BLOCK.defaultBlockState() : wood);
+                    interiorBlock(level, box, bay, side, 2, 0, side == 0
+                            ? palette.plant() : Blocks.POTTED_FERN.defaultBlockState());
+                }
+                interiorBlock(level, box, bay, -1, 1, 1, crate);
+                interiorBlock(level, box, bay, -1, 2, 1, lamp);
+                interiorBlock(level, box, bay, -1, 3, 1, shelf);
+                if (!bay.openFront()) {
+                    interiorBlock(level, box, bay, 0, 1, 1, worktop);
+                }
+                interiorBlock(level, box, bay, 1, 1, 1, Blocks.CAULDRON.defaultBlockState());
+            }
+            case 6 -> {
+                for (int side : new int[]{-1, 1}) {
+                    interiorBlock(level, box, bay, side, 1, 0, metal);
+                    interiorBlock(level, box, bay, side, 2, 0, palette.glass());
+                    interiorBlock(level, box, bay, side, 3, 0, shelf);
+                }
+                interiorBlock(level, box, bay, 0, 1, 0, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+                interiorBlock(level, box, bay, 0, 2, 0, lamp);
+                interiorBlock(level, box, bay, 0, 3, 0, shelf);
+                interiorBlock(level, box, bay, -1, 1, 1, crate);
+                interiorBlock(level, box, bay, 1, 1, 1, bracket);
+            }
+            case 7 -> {
+                BlockState note = Blocks.NOTE_BLOCK.defaultBlockState()
+                        .setValue(BlockStateProperties.NOTEBLOCK_INSTRUMENT, bay.noteInstrument());
+                interiorBlock(level, box, bay, -1, 1, 0, note);
+                interiorBlock(level, box, bay, 0, 1, 0, wood);
+                interiorBlock(level, box, bay, 0, 2, 0, palette.inset());
+                interiorBlock(level, box, bay, 0, 3, 0, lamp);
+                interiorBlock(level, box, bay, 1, 1, 0, note);
+                interiorBlock(level, box, bay, -1, 1, 1, seat);
+                if (!bay.openFront()) {
+                    interiorBlock(level, box, bay, 0, 1, 1, shelf);
+                }
+                interiorBlock(level, box, bay, 1, 1, 1, seat);
+            }
+            case 9 -> {
+                interiorBlock(level, box, bay, -1, 0, 0, palette.inset());
+                interiorBlock(level, box, bay, 0, 0, 0, lamp);
+                interiorBlock(level, box, bay, 1, 0, 0, palette.inset());
+            }
+            default -> {
+                interiorBlock(level, box, bay, 0, 1, 0, bracket);
+                interiorBlock(level, box, bay, 0, 2, 0, lamp);
+                interiorBlock(level, box, bay, 0, 3, 0, shelf);
+            }
+        }
+    }
+
+    private void buildSurfaceDetail(WorldGenLevel level, BoundingBox box,
+                                     StructureInteriorLayouts.Surface surface, int floorOffset) {
+        StructureInteriorLayouts.Palette palette = StructureInteriorLayouts.palette(surface.theme());
+        String pattern = StructureInteriorLayouts.surfacePattern(surface.theme(), surface.kind());
+        Direction across = surface.facing().getCounterClockWise();
+        int baseY = surface.y() + floorOffset;
+        if (surface.kind() == 1 || surface.kind() == 2) {
+            int radius = surface.kind() == 1 ? 2 : 1;
+            for (int side = -radius; side <= radius; side++) {
+                for (int forward = -radius; forward <= radius; forward++) {
+                    int index = (forward + radius) * (radius * 2 + 1) + side + radius;
+                    BlockState state = StructureInteriorLayouts.surfaceMaterial(palette, pattern.charAt(index));
+                    int x = surface.x() + side * across.getStepX() + forward * surface.facing().getStepX();
+                    int z = surface.z() + side * across.getStepZ() + forward * surface.facing().getStepZ();
+                    surfaceBlock(level, box, x, baseY, z, state, true);
+                }
+            }
+            return;
+        }
+        int halfWidth = surface.kind() == 4 ? 0 : 1;
+        int height = surface.kind() >= 4 ? 3 : 5;
+        boolean hanging = surface.kind() == 5;
+        for (int side = -halfWidth; side <= halfWidth; side++) {
+            for (int rise = 0; rise < height; rise++) {
+                int index = rise * (halfWidth * 2 + 1) + side + halfWidth;
+                BlockState state = StructureInteriorLayouts.surfaceMaterial(palette, pattern.charAt(index));
+                int front = hanging ? 1 : 0;
+                int x = surface.x() + side * across.getStepX() + front * surface.facing().getStepX();
+                int z = surface.z() + side * across.getStepZ() + front * surface.facing().getStepZ();
+                surfaceBlock(level, box, x, baseY + rise, z, state, !hanging);
+            }
+        }
+        if (hanging) {
+            return;
+        }
+        for (int side = -halfWidth; side <= halfWidth; side++) {
+            for (int rise = 1; rise < height; rise++) {
+                if (halfWidth > 0 && rise == height / 2) {
+                    continue;
+                }
+                if ((halfWidth == 0 || Math.abs(side) != halfWidth) && rise != height - 1) {
+                    continue;
+                }
+                BlockState state = rise == height - 1
+                        ? palette.slab().setValue(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM)
+                        : StructureInteriorLayouts.surfaceMaterial(palette,
+                                StructureInteriorLayouts.surfaceBrace(surface.theme()));
+                int x = surface.x() + side * across.getStepX() + surface.facing().getStepX();
+                int z = surface.z() + side * across.getStepZ() + surface.facing().getStepZ();
+                surfaceBlock(level, box, x, baseY + rise, z, state, false);
+            }
+        }
+    }
+
+    private void surfaceBlock(WorldGenLevel level, BoundingBox box, int x, int y, int z,
+                              BlockState state, boolean replaceMasonry) {
+        BlockState existing = getBlock(level, x, y, z, box);
+        // 镶嵌只替换普通建材白名单，封印壳、机关与矿物不属于装饰基底。
+        if (replaceMasonry ? StructureInteriorLayouts.decoratable(existing)
+                : existing.isAir() || existing.is(Blocks.WATER)) {
+            placeKnownCorniceBlock(level, box, state, existing, x, y, z);
+        }
+    }
+
+    private void interiorBlock(WorldGenLevel level, BoundingBox box, StructureInteriorLayouts.Bay bay,
+                               int side, int height, int forward, BlockState state) {
+        Direction across = bay.facing().getCounterClockWise();
+        int x = bay.x() + side * across.getStepX() + forward * bay.facing().getStepX();
+        int z = bay.z() + side * across.getStepZ() + forward * bay.facing().getStepZ();
+        int y = bay.y() + height;
+        // 每格只读取当前生成区块；固定局部布局不依赖相邻区块的生成顺序。
+        BlockState existing = getBlock(level, x, y, z, box);
+        if (existing.isAir() || existing.is(Blocks.WATER)
+                || (height == 0 && !existing.hasBlockEntity())) {
+            placeKnownCorniceBlock(level, box, state, existing, x, y, z);
+        }
+    }
+
+    /** 在建筑与机关放置完毕后调用;只延伸当前区块中已有的实心地坪,悬空奇观不调用。 */
+    protected void anchorGroundColumns(WorldGenLevel level, BoundingBox box, int floorY,
+                                        BlockState foundation) {
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        int baseY = this.getWorldY(floorY);
+        if (baseY < box.minY() || baseY > box.maxY()) {
+            return;
+        }
+        int bottom = Math.max(level.getMinBuildHeight() + 1, baseY - 96);
+        int minX = Math.max(box.minX(), boundingBox.minX());
+        int maxX = Math.min(box.maxX(), boundingBox.maxX());
+        int minZ = Math.max(box.minZ(), boundingBox.minZ());
+        int maxZ = Math.min(box.maxZ(), boundingBox.maxZ());
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                cursor.set(x, baseY, z);
+                BlockState floor = level.getBlockState(cursor);
+                if (!floor.isCollisionShapeFullBlock(level, cursor) || floor.hasBlockEntity()
+                        || floor.is(Blocks.BEDROCK)) {
+                    continue;
+                }
+                boolean pier = Math.floorMod(x - boundingBox.minX(), 6) < 2
+                        && Math.floorMod(z - boundingBox.minZ(), 6) < 2;
+                int endY = pier ? bottom : Math.max(bottom, baseY - 4);
+                for (int y = baseY - 1; y >= endY && y >= box.minY(); y--) {
+                    cursor.set(x, y, z);
+                    BlockState existing = level.getBlockState(cursor);
+                    if (existing.is(Blocks.BEDROCK) || existing.hasBlockEntity()
+                            || existing.isCollisionShapeFullBlock(level, cursor)) {
+                        break;
+                    }
+                    level.setBlock(cursor, foundation, 2);
+                }
+            }
+        }
+    }
+
+    /** 两格宽方形旋梯,每两步升一格;必须晚于楼板生成,以保留三格头部净空。 */
+    protected void buildWalkableSpiral(WorldGenLevel level, BoundingBox box,
+                                       int centerX, int baseY, int centerZ, int topY, int radius,
+                                       BlockState floor, BlockState stairs) {
+        requireAscending("buildWalkableSpiral", "baseY", baseY, "topY", topY);
+        if (radius < 2) {
+            throw new IllegalArgumentException("Spiral radius must be at least 2 blocks");
+        }
+        BoundingBox local = localGenerationBounds(box);
+        int sideLength = radius * 2;
+        for (int step = 0; step <= (topY - baseY) * 2 + 1; step++) {
+            int side = (step / sideLength) % 4;
+            int along = step % sideLength;
+            int x = side == 0 ? -radius + along : side == 1 ? radius
+                    : side == 2 ? radius - along : -radius;
+            int z = side == 0 ? -radius : side == 1 ? -radius + along
+                    : side == 2 ? radius : radius - along;
+            Direction direction = switch (side) {
+                case 0 -> Direction.EAST;
+                case 1 -> Direction.SOUTH;
+                case 2 -> Direction.WEST;
+                default -> Direction.NORTH;
+            };
+            Direction outward = direction.getCounterClockWise();
+            int y = baseY + step / 2;
+            // 踏面低于裁剪盒时，其上方三格净空仍可能伸入本次生成范围。
+            if (y > local.maxY() || y + 3 < local.minY()) {
+                continue;
+            }
+            for (int width = 0; width <= 1; width++) {
+                int px = centerX + x + outward.getStepX() * width;
+                int pz = centerZ + z + outward.getStepZ() * width;
+                if (px < local.minX() || px > local.maxX() || pz < local.minZ() || pz > local.maxZ()) {
+                    continue;
+                }
+                for (int head = Math.max(1, local.minY() - y); head <= Math.min(3, local.maxY() - y); head++) {
+                    placeCorniceBlock(level, box, Blocks.AIR.defaultBlockState(), px, y + head, pz);
+                }
+                if (y >= local.minY()) {
+                    placeCorniceBlock(level, box, step % 2 == 0
+                            ? orientStairs(stairs, direction, Half.BOTTOM) : floor,
+                            px, y, pz);
+                }
+            }
+        }
     }
 
     /** 分支奖励台(明奖)。引用掉落表,子类不要各自复制一份,否则奖励口径分叉。 */
@@ -123,8 +694,12 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
 
     private void sitePlatform(WorldGenLevel level, BoundingBox box, int x0, int y, int z0,
                               int size, BlockState state) {
-        for (int x = x0; x < x0 + size; x++) {
-            for (int z = z0; z < z0 + size; z++) {
+        BoundingBox local = localGenerationBounds(box);
+        if (y < local.minY() || y > local.maxY()) {
+            return;
+        }
+        for (int x = Math.max(x0, local.minX()); x <= Math.min(x0 + size - 1, local.maxX()); x++) {
+            for (int z = Math.max(z0, local.minZ()); z <= Math.min(z0 + size - 1, local.maxZ()); z++) {
                 this.placeBlock(level, state, x, y, z, box);
             }
         }
@@ -132,7 +707,13 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
 
     private void sitePillar(WorldGenLevel level, BoundingBox box, int x, int y, int z,
                             int height, BlockState state) {
-        for (int i = 0; i < height; i++) {
+        int worldX = getWorldX(x, z);
+        int worldZ = getWorldZ(x, z);
+        if (worldX < box.minX() || worldX > box.maxX() || worldZ < box.minZ() || worldZ > box.maxZ()) {
+            return;
+        }
+        int worldY = getWorldY(y);
+        for (int i = Math.max(0, box.minY() - worldY); i <= Math.min(height - 1, box.maxY() - worldY); i++) {
             this.placeBlock(level, state, x, y + i, z, box);
         }
     }
@@ -161,17 +742,24 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
     protected void buildAccessibleChest(WorldGenLevel level, RandomSource random, BoundingBox box,
                                         int x, int y, int z,
                                         net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> loot) {
+        buildAccessibleChest(level, random, box, x, y, z, loot, null);
+    }
+
+    /** 指定方向使用结构局部坐标；未指定时保持原版宝箱默认的世界北向。 */
+    protected void buildAccessibleChest(WorldGenLevel level, RandomSource random, BoundingBox box,
+                                        int x, int y, int z, ResourceKey<LootTable> loot,
+                                        Direction facing) {
         BlockState floor = ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
         BlockState accent = ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState();
         int floorY = y - 1;
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
-                this.placeBlock(level, floor, x + dx, floorY, z + dz, box);
+                placeCorniceBlock(level, box, floor, x + dx, floorY, z + dz);
             }
         }
-        this.placeBlock(level, accent, x, floorY, z - 2, box);
+        placeCorniceBlock(level, box, accent, x, floorY, z - 2);
         clearChestPocket(level, box, x, y, z);
-        this.createChest(level, box, random, x, y, z, loot);
+        this.createChest(level, box, random, x, y, z, loot, facing);
     }
 
     protected void buildSteppedDisk(WorldGenLevel level, BoundingBox box,
@@ -195,7 +783,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             int x = centerX + (int) Math.round(Math.cos(angle) * radius);
             int z = centerZ + (int) Math.round(Math.sin(angle) * radius);
             architecturalPillar(level, box, x, baseY, z, height, pillar);
-            this.placeBlock(level, capital, x, baseY + height, z, box);
+            placeCorniceBlock(level, box, capital, x, baseY + height, z);
         }
         architecturalRing(level, box, centerX, baseY + height, centerZ, radius, ring);
     }
@@ -285,68 +873,80 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int maxZ = centerZ + halfDepth;
         int aisleX = Math.max(3, halfWidth - 4);
         int vaultRise = Math.max(3, halfWidth / 2);
+        BoundingBox local = localGenerationBounds(box);
+        int clipMinX = Math.max(minX, local.minX());
+        int clipMaxX = Math.min(maxX, local.maxX());
+        int clipMinZ = Math.max(minZ, local.minZ());
+        int clipMaxZ = Math.min(maxZ, local.maxZ());
 
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                BlockState state = (x == centerX || Math.floorMod(z - minZ, baySpacing) == 0)
-                        ? rib : floor;
-                this.placeBlock(level, state, x, baseY - 1, z, box);
+        // 零间距必须保留除零前的完整地板遍历，中心列会短路取模。
+        if (baySpacing == 0 || baseY - 1 >= local.minY() && baseY - 1 <= local.maxY()) {
+            for (int x = baySpacing == 0 ? minX : clipMinX; x <= (baySpacing == 0 ? maxX : clipMaxX); x++) {
+                for (int z = baySpacing == 0 ? minZ : clipMinZ; z <= (baySpacing == 0 ? maxZ : clipMaxZ); z++) {
+                    BlockState state = (x == centerX || Math.floorMod(z - minZ, baySpacing) == 0)
+                            ? rib : floor;
+                    placeCorniceBlock(level, box, state, x, baseY - 1, z);
+                }
             }
         }
 
-        for (int z = minZ; z <= maxZ; z++) {
+        for (int z = baySpacing == 0 ? minZ : clipMinZ; z <= (baySpacing == 0 ? maxZ : clipMaxZ); z++) {
             int bay = Math.floorMod(z - minZ, baySpacing);
             boolean buttress = bay == 0 || bay == 1 || z == maxZ;
             for (int side : new int[]{-1, 1}) {
                 int wallX = centerX + side * halfWidth;
-                for (int y = 0; y <= wallHeight; y++) {
-                    boolean plinth = y <= 2;
-                    boolean clerestory = y >= wallHeight - 1;
-                    boolean arcadeOpening = !buttress && bay >= 2 && bay <= baySpacing - 2 && y <= 4;
-                    if (!arcadeOpening && (buttress || plinth || clerestory)) {
-                        this.placeBlock(level, buttress && y % 4 == 0 ? rib : wall,
-                                wallX, baseY + y, z, box);
+                if (wallX >= local.minX() && wallX <= local.maxX()) {
+                    for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(wallHeight, local.maxY() - baseY); y++) {
+                        boolean plinth = y <= 2;
+                        boolean clerestory = y >= wallHeight - 1;
+                        boolean arcadeOpening = !buttress && bay >= 2 && bay <= baySpacing - 2 && y <= 4;
+                        if (!arcadeOpening && (buttress || plinth || clerestory)) {
+                            placeCorniceBlock(level, box, buttress && y % 4 == 0 ? rib : wall, wallX, baseY + y, z);
+                        }
                     }
                 }
                 if (buttress) {
                     architecturalPillar(level, box,
                             centerX + side * aisleX, baseY, z, wallHeight - 1, wall);
-                    this.placeBlock(level, light,
-                            centerX + side * aisleX, baseY + wallHeight, z, box);
+                    if (local.isInside(centerX + side * aisleX, baseY + wallHeight, z)) {
+                        placeCorniceBlock(level, box, light, centerX + side * aisleX, baseY + wallHeight, z);
+                    }
                 }
             }
         }
 
-        for (int z = minZ; z <= maxZ; z++) {
+        for (int z = clipMinZ; z <= clipMaxZ; z++) {
             boolean ribBay = Math.floorMod(z - minZ, baySpacing) == 0 || z == maxZ;
-            for (int dx = -halfWidth; dx <= halfWidth; dx++) {
+            for (int dx = clipMinX - centerX; dx <= clipMaxX - centerX; dx++) {
                 double normalized = dx / (double) Math.max(1, halfWidth);
                 int rise = (int) Math.round(vaultRise
                         * Math.sqrt(Math.max(0.0D, 1.0D - normalized * normalized)));
                 BlockState state = ribBay
                         ? dx == 0 || Math.abs(dx) == aisleX ? light : rib
                         : Math.abs(dx) <= 2 ? light : wall;
-                this.placeBlock(level, state,
-                        centerX + dx, baseY + wallHeight + rise, z, box);
+                if (baseY + wallHeight + rise >= local.minY() && baseY + wallHeight + rise <= local.maxY()) {
+                    placeCorniceBlock(level, box, state, centerX + dx, baseY + wallHeight + rise, z);
+                }
             }
         }
         int ridgeY = baseY + wallHeight + vaultRise;
-        for (int z = minZ; z <= maxZ; z++) {
-            this.placeBlock(level, Math.floorMod(z - minZ, baySpacing) == 0 ? light : rib,
-                    centerX, ridgeY, z, box);
+        if (centerX >= local.minX() && centerX <= local.maxX() && ridgeY >= local.minY() && ridgeY <= local.maxY()) {
+            for (int z = clipMinZ; z <= clipMaxZ; z++) {
+                placeCorniceBlock(level, box, Math.floorMod(z - minZ, baySpacing) == 0 ? light : rib, centerX, ridgeY, z);
+            }
         }
 
         for (int endZ : new int[]{minZ, maxZ}) {
-            for (int dx = -halfWidth; dx <= halfWidth; dx++) {
+            if (endZ < local.minZ() || endZ > local.maxZ()) continue;
+            for (int dx = clipMinX - centerX; dx <= clipMaxX - centerX; dx++) {
                 int gableTop = wallHeight + Math.max(0,
                         (int) Math.round(vaultRise * (1.0D - Math.abs(dx) / (double) halfWidth)));
-                for (int y = 0; y <= gableTop; y++) {
+                for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(gableTop, local.maxY() - baseY); y++) {
                     boolean doorway = Math.abs(dx) <= 2 && y <= 4;
                     boolean roseWindow = Math.abs(dx) <= 2
                             && y >= wallHeight - 2 && y <= wallHeight + 1;
                     if (!doorway) {
-                        this.placeBlock(level, roseWindow ? light : y % 5 == 0 ? rib : wall,
-                                centerX + dx, baseY + y, endZ, box);
+                        placeCorniceBlock(level, box, roseWindow ? light : y % 5 == 0 ? rib : wall, centerX + dx, baseY + y, endZ);
                     }
                 }
             }
@@ -360,12 +960,13 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                                         BlockState body, BlockState trim, BlockState light) {
         requireAscending("buildTwinTowerFacade", "towerRadius", towerRadius,
                 "towerOffset", towerOffset);
+        BoundingBox local = localGenerationBounds(box);
         for (int side : new int[]{-1, 1}) {
             int towerX = centerX + side * towerOffset;
-            for (int y = 0; y <= towerHeight; y++) {
+            for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(towerHeight, local.maxY() - baseY); y++) {
                 int radius = y >= towerHeight * 2 / 3 ? Math.max(2, towerRadius - 1) : towerRadius;
-                for (int dx = -radius; dx <= radius; dx++) {
-                    for (int dz = -radius; dz <= radius; dz++) {
+                for (int dx = Math.max(-radius, local.minX() - towerX); dx <= Math.min(radius, local.maxX() - towerX); dx++) {
+                    for (int dz = Math.max(-radius, local.minZ() - facadeZ); dz <= Math.min(radius, local.maxZ() - facadeZ); dz++) {
                         if (Math.abs(dx) == radius || Math.abs(dz) == radius) {
                             BlockState state = y % 5 == 0 ? trim : body;
                             this.placeBlock(level, state, towerX + dx, baseY + y, facadeZ + dz, box);
@@ -374,27 +975,33 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                 }
             }
             int crownY = baseY + towerHeight + 1;
-            for (int dx = -towerRadius; dx <= towerRadius; dx++) {
-                for (int dz = -towerRadius; dz <= towerRadius; dz++) {
-                    if (Math.abs(dx) == towerRadius || Math.abs(dz) == towerRadius) {
-                        this.placeBlock(level, (dx + dz) % 2 == 0 ? trim : body,
-                                towerX + dx, crownY, facadeZ + dz, box);
+            if (crownY >= local.minY() && crownY <= local.maxY()) {
+                for (int dx = Math.max(-towerRadius, local.minX() - towerX); dx <= Math.min(towerRadius, local.maxX() - towerX); dx++) {
+                    for (int dz = Math.max(-towerRadius, local.minZ() - facadeZ); dz <= Math.min(towerRadius, local.maxZ() - facadeZ); dz++) {
+                        if (Math.abs(dx) == towerRadius || Math.abs(dz) == towerRadius) {
+                            this.placeBlock(level, (dx + dz) % 2 == 0 ? trim : body,
+                                    towerX + dx, crownY, facadeZ + dz, box);
+                        }
                     }
                 }
             }
-            this.placeBlock(level, light, towerX, crownY + 1, facadeZ, box);
+            if (local.isInside(towerX, crownY + 1, facadeZ)) {
+                this.placeBlock(level, light, towerX, crownY + 1, facadeZ, box);
+            }
         }
 
         int facadeHeight = Math.max(8, towerHeight * 2 / 3);
-        for (int dx = -towerOffset + towerRadius; dx <= towerOffset - towerRadius; dx++) {
-            int gable = Math.max(0, (towerOffset - Math.abs(dx)) / 3);
-            for (int y = 0; y <= facadeHeight + gable; y++) {
-                boolean mainDoor = Math.abs(dx) <= 3 && y <= 5;
-                boolean roseWindow = Math.abs(dx) <= 2
-                        && y >= facadeHeight - 2 && y <= facadeHeight + 1;
-                if (!mainDoor) {
-                    this.placeBlock(level, roseWindow ? light : y % 5 == 0 ? trim : body,
-                            centerX + dx, baseY + y, facadeZ, box);
+        if (facadeZ >= local.minZ() && facadeZ <= local.maxZ()) {
+            for (int dx = Math.max(-towerOffset + towerRadius, local.minX() - centerX); dx <= Math.min(towerOffset - towerRadius, local.maxX() - centerX); dx++) {
+                int gable = Math.max(0, (towerOffset - Math.abs(dx)) / 3);
+                for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(facadeHeight + gable, local.maxY() - baseY); y++) {
+                    boolean mainDoor = Math.abs(dx) <= 3 && y <= 5;
+                    boolean roseWindow = Math.abs(dx) <= 2
+                            && y >= facadeHeight - 2 && y <= facadeHeight + 1;
+                    if (!mainDoor) {
+                        this.placeBlock(level, roseWindow ? light : y % 5 == 0 ? trim : body,
+                                centerX + dx, baseY + y, facadeZ, box);
+                    }
                 }
             }
         }
@@ -414,31 +1021,51 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int maxX = centerX + halfWidth;
         int minZ = centerZ - halfDepth;
         int maxZ = centerZ + halfDepth;
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                this.placeBlock(level, (x == centerX || z == centerZ) ? beam : floor,
-                        x, baseY - 1, z, box);
+        BoundingBox local = localGenerationBounds(box);
+        int clipMinX = Math.max(minX, local.minX());
+        int clipMaxX = Math.min(maxX, local.maxX());
+        int clipMinZ = Math.max(minZ, local.minZ());
+        int clipMaxZ = Math.min(maxZ, local.maxZ());
+        boolean northInside = minZ >= local.minZ() && minZ <= local.maxZ();
+        boolean southInside = maxZ >= local.minZ() && maxZ <= local.maxZ();
+        boolean westInside = minX >= local.minX() && minX <= local.maxX();
+        boolean eastInside = maxX >= local.minX() && maxX <= local.maxX();
+        boolean capInside = baseY + height >= local.minY() && baseY + height <= local.maxY();
+        if (baseY - 1 >= local.minY() && baseY - 1 <= local.maxY()) {
+            for (int x = clipMinX; x <= clipMaxX; x++) {
+                for (int z = clipMinZ; z <= clipMaxZ; z++) {
+                    this.placeBlock(level, (x == centerX || z == centerZ) ? beam : floor,
+                            x, baseY - 1, z, box);
+                }
             }
         }
-        for (int x = minX; x <= maxX; x += spacing) {
-            architecturalPillar(level, box, x, baseY, minZ, height, pillar);
-            architecturalPillar(level, box, x, baseY, maxZ, height, pillar);
-            this.placeBlock(level, light, x, baseY + height, minZ, box);
-            this.placeBlock(level, light, x, baseY + height, maxZ, box);
+        int firstX = spacing > 0 ? clipMinX + Math.floorMod(minX - clipMinX, spacing) : minX;
+        for (int x = firstX; x <= (spacing > 0 ? clipMaxX : maxX); x += spacing) {
+            if (northInside) architecturalPillar(level, box, x, baseY, minZ, height, pillar);
+            if (southInside) architecturalPillar(level, box, x, baseY, maxZ, height, pillar);
+            if (capInside) {
+                if (northInside) this.placeBlock(level, light, x, baseY + height, minZ, box);
+                if (southInside) this.placeBlock(level, light, x, baseY + height, maxZ, box);
+            }
         }
-        for (int z = minZ; z <= maxZ; z += spacing) {
-            architecturalPillar(level, box, minX, baseY, z, height, pillar);
-            architecturalPillar(level, box, maxX, baseY, z, height, pillar);
-            this.placeBlock(level, light, minX, baseY + height, z, box);
-            this.placeBlock(level, light, maxX, baseY + height, z, box);
+        int firstZ = spacing > 0 ? clipMinZ + Math.floorMod(minZ - clipMinZ, spacing) : minZ;
+        for (int z = firstZ; z <= (spacing > 0 ? clipMaxZ : maxZ); z += spacing) {
+            if (westInside) architecturalPillar(level, box, minX, baseY, z, height, pillar);
+            if (eastInside) architecturalPillar(level, box, maxX, baseY, z, height, pillar);
+            if (capInside) {
+                if (westInside) this.placeBlock(level, light, minX, baseY + height, z, box);
+                if (eastInside) this.placeBlock(level, light, maxX, baseY + height, z, box);
+            }
         }
-        for (int x = minX; x <= maxX; x++) {
-            this.placeBlock(level, beam, x, baseY + height, minZ, box);
-            this.placeBlock(level, beam, x, baseY + height, maxZ, box);
-        }
-        for (int z = minZ; z <= maxZ; z++) {
-            this.placeBlock(level, beam, minX, baseY + height, z, box);
-            this.placeBlock(level, beam, maxX, baseY + height, z, box);
+        if (capInside) {
+            for (int x = clipMinX; x <= clipMaxX; x++) {
+                if (northInside) this.placeBlock(level, beam, x, baseY + height, minZ, box);
+                if (southInside) this.placeBlock(level, beam, x, baseY + height, maxZ, box);
+            }
+            for (int z = clipMinZ; z <= clipMaxZ; z++) {
+                if (westInside) this.placeBlock(level, beam, minX, baseY + height, z, box);
+                if (eastInside) this.placeBlock(level, beam, maxX, baseY + height, z, box);
+            }
         }
     }
 
@@ -446,11 +1073,12 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                                     int centerX, int baseY, int centerZ,
                                     int baseRadius, int height,
                                     BlockState body, BlockState band, BlockState light) {
-        for (int y = 0; y <= height; y++) {
+        BoundingBox local = localGenerationBounds(box);
+        for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(height, local.maxY() - baseY); y++) {
             int tier = y * 3 / Math.max(1, height);
             int radius = Math.max(2, baseRadius - tier);
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
+            for (int dx = Math.max(-radius, local.minX() - centerX); dx <= Math.min(radius, local.maxX() - centerX); dx++) {
+                for (int dz = Math.max(-radius, local.minZ() - centerZ); dz <= Math.min(radius, local.maxZ() - centerZ); dz++) {
                     if (Math.abs(dx) == radius || Math.abs(dz) == radius) {
                         this.placeBlock(level, y % 5 == 0 ? band : body,
                                 centerX + dx, baseY + y, centerZ + dz, box);
@@ -460,7 +1088,9 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         }
         architecturalDisk(level, box, centerX, baseY + height + 1, centerZ,
                 Math.max(2, baseRadius - 2), band);
-        this.placeBlock(level, light, centerX, baseY + height + 2, centerZ, box);
+        if (local.isInside(centerX, baseY + height + 2, centerZ)) {
+            this.placeBlock(level, light, centerX, baseY + height + 2, centerZ, box);
+        }
     }
 
     /**
@@ -479,26 +1109,32 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int minZ = centerZ - halfDepth;
         int maxZ = centerZ + halfDepth;
 
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                this.placeBlock(level, (x == centerX || z == centerZ) ? roof : floor,
-                        x, baseY - 1, z, box);
+        BoundingBox local = localGenerationBounds(box);
+        if (baseY - 1 >= local.minY() && baseY - 1 <= local.maxY()) {
+            for (int x = Math.max(minX, local.minX()); x <= Math.min(maxX, local.maxX()); x++) {
+                for (int z = Math.max(minZ, local.minZ()); z <= Math.min(maxZ, local.maxZ()); z++) {
+                    this.placeBlock(level, (x == centerX || z == centerZ) ? roof : floor,
+                            x, baseY - 1, z, box);
+                }
             }
         }
 
-        for (int z = minZ; z <= maxZ; z++) {
+        for (int z = Math.max(minZ, local.minZ()); z <= Math.min(maxZ, local.maxZ()); z++) {
             boolean frameBay = z == minZ || z == maxZ
                     || Math.floorMod(z - minZ, Math.max(2, baySpacing)) == 0;
             for (int side : new int[]{-1, 1}) {
                 int x = centerX + side * halfWidth;
-                for (int y = 0; y <= wallHeight; y++) {
+                if (x < local.minX() || x > local.maxX()) {
+                    continue;
+                }
+                for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(wallHeight, local.maxY() - baseY); y++) {
                     boolean solid = frameBay || y <= 1 || y == wallHeight;
                     if (solid) {
                         this.placeBlock(level, frameBay && y % 3 == 0 ? roof : wall,
                                 x, baseY + y, z, box);
                     }
                 }
-                if (frameBay) {
+                if (frameBay && local.isInside(x, baseY + wallHeight - 1, z)) {
                     this.placeBlock(level, light, x, baseY + wallHeight - 1, z, box);
                 }
             }
@@ -506,10 +1142,13 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
 
         int roofRise = Math.max(2, halfWidth / 2);
         for (int endZ : new int[]{minZ, maxZ}) {
-            for (int dx = -halfWidth; dx <= halfWidth; dx++) {
+            if (endZ < local.minZ() || endZ > local.maxZ()) {
+                continue;
+            }
+            for (int dx = Math.max(-halfWidth, local.minX() - centerX); dx <= Math.min(halfWidth, local.maxX() - centerX); dx++) {
                 int gable = wallHeight + Math.max(0,
                         (int) Math.round(roofRise * (1.0D - Math.abs(dx) / (double) halfWidth)));
-                for (int y = 0; y <= gable; y++) {
+                for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(gable, local.maxY() - baseY); y++) {
                     boolean doorway = Math.abs(dx) <= 1 && y <= 3;
                     boolean window = Math.abs(dx) <= 1 && y >= wallHeight - 1;
                     if (!doorway) {
@@ -520,11 +1159,19 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             }
         }
 
-        for (int dx = -halfWidth - 1; dx <= halfWidth + 1; dx++) {
+        // 零间距沿用屋面遍历，保留算术异常发生前的写入顺序。
+        int roofMinX = baySpacing == 0 ? -halfWidth - 1 : Math.max(-halfWidth - 1, local.minX() - centerX);
+        int roofMaxX = baySpacing == 0 ? halfWidth + 1 : Math.min(halfWidth + 1, local.maxX() - centerX);
+        int roofMinZ = baySpacing == 0 ? minZ - 1 : Math.max(minZ - 1, local.minZ());
+        int roofMaxZ = baySpacing == 0 ? maxZ + 1 : Math.min(maxZ + 1, local.maxZ());
+        for (int dx = roofMinX; dx <= roofMaxX; dx++) {
             int clamped = Math.min(halfWidth, Math.abs(dx));
             int rise = (halfWidth - clamped) * roofRise / Math.max(1, halfWidth);
             int roofY = baseY + wallHeight + 1 + rise;
-            for (int z = minZ - 1; z <= maxZ + 1; z++) {
+            if (baySpacing != 0 && (roofY < local.minY() || roofY > local.maxY())) {
+                continue;
+            }
+            for (int z = roofMinZ; z <= roofMaxZ; z++) {
                 BlockState state = dx == 0 && Math.floorMod(z - minZ, baySpacing) == 0
                         ? light : roof;
                 this.placeBlock(level, state, centerX + dx, roofY, z, box);
@@ -543,16 +1190,30 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                                          BlockState trim, BlockState light) {
         Direction axis = horizontal(forward);
         Direction side = axis.getClockWise();
-        for (int distance = -halfLength; distance <= halfLength; distance++) {
-            for (int lateral = -halfWidth; lateral <= halfWidth; lateral++) {
+        BoundingBox local = localGenerationBounds(box);
+        int distanceA = (local.minX() - centerX) * axis.getStepX() + (local.minZ() - centerZ) * axis.getStepZ();
+        int distanceB = (local.maxX() - centerX) * axis.getStepX() + (local.maxZ() - centerZ) * axis.getStepZ();
+        int lateralA = (local.minX() - centerX) * side.getStepX() + (local.minZ() - centerZ) * side.getStepZ();
+        int lateralB = (local.maxX() - centerX) * side.getStepX() + (local.maxZ() - centerZ) * side.getStepZ();
+        int minDistance = Math.max(-halfLength, Math.min(distanceA, distanceB));
+        int maxDistance = Math.min(halfLength, Math.max(distanceA, distanceB));
+        int minLateral = Math.max(-halfWidth, Math.min(lateralA, lateralB));
+        int maxLateral = Math.min(halfWidth, Math.max(lateralA, lateralB));
+        boolean deckInside = deckY >= local.minY() && deckY <= local.maxY();
+        boolean baseInside = deckY - 1 >= local.minY() && deckY - 1 <= local.maxY();
+        boolean railInside = deckY + 1 >= local.minY() && deckY + 1 <= local.maxY();
+        for (int distance = minDistance; distance <= maxDistance; distance++) {
+            for (int lateral = minLateral; lateral <= maxLateral; lateral++) {
                 int x = localX(centerX, axis, side, distance, lateral);
                 int z = localZ(centerZ, axis, side, distance, lateral);
-                this.placeBlock(level,
-                        lateral == 0 && Math.floorMod(distance, 5) == 0 ? trim : deck,
-                        x, deckY, z, box);
+                if (deckInside) {
+                    this.placeBlock(level,
+                            lateral == 0 && Math.floorMod(distance, 5) == 0 ? trim : deck,
+                            x, deckY, z, box);
+                }
                 if (Math.abs(lateral) == halfWidth) {
-                    this.placeBlock(level, wall, x, deckY - 1, z, box);
-                    if (Math.floorMod(distance, 3) != 1) {
+                    if (baseInside) this.placeBlock(level, wall, x, deckY - 1, z, box);
+                    if (railInside && Math.floorMod(distance, 3) != 1) {
                         this.placeBlock(level, Math.floorMod(distance, 5) == 0 ? trim : wall,
                                 x, deckY + 1, z, box);
                     }
@@ -566,7 +1227,9 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                 int x = localX(centerX, axis, side, distance, lateral);
                 int z = localZ(centerZ, axis, side, distance, lateral);
                 architecturalPillar(level, box, x, 0, z, deckY + 1, wall);
-                this.placeBlock(level, trim, x, deckY + 1, z, box);
+                if (local.isInside(x, deckY + 1, z)) {
+                    this.placeBlock(level, trim, x, deckY + 1, z, box);
+                }
             }
         }
 
@@ -583,7 +1246,9 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                     }
                 }
                 architecturalDisk(level, box, x, deckY + towerHeight, z, 2, trim);
-                this.placeBlock(level, light, x, deckY + towerHeight + 1, z, box);
+                if (local.isInside(x, deckY + towerHeight + 1, z)) {
+                    this.placeBlock(level, light, x, deckY + towerHeight + 1, z, box);
+                }
             }
             int gateX = localX(centerX, axis, side, distance, 0);
             int gateZ = localZ(centerZ, axis, side, distance, 0);
@@ -598,24 +1263,56 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                                  BlockState floor, BlockState wall,
                                  BlockState rib, BlockState light) {
         Direction side = outward.getClockWise();
-        for (int forward = 0; forward <= radius; forward++) {
+        BoundingBox local = localGenerationBounds(box);
+        int forwardA = (local.minX() - centerX) * outward.getStepX() + (local.minZ() - centerZ) * outward.getStepZ();
+        int forwardB = (local.maxX() - centerX) * outward.getStepX() + (local.maxZ() - centerZ) * outward.getStepZ();
+        int lateralA = (local.minX() - centerX) * side.getStepX() + (local.minZ() - centerZ) * side.getStepZ();
+        int lateralB = (local.maxX() - centerX) * side.getStepX() + (local.maxZ() - centerZ) * side.getStepZ();
+        int minForward = Math.max(0, Math.min(forwardA, forwardB));
+        int maxForward = Math.min(radius, Math.max(forwardA, forwardB));
+        int minLateral = Math.min(lateralA, lateralB);
+        int maxLateral = Math.max(lateralA, lateralB);
+        boolean floorInside = baseY - 1 >= local.minY() && baseY - 1 <= local.maxY();
+        for (int forward = minForward; forward <= maxForward; forward++) {
             int halfSpan = (int) Math.floor(Math.sqrt(radius * radius - forward * forward));
-            for (int lateral = -halfSpan; lateral <= halfSpan; lateral++) {
+            for (int lateral = Math.max(-halfSpan, minLateral); lateral <= Math.min(halfSpan, maxLateral); lateral++) {
                 int x = centerX + outward.getStepX() * forward + side.getStepX() * lateral;
                 int z = centerZ + outward.getStepZ() * forward + side.getStepZ() * lateral;
-                this.placeBlock(level, lateral == 0 ? rib : floor, x, baseY - 1, z, box);
+                if (floorInside) this.placeBlock(level, lateral == 0 ? rib : floor, x, baseY - 1, z, box);
                 if (Math.abs(lateral) == halfSpan) {
-                    for (int y = 0; y <= height; y++) {
+                    for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(height, local.maxY() - baseY); y++) {
                         this.placeBlock(level, y == height ? rib : wall, x, baseY + y, z, box);
                     }
                 }
             }
         }
-        for (int lateral = -radius; lateral <= radius; lateral += Math.max(3, radius / 2)) {
+        int spacing = Math.max(3, radius / 2);
+        int firstPillar = Math.max(-radius, minLateral);
+        firstPillar += Math.floorMod(-radius - firstPillar, spacing);
+        for (int lateral = firstPillar; lateral <= Math.min(radius, maxLateral); lateral += spacing) {
             int x = centerX + side.getStepX() * lateral;
             int z = centerZ + side.getStepZ() * lateral;
             architecturalPillar(level, box, x, baseY, z, height, wall);
-            this.placeBlock(level, light, x, baseY + height, z, box);
+            if (local.isInside(x, baseY + height, z)) {
+                this.placeBlock(level, light, x, baseY + height, z, box);
+            }
+        }
+    }
+
+    /** 建造前清空地板上方的局部体积；地形修整不保证山体退出建筑内部。 */
+    protected void clearStructureSpace(WorldGenLevel level, BoundingBox box, int floorY) {
+        BoundingBox local = localGenerationBounds(box);
+        int minY = Math.max(floorY + 1, local.minY());
+        int maxY = Math.min(height - 1, local.maxY());
+        BlockState air = Blocks.AIR.defaultBlockState();
+        for (int x = Math.max(0, local.minX()); x <= Math.min(width - 1, local.maxX()); x++) {
+            for (int z = Math.max(0, local.minZ()); z <= Math.min(depth - 1, local.maxZ()); z++) {
+                for (int y = minY; y <= maxY; y++) {
+                    if (!this.getBlock(level, x, y, z, box).isAir()) {
+                        this.placeBlock(level, air, x, y, z, box);
+                    }
+                }
+            }
         }
     }
 
@@ -627,15 +1324,21 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                                     int centerX, int floorY, int centerZ,
                                     int radius, int fromY, int toY) {
         BlockState air = Blocks.AIR.defaultBlockState();
+        BoundingBox local = localGenerationBounds(box);
+        int minY = Math.max(floorY + fromY, local.minY());
+        int maxY = Math.min(floorY + toY, local.maxY());
+        if (minY > maxY) {
+            return;
+        }
         int radiusSquared = radius * radius;
-        for (int x = centerX - radius; x <= centerX + radius; x++) {
-            for (int z = centerZ - radius; z <= centerZ + radius; z++) {
+        for (int x = Math.max(centerX - radius, local.minX()); x <= Math.min(centerX + radius, local.maxX()); x++) {
+            for (int z = Math.max(centerZ - radius, local.minZ()); z <= Math.min(centerZ + radius, local.maxZ()); z++) {
                 int dx = x - centerX;
                 int dz = z - centerZ;
                 if (dx * dx + dz * dz > radiusSquared) {
                     continue;
                 }
-                for (int y = floorY + fromY; y <= floorY + toY; y++) {
+                for (int y = minY; y <= maxY; y++) {
                     BlockState existing = this.getBlock(level, x, y, z, box);
                     if (existing.isAir() || isArenaFixture(existing)
                             || !existing.getFluidState().isEmpty()) {
@@ -677,11 +1380,15 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                                           int centerX, int floorY, int centerZ, int radius,
                                           BlockState outerBand, BlockState paths,
                                           BlockState focus) {
+        BoundingBox local = localGenerationBounds(box);
+        if (floorY < local.minY() || floorY > local.maxY()) {
+            return;
+        }
         int outerSquared = radius * radius;
         int innerRadius = Math.max(3, radius / 3);
         int middleRadius = Math.max(innerRadius + 2, radius * 2 / 3);
-        for (int x = centerX - radius; x <= centerX + radius; x++) {
-            for (int z = centerZ - radius; z <= centerZ + radius; z++) {
+        for (int x = Math.max(centerX - radius, local.minX()); x <= Math.min(centerX + radius, local.maxX()); x++) {
+            for (int z = Math.max(centerZ - radius, local.minZ()); z <= Math.min(centerZ + radius, local.maxZ()); z++) {
                 int dx = x - centerX;
                 int dz = z - centerZ;
                 int distanceSquared = dx * dx + dz * dz;
@@ -702,7 +1409,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
 
                 BlockState existing = this.getBlock(level, x, floorY, z, box);
                 if (existing.isAir() || !existing.getFluidState().isEmpty()
-                        || existing.is(ModBlocks.MINIBOSS_SPAWNER.get())) {
+                        || isArenaFixture(existing) || existing.hasBlockEntity()) {
                     continue;
                 }
                 BlockState state = innerRing ? focus
@@ -753,10 +1460,11 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                                      BlockState floor, BlockState drum,
                                      BlockState shell, BlockState light) {
         int rise = Math.max(3, radius * 2 / 3);
+        BoundingBox local = localGenerationBounds(box);
         architecturalDisk(level, box, centerX, baseY - 1, centerZ, radius, floor);
         architecturalRing(level, box, centerX, baseY - 1, centerZ, radius, drum);
 
-        for (int y = 0; y <= drumHeight; y++) {
+        for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(drumHeight, local.maxY() - baseY); y++) {
             for (int angleStep = 0; angleStep < 360; angleStep++) {
                 double angle = Math.toRadians(angleStep);
                 int x = centerX + (int) Math.round(Math.cos(angle) * radius);
@@ -767,12 +1475,14 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                 if (doorway) {
                     continue;
                 }
-                this.placeBlock(level, y % 4 == 0 ? drum : shell, x, baseY + y, z, box);
+                if (local.isInside(x, baseY + y, z)) {
+                    this.placeBlock(level, y % 4 == 0 ? drum : shell, x, baseY + y, z, box);
+                }
             }
         }
 
         int eyeRadius = Math.max(1, radius / 6);
-        for (int layer = 0; layer <= rise; layer++) {
+        for (int layer = Math.max(0, local.minY() - baseY - drumHeight); layer <= Math.min(rise, local.maxY() - baseY - drumHeight); layer++) {
             double ratio = layer / (double) rise;
             int layerRadius = (int) Math.round(radius * Math.cos(ratio * Math.PI / 2.0D));
             if (layerRadius <= eyeRadius) {
@@ -784,7 +1494,9 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                 double angle = Math.toRadians(angleStep);
                 int x = centerX + (int) Math.round(Math.cos(angle) * layerRadius);
                 int z = centerZ + (int) Math.round(Math.sin(angle) * layerRadius);
-                this.placeBlock(level, ribLayer ? drum : shell, x, y, z, box);
+                if (local.isInside(x, y, z)) {
+                    this.placeBlock(level, ribLayer ? drum : shell, x, y, z, box);
+                }
             }
         }
 
@@ -810,6 +1522,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int platformWidth = Math.max(1, inset - 1);
         int floorRadius = Math.max(2, coreRadius);
         int topTier = levels;
+        BoundingBox local = localGenerationBounds(box);
         for (int tier = 0; tier < levels; tier++) {
             int tierRadius = baseRadius - tier * inset;
             if (tierRadius <= floorRadius) {
@@ -818,10 +1531,10 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                 break;
             }
             int tierBase = baseY + tier * step;
-            for (int y = 0; y < step; y++) {
+            for (int y = Math.max(0, local.minY() - tierBase); y < Math.min(step, local.maxY() - tierBase + 1); y++) {
                 boolean top = y == step - 1;
-                for (int x = centerX - tierRadius; x <= centerX + tierRadius; x++) {
-                    for (int z = centerZ - tierRadius; z <= centerZ + tierRadius; z++) {
+                for (int x = Math.max(centerX - tierRadius, local.minX()); x <= Math.min(centerX + tierRadius, local.maxX()); x++) {
+                    for (int z = Math.max(centerZ - tierRadius, local.minZ()); z <= Math.min(centerZ + tierRadius, local.maxZ()); z++) {
                         int ring = Math.max(Math.abs(x - centerX), Math.abs(z - centerZ));
                         boolean wall = ring == tierRadius;
                         // 只在台壁内侧铺一条平台带,中央留空。
@@ -840,7 +1553,9 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                     int z = centerZ + sz * tierRadius;
                     BlockState oriented = orientStairs(stair,
                             sx > 0 ? Direction.WEST : Direction.EAST, Half.BOTTOM);
-                    placeCorniceBlock(level, box, oriented, x, tierBase + step - 1, z);
+                    if (local.isInside(x, tierBase + step - 1, z)) {
+                        placeCorniceBlock(level, box, oriented, x, tierBase + step - 1, z);
+                    }
                 }
             }
             topTier = tier + 1;
@@ -849,8 +1564,11 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int topRadius = Math.max(floorRadius, baseRadius - (topTier - 1) * inset);
         for (int sx : new int[]{-1, 1}) {
             for (int sz : new int[]{-1, 1}) {
-                this.placeBlock(level, light,
-                        centerX + sx * topRadius, topY, centerZ + sz * topRadius, box);
+                int x = centerX + sx * topRadius;
+                int z = centerZ + sz * topRadius;
+                if (local.isInside(x, topY, z)) {
+                    this.placeBlock(level, light, x, topY, z, box);
+                }
             }
         }
     }
@@ -872,30 +1590,37 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int minZ = centerZ - halfDepth;
         int maxZ = centerZ + halfDepth;
         int inset = Math.max(2, arcadeInset);
+        BoundingBox local = localGenerationBounds(box);
 
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                boolean walkway = Math.abs(x - centerX) >= halfWidth - inset
-                        || Math.abs(z - centerZ) >= halfDepth - inset;
-                this.placeBlock(level, walkway ? beam : floor, x, baseY - 1, z, box);
+        if (baseY - 1 >= local.minY() && baseY - 1 <= local.maxY()) {
+            for (int x = Math.max(minX, local.minX()); x <= Math.min(maxX, local.maxX()); x++) {
+                for (int z = Math.max(minZ, local.minZ()); z <= Math.min(maxZ, local.maxZ()); z++) {
+                    boolean walkway = Math.abs(x - centerX) >= halfWidth - inset
+                            || Math.abs(z - centerZ) >= halfDepth - inset;
+                    placeCorniceBlock(level, box, walkway ? beam : floor, x, baseY - 1, z);
+                }
             }
         }
 
-        for (int y = 0; y <= wallHeight; y++) {
-            for (int x = minX; x <= maxX; x++) {
+        boolean northInside = minZ >= local.minZ() && minZ <= local.maxZ();
+        boolean southInside = maxZ >= local.minZ() && maxZ <= local.maxZ();
+        boolean westInside = minX >= local.minX() && minX <= local.maxX();
+        boolean eastInside = maxX >= local.minX() && maxX <= local.maxX();
+        for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(wallHeight, local.maxY() - baseY); y++) {
+            for (int x = Math.max(minX, local.minX()); x <= Math.min(maxX, local.maxX()); x++) {
                 boolean door = Math.abs(x - centerX) <= 1 && y <= 3;
                 if (!door) {
                     BlockState state = y == wallHeight || y % 4 == 0 ? beam : wall;
-                    this.placeBlock(level, state, x, baseY + y, minZ, box);
-                    this.placeBlock(level, state, x, baseY + y, maxZ, box);
+                    if (northInside) this.placeBlock(level, state, x, baseY + y, minZ, box);
+                    if (southInside) this.placeBlock(level, state, x, baseY + y, maxZ, box);
                 }
             }
-            for (int z = minZ; z <= maxZ; z++) {
+            for (int z = Math.max(minZ, local.minZ()); z <= Math.min(maxZ, local.maxZ()); z++) {
                 boolean door = Math.abs(z - centerZ) <= 1 && y <= 3;
                 if (!door) {
                     BlockState state = y == wallHeight || y % 4 == 0 ? beam : wall;
-                    this.placeBlock(level, state, minX, baseY + y, z, box);
-                    this.placeBlock(level, state, maxX, baseY + y, z, box);
+                    if (westInside) this.placeBlock(level, state, minX, baseY + y, z, box);
+                    if (eastInside) this.placeBlock(level, state, maxX, baseY + y, z, box);
                 }
             }
         }
@@ -904,41 +1629,66 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int innerX = Math.max(1, halfWidth - inset);
         int innerZ = Math.max(1, halfDepth - inset);
         int arcadeHeight = Math.max(3, wallHeight - 2);
-        for (int x = centerX - innerX; x <= centerX + innerX; x += 3) {
+        int firstX = Math.max(centerX - innerX, local.minX());
+        firstX += Math.floorMod(centerX - innerX - firstX, 3);
+        int firstZ = Math.max(centerZ - innerZ, local.minZ());
+        firstZ += Math.floorMod(centerZ - innerZ - firstZ, 3);
+        for (int x = firstX; x <= Math.min(centerX + innerX, local.maxX()); x += 3) {
             for (int side : new int[]{-1, 1}) {
                 int z = centerZ + side * innerZ;
+                if (z < local.minZ() || z > local.maxZ()) {
+                    continue;
+                }
                 architecturalPillar(level, box, x, baseY, z, arcadeHeight, wall);
-                this.placeBlock(level, beam, x, baseY + arcadeHeight, z, box);
-            }
-        }
-        for (int z = centerZ - innerZ; z <= centerZ + innerZ; z += 3) {
-            for (int side : new int[]{-1, 1}) {
-                int x = centerX + side * innerX;
-                architecturalPillar(level, box, x, baseY, z, arcadeHeight, wall);
-                this.placeBlock(level, beam, x, baseY + arcadeHeight, z, box);
-            }
-        }
-        // 顶板只盖 inset 带,天井不盖。
-        for (int x = centerX - innerX; x <= centerX + innerX; x++) {
-            for (int side : new int[]{-1, 1}) {
-                for (int offset = 0; offset < inset; offset++) {
-                    int z = centerZ + side * (innerZ + offset);
+                if (local.isInside(x, baseY + arcadeHeight, z)) {
                     this.placeBlock(level, beam, x, baseY + arcadeHeight, z, box);
                 }
             }
         }
-        for (int z = centerZ - innerZ; z <= centerZ + innerZ; z++) {
+        for (int z = firstZ; z <= Math.min(centerZ + innerZ, local.maxZ()); z += 3) {
             for (int side : new int[]{-1, 1}) {
-                for (int offset = 0; offset < inset; offset++) {
-                    int x = centerX + side * (innerX + offset);
+                int x = centerX + side * innerX;
+                if (x < local.minX() || x > local.maxX()) {
+                    continue;
+                }
+                architecturalPillar(level, box, x, baseY, z, arcadeHeight, wall);
+                if (local.isInside(x, baseY + arcadeHeight, z)) {
                     this.placeBlock(level, beam, x, baseY + arcadeHeight, z, box);
+                }
+            }
+        }
+        // 顶板只盖 inset 带,天井不盖。
+        if (baseY + arcadeHeight >= local.minY() && baseY + arcadeHeight <= local.maxY()) {
+            for (int x = Math.max(centerX - innerX, local.minX()); x <= Math.min(centerX + innerX, local.maxX()); x++) {
+                for (int side : new int[]{-1, 1}) {
+                    int startZ = centerZ + side * innerZ;
+                    int minOffset = Math.max(0, side > 0 ? local.minZ() - startZ : startZ - local.maxZ());
+                    int maxOffset = Math.min(inset - 1, side > 0 ? local.maxZ() - startZ : startZ - local.minZ());
+                    for (int offset = minOffset; offset <= maxOffset; offset++) {
+                        int z = centerZ + side * (innerZ + offset);
+                        this.placeBlock(level, beam, x, baseY + arcadeHeight, z, box);
+                    }
+                }
+            }
+            for (int z = Math.max(centerZ - innerZ, local.minZ()); z <= Math.min(centerZ + innerZ, local.maxZ()); z++) {
+                for (int side : new int[]{-1, 1}) {
+                    int startX = centerX + side * innerX;
+                    int minOffset = Math.max(0, side > 0 ? local.minX() - startX : startX - local.maxX());
+                    int maxOffset = Math.min(inset - 1, side > 0 ? local.maxX() - startX : startX - local.minX());
+                    for (int offset = minOffset; offset <= maxOffset; offset++) {
+                        int x = centerX + side * (innerX + offset);
+                        this.placeBlock(level, beam, x, baseY + arcadeHeight, z, box);
+                    }
                 }
             }
         }
         for (int sx : new int[]{-1, 1}) {
             for (int sz : new int[]{-1, 1}) {
-                this.placeBlock(level, light, centerX + sx * innerX,
-                        baseY + arcadeHeight - 1, centerZ + sz * innerZ, box);
+                int x = centerX + sx * innerX;
+                int z = centerZ + sz * innerZ;
+                if (local.isInside(x, baseY + arcadeHeight - 1, z)) {
+                    this.placeBlock(level, light, x, baseY + arcadeHeight - 1, z, box);
+                }
             }
         }
     }
@@ -958,6 +1708,15 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int levels = Math.max(2, terraces);
         int span = Math.max(3, terraceSpan);
         int step = Math.max(2, terraceHeight);
+        BoundingBox local = localGenerationBounds(box);
+        int forwardA = (local.minX() - centerX) * axis.getStepX() + (local.minZ() - centerZ) * axis.getStepZ();
+        int forwardB = (local.maxX() - centerX) * axis.getStepX() + (local.maxZ() - centerZ) * axis.getStepZ();
+        int lateralA = (local.minX() - centerX) * side.getStepX() + (local.minZ() - centerZ) * side.getStepZ();
+        int lateralB = (local.maxX() - centerX) * side.getStepX() + (local.maxZ() - centerZ) * side.getStepZ();
+        int minForward = Math.min(forwardA, forwardB);
+        int maxForward = Math.max(forwardA, forwardB);
+        int minLateral = Math.min(lateralA, lateralB);
+        int maxLateral = Math.max(lateralA, lateralB);
 
         for (int tier = 0; tier < levels; tier++) {
             int y = baseY + tier * step;
@@ -968,27 +1727,36 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                 reach = 2;
             }
             int halfWidth = Math.max(2, span - tier / 2);
-            for (int distance = 0; distance <= reach; distance++) {
-                for (int lateral = -halfWidth; lateral <= halfWidth; lateral++) {
-                    int x = localX(centerX, axis, side, direction * distance, lateral);
-                    int z = localZ(centerZ, axis, side, direction * distance, lateral);
-                    boolean rim = distance == reach || Math.abs(lateral) == halfWidth;
-                    this.placeBlock(level, rim ? edge : deck, x, y, z, box);
+            int minDistance = Math.max(0, direction > 0 ? minForward : -maxForward);
+            int maxDistance = Math.min(reach, direction > 0 ? maxForward : -minForward);
+            if (y >= local.minY() && y <= local.maxY()) {
+                for (int distance = minDistance; distance <= maxDistance; distance++) {
+                    for (int lateral = Math.max(-halfWidth, minLateral); lateral <= Math.min(halfWidth, maxLateral); lateral++) {
+                        int x = localX(centerX, axis, side, direction * distance, lateral);
+                        int z = localZ(centerZ, axis, side, direction * distance, lateral);
+                        boolean rim = distance == reach || Math.abs(lateral) == halfWidth;
+                        this.placeBlock(level, rim ? edge : deck, x, y, z, box);
+                    }
                 }
             }
             // 斜撑只能在第一层之上:最底层向下伸的斜撑会穿到 baseY 以下,落进场地净空。
             if (tier > 0) {
                 for (int lateral : new int[]{-halfWidth, halfWidth}) {
-                    for (int back = 1; back <= Math.min(reach, step); back++) {
+                    if (lateral < minLateral || lateral > maxLateral) continue;
+                    int firstBack = Math.max(1, Math.max(reach - maxDistance, y - local.maxY()));
+                    int lastBack = Math.min(Math.min(reach, step), Math.min(reach - minDistance, y - local.minY()));
+                    for (int back = firstBack; back <= lastBack; back++) {
                         int x = localX(centerX, axis, side, direction * (reach - back), lateral);
                         int z = localZ(centerZ, axis, side, direction * (reach - back), lateral);
                         this.placeBlock(level, brace, x, y - back, z, box);
                     }
                 }
             }
-            this.placeBlock(level, light,
-                    localX(centerX, axis, side, direction * reach, 0), y + 1,
-                    localZ(centerZ, axis, side, direction * reach, 0), box);
+            int lightX = localX(centerX, axis, side, direction * reach, 0);
+            int lightZ = localZ(centerZ, axis, side, direction * reach, 0);
+            if (local.isInside(lightX, y + 1, lightZ)) {
+                this.placeBlock(level, light, lightX, y + 1, lightZ, box);
+            }
         }
     }
 
@@ -1016,16 +1784,19 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             profile[i] = shape.nextInt(wallHeight + 1);
         }
 
+        BoundingBox local = localGenerationBounds(box);
         int index = 0;
         for (int x = minX; x <= maxX; x++) {
             for (int side : new int[]{-1, 1}) {
                 int z = side < 0 ? minZ : maxZ;
                 int top = profile[Math.floorMod(index++, profile.length)];
-                for (int y = 0; y <= top; y++) {
-                    this.placeBlock(level, y == top ? accent : wall, x, baseY + y, z, box);
+                if (x >= local.minX() && x <= local.maxX() && z >= local.minZ() && z <= local.maxZ()) {
+                    for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(top, local.maxY() - baseY); y++) {
+                        placeCorniceBlock(level, box, y == top ? accent : wall, x, baseY + y, z);
+                    }
                 }
-                if (top >= wallHeight - 1) {
-                    this.placeBlock(level, light, x, baseY + top + 1, z, box);
+                if (top >= wallHeight - 1 && local.isInside(x, baseY + top + 1, z)) {
+                    placeCorniceBlock(level, box, light, x, baseY + top + 1, z);
                 }
             }
         }
@@ -1033,27 +1804,29 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             for (int side : new int[]{-1, 1}) {
                 int x = side < 0 ? minX : maxX;
                 int top = profile[Math.floorMod(index++, profile.length)];
-                for (int y = 0; y <= top; y++) {
-                    this.placeBlock(level, y == top ? accent : wall, x, baseY + y, z, box);
+                if (x >= local.minX() && x <= local.maxX() && z >= local.minZ() && z <= local.maxZ()) {
+                    for (int y = Math.max(0, local.minY() - baseY); y <= Math.min(top, local.maxY() - baseY); y++) {
+                        placeCorniceBlock(level, box, y == top ? accent : wall, x, baseY + y, z);
+                    }
                 }
             }
         }
 
         // 倒塌堆积只落在墙内侧一格,不侵占中央。
         for (int x = minX + 1; x <= maxX - 1; x++) {
-            if (shape.nextFloat() < 0.35F) {
-                this.placeBlock(level, rubble, x, baseY, minZ + 1, box);
+            if (shape.nextFloat() < 0.35F && local.isInside(x, baseY, minZ + 1)) {
+                placeCorniceBlock(level, box, rubble, x, baseY, minZ + 1);
             }
-            if (shape.nextFloat() < 0.35F) {
-                this.placeBlock(level, rubble, x, baseY, maxZ - 1, box);
+            if (shape.nextFloat() < 0.35F && local.isInside(x, baseY, maxZ - 1)) {
+                placeCorniceBlock(level, box, rubble, x, baseY, maxZ - 1);
             }
         }
         for (int z = minZ + 1; z <= maxZ - 1; z++) {
-            if (shape.nextFloat() < 0.35F) {
-                this.placeBlock(level, rubble, minX + 1, baseY, z, box);
+            if (shape.nextFloat() < 0.35F && local.isInside(minX + 1, baseY, z)) {
+                placeCorniceBlock(level, box, rubble, minX + 1, baseY, z);
             }
-            if (shape.nextFloat() < 0.35F) {
-                this.placeBlock(level, rubble, maxX - 1, baseY, z, box);
+            if (shape.nextFloat() < 0.35F && local.isInside(maxX - 1, baseY, z)) {
+                placeCorniceBlock(level, box, rubble, maxX - 1, baseY, z);
             }
         }
     }
@@ -1064,14 +1837,21 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                                       int halfWidth, int halfDepth, int spacing,
                                       BlockState lamp) {
         int step = Math.max(2, spacing);
-        for (int dx = -halfWidth; dx <= halfWidth; dx++) {
-            for (int dz = -halfDepth; dz <= halfDepth; dz++) {
-
-                if (Math.floorMod(dx, step) != 0 || Math.floorMod(dz, step) != 0) {
-                    continue;
-                }
-                int x = centerX + dx;
-                int z = centerZ + dz;
+        BoundingBox local = localGenerationBounds(box);
+        if (lampY < local.minY() || lampY > local.maxY()) {
+            return;
+        }
+        int minX = Math.max(-halfWidth, local.minX() - centerX);
+        int maxX = Math.min(halfWidth, local.maxX() - centerX);
+        int minZ = Math.max(-halfDepth, local.minZ() - centerZ);
+        int maxZ = Math.min(halfDepth, local.maxZ() - centerZ);
+        // 网格以结构中心为原点，裁剪后仍保持负坐标与边界灯位的间距。
+        long firstX = (long) minX + Math.floorMod(-(long) minX, step);
+        long firstZ = (long) minZ + Math.floorMod(-(long) minZ, step);
+        for (long dx = firstX; dx <= maxX; dx += step) {
+            for (long dz = firstZ; dz <= maxZ; dz += step) {
+                int x = centerX + (int) dx;
+                int z = centerZ + (int) dz;
                 BlockState existing = this.getBlock(level, x, lampY, z, box);
                 if (!existing.isAir()) {
                     continue;
@@ -1096,14 +1876,18 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int maxZ = centerZ + halfDepth;
         BlockState air = Blocks.AIR.defaultBlockState();
         int topY = baseY + levels * height;
+        BoundingBox local = localGenerationBounds(box);
 
-        this.generateBox(level, box, minX + 1, baseY, minZ + 1,
-                maxX - 1, topY - 1, maxZ - 1, air, air, false);
+        this.generateBox(level, box, Math.max(minX + 1, local.minX()), Math.max(baseY, local.minY()), Math.max(minZ + 1, local.minZ()),
+                Math.min(maxX - 1, local.maxX()), Math.min(topY - 1, local.maxY()), Math.min(maxZ - 1, local.maxZ()), air, air, false);
 
         for (int storey = 0; storey <= levels; storey++) {
             int y = baseY + storey * height - (storey == 0 ? 1 : 0);
-            for (int x = minX; x <= maxX; x++) {
-                for (int z = minZ; z <= maxZ; z++) {
+            if (y < local.minY() || y > local.maxY()) {
+                continue;
+            }
+            for (int x = Math.max(minX, local.minX()); x <= Math.min(maxX, local.maxX()); x++) {
+                for (int z = Math.max(minZ, local.minZ()); z <= Math.min(maxZ, local.maxZ()); z++) {
                     boolean beam = x == centerX || z == centerZ
                             || Math.floorMod(x - minX, 6) == 0
                             || Math.floorMod(z - minZ, 6) == 0;
@@ -1112,23 +1896,27 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             }
         }
 
+        boolean northInside = minZ >= local.minZ() && minZ <= local.maxZ();
+        boolean southInside = maxZ >= local.minZ() && maxZ <= local.maxZ();
+        boolean westInside = minX >= local.minX() && minX <= local.maxX();
+        boolean eastInside = maxX >= local.minX() && maxX <= local.maxX();
         for (int storey = 0; storey < levels; storey++) {
             int floorY = baseY + storey * height;
-            for (int y = floorY; y < floorY + height; y++) {
+            for (int y = Math.max(floorY, local.minY()); y < Math.min(floorY + height, local.maxY() + 1); y++) {
                 boolean windowBand = (y - floorY) == height / 2;
-                for (int x = minX; x <= maxX; x++) {
+                for (int x = Math.max(minX, local.minX()); x <= Math.min(maxX, local.maxX()); x++) {
                     boolean windowSlot = windowBand && Math.floorMod(x - minX, 4) == 2;
                     BlockState state = windowSlot ? window
                             : Math.floorMod(x - minX, 6) == 0 ? trim : wall;
-                    this.placeBlock(level, state, x, y, minZ, box);
-                    this.placeBlock(level, state, x, y, maxZ, box);
+                    if (northInside) this.placeBlock(level, state, x, y, minZ, box);
+                    if (southInside) this.placeBlock(level, state, x, y, maxZ, box);
                 }
-                for (int z = minZ; z <= maxZ; z++) {
+                for (int z = Math.max(minZ, local.minZ()); z <= Math.min(maxZ, local.maxZ()); z++) {
                     boolean windowSlot = windowBand && Math.floorMod(z - minZ, 4) == 2;
                     BlockState state = windowSlot ? window
                             : Math.floorMod(z - minZ, 6) == 0 ? trim : wall;
-                    this.placeBlock(level, state, minX, y, z, box);
-                    this.placeBlock(level, state, maxX, y, z, box);
+                    if (westInside) this.placeBlock(level, state, minX, y, z, box);
+                    if (eastInside) this.placeBlock(level, state, maxX, y, z, box);
                 }
             }
             buildManorStoreyInterior(level, box, centerX, floorY, centerZ,
@@ -1137,17 +1925,21 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
 
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = 0; dy <= 1; dy++) {
-                this.placeBlock(level, air, centerX + dx, baseY + dy, maxZ, box);
+                if (local.isInside(centerX + dx, baseY + dy, maxZ)) {
+                    this.placeBlock(level, air, centerX + dx, baseY + dy, maxZ, box);
+                }
             }
-            this.placeBlock(level, trim, centerX + dx, baseY + 2, maxZ, box);
+            if (local.isInside(centerX + dx, baseY + 2, maxZ)) {
+                this.placeBlock(level, trim, centerX + dx, baseY + 2, maxZ, box);
+            }
         }
 
         int roofRise = Math.max(2, Math.min(halfWidth, halfDepth) / 2);
-        for (int layer = 0; layer <= roofRise; layer++) {
+        for (int layer = Math.max(0, local.minY() - topY); layer <= Math.min(roofRise, local.maxY() - topY); layer++) {
             int inset = layer;
             int y = topY + layer;
-            for (int x = minX + inset; x <= maxX - inset; x++) {
-                for (int z = minZ + inset; z <= maxZ - inset; z++) {
+            for (int x = Math.max(minX + inset, local.minX()); x <= Math.min(maxX - inset, local.maxX()); x++) {
+                for (int z = Math.max(minZ + inset, local.minZ()); z <= Math.min(maxZ - inset, local.maxZ()); z++) {
                     boolean edge = x == minX + inset || x == maxX - inset
                             || z == minZ + inset || z == maxZ - inset;
                     if (!edge && layer != roofRise) {
@@ -1169,44 +1961,52 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int minZ = centerZ - halfDepth;
         int maxZ = centerZ + halfDepth;
         int ceiling = floorY + height - 1;
+        BoundingBox local = localGenerationBounds(box);
 
         int doorInnerX = Math.max(1, halfWidth - 2);
         int doorOuterX = Math.max(doorInnerX, halfWidth - 1);
         int doorInnerZ = Math.max(1, halfDepth - 2);
         int doorOuterZ = Math.max(doorInnerZ, halfDepth - 1);
-        for (int y = floorY; y < ceiling; y++) {
-            for (int x = minX + 1; x <= maxX - 1; x++) {
-                int distance = Math.abs(x - centerX);
-                boolean doorway = distance >= doorInnerX && distance <= doorOuterX
-                        && (y - floorY) <= 1;
-                this.placeBlock(level, doorway ? air
-                        : (y - floorY) == height - 2 ? trim : wall, x, y, centerZ, box);
-            }
-            for (int z = minZ + 1; z <= maxZ - 1; z++) {
-                if (z == centerZ) {
-                    continue;
+        for (int y = Math.max(floorY, local.minY()); y < Math.min(ceiling, local.maxY() + 1); y++) {
+            if (centerZ >= local.minZ() && centerZ <= local.maxZ()) {
+                for (int x = Math.max(minX + 1, local.minX()); x <= Math.min(maxX - 1, local.maxX()); x++) {
+                    int distance = Math.abs(x - centerX);
+                    boolean doorway = distance >= doorInnerX && distance <= doorOuterX
+                            && (y - floorY) <= 1;
+                    this.placeBlock(level, doorway ? air
+                            : (y - floorY) == height - 2 ? trim : wall, x, y, centerZ, box);
                 }
-                int distance = Math.abs(z - centerZ);
-                boolean doorway = distance >= doorInnerZ && distance <= doorOuterZ
-                        && (y - floorY) <= 1;
-                this.placeBlock(level, doorway ? air
-                        : (y - floorY) == height - 2 ? trim : wall, centerX, y, z, box);
+            }
+            if (centerX >= local.minX() && centerX <= local.maxX()) {
+                for (int z = Math.max(minZ + 1, local.minZ()); z <= Math.min(maxZ - 1, local.maxZ()); z++) {
+                    if (z == centerZ) {
+                        continue;
+                    }
+                    int distance = Math.abs(z - centerZ);
+                    boolean doorway = distance >= doorInnerZ && distance <= doorOuterZ
+                            && (y - floorY) <= 1;
+                    this.placeBlock(level, doorway ? air
+                            : (y - floorY) == height - 2 ? trim : wall, centerX, y, z, box);
+                }
             }
         }
 
         int stairX = minX + 2;
         int stairZ = minZ + 2;
-        for (int step = 0; step < height; step++) {
-            this.placeBlock(level, trim, stairX + step % 2, floorY + step, stairZ, box);
-            this.placeBlock(level, air, stairX + step % 2, floorY + step + 1, stairZ, box);
-            this.placeBlock(level, air, stairX + step % 2, floorY + step + 2, stairZ, box);
+        // 踏面不在切片内时，其上方两格净空仍可能落入范围。
+        for (int step = Math.max(0, local.minY() - floorY - 2); step < Math.min(height, local.maxY() - floorY + 1); step++) {
+            int x = stairX + step % 2;
+            int y = floorY + step;
+            if (local.isInside(x, y, stairZ)) this.placeBlock(level, trim, x, y, stairZ, box);
+            if (local.isInside(x, y + 1, stairZ)) this.placeBlock(level, air, x, y + 1, stairZ, box);
+            if (local.isInside(x, y + 2, stairZ)) this.placeBlock(level, air, x, y + 2, stairZ, box);
         }
 
         for (int sx : new int[]{-1, 1}) {
             for (int sz : new int[]{-1, 1}) {
                 int x = centerX + sx * Math.max(2, halfWidth / 2);
                 int z = centerZ + sz * Math.max(2, halfDepth / 2);
-                if (this.getBlock(level, x, ceiling - 1, z, box).isAir()) {
+                if (local.isInside(x, ceiling - 1, z) && this.getBlock(level, x, ceiling - 1, z, box).isAir()) {
                     this.placeBlock(level, lamp, x, ceiling - 1, z, box);
                 }
             }
@@ -1248,15 +2048,26 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int maxX = centerX + halfWidth + 1;
         int minZ = centerZ - halfDepth - 1;
         int maxZ = centerZ + halfDepth + 1;
-        for (int x = minX; x <= maxX; x++) {
-            BlockState state = Math.floorMod(x - minX, 4) == 0 ? accent : body;
-            placeCorniceBlock(level, box, state, x, y, minZ);
-            placeCorniceBlock(level, box, state, x, y, maxZ);
+        BoundingBox local = localGenerationBounds(box);
+        if (y < local.minY() || y > local.maxY()) return;
+        boolean northInside = minZ >= local.minZ() && minZ <= local.maxZ();
+        boolean southInside = maxZ >= local.minZ() && maxZ <= local.maxZ();
+        boolean westInside = minX >= local.minX() && minX <= local.maxX();
+        boolean eastInside = maxX >= local.minX() && maxX <= local.maxX();
+        // 装饰节奏按完整构件起点计算；裁剪不能改变相位或合并角点的重复放置。
+        if (northInside || southInside) {
+            for (int x = Math.max(minX, local.minX()); x <= Math.min(maxX, local.maxX()); x++) {
+                BlockState state = Math.floorMod(x - minX, 4) == 0 ? accent : body;
+                if (northInside) placeCorniceBlock(level, box, state, x, y, minZ);
+                if (southInside) placeCorniceBlock(level, box, state, x, y, maxZ);
+            }
         }
-        for (int z = minZ; z <= maxZ; z++) {
-            BlockState state = Math.floorMod(z - minZ, 4) == 0 ? accent : body;
-            placeCorniceBlock(level, box, state, minX, y, z);
-            placeCorniceBlock(level, box, state, maxX, y, z);
+        if (westInside || eastInside) {
+            for (int z = Math.max(minZ, local.minZ()); z <= Math.min(maxZ, local.maxZ()); z++) {
+                BlockState state = Math.floorMod(z - minZ, 4) == 0 ? accent : body;
+                if (westInside) placeCorniceBlock(level, box, state, minX, y, z);
+                if (eastInside) placeCorniceBlock(level, box, state, maxX, y, z);
+            }
         }
     }
 
@@ -1277,20 +2088,106 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         BlockState south = orientStairs(stairs, Direction.NORTH, half);
         BlockState west = orientStairs(stairs, Direction.EAST, half);
         BlockState east = orientStairs(stairs, Direction.WEST, half);
-        for (int x = minX + 1; x <= maxX - 1; x++) {
-            placeCorniceBlock(level, box, north, x, y, minZ);
-            placeCorniceBlock(level, box, south, x, y, maxZ);
+        BoundingBox local = localGenerationBounds(box);
+        if (y < local.minY() || y > local.maxY()) return;
+        boolean northInside = minZ >= local.minZ() && minZ <= local.maxZ();
+        boolean southInside = maxZ >= local.minZ() && maxZ <= local.maxZ();
+        boolean westInside = minX >= local.minX() && minX <= local.maxX();
+        boolean eastInside = maxX >= local.minX() && maxX <= local.maxX();
+        if (northInside || southInside) {
+            for (int x = Math.max(minX + 1, local.minX()); x <= Math.min(maxX - 1, local.maxX()); x++) {
+                if (northInside) placeCorniceBlock(level, box, north, x, y, minZ);
+                if (southInside) placeCorniceBlock(level, box, south, x, y, maxZ);
+            }
         }
-        for (int z = minZ + 1; z <= maxZ - 1; z++) {
-            placeCorniceBlock(level, box, west, minX, y, z);
-            placeCorniceBlock(level, box, east, maxX, y, z);
+        if (westInside || eastInside) {
+            for (int z = Math.max(minZ + 1, local.minZ()); z <= Math.min(maxZ - 1, local.maxZ()); z++) {
+                if (westInside) placeCorniceBlock(level, box, west, minX, y, z);
+                if (eastInside) placeCorniceBlock(level, box, east, maxX, y, z);
+            }
         }
 
         BlockState corner = orientSlab(cornerSlab, inverted);
-        placeCorniceBlock(level, box, corner, minX, y, minZ);
-        placeCorniceBlock(level, box, corner, maxX, y, minZ);
-        placeCorniceBlock(level, box, corner, minX, y, maxZ);
-        placeCorniceBlock(level, box, corner, maxX, y, maxZ);
+        if (westInside && northInside) placeCorniceBlock(level, box, corner, minX, y, minZ);
+        if (eastInside && northInside) placeCorniceBlock(level, box, corner, maxX, y, minZ);
+        if (westInside && southInside) placeCorniceBlock(level, box, corner, minX, y, maxZ);
+        if (eastInside && southInside) placeCorniceBlock(level, box, corner, maxX, y, maxZ);
+    }
+
+    protected void buildCircularPlinth(WorldGenLevel level, BoundingBox box,
+                                        int centerX, int y, int centerZ, int radius,
+                                        BlockState stone, BlockState stairs) {
+        architecturalRing(level, box, centerX, y, centerZ, radius, stone);
+        for (Direction facing : Direction.Plane.HORIZONTAL) {
+            Direction across = facing.getClockWise();
+            for (int side = -2; side <= 2; side++) {
+                int x = centerX + facing.getStepX() * radius + across.getStepX() * side;
+                int z = centerZ + facing.getStepZ() * radius + across.getStepZ() * side;
+                placeCorniceBlock(level, box, orientStairs(stairs, facing, Half.BOTTOM), x, y + 1, z);
+            }
+        }
+    }
+
+    private static boolean circularCorniceCell(int dx, int dz, int radius) {
+        double inner = Math.max(0, radius - 1.5D);
+        int distance = dx * dx + dz * dz;
+        return distance <= radius * radius && distance >= inner * inner;
+    }
+
+    // 环带宽度至少 √2 格，斜向台阶才能通过方块侧面连续连接。
+    protected void buildCircularCornice(WorldGenLevel level, BoundingBox box,
+                                         int centerX, int y, int centerZ, int radius,
+                                         BlockState stairs, BlockState slab, boolean inverted) {
+        BoundingBox local = localGenerationBounds(box);
+        if (y < local.minY() || y > local.maxY()) {
+            return;
+        }
+        for (int dx = Math.max(-radius, local.minX() - centerX); dx <= Math.min(radius, local.maxX() - centerX); dx++) {
+            int outerZ = (int) Math.floor(Math.sqrt(radius * radius - dx * dx));
+            double inner = Math.max(0, radius - 1.5D);
+            int innerZ = (int) Math.ceil(Math.sqrt(Math.max(0, inner * inner - dx * dx)));
+            for (int dz = Math.max(-outerZ, local.minZ() - centerZ); dz <= Math.min(outerZ, local.maxZ() - centerZ); dz++) {
+                if (Math.abs(dz) < innerZ) {
+                    dz = innerZ - 1;
+                    continue;
+                }
+                Direction facing = Math.abs(dx) > Math.abs(dz)
+                        ? (dx > 0 ? Direction.EAST : Direction.WEST)
+                        : (dz > 0 ? Direction.SOUTH : Direction.NORTH);
+                BlockState state = Math.abs(Math.abs(dx) - Math.abs(dz)) <= 1
+                        ? orientSlab(slab, inverted) : orientStairs(stairs, facing, inverted ? Half.TOP : Half.BOTTOM);
+                surfaceBlock(level, box, centerX + dx, y, centerZ + dz, state, true);
+                surfaceBlock(level, box, centerX + dx, y, centerZ + dz, state, false);
+            }
+        }
+    }
+
+    protected void buildCircularParapet(WorldGenLevel level, BoundingBox box,
+                                         int centerX, int y, int centerZ, int radius,
+                                         BlockState wall) {
+        BoundingBox local = localGenerationBounds(box);
+        if (y < local.minY() || y > local.maxY()) {
+            return;
+        }
+        for (int dx = Math.max(-radius, local.minX() - centerX); dx <= Math.min(radius, local.maxX() - centerX); dx++) {
+            int outerZ = (int) Math.floor(Math.sqrt(radius * radius - dx * dx));
+            double inner = Math.max(0, radius - 1.5D);
+            int innerZ = (int) Math.ceil(Math.sqrt(Math.max(0, inner * inner - dx * dx)));
+            for (int dz = Math.max(-outerZ, local.minZ() - centerZ); dz <= Math.min(outerZ, local.maxZ() - centerZ); dz++) {
+                if (Math.abs(dz) < innerZ) {
+                    dz = innerZ - 1;
+                    continue;
+                }
+                BlockState state = connectWall(wall,
+                        circularCorniceCell(dx, dz - 1, radius),
+                        circularCorniceCell(dx + 1, dz, radius),
+                        circularCorniceCell(dx, dz + 1, radius),
+                        circularCorniceCell(dx - 1, dz, radius),
+                        dx == 0 || dz == 0 || Math.abs(dx) == Math.abs(dz));
+                surfaceBlock(level, box, centerX + dx, y, centerZ + dz, state, true);
+                surfaceBlock(level, box, centerX + dx, y, centerZ + dz, state, false);
+            }
+        }
     }
 
     /**
@@ -1309,30 +2206,40 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int minZ = centerZ - halfDepth;
         int maxZ = centerZ + halfDepth;
         int spacing = Math.max(2, postSpacing);
+        BoundingBox local = localGenerationBounds(box);
+        if (y < local.minY() || y > local.maxY()) return;
+        boolean northInside = minZ >= local.minZ() && minZ <= local.maxZ();
+        boolean southInside = maxZ >= local.minZ() && maxZ <= local.maxZ();
+        boolean westInside = minX >= local.minX() && minX <= local.maxX();
+        boolean eastInside = maxX >= local.minX() && maxX <= local.maxX();
 
-        for (int x = minX + 1; x <= maxX - 1; x++) {
-            boolean pillar = Math.floorMod(x - minX, spacing) == 0;
-            BlockState state = pillar ? post
-                    : connectWall(wall, false, true, false, true, false);
-            placeCorniceBlock(level, box, state, x, y, minZ);
-            placeCorniceBlock(level, box, state, x, y, maxZ);
+        if (northInside || southInside) {
+            for (int x = Math.max(minX + 1, local.minX()); x <= Math.min(maxX - 1, local.maxX()); x++) {
+                boolean pillar = Math.floorMod(x - minX, spacing) == 0;
+                BlockState state = pillar ? post
+                        : connectWall(wall, false, true, false, true, false);
+                if (northInside) placeCorniceBlock(level, box, state, x, y, minZ);
+                if (southInside) placeCorniceBlock(level, box, state, x, y, maxZ);
+            }
         }
 
-        for (int z = minZ + 1; z <= maxZ - 1; z++) {
-            boolean pillar = Math.floorMod(z - minZ, spacing) == 0;
-            BlockState state = pillar ? post
-                    : connectWall(wall, true, false, true, false, false);
-            placeCorniceBlock(level, box, state, minX, y, z);
-            placeCorniceBlock(level, box, state, maxX, y, z);
+        if (westInside || eastInside) {
+            for (int z = Math.max(minZ + 1, local.minZ()); z <= Math.min(maxZ - 1, local.maxZ()); z++) {
+                boolean pillar = Math.floorMod(z - minZ, spacing) == 0;
+                BlockState state = pillar ? post
+                        : connectWall(wall, true, false, true, false, false);
+                if (westInside) placeCorniceBlock(level, box, state, minX, y, z);
+                if (eastInside) placeCorniceBlock(level, box, state, maxX, y, z);
+            }
         }
 
-        placeCorniceBlock(level, box, connectWall(wall, false, true, true, false, true),
+        if (westInside && northInside) placeCorniceBlock(level, box, connectWall(wall, false, true, true, false, true),
                 minX, y, minZ);
-        placeCorniceBlock(level, box, connectWall(wall, false, false, true, true, true),
+        if (eastInside && northInside) placeCorniceBlock(level, box, connectWall(wall, false, false, true, true, true),
                 maxX, y, minZ);
-        placeCorniceBlock(level, box, connectWall(wall, true, true, false, false, true),
+        if (westInside && southInside) placeCorniceBlock(level, box, connectWall(wall, true, true, false, false, true),
                 minX, y, maxZ);
-        placeCorniceBlock(level, box, connectWall(wall, true, false, false, true, true),
+        if (eastInside && southInside) placeCorniceBlock(level, box, connectWall(wall, true, false, false, true, true),
                 maxX, y, maxZ);
     }
 
@@ -1342,6 +2249,12 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         if (!wall.hasProperty(BlockStateProperties.NORTH_WALL)) {
             return wall;
         }
+        // 原版有朝向 Piece 的状态变换以局部 -Z 为前方；几何连边需先交换南北，空朝向则保持世界坐标。
+        if (this.getOrientation() != null) {
+            boolean localNorth = north;
+            north = south;
+            south = localNorth;
+        }
         return wall
                 .setValue(BlockStateProperties.NORTH_WALL, north ? WallSide.LOW : WallSide.NONE)
                 .setValue(BlockStateProperties.EAST_WALL, east ? WallSide.LOW : WallSide.NONE)
@@ -1350,10 +2263,47 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                 .setValue(BlockStateProperties.UP, up);
     }
 
+    /** 起点为门组底角，宽度沿局部门面朝向的顺时针方向展开。 */
+    protected void buildConnectedDoor(WorldGenLevel level, BoundingBox box, BlockState door,
+                                      int x, int y, int z, Direction facing, int width, int height) {
+        if (!facing.getAxis().isHorizontal() || width < 1 || height < 1) {
+            throw new IllegalArgumentException("Door group requires a horizontal facing and positive dimensions");
+        }
+        Direction row = facing.getClockWise();
+        Direction worldRow = Direction.fromDelta(getWorldX(row.getStepX(), row.getStepZ()) - getWorldX(0, 0), 0,
+                getWorldZ(row.getStepX(), row.getStepZ()) - getWorldZ(0, 0));
+        var definition = door.getBlock().getStateDefinition();
+        var up = (BooleanProperty) definition.getProperty("up");
+        for (int column = 0; column < width; column++) {
+            for (int dy = 0; dy < height; dy++) {
+                // 这些门只旋转 FACING，连边必须按世界轴写入，不能读取尚未生成的邻区块。
+                BlockState state = door.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
+                        .setValue(up, dy + 1 < height);
+                for (Direction direction : Direction.Plane.HORIZONTAL) {
+                    var property = (BooleanProperty) definition.getProperty(direction.getName());
+                    state = state.setValue(property, direction == worldRow && column + 1 < width
+                            || direction == worldRow.getOpposite() && column > 0);
+                }
+                this.placeBlock(level, state, x + row.getStepX() * column, y + dy, z + row.getStepZ() * column, box);
+            }
+        }
+    }
+
+    // 仅接收设施的局部交互面方向；原版 placeBlock 随后仍会镜像和旋转状态。
+    protected Direction localFurnitureFacing(Direction facing) {
+        return this.getOrientation() != null && facing.getAxis() == Direction.Axis.Z
+                ? facing.getOpposite() : facing;
+    }
+
     protected BlockState orientStairs(BlockState stairs, Direction facing, Half half) {
         BlockState state = stairs;
         if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
-            state = state.setValue(BlockStateProperties.HORIZONTAL_FACING, horizontal(facing));
+            Direction local = horizontal(facing);
+            // 输入是局部高半块方向；原版 placeBlock 的状态变换需预先补偿南北反射。
+            if (this.getOrientation() != null && local.getAxis() == Direction.Axis.Z) {
+                local = local.getOpposite();
+            }
+            state = state.setValue(BlockStateProperties.HORIZONTAL_FACING, local);
         }
         if (state.hasProperty(BlockStateProperties.HALF)) {
             state = state.setValue(BlockStateProperties.HALF, half);
@@ -1370,9 +2320,15 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
     }
 
     /** 装饰构件单块放置。让行清单必须委托 isArenaFixture,另写一份会覆盖机关、真视箱与奖励祭坛。 */
-    private void placeCorniceBlock(WorldGenLevel level, BoundingBox box,
-                                   BlockState state, int x, int y, int z) {
+    protected void placeCorniceBlock(WorldGenLevel level, BoundingBox box,
+                                     BlockState state, int x, int y, int z) {
         BlockState existing = this.getBlock(level, x, y, z, box);
+        placeKnownCorniceBlock(level, box, state, existing, x, y, z);
+    }
+
+    // existing 必须是本次放置前同一坐标的状态；读取后不可插入其他方块写入。
+    private void placeKnownCorniceBlock(WorldGenLevel level, BoundingBox box,
+                                        BlockState state, BlockState existing, int x, int y, int z) {
         if (isArenaFixture(existing)) {
             return;
         }
@@ -1383,7 +2339,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         if (!state.hasProperty(BlockStateProperties.WATERLOGGED)) {
             return state;
         }
-        boolean submerged = existing.getFluidState().is(net.minecraft.world.level.material.Fluids.WATER);
+        boolean submerged = Fluids.WATER.isSame(existing.getFluidState().getType());
         return state.setValue(BlockStateProperties.WATERLOGGED, submerged);
     }
 
@@ -1393,17 +2349,19 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                                     int baseRadius, int height,
                                     BlockState body, BlockState accent, BlockState lamp) {
         int levels = Math.max(1, height);
-        for (int layer = 0; layer < levels; layer++) {
-
+        BoundingBox local = localGenerationBounds(box);
+        for (int layer = Math.max(0, local.minY() - baseY); layer < Math.min(levels, local.maxY() - baseY + 1); layer++) {
             int radius = Math.max(0, baseRadius - baseRadius * layer / levels);
             int y = baseY + layer;
             if (radius == 0) {
-                placeCorniceBlock(level, box, layer % 2 == 0 ? accent : body,
-                        centerX, y, centerZ);
+                if (local.isInside(centerX, y, centerZ)) {
+                    placeCorniceBlock(level, box, layer % 2 == 0 ? accent : body,
+                            centerX, y, centerZ);
+                }
                 continue;
             }
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
+            for (int dx = Math.max(-radius, local.minX() - centerX); dx <= Math.min(radius, local.maxX() - centerX); dx++) {
+                for (int dz = Math.max(-radius, local.minZ() - centerZ); dz <= Math.min(radius, local.maxZ() - centerZ); dz++) {
                     if (Math.abs(dx) != radius && Math.abs(dz) != radius) {
                         continue;
                     }
@@ -1412,26 +2370,27 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
                 }
             }
         }
-        placeCorniceBlock(level, box, lamp, centerX, baseY + levels, centerZ);
+        // 顶灯可能单独落入切片，即使没有任何塔身层进入本次范围也必须保留。
+        if (local.isInside(centerX, baseY + levels, centerZ)) {
+            placeCorniceBlock(level, box, lamp, centerX, baseY + levels, centerZ);
+        }
     }
 
-    protected void scatterArchitecturalDebris(WorldGenLevel level, RandomSource random, BoundingBox box,
+    protected void scatterArchitecturalDebris(WorldGenLevel level, BoundingBox box, String id,
                                                int centerX, int y, int centerZ,
-                                               int minRadius, int maxRadius, int count,
                                                BlockState primary, BlockState secondary) {
-        for (int i = 0; i < count; i++) {
-            double angle = random.nextDouble() * Math.PI * 2.0D;
-            int radius = minRadius + random.nextInt(Math.max(1, maxRadius - minRadius + 1));
-            int x = centerX + (int) Math.round(Math.cos(angle) * radius);
-            int z = centerZ + (int) Math.round(Math.sin(angle) * radius);
-
-            if (Math.abs(x - centerX) <= 2 || Math.abs(z - centerZ) <= 2
-                    || !this.getBlock(level, x, y, z, box).isAir()) {
+        BoundingBox local = localGenerationBounds(box);
+        for (StructureDebrisLayouts.Placement placement : StructureDebrisLayouts.placements(id)) {
+            int x = centerX + placement.dx();
+            int blockY = y + placement.dy();
+            int z = centerZ + placement.dz();
+            if (!local.isInside(x, blockY, z)) {
                 continue;
             }
-            int height = 1 + random.nextInt(3);
-            architecturalPillar(level, box, x, y, z, height,
-                    random.nextBoolean() ? primary : secondary);
+            BlockState existing = this.getBlock(level, x, blockY, z, box);
+            if (existing.is(placement.substrate())) {
+                placeCorniceBlock(level, box, placement.material() == 0 ? primary : secondary, x, blockY, z);
+            }
         }
     }
 
@@ -1502,7 +2461,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int chestZ = localZ(centerZ, axis, side, 0, 0);
         this.placeBlock(level, air, chestX, baseY + 1, chestZ, box);
         this.placeBlock(level, air, chestX, baseY + 2, chestZ, box);
-        this.createChest(level, box, random, chestX, baseY + 1, chestZ, loot);
+        this.createChest(level, box, random, chestX, baseY + 1, chestZ, loot, axis.getOpposite());
 
         for (int entrance : new int[]{-halfLength, halfLength}) {
             int gateX = localX(centerX, axis, side, entrance, 0);
@@ -1586,7 +2545,8 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             architecturalPillar(level, box, x, baseY + 1, z, 2,
                     order % 2 == 0 ? wall : accent);
             this.placeBlock(level, ModBlocks.SEQUENCE_RUNE.get().defaultBlockState()
-                            .setValue(SequenceRuneBlock.ORDER, order),
+                            .setValue(SequenceRuneBlock.ORDER, order)
+                            .setValue(SequenceRuneBlock.FACING, localFurnitureFacing(axis.getOpposite())),
                     x, baseY + 3, z, box);
         }
         for (int index = 0; index < sequence.length; index++) {
@@ -1594,6 +2554,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             int z = localZ(coreZ, axis, side, 5, index - 2);
             this.placeBlock(level, ModBlocks.SEQUENCE_RUNE.get().defaultBlockState()
                             .setValue(SequenceRuneBlock.ORDER, sequence[index])
+                            .setValue(SequenceRuneBlock.FACING, localFurnitureFacing(axis.getOpposite()))
                             .setValue(SequenceRuneBlock.LIT, Boolean.TRUE),
                     x, baseY + 4, z, box);
         }
@@ -1602,7 +2563,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int chestZ = localZ(coreZ, axis, side, 8, 0);
         this.placeBlock(level, air, chestX, baseY + 1, chestZ, box);
         this.placeBlock(level, air, chestX, baseY + 2, chestZ, box);
-        this.createChest(level, box, random, chestX, baseY + 1, chestZ, loot);
+        this.createChest(level, box, random, chestX, baseY + 1, chestZ, loot, axis.getOpposite());
     }
 
     protected void placeStructureSpawner(WorldGenLevel level, RandomSource random, BoundingBox box,
@@ -1613,7 +2574,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 for (int dy = 0; dy <= 3; dy++) {
-                    this.placeBlock(level, Blocks.AIR.defaultBlockState(), x + dx, y + dy, z + dz, box);
+                    placeCorniceBlock(level, box, Blocks.AIR.defaultBlockState(), x + dx, y + dy, z + dz);
                 }
             }
         }
@@ -1622,12 +2583,14 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         if (box.isInside(spawnerPos)
                 && level.getBlockEntity(spawnerPos) instanceof SpawnerBlockEntity spawner) {
             spawner.setEntityId(entityType, random);
+            StructureMobSpawns.configure(spawner, level.registryAccess(),
+                    net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entityType));
         }
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             int lampX = x + direction.getStepX() * 3;
             int lampZ = z + direction.getStepZ() * 3;
-            this.placeBlock(level, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState(),
-                    lampX, y + 2, lampZ, box);
+            placeCorniceBlock(level, box, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState(),
+                    lampX, y + 2, lampZ);
         }
     }
 
@@ -1668,23 +2631,27 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         int outer = radius * radius;
         int innerRadius = radius - 1;
         int inner = innerRadius * innerRadius;
-        for (int x = centerX - radius; x <= centerX + radius; x++) {
-            for (int z = centerZ - radius; z <= centerZ + radius; z++) {
-                int dx = x - centerX;
-                int dz = z - centerZ;
-                int distance = dx * dx + dz * dz;
-                if (distance > outer || distance < inner) {
-                    continue;
-                }
+        BoundingBox local = localGenerationBounds(box);
+        if (local.maxY() >= baseY - 1 && local.minY() <= baseY + 3) {
+            for (int x = Math.max(centerX - radius, local.minX()); x <= Math.min(centerX + radius, local.maxX()); x++) {
+                for (int z = Math.max(centerZ - radius, local.minZ()); z <= Math.min(centerZ + radius, local.maxZ()); z++) {
+                    int dx = x - centerX;
+                    int dz = z - centerZ;
+                    int distance = dx * dx + dz * dz;
+                    if (distance > outer || distance < inner) {
+                        continue;
+                    }
 
-                if (Math.abs(dx) <= 4 || Math.abs(dz) <= 4) {
-                    continue;
-                }
-                for (int dy = -1; dy <= 2; dy++) {
-                    this.placeBlock(level, wall, x, baseY + dy, z, box);
-                }
-                if (Math.floorMod(x + z, 3) == 0) {
-                    this.placeBlock(level, accent, x, baseY + 3, z, box);
+                    if (Math.abs(dx) <= 4 || Math.abs(dz) <= 4) {
+                        continue;
+                    }
+                    for (int dy = Math.max(-1, local.minY() - baseY); dy <= Math.min(2, local.maxY() - baseY); dy++) {
+                        this.placeBlock(level, wall, x, baseY + dy, z, box);
+                    }
+                    if (baseY + 3 >= local.minY() && baseY + 3 <= local.maxY()
+                            && Math.floorMod(x + z, 3) == 0) {
+                        this.placeBlock(level, accent, x, baseY + 3, z, box);
+                    }
                 }
             }
         }
@@ -1692,16 +2659,18 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             double angle = Math.PI / 8.0D + i * Math.PI / 4.0D;
             int towerX = centerX + (int) Math.round(Math.cos(angle) * radius);
             int towerZ = centerZ + (int) Math.round(Math.sin(angle) * radius);
-            for (int dy = -1; dy <= 6; dy++) {
-                for (int ox = -1; ox <= 1; ox++) {
-                    for (int oz = -1; oz <= 1; oz++) {
+            for (int dy = Math.max(-1, local.minY() - baseY); dy <= Math.min(6, local.maxY() - baseY); dy++) {
+                for (int ox = Math.max(-1, local.minX() - towerX); ox <= Math.min(1, local.maxX() - towerX); ox++) {
+                    for (int oz = Math.max(-1, local.minZ() - towerZ); oz <= Math.min(1, local.maxZ() - towerZ); oz++) {
                         boolean corner = ox != 0 && oz != 0;
                         this.placeBlock(level, corner && dy >= 5 ? accent : wall,
                                 towerX + ox, baseY + dy, towerZ + oz, box);
                     }
                 }
             }
-            this.placeBlock(level, lamp, towerX, baseY + 7, towerZ, box);
+            if (local.isInside(towerX, baseY + 7, towerZ)) {
+                this.placeBlock(level, lamp, towerX, baseY + 7, towerZ, box);
+            }
         }
     }
 
@@ -1750,9 +2719,11 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         }
 
         for (int lampDistance : new int[]{2, 4}) {
+            // 内侧踏板上方须留出投影器整格落点及投影头部的净空。
+            int lampLateral = lampDistance == 2 ? 1 : 0;
             this.placeBlock(level, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState(),
-                    localX(doorX, axis, side, lampDistance, 0), baseY + 2,
-                    localZ(doorZ, axis, side, lampDistance, 0), box);
+                    localX(doorX, axis, side, lampDistance, lampLateral), baseY + 2,
+                    localZ(doorZ, axis, side, lampDistance, lampLateral), box);
         }
         for (int studDistance : new int[]{1, 3, 5}) {
             for (int lateral : new int[]{-2, 2}) {
@@ -1763,7 +2734,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         }
         int chestX = localX(doorX, axis, side, 5, 0);
         int chestZ = localZ(doorZ, axis, side, 5, 0);
-        this.createChest(level, box, random, chestX, baseY, chestZ, loot);
+        this.createChest(level, box, random, chestX, baseY, chestZ, loot, axis.getOpposite());
     }
 
     /** 水下刷怪笼:不清空水体,只放刷怪笼与基座环,供内部本就浸水的结构使用。 */
@@ -1924,9 +2895,83 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             int z = localZ(coreZ, axis, side, 1, i - 2);
             this.placeBlock(level, ModBlocks.SEQUENCE_RUNE.get().defaultBlockState()
                             .setValue(SequenceRuneBlock.ORDER, sequence[i])
+                            .setValue(SequenceRuneBlock.FACING, localFurnitureFacing(axis.getOpposite()))
                             .setValue(SequenceRuneBlock.LIT, Boolean.TRUE),
                     x, baseY + 4, z, box);
         }
+    }
+
+    /**
+     * 回响环:八枚符文围成环,按下一枚会翻转自身与两侧,全部熄灭后清除奖励龛封印。
+     * 初始状态由可解的服务端按键序列生成,答案不写入方块状态以外的客户端数据。
+     */
+    protected void buildLightsOutConstellation(WorldGenLevel level, RandomSource random,
+                                               BoundingBox box, int coreX, int baseY, int coreZ,
+                                               Direction forward, BlockState floor, BlockState wall,
+                                               BlockState accent, ResourceKey<LootTable> loot) {
+        Direction axis = horizontal(forward);
+        Direction side = axis.getClockWise();
+        BlockState air = Blocks.AIR.defaultBlockState();
+        architecturalDisk(level, box, coreX, baseY, coreZ, 6, floor);
+        architecturalRing(level, box, coreX, baseY, coreZ, 6, accent);
+        for (int distance = -6; distance <= 6; distance++) {
+            for (int lateral = -6; lateral <= 6; lateral++) {
+                if (distance * distance + lateral * lateral > 36) {
+                    continue;
+                }
+                int x = localX(coreX, axis, side, distance, lateral);
+                int z = localZ(coreZ, axis, side, distance, lateral);
+                for (int dy = 1; dy <= 3; dy++) {
+                    placeBlock(level, air, x, baseY + dy, z, box);
+                }
+            }
+        }
+
+        int initialMask = lightsOutInitialMask(coreX, baseY, coreZ);
+        java.util.List<BlockPos> tilePositions = new java.util.ArrayList<>(8);
+        for (int i = 0; i < 8; i++) {
+            double angle = Math.PI * 2.0D * i / 8.0D;
+            int distance = (int) Math.round(Math.sin(angle) * 4.0D);
+            int lateral = (int) Math.round(Math.cos(angle) * 4.0D);
+            int x = localX(coreX, axis, side, distance, lateral);
+            int z = localZ(coreZ, axis, side, distance, lateral);
+            placeBlock(level, wall, x, baseY + 1, z, box);
+            placeBlock(level, ModBlocks.SEQUENCE_RUNE.get().defaultBlockState()
+                    .setValue(SequenceRuneBlock.ORDER, i)
+                    .setValue(SequenceRuneBlock.LIT, (initialMask & (1 << i)) != 0), x, baseY + 2, z, box);
+            tilePositions.add(new BlockPos(getWorldX(x, z), getWorldY(baseY + 2), getWorldZ(x, z)));
+        }
+
+        placeBlock(level, accent, coreX, baseY, coreZ, box);
+        placeBlock(level, ModBlocks.PUZZLE_CORE.get().defaultBlockState(),
+                coreX, baseY + 1, coreZ, box);
+        BlockPos corePos = new BlockPos(getWorldX(coreX, coreZ),
+                getWorldY(baseY + 1), getWorldZ(coreX, coreZ));
+        if (box.isInside(corePos)
+                && level.getBlockEntity(corePos) instanceof PuzzleCoreBlockEntity core) {
+            core.setLightsOutPattern(tilePositions, initialMask);
+        }
+        buildSealedVaultPocket(level, random, box, coreX, baseY, coreZ,
+                axis, side, 7, loot);
+    }
+
+    private int lightsOutInitialMask(int localX, int localY, int localZ) {
+        long seed = this.boundingBox.minX() * 341873128712L
+                ^ this.boundingBox.minZ() * 132897987541L
+                ^ localX * 42317861L ^ localY * 83492791L ^ localZ * 374761393L;
+        RandomSource patternRandom = RandomSource.create(seed);
+        int mask = 0;
+        int steps = 4 + patternRandom.nextInt(4);
+        for (int i = 0; i < steps; i++) {
+            mask ^= lightsOutPressMask(patternRandom.nextInt(8));
+        }
+        return mask == 0 ? lightsOutPressMask(0) : mask;
+    }
+
+    private static int lightsOutPressMask(int index) {
+        int left = Math.floorMod(index - 1, 8);
+        int right = (index + 1) % 8;
+        return (1 << index) | (1 << left) | (1 << right);
     }
 
     /** 谜题核心前方的封印奖励龛:锚定石外壳,普通封印石门,由解谜清除。 */
@@ -1953,7 +2998,7 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         }
         int chestX = localX(coreX, axis, side, doorDistance + 2, 0);
         int chestZ = localZ(coreZ, axis, side, doorDistance + 2, 0);
-        this.createChest(level, box, random, chestX, baseY + 1, chestZ, loot);
+        this.createChest(level, box, random, chestX, baseY + 1, chestZ, loot, axis.getOpposite());
     }
 
     private void buildRelayGate(WorldGenLevel level, BoundingBox box,
@@ -2015,13 +3060,17 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
 
     protected void architecturalDisk(WorldGenLevel level, BoundingBox box,
                                       int centerX, int y, int centerZ, int radius, BlockState state) {
+        BoundingBox local = localGenerationBounds(box);
+        if (y < local.minY() || y > local.maxY()) {
+            return;
+        }
         int radiusSquared = radius * radius;
-        for (int x = centerX - radius; x <= centerX + radius; x++) {
-            for (int z = centerZ - radius; z <= centerZ + radius; z++) {
+        for (int x = Math.max(centerX - radius, local.minX()); x <= Math.min(centerX + radius, local.maxX()); x++) {
+            for (int z = Math.max(centerZ - radius, local.minZ()); z <= Math.min(centerZ + radius, local.maxZ()); z++) {
                 int dx = x - centerX;
                 int dz = z - centerZ;
                 if (dx * dx + dz * dz <= radiusSquared) {
-                    this.placeBlock(level, state, x, y, z, box);
+                    placeCorniceBlock(level, box, state, x, y, z);
                 }
             }
         }
@@ -2029,16 +3078,20 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
 
     protected void architecturalRing(WorldGenLevel level, BoundingBox box,
                                       int centerX, int y, int centerZ, int radius, BlockState state) {
+        BoundingBox local = localGenerationBounds(box);
+        if (y < local.minY() || y > local.maxY()) {
+            return;
+        }
         int outer = radius * radius;
         int innerRadius = Math.max(0, radius - 1);
         int inner = innerRadius * innerRadius;
-        for (int x = centerX - radius; x <= centerX + radius; x++) {
-            for (int z = centerZ - radius; z <= centerZ + radius; z++) {
+        for (int x = Math.max(centerX - radius, local.minX()); x <= Math.min(centerX + radius, local.maxX()); x++) {
+            for (int z = Math.max(centerZ - radius, local.minZ()); z <= Math.min(centerZ + radius, local.maxZ()); z++) {
                 int dx = x - centerX;
                 int dz = z - centerZ;
                 int distance = dx * dx + dz * dz;
                 if (distance <= outer && distance >= inner) {
-                    this.placeBlock(level, state, x, y, z, box);
+                    placeCorniceBlock(level, box, state, x, y, z);
                 }
             }
         }
@@ -2046,8 +3099,20 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
 
     protected void architecturalPillar(WorldGenLevel level, BoundingBox box,
                                         int x, int y, int z, int height, BlockState state) {
-        for (int offset = 0; offset < height; offset++) {
-            this.placeBlock(level, state, x, y + offset, z, box);
+        BoundingBox local = localGenerationBounds(box);
+        if (x < local.minX() || x > local.maxX() || z < local.minZ() || z > local.maxZ()) {
+            return;
+        }
+        int chestHeadroom = -1;
+        for (int offset = Math.max(0, local.minY() - y); offset < Math.min(height, local.maxY() - y + 1); offset++) {
+            BlockState existing = this.getBlock(level, x, y + offset, z, box);
+            if (existing.is(Blocks.CHEST) || existing.is(ModBlocks.TRUE_SIGHT_CHEST.get())) {
+                chestHeadroom = offset + 2;
+            }
+            if (offset <= chestHeadroom) {
+                continue;
+            }
+            placeCorniceBlock(level, box, state, x, y + offset, z);
         }
     }
 
@@ -2066,12 +3131,12 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 if (dx != 0 || dz != 0) {
-                    this.placeBlock(level, air, x + dx, y, z + dz, box);
+                    placeCorniceBlock(level, box, air, x + dx, y, z + dz);
                 }
             }
         }
         for (int dy = 1; dy <= 2; dy++) {
-            this.placeBlock(level, air, x, y + dy, z, box);
+            placeCorniceBlock(level, box, air, x, y + dy, z);
         }
     }
 
@@ -2147,9 +3212,12 @@ abstract class EchoStructurePiece extends ScatteredFeaturePiece {
             int baseX = x + side.getStepX() * step;
             int baseZ = z + side.getStepZ() * step;
             for (int offset = -1; offset <= 1; offset++) {
+                int approachX = baseX + perpX * offset;
+                int approachZ = baseZ + perpZ * offset;
+                placeCorniceBlock(level, box, ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState(),
+                        approachX, Math.max(0, y - 1), approachZ);
                 for (int dy = 0; dy <= 2; dy++) {
-                    this.placeBlock(level, air, baseX + perpX * offset, y + dy,
-                            baseZ + perpZ * offset, box);
+                    placeCorniceBlock(level, box, air, approachX, y + dy, approachZ);
                 }
             }
         }

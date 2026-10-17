@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IDI",
+    "IEI",
+    "DCD"
+  ],
+  "key": {
+    "I": {
+      "item": "unknown_echoes:echo_metal_ingot"
+    },
+    "D": {
+      "item": "unknown_echoes:echo_dust"
+    },
+    "E": {
+      "item": "minecraft:enchanting_table"
+    },
+    "C": {
+      "item": "unknown_echoes:echo_core"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:particle_enchanting_table",
+    "count": 1
+  }
+}

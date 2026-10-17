@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=y": {
+      "model": "unknown_echoes:block/ship_timber"
+    },
+    "axis=x": {
+      "model": "unknown_echoes:block/ship_timber",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z": {
+      "model": "unknown_echoes:block/ship_timber",
+      "x": 90
+    }
+  }
+}

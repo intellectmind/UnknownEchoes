@@ -57,10 +57,8 @@ public class StepRuneBlock extends Block {
 
     @Override
     protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-        if (level.isClientSide || !(entity instanceof ServerPlayer player) || player.isSpectator()) {
-            return;
-        }
-        if (state.getValue(LIT)) {
+        if (level.isClientSide || !(entity instanceof ServerPlayer player) || player.isSpectator()
+                || !player.isAlive() || player.isRemoved() || player.hasDisconnected() || player.level() != level) {
             return;
         }
 
@@ -69,7 +67,7 @@ public class StepRuneBlock extends Block {
         }
         level.scheduleTick(pos, this, RETRIGGER_TICKS);
         PuzzleCoreBlockEntity core = SequenceRuneBlock.findCore(level, pos);
-        if (core == null) {
+        if (core == null || state.getValue(LIT) && !core.acceptsLitRuneInput()) {
             return;
         }
         core.tryActivate(state.getValue(ORDER), pos, player);

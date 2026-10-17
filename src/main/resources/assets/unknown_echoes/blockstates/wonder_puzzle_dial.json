@@ -1,0 +1,220 @@
+{
+  "variants": {
+    "form=0,value=0,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_0"
+    },
+    "form=0,value=0,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_0_lit"
+    },
+    "form=0,value=1,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_1"
+    },
+    "form=0,value=1,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_1_lit"
+    },
+    "form=0,value=2,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_2"
+    },
+    "form=0,value=2,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_2_lit"
+    },
+    "form=0,value=3,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_3"
+    },
+    "form=0,value=3,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_3_lit"
+    },
+    "form=0,value=4,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_4"
+    },
+    "form=0,value=4,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_4_lit"
+    },
+    "form=0,value=5,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_5"
+    },
+    "form=0,value=5,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_5_lit"
+    },
+    "form=0,value=6,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_6"
+    },
+    "form=0,value=6,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_6_lit"
+    },
+    "form=0,value=7,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_7"
+    },
+    "form=0,value=7,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_7_lit"
+    },
+    "form=0,value=8,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_8"
+    },
+    "form=0,value=8,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_0_8_lit"
+    },
+    "form=1,value=0,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_0"
+    },
+    "form=1,value=0,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_0_lit"
+    },
+    "form=1,value=1,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_1"
+    },
+    "form=1,value=1,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_1_lit"
+    },
+    "form=1,value=2,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_2"
+    },
+    "form=1,value=2,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_2_lit"
+    },
+    "form=1,value=3,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_3"
+    },
+    "form=1,value=3,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_3_lit"
+    },
+    "form=1,value=4,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_4"
+    },
+    "form=1,value=4,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_4_lit"
+    },
+    "form=1,value=5,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_5"
+    },
+    "form=1,value=5,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_5_lit"
+    },
+    "form=1,value=6,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_6"
+    },
+    "form=1,value=6,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_6_lit"
+    },
+    "form=1,value=7,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_7"
+    },
+    "form=1,value=7,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_7_lit"
+    },
+    "form=1,value=8,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_8"
+    },
+    "form=1,value=8,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_1_8_lit"
+    },
+    "form=2,value=0,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_0"
+    },
+    "form=2,value=0,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_0_lit"
+    },
+    "form=2,value=1,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_1"
+    },
+    "form=2,value=1,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_1_lit"
+    },
+    "form=2,value=2,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_2"
+    },
+    "form=2,value=2,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_2_lit"
+    },
+    "form=2,value=3,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_3"
+    },
+    "form=2,value=3,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_3_lit"
+    },
+    "form=2,value=4,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_4"
+    },
+    "form=2,value=4,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_4_lit"
+    },
+    "form=2,value=5,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_5"
+    },
+    "form=2,value=5,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_5_lit"
+    },
+    "form=2,value=6,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_6"
+    },
+    "form=2,value=6,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_6_lit"
+    },
+    "form=2,value=7,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_7"
+    },
+    "form=2,value=7,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_7_lit"
+    },
+    "form=2,value=8,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_8"
+    },
+    "form=2,value=8,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_2_8_lit"
+    },
+    "form=3,value=0,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_0"
+    },
+    "form=3,value=0,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_0_lit"
+    },
+    "form=3,value=1,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_1"
+    },
+    "form=3,value=1,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_1_lit"
+    },
+    "form=3,value=2,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_2"
+    },
+    "form=3,value=2,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_2_lit"
+    },
+    "form=3,value=3,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_3"
+    },
+    "form=3,value=3,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_3_lit"
+    },
+    "form=3,value=4,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_4"
+    },
+    "form=3,value=4,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_4_lit"
+    },
+    "form=3,value=5,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_5"
+    },
+    "form=3,value=5,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_5_lit"
+    },
+    "form=3,value=6,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_6"
+    },
+    "form=3,value=6,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_6_lit"
+    },
+    "form=3,value=7,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_7"
+    },
+    "form=3,value=7,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_7_lit"
+    },
+    "form=3,value=8,lit=false": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_8"
+    },
+    "form=3,value=8,lit=true": {
+      "model": "unknown_echoes:block/wonder_puzzle_dial_3_8_lit"
+    }
+  }
+}

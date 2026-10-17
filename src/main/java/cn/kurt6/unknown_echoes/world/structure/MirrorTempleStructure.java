@@ -20,16 +20,16 @@ import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-public class MirrorTempleStructure extends SinglePieceStructure {
+public class MirrorTempleStructure extends TerrainAnchoredStructure {
     public static final MapCodec<MirrorTempleStructure> CODEC = simpleCodec(MirrorTempleStructure::new);
 
     private static final int WIDTH = 49;
     private static final int DEPTH = 49;
-    private static final int HEIGHT = 24;
+    private static final int HEIGHT = 34;
+    private static final int SHELL_HEIGHT = 24;
     private static final int BOSS_ARENA_SIZE = 37;
     private static final int BOSS_ARENA_Z = DEPTH - 19;
     /** Boss 出生点与主战区中心重合,复战与首次生成使用同一场地锚点。 */
@@ -45,12 +45,8 @@ public class MirrorTempleStructure extends SinglePieceStructure {
         Piece piece = new Piece(context.random(),
                 context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ());
         BoundingBox footprint = piece.getBoundingBox();
-        if (!LakeBedPlacement.hasSubmergedFootprint(context,
-                footprint.minX(), footprint.minZ(), WIDTH, 24, 24)) {
-            return java.util.Optional.empty();
-        }
-        int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(
-                context, footprint.minX(), footprint.minZ(), WIDTH, DEPTH);
+        int floorY = LakeBedPlacement.findOceanFloor(context,
+                footprint.minX(), footprint.minZ(), WIDTH, DEPTH, 24, 24);
         if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
             return java.util.Optional.empty();
         }
@@ -71,7 +67,7 @@ public class MirrorTempleStructure extends SinglePieceStructure {
         private static final int[][] MIRROR_TEMPLE_NODES = {
                 {6, 6}, {24, 6}, {42, 6},
                 {6, 24}, {42, 24},
-                {6, 42}, {24, 42}, {42, 42},
+                {4, 42}, {24, 42}, {42, 42},
                 {15, 15}, {33, 15}, {15, 33}, {33, 33}
         };
 
@@ -275,10 +271,9 @@ public class MirrorTempleStructure extends SinglePieceStructure {
             BlockState hidden = ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState();
             BlockState anchored = ModBlocks.ANCHORED_SEALED_STONE.get().defaultBlockState();
             BlockState altar = ModBlocks.TRUE_SIGHT_ALTAR.get().defaultBlockState();
-            BlockState sigil = ModBlocks.MIRROR_SIGIL.get().defaultBlockState();
             BlockState air = Blocks.AIR.defaultBlockState();
 
-            this.generateBox(level, box, 0, 0, 0, WIDTH - 1, HEIGHT - 1, DEPTH - 1,
+            this.generateBox(level, box, 0, 0, 0, WIDTH - 1, SHELL_HEIGHT - 1, DEPTH - 1,
                     bricks, air, false);
 
             for (int dx = -1; dx <= 1; dx++) {
@@ -287,51 +282,15 @@ public class MirrorTempleStructure extends SinglePieceStructure {
                 }
             }
             buildOuterCloister(level, box, bricks, hidden, air);
-            buildSigilRooms(level, box, bricks, sigil, air);
+            buildSigilRooms(level, box, bricks, runeBricks, air);
             // 高廊只保留外圈立面,中央战区必须从地板一直通到穹顶。
             buildHighGallery(level, box, bricks, runeBricks);
 
             for (int[] column : new int[][]{{3, 3}, {WIDTH - 4, 3}, {3, DEPTH - 4}, {WIDTH - 4, DEPTH - 4}}) {
-                for (int y = 1; y <= HEIGHT - 3; y++) {
+                for (int y = 1; y <= SHELL_HEIGHT - 3; y++) {
                     this.placeBlock(level, bricks, column[0], y, column[1], box);
                 }
                 this.placeBlock(level, runeBricks, column[0], 3, column[1], box);
-            }
-
-            RandomSource sigilRandom = RandomSource.create(
-                    this.boundingBox.minX() * 341873128712L ^ this.boundingBox.minZ() * 132897987541L);
-            int[][] sigilSpots = {
-                    {1, 4}, {1, DEPTH / 2}, {1, DEPTH - 5},
-                    {WIDTH - 2, 4}, {WIDTH - 2, DEPTH / 2}, {WIDTH - 2, DEPTH - 6},
-                    {5, 1}, {8, 1}, {WIDTH - 6, 1},
-                    {4, DEPTH - 2}, {9, DEPTH - 2}, {15, DEPTH - 2}
-            };
-
-            int[] perm = new int[sigilSpots.length];
-            for (int i = 0; i < perm.length; i++) {
-                perm[i] = i;
-            }
-            for (int i = perm.length - 1; i > 0; i--) {
-                int j = sigilRandom.nextInt(i + 1);
-                int tmp = perm[i];
-                perm[i] = perm[j];
-                perm[j] = tmp;
-            }
-            boolean[] isReal = new boolean[sigilSpots.length];
-            for (int i = 0; i < 4; i++) {
-                isReal[perm[i]] = true;
-            }
-            for (int i = 0; i < sigilSpots.length; i++) {
-                this.placeBlock(level, sigil, sigilSpots[i][0], 2, sigilSpots[i][1], box);
-
-                BlockPos sigilPos = new BlockPos(
-                        this.getWorldX(sigilSpots[i][0], sigilSpots[i][1]),
-                        this.getWorldY(2),
-                        this.getWorldZ(sigilSpots[i][0], sigilSpots[i][1]));
-                if (box.isInside(sigilPos) && level.getBlockEntity(sigilPos)
-                        instanceof cn.kurt6.unknown_echoes.block.truesight.MirrorSigilBlockEntity sigilEntity) {
-                    sigilEntity.setReal(isReal[i]);
-                }
             }
 
             for (int x = WIDTH / 2 - 1; x <= WIDTH / 2 + 1; x++) {
@@ -340,9 +299,6 @@ public class MirrorTempleStructure extends SinglePieceStructure {
                 }
             }
             this.placeBlock(level, altar, WIDTH / 2, 2, DEPTH - 4, box);
-
-            this.placeBlock(level, ModBlocks.TRUE_SIGHT_STELE.get().defaultBlockState(),
-                    WIDTH / 2 - 3, 1, DEPTH - 4, box);
 
             this.generateBox(level, box, WIDTH - 5, 1, DEPTH - 5, WIDTH - 2, 4, DEPTH - 2, air, air, false);
 
@@ -371,6 +327,10 @@ public class MirrorTempleStructure extends SinglePieceStructure {
                     this.placeBlock(level, hidden, x, y, DEPTH - 5, box);
                 }
             }
+            this.generateBox(level, box, WIDTH - 5, 4, DEPTH - 5, WIDTH - 5, 4, DEPTH - 2,
+                    anchored, anchored, false);
+            this.generateBox(level, box, WIDTH - 4, 4, DEPTH - 5, WIDTH - 2, 4, DEPTH - 5,
+                    anchored, anchored, false);
             buildAccessibleChest(level, random, box, WIDTH - 3, 1, DEPTH - 3,
                     ModLootTables.ECHO_TEMPLE_HIDDEN);
 
@@ -388,6 +348,10 @@ public class MirrorTempleStructure extends SinglePieceStructure {
                     ModLootTables.T5_MINIBOSS_REPEAT);
             buildTrueSightRevisitDoor(level, random, box, hidden, anchored);
             buildMonumentFrame(level, random, box);
+            // 真视碑落在中心净空之外，须晚于战区铺地与外环门架。
+            this.placeBlock(level, ModBlocks.TRUE_SIGHT_STELE.get().defaultBlockState(),
+                    WIDTH / 2 - 3, 2, DEPTH - 2, box);
+            placeTempleSigils(level, box);
 
             placeStructureSpawner(level, random, box, 6, 1, 25,
                     ModEntities.MIRROR_DUST_DECOY.get(), bricks, runeBricks);
@@ -423,6 +387,47 @@ public class MirrorTempleStructure extends SinglePieceStructure {
                     }
                 }
             }
+            dressStructure(level, box, "mirror_temple");
+        }
+
+        private void placeTempleSigils(WorldGenLevel level, BoundingBox box) {
+            // 符印须晚于门面落位；北侧各厅保留一枚，真假只写入方块实体。
+            BlockState sigil = ModBlocks.MIRROR_SIGIL.get().defaultBlockState();
+            RandomSource sigilRandom = RandomSource.create(
+                    this.boundingBox.minX() * 341873128712L ^ this.boundingBox.minZ() * 132897987541L);
+            int[][] sigilSpots = {
+                    {1, 2, 4}, {1, 2, DEPTH / 2}, {1, 2, DEPTH - 5},
+                    {WIDTH - 2, 2, 4}, {WIDTH - 2, 2, DEPTH / 2}, {WIDTH - 2, 2, DEPTH - 6},
+                    {14, 3, 12}, {24, 3, 12}, {35, 3, 12},
+                    {4, 2, DEPTH - 2}, {9, 2, DEPTH - 2}, {15, 2, DEPTH - 2}
+            };
+
+            int[] perm = new int[sigilSpots.length];
+            for (int i = 0; i < perm.length; i++) {
+                perm[i] = i;
+            }
+            for (int i = perm.length - 1; i > 0; i--) {
+                int j = sigilRandom.nextInt(i + 1);
+                int tmp = perm[i];
+                perm[i] = perm[j];
+                perm[j] = tmp;
+            }
+            boolean[] isReal = new boolean[sigilSpots.length];
+            for (int i = 0; i < 4; i++) {
+                isReal[perm[i]] = true;
+            }
+            for (int i = 0; i < sigilSpots.length; i++) {
+                this.placeBlock(level, sigil, sigilSpots[i][0], sigilSpots[i][1], sigilSpots[i][2], box);
+
+                BlockPos sigilPos = new BlockPos(
+                        this.getWorldX(sigilSpots[i][0], sigilSpots[i][2]),
+                        this.getWorldY(sigilSpots[i][1]),
+                        this.getWorldZ(sigilSpots[i][0], sigilSpots[i][2]));
+                if (box.isInside(sigilPos) && level.getBlockEntity(sigilPos)
+                        instanceof cn.kurt6.unknown_echoes.block.truesight.MirrorSigilBlockEntity sigilEntity) {
+                    sigilEntity.setReal(isReal[i]);
+                }
+            }
         }
 
         private void buildMonumentFrame(WorldGenLevel level, RandomSource random, BoundingBox box) {
@@ -440,6 +445,14 @@ public class MirrorTempleStructure extends SinglePieceStructure {
             }
             architecturalRing(level, box, c, 14, c, 17,
                     Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState());
+            // 镜面裂冠：北侧三枚不同高度的棱镜脊柱只服务于主神殿的远景识别。
+            for (int[] shard : new int[][]{{c - 12, 7, 20}, {c, 5, 22}, {c + 12, 7, 18}}) {
+                for (int y = 15; y <= shard[2]; y++) {
+                    this.placeBlock(level, y % 2 == 0 ? fractured : mirror,
+                            shard[0], y, shard[1], box);
+                }
+                this.placeBlock(level, prism, shard[0], shard[2] + 1, shard[1], box);
+            }
         }
 
         private void buildOuterCloister(WorldGenLevel level, BoundingBox box,
@@ -457,15 +470,15 @@ public class MirrorTempleStructure extends SinglePieceStructure {
         }
 
         private void buildSigilRooms(WorldGenLevel level, BoundingBox box,
-                                     BlockState bricks, BlockState sigil, BlockState air) {
+                                     BlockState bricks, BlockState inlay, BlockState air) {
             int[][] rooms = {{10, 11}, {WIDTH / 2 - 4, 11}, {WIDTH - 18, 11}};
             for (int[] room : rooms) {
                 this.generateBox(level, box, room[0], 1, room[1], room[0] + 8, 6, room[1] + 8, bricks, bricks, false);
                 this.generateBox(level, box, room[0] + 1, 2, room[1] + 1, room[0] + 7, 5, room[1] + 7, air, air, false);
                 this.placeBlock(level, air, room[0] + 4, 2, room[1] + 8, box);
-                this.placeBlock(level, sigil, room[0] + 2, 3, room[1] + 1, box);
-                this.placeBlock(level, sigil, room[0] + 4, 3, room[1] + 1, box);
-                this.placeBlock(level, sigil, room[0] + 6, 3, room[1] + 1, box);
+                this.placeBlock(level, inlay, room[0] + 2, 3, room[1] + 1, box);
+                this.placeBlock(level, inlay, room[0] + 4, 3, room[1] + 1, box);
+                this.placeBlock(level, inlay, room[0] + 6, 3, room[1] + 1, box);
             }
         }
 
@@ -512,7 +525,7 @@ public class MirrorTempleStructure extends SinglePieceStructure {
                     if ((x - c) * (x - c) + (z - arenaZ) * (z - arenaZ) > (r - 2) * (r - 2)) {
                         continue;
                     }
-                    for (int y = 2; y <= HEIGHT - 2; y++) {
+                    for (int y = 2; y <= SHELL_HEIGHT - 2; y++) {
                         // 祭坛位于战区边缘,必须保留,否则 Boss 生成条件会被净空逻辑抹掉。
                         if (x == WIDTH / 2 && z == DEPTH - 4 && y == 2) {
                             continue;
@@ -535,7 +548,7 @@ public class MirrorTempleStructure extends SinglePieceStructure {
                                                BlockState hidden, BlockState anchored) {
             int x0 = 6;
             int z0 = DEPTH - 13;
-            this.generateBox(level, box, x0, 1, z0, x0 + 8, 5, z0 + 8, anchored, anchored, false);
+            this.generateBox(level, box, x0, 0, z0, x0 + 8, 5, z0 + 8, anchored, anchored, false);
             this.generateBox(level, box, x0 + 1, 2, z0 + 1, x0 + 7, 4, z0 + 7,
                     Blocks.AIR.defaultBlockState(), Blocks.AIR.defaultBlockState(), false);
             this.placeBlock(level, hidden, x0 + 4, 2, z0, box);

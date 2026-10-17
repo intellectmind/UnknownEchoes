@@ -1,0 +1,32 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:clue_map"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.exploration_root.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.exploration_root.desc"
+    },
+    "frame": "task",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "hidden": false,
+    "background": "minecraft:textures/block/moss_block.png"
+  },
+  "criteria": {
+    "has_item": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:echo_shard"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

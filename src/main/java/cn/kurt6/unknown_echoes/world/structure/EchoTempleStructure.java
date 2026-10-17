@@ -15,6 +15,7 @@ import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.WorldgenRandom;
@@ -187,6 +188,8 @@ public class EchoTempleStructure extends Structure {
 
                 }
             }
+            dressStructure(level, box, "echo_temple_" + kind.name().toLowerCase(java.util.Locale.ROOT),
+                    kind == Kind.ENTRANCE ? boundingBox.getYSpan() - kind.height : 0);
         }
 
         private BlockState bricks(RandomSource random) {
@@ -232,6 +235,14 @@ public class EchoTempleStructure extends Structure {
                 architecturalPillar(level, box, tower[0], 1, tower[1], 9, brick);
                 this.placeBlock(level, rune, tower[0], 10, tower[1], box);
             }
+
+            // 前庭回响冠：五枚错位立石组成门前梳状天际线，只有前庭模块拥有这组轮廓。
+            for (int i = -2; i <= 2; i++) {
+                int height = 7 + Math.abs(i);
+                architecturalPillar(level, box, centerX + i * 2, 2,
+                        this.kind.depth - 3, height, i == 0 ? rune : (i % 2 == 0 ? mossy : cracked));
+            }
+            this.placeBlock(level, lamp, centerX, 2 + 7 + 2, this.kind.depth - 3, box);
 
             for (int[] debris : new int[][]{{4, 3}, {18, 3}, {4, 8}, {18, 8}, {4, 10}, {18, 10}}) {
                 architecturalPillar(level, box, debris[0], 1, debris[1], 1 + random.nextInt(2),
@@ -422,6 +433,8 @@ public class EchoTempleStructure extends Structure {
             int doorZ = this.kind.depth / 2;
             this.placeBlock(level, fill, doorX, 1, doorZ, box);
             this.placeBlock(level, fill, doorX, 2, doorZ, box);
+            // 门内台阶抬高脚面，门楣须为站立穿行留出三格净高。
+            this.placeBlock(level, fill, doorX, 3, doorZ, box);
         }
 
         private void buildCombat(WorldGenLevel level, BoundingBox box, RandomSource random) {
@@ -450,7 +463,8 @@ public class EchoTempleStructure extends Structure {
                     this.placeBlock(level, shelf, x, y, this.kind.depth - 2, box);
                 }
             }
-            this.placeBlock(level, Blocks.LECTERN.defaultBlockState(),
+            this.placeBlock(level, Blocks.LECTERN.defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.NORTH)),
                     this.kind.width / 2, 1, this.kind.depth / 2, box);
             buildAccessibleChest(level, random, box, this.kind.isEastSide() ? this.kind.width - 3 : 2,
                     1, this.kind.depth / 2, ModLootTables.ECHO_TEMPLE_ARCHIVE);

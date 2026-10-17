@@ -9,10 +9,13 @@ public record ExplorationClue(String structureId, String dimension, BlockPos pos
                 + pos.getX() + "|" + pos.getY() + "|" + pos.getZ() + "|" + (visited ? 1 : 0);
     }
 
-    /** 解析失败返回 null,调用方跳过即可。 */
+    // 解析失败返回 null，调用方跳过即可。
     public static ExplorationClue decode(String line) {
-        String[] parts = line.split("\\|");
-        if (parts.length != 6) {
+        if (line == null) {
+            return null;
+        }
+        String[] parts = line.split("\\|", -1);
+        if (parts.length != 6 || !("0".equals(parts[5]) || "1".equals(parts[5]))) {
             return null;
         }
         try {
@@ -27,5 +30,11 @@ public record ExplorationClue(String structureId, String dimension, BlockPos pos
 
     public ExplorationClue asVisited() {
         return new ExplorationClue(structureId, dimension, pos, true);
+    }
+
+    // 抵达状态变化不改变目的地身份。
+    public boolean sameSite(ExplorationClue other) {
+        return other != null && structureId.equals(other.structureId)
+                && dimension.equals(other.dimension) && pos.equals(other.pos);
     }
 }

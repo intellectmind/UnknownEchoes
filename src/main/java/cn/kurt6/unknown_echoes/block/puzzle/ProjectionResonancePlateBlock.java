@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.block.puzzle;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.entity.projection.EchoProjectionEntity;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import com.mojang.serialization.MapCodec;
@@ -30,21 +31,27 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /** 仅由回响投影维持的踏板，可临时开启附近投影共鸣门并输出红石信号。 */
 public final class ProjectionResonancePlateBlock extends Block {
     public static final MapCodec<ProjectionResonancePlateBlock> CODEC =
             simpleCodec(ProjectionResonancePlateBlock::new);
     public static final BooleanProperty ACTIVE = BooleanProperty.create("active");
+    // 未完成的开门必须随区块保存；完成后不再在每次占用复查中扫描周围方块。
+    public static final BooleanProperty PENDING_OPEN = BooleanProperty.create("pending_open");
 
     public static final int DOOR_RADIUS = 8;
     public static final int RECHECK_TICKS = 10;
     private static final int DOOR_VERTICAL_RADIUS = 3;
+    private static final Map<ServerLevel, Long> CONTROLLER_REVISIONS = new WeakHashMap<>();
     private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 3, 15);
 
     public ProjectionResonancePlateBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(ACTIVE, Boolean.FALSE));
+        registerDefaultState(stateDefinition.any().setValue(ACTIVE, Boolean.FALSE)
+                .setValue(PENDING_OPEN, Boolean.FALSE));
     }
 
     @Override
@@ -54,7 +61,7 @@ public final class ProjectionResonancePlateBlock extends Block {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(ACTIVE);
+        builder.add(ACTIVE, PENDING_OPEN);
     }
 
     @Override
@@ -71,41 +78,95 @@ public final class ProjectionResonancePlateBlock extends Block {
 
     @Override
     protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-        if (level.isClientSide || !(entity instanceof EchoProjectionEntity)) {
+        if (level.isClientSide || !(entity instanceof EchoProjectionEntity)
+                || !entity.isAlive() || entity.level() != level || !(level instanceof ServerLevel serverLevel)
+                || !isCurrentPlate(serverLevel, pos, state)) {
             return;
         }
-        ServerLevel serverLevel = (ServerLevel) level;
         if (!state.getValue(ACTIVE)) {
-            serverLevel.setBlock(pos, state.setValue(ACTIVE, Boolean.TRUE), Block.UPDATE_ALL);
-            setNearbyResonanceDoors(serverLevel, pos, true);
+            BlockState activeState = state.setValue(ACTIVE, Boolean.TRUE)
+                    .setValue(PENDING_OPEN, Boolean.TRUE);
+            boolean applied;
+            try {
+                applied = serverLevel.setBlock(pos, activeState, Block.UPDATE_ALL);
+            } finally {
+                // 方块通知、开门和声音均可能中断；已提交的激活仍须复查并恢复。
+                if (isCurrentPlate(serverLevel, pos, activeState)) {
+                    serverLevel.scheduleTick(pos, this, RECHECK_TICKS);
+                }
+            }
+            if (!applied || !isCurrentPlate(serverLevel, pos, activeState)) {
+                return;
+            }
+            if (!finishOpeningDoors(serverLevel, pos, activeState)) {
+                return;
+            }
             serverLevel.sendParticles(ParticleTypes.END_ROD,
                     pos.getX() + 0.5D, pos.getY() + 0.25D, pos.getZ() + 0.5D,
                     18, 0.42D, 0.12D, 0.42D, 0.025D);
-            serverLevel.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME,
-                    SoundSource.BLOCKS, 0.9F, 1.45F);
-            serverLevel.scheduleTick(pos, this, RECHECK_TICKS);
+            serverLevel.playSound(null, pos, ModSounds.BLOCK_PROJECTION_PLATE_CONFIRM.get(),
+                    SoundSource.BLOCKS, 0.9F, 1.0F);
         }
+    }
+
+    private static boolean isCurrentPlate(ServerLevel level, BlockPos pos, BlockState expected) {
+        return level.hasChunkAt(pos) && level.getBlockState(pos) == expected
+                && expected.getBlock() instanceof ProjectionResonancePlateBlock;
+    }
+
+    private static boolean finishOpeningDoors(ServerLevel level, BlockPos pos, BlockState activeState) {
+        if (!setNearbyResonanceDoors(level, pos, true) || !isCurrentPlate(level, pos, activeState)) {
+            return false;
+        }
+        BlockState settledState = activeState.setValue(PENDING_OPEN, Boolean.FALSE);
+        return level.setBlock(pos, settledState, Block.UPDATE_CLIENTS)
+                && isCurrentPlate(level, pos, settledState);
     }
 
     @Override
     protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        if (!state.getValue(ACTIVE)) {
+        if (!isCurrentPlate(level, pos, state)) {
             return;
         }
-        boolean projectionPresent = !level.getEntitiesOfClass(EchoProjectionEntity.class,
-                new AABB(pos).inflate(0.25D, 0.5D, 0.25D), Entity::isAlive).isEmpty();
-        if (projectionPresent) {
-            level.scheduleTick(pos, this, RECHECK_TICKS);
-            return;
+        boolean wasActive = state.getValue(ACTIVE);
+        if (wasActive) {
+            boolean projectionPresent = !level.getEntitiesOfClass(EchoProjectionEntity.class,
+                    new AABB(pos).inflate(0.25D, 0.5D, 0.25D), Entity::isAlive).isEmpty();
+            if (projectionPresent) {
+                level.scheduleTick(pos, this, RECHECK_TICKS);
+                if (state.getValue(PENDING_OPEN)) {
+                    finishOpeningDoors(level, pos, state);
+                }
+                return;
+            }
         }
 
-        level.setBlock(pos, state.setValue(ACTIVE, Boolean.FALSE), Block.UPDATE_ALL);
-        setNearbyResonanceDoors(level, pos, false);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                pos.getX() + 0.5D, pos.getY() + 0.2D, pos.getZ() + 0.5D,
-                8, 0.28D, 0.08D, 0.28D, 0.015D);
-        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE,
-                SoundSource.BLOCKS, 0.55F, 0.65F);
+        BlockState idleState = state.setValue(ACTIVE, Boolean.FALSE)
+                .setValue(PENDING_OPEN, Boolean.FALSE);
+        boolean doorsSettled = false;
+        try {
+            if (wasActive) {
+                boolean reset = level.setBlock(pos, idleState, Block.UPDATE_ALL);
+                if (!reset || !isCurrentPlate(level, pos, idleState)) {
+                    return;
+                }
+            }
+            doorsSettled = setNearbyResonanceDoors(level, pos, false);
+            if (!doorsSettled || !isCurrentPlate(level, pos, idleState) || !wasActive) {
+                return;
+            }
+            level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                    pos.getX() + 0.5D, pos.getY() + 0.2D, pos.getZ() + 0.5D,
+                    8, 0.28D, 0.08D, 0.28D, 0.015D);
+            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE,
+                    SoundSource.BLOCKS, 0.55F, 0.65F);
+        } finally {
+            // 复位可能已提交而关门尚未完成；闲置态的补偿 tick 继续处理未关闭的门。
+            if (!doorsSettled && (isCurrentPlate(level, pos, state)
+                    || isCurrentPlate(level, pos, idleState))) {
+                level.scheduleTick(pos, this, RECHECK_TICKS);
+            }
+        }
     }
 
     @Override
@@ -130,32 +191,59 @@ public final class ProjectionResonancePlateBlock extends Block {
     }
 
     @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos,
+                           BlockState oldState, boolean movedByPiston) {
+        if (state != oldState && level instanceof ServerLevel serverLevel) {
+            CONTROLLER_REVISIONS.merge(serverLevel, 1L, Long::sum);
+        }
+        super.onPlace(state, level, pos, oldState, movedByPiston);
+    }
+
+    @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos,
                             BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && state.getValue(ACTIVE)
+        if (!state.is(newState.getBlock())
                 && level instanceof ServerLevel serverLevel) {
-            setNearbyResonanceDoors(serverLevel, pos, false);
+            CONTROLLER_REVISIONS.merge(serverLevel, 1L, Long::sum);
+            ProjectionPlateCleanupData.release(serverLevel, pos);
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }
 
-    private static void setNearbyResonanceDoors(ServerLevel level, BlockPos origin, boolean open) {
-        List<BlockPos> otherControllers = open
-                ? List.of()
-                : findOtherActiveControllers(level, origin);
+    static boolean finishRemovedPlateCleanup(ServerLevel level, BlockPos origin) {
+        if (!level.hasChunkAt(origin)) {
+            return false;
+        }
+        BlockState state = level.getBlockState(origin);
+        if (state.getBlock() instanceof ProjectionResonancePlateBlock && state.getValue(ACTIVE)) {
+            return true;
+        }
+        return setNearbyResonanceDoors(level, origin, false);
+    }
+
+    private static boolean setNearbyResonanceDoors(ServerLevel level, BlockPos origin, boolean open) {
+        BlockState controllerState = level.getBlockState(origin);
+        boolean complete = true;
+        ControllerLookup otherControllers = open ? null : new ControllerLookup(level, origin);
         for (BlockPos cursor : BlockPos.betweenClosed(
                 origin.offset(-DOOR_RADIUS, -DOOR_VERTICAL_RADIUS, -DOOR_RADIUS),
                 origin.offset(DOOR_RADIUS, DOOR_VERTICAL_RADIUS, DOOR_RADIUS))) {
             if (!level.hasChunkAt(cursor)) {
+                complete = false;
                 continue;
             }
             BlockState state = level.getBlockState(cursor);
             if (state.is(ModBlocks.PROJECTION_RESONANCE_DOOR.get())) {
-                if (!open && (level.hasNeighborSignal(cursor)
-                        || isControlledByAnotherPlate(cursor, otherControllers))) {
+                if (!open && !state.getValue(ProjectionResonanceDoorBlock.OPEN)) {
                     continue;
                 }
-                setDoorState(level, cursor, open);
+                if (!open && isControlledByAnotherPlate(cursor, otherControllers)) {
+                    continue;
+                }
+                complete &= setDoorState(level, cursor, open, origin, controllerState);
+                if (!level.hasChunkAt(origin) || level.getBlockState(origin) != controllerState) {
+                    return false;
+                }
                 continue;
             }
             if (!state.is(Blocks.IRON_DOOR)
@@ -164,13 +252,46 @@ public final class ProjectionResonancePlateBlock extends Block {
                 continue;
             }
             BlockPos upperPos = cursor.above();
-            if (!open && (level.hasNeighborSignal(cursor)
-                    || level.hasNeighborSignal(upperPos)
-                    || isControlledByAnotherPlate(cursor, otherControllers))) {
+            if (!open && isHeldOpen(level, cursor, upperPos, otherControllers)) {
                 continue;
             }
-            setDoorState(level, cursor, open);
-            setDoorState(level, upperPos, open);
+            complete &= setDoorState(level, cursor, open, origin, controllerState);
+            if (open || !isHeldOpen(level, cursor, upperPos, otherControllers)) {
+                complete &= setDoorState(level, upperPos, open, origin, controllerState);
+            }
+            if (!level.hasChunkAt(origin) || level.getBlockState(origin) != controllerState) {
+                return false;
+            }
+        }
+        return complete;
+    }
+
+    private static boolean isHeldOpen(ServerLevel level, BlockPos cursor, BlockPos upperPos,
+                                      ControllerLookup otherControllers) {
+        return level.hasNeighborSignal(cursor)
+                || upperPos != null && level.hasNeighborSignal(upperPos)
+                || isControlledByAnotherPlate(cursor, otherControllers);
+    }
+
+    /** 只在控制状态变化后刷新；未遇到需要关门的位置时不扫描其他踏板。 */
+    private static final class ControllerLookup {
+        private final ServerLevel level;
+        private final BlockPos origin;
+        private long revision;
+        private List<BlockPos> positions;
+
+        private ControllerLookup(ServerLevel level, BlockPos origin) {
+            this.level = level;
+            this.origin = origin.immutable();
+        }
+
+        private List<BlockPos> positions() {
+            long currentRevision = CONTROLLER_REVISIONS.getOrDefault(level, 0L);
+            if (positions == null || revision != currentRevision) {
+                positions = findOtherActiveControllers(level, origin);
+                revision = currentRevision;
+            }
+            return positions;
         }
     }
 
@@ -195,8 +316,8 @@ public final class ProjectionResonancePlateBlock extends Block {
     }
 
     private static boolean isControlledByAnotherPlate(BlockPos doorPos,
-                                                       List<BlockPos> controllers) {
-        for (BlockPos controller : controllers) {
+                                                       ControllerLookup controllers) {
+        for (BlockPos controller : controllers.positions()) {
             if (Math.abs(controller.getX() - doorPos.getX()) <= DOOR_RADIUS
                     && Math.abs(controller.getY() - doorPos.getY()) <= DOOR_VERTICAL_RADIUS
                     && Math.abs(controller.getZ() - doorPos.getZ()) <= DOOR_RADIUS) {
@@ -206,14 +327,27 @@ public final class ProjectionResonancePlateBlock extends Block {
         return false;
     }
 
-    private static void setDoorState(ServerLevel level, BlockPos pos, boolean open) {
+    private static boolean setDoorState(ServerLevel level, BlockPos pos, boolean open,
+                                       BlockPos origin, BlockState controllerState) {
+        if (!level.hasChunkAt(origin) || level.getBlockState(origin) != controllerState
+                || !level.hasChunkAt(pos)) {
+            return false;
+        }
         BlockState state = level.getBlockState(pos);
+        BlockState target = state;
         if (state.is(ModBlocks.PROJECTION_RESONANCE_DOOR.get())
                 && state.getValue(ProjectionResonanceDoorBlock.OPEN) != open) {
-            level.setBlock(pos, state.setValue(ProjectionResonanceDoorBlock.OPEN, open), Block.UPDATE_ALL);
+            target = state.setValue(ProjectionResonanceDoorBlock.OPEN, open);
         } else if (state.is(Blocks.IRON_DOOR)
                 && state.getValue(BlockStateProperties.OPEN) != open) {
-            level.setBlock(pos, state.setValue(BlockStateProperties.OPEN, open), Block.UPDATE_ALL);
+            target = state.setValue(BlockStateProperties.OPEN, open);
         }
+        if (target != state) {
+            boolean applied = level.setBlock(pos, target, Block.UPDATE_ALL);
+            if (!applied || !level.hasChunkAt(pos) || level.getBlockState(pos) != target) {
+                return false;
+            }
+        }
+        return level.hasChunkAt(origin) && level.getBlockState(origin) == controllerState;
     }
 }

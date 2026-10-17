@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.block.deep;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
@@ -41,12 +42,21 @@ public class DeepBiomePlantBlock extends FlowerBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, net.minecraft.world.level.Level level,
                                                BlockPos pos, Player player, BlockHitResult hitResult) {
+        // 原版也会把持物右键转到此默认分支；放行双手物品，避免抢先拔走观测目标。
+        if (!player.getMainHandItem().isEmpty()
+                || !player.getOffhandItem().isEmpty()) {
+            return InteractionResult.PASS;
+        }
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
         if (!(level instanceof ServerLevel serverLevel)
                 || !(player instanceof ServerPlayer serverPlayer)
                 || serverPlayer.isSpectator()) {
+            return InteractionResult.CONSUME;
+        }
+        // 右键事件可能已替换植株或传送玩家，先确认原交互仍然有效。
+        if (serverPlayer.level() != serverLevel || serverLevel.getBlockState(pos) != state) {
             return InteractionResult.CONSUME;
         }
         Item harvestItem = asItem();
@@ -75,6 +85,9 @@ public class DeepBiomePlantBlock extends FlowerBlock {
                 || serverPlayer.isSpectator()) {
             return ItemInteractionResult.CONSUME;
         }
+        if (serverPlayer.level() != serverLevel || serverLevel.getBlockState(pos) != state) {
+            return ItemInteractionResult.CONSUME;
+        }
         Item harvestItem = asItem();
         if (harvestItem == Items.AIR) {
             return ItemInteractionResult.CONSUME;
@@ -96,7 +109,7 @@ public class DeepBiomePlantBlock extends FlowerBlock {
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER,
                 pos.getX() + 0.5D, pos.getY() + 0.7D, pos.getZ() + 0.5D,
                 6, 0.18D, 0.25D, 0.18D, 0.02D);
-        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME,
-                SoundSource.BLOCKS, 0.45F, 1.35F);
+        level.playSound(null, pos, ModSounds.BLOCK_DEEP_PLANT_HARVEST.get(),
+                SoundSource.BLOCKS, 0.45F, 1.0F);
     }
 }

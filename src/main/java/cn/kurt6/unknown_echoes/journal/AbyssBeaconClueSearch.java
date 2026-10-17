@@ -61,7 +61,7 @@ public final class AbyssBeaconClueSearch {
     }
 
     public static RequestResult request(ServerPlayer player, ResourceLocation structureId) {
-        if (!(player.level() instanceof ServerLevel level)) {
+        if (!player.isAlive() || !(player.level() instanceof ServerLevel level)) {
             return RequestResult.UNAVAILABLE;
         }
         if (ACTIVE.containsKey(player.getUUID())) {
@@ -111,7 +111,7 @@ public final class AbyssBeaconClueSearch {
             return;
         }
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
-        if (player == null || !player.level().dimension().equals(task.dimension)) {
+        if (player == null || !player.isAlive() || !player.level().dimension().equals(task.dimension)) {
             ACTIVE.remove(task.playerId, task);
             return;
         }
@@ -124,7 +124,8 @@ public final class AbyssBeaconClueSearch {
         }
         ChunkPos candidate = task.cursor.next();
         if (candidate == null) {
-            finishUnavailable(server, task);
+            if (task.cursor.isExhausted()) finishUnavailable(server, task);
+            else deferNext(level, task);
             return;
         }
         task.searchedCandidates++;
@@ -147,12 +148,12 @@ public final class AbyssBeaconClueSearch {
 
     private static void handleCandidate(MinecraftServer server, SearchTask task, ServerLevel level,
                                         ChunkAccess chunk, Throwable error) {
-        if (ACTIVE.get(task.playerId) != task) {
+        if (server.isStopped() || ACTIVE.get(task.playerId) != task) {
             return;
         }
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
-        if (player == null || !player.level().dimension().equals(task.dimension)) {
-            ACTIVE.remove(task.playerId);
+        if (player == null || !player.isAlive() || !player.level().dimension().equals(task.dimension)) {
+            ACTIVE.remove(task.playerId, task);
             return;
         }
         if (error != null || chunk == null) {
@@ -178,7 +179,7 @@ public final class AbyssBeaconClueSearch {
         }
 
         RequestResult result = record(player, level, task.structureId, target);
-        ACTIVE.remove(task.playerId);
+        ACTIVE.remove(task.playerId, task);
         player.displayClientMessage(Component.translatable(
                 result == RequestResult.ADDED
                         ? "message.unknown_echoes.completion.abyss_clue_added"
@@ -191,11 +192,12 @@ public final class AbyssBeaconClueSearch {
     }
 
     private static void finishUnavailable(MinecraftServer server, SearchTask task) {
-        if (ACTIVE.remove(task.playerId) != task) {
+        if (!ACTIVE.remove(task.playerId, task)) {
             return;
         }
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
-        if (player != null) {
+        if (!server.isStopped() && player != null && player.isAlive()
+                && player.level().dimension().equals(task.dimension)) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.completion.abyss_clue_unavailable"), true);
         }
@@ -218,7 +220,14 @@ public final class AbyssBeaconClueSearch {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        if (ACTIVE.isEmpty()) {
+            return;
+        }
         MinecraftServer server = event.getServer();
+        if (ACTIVE.size() == 1) {
+            searchNext(server, ACTIVE.values().iterator().next());
+            return;
+        }
         for (SearchTask task : List.copyOf(ACTIVE.values())) {
             searchNext(server, task);
         }
@@ -262,7 +271,7 @@ public final class AbyssBeaconClueSearch {
         private final Set<Long> seen = new HashSet<>();
         private final PriorityQueue<Candidate> pending = new PriorityQueue<>(
                 Comparator.comparingDouble(Candidate::distanceSquared));
-        private int ring;
+        private final StructureSearchRings rings;
 
         private CandidateCursor(BlockPos origin, long seed,
                                 ChunkGeneratorStructureState generatorState,
@@ -272,47 +281,44 @@ public final class AbyssBeaconClueSearch {
             this.seed = seed;
             this.generatorState = generatorState;
             this.placements = List.copyOf(placements);
+            this.rings = new StructureSearchRings(placements.size());
         }
 
-        /** 无候选可出队时返回 null；调用方据此判定"这一维度没有可补录的信标"。 */
+        /** null 可能表示单次检查预算耗尽；须配合 isExhausted 判断是否已搜完。 */
         @Nullable
         private ChunkPos next() {
-            while (ring <= MAX_RING) {
-                if (pending.isEmpty()) {
-                    fillRing(ring++);
-                    continue;
-                }
-                Candidate nearest = pending.peek();
-                if (nearest.distanceSquared() <= minUnsearchedDistanceSquared()) {
+            int remaining = StructureSearchRings.CHECKS_PER_STEP;
+            while (rings.ring() <= MAX_RING) {
+                if (rings.atRingStart() && !pending.isEmpty()
+                        && pending.peek().distanceSquared() <= minUnsearchedDistanceSquared()) {
                     return pending.remove().pos();
                 }
-                fillRing(ring++);
+                if (remaining-- == 0) return null;
+                scanPlacement();
             }
             return pending.isEmpty() ? null : pending.remove().pos();
         }
 
-        private void fillRing(int radius) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                for (int dx = -radius; dx <= radius; dx++) {
-                    if (radius > 0 && Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
-                        continue;
-                    }
-                    for (RandomSpreadStructurePlacement placement : placements) {
-                        ChunkPos candidate = placement.getPotentialStructureChunk(seed,
-                                originChunk.x + dx * placement.spacing(),
-                                originChunk.z + dz * placement.spacing());
-                        if (!placement.isStructureChunk(generatorState, candidate.x, candidate.z)
-                                || !seen.add(candidate.toLong())) {
-                            continue;
-                        }
-                        pending.add(new Candidate(candidate, distanceSquared(candidate)));
-                    }
-                }
+        private boolean isExhausted() {
+            return rings.ring() > MAX_RING && pending.isEmpty();
+        }
+
+        private void scanPlacement() {
+            RandomSpreadStructurePlacement placement = placements.get(rings.targetIndex());
+            ChunkPos candidate = placement.getPotentialStructureChunk(seed,
+                    originChunk.x + rings.offsetX() * placement.spacing(),
+                    originChunk.z + rings.offsetZ() * placement.spacing());
+            rings.advance();
+            if (!placement.isStructureChunk(generatorState, candidate.x, candidate.z)
+                    || !seen.add(candidate.toLong())) {
+                return;
             }
+            pending.add(new Candidate(candidate, distanceSquared(candidate)));
         }
 
         /** 下一候选只有不远于所有未扫描区域的理论最近点时才可出队，避免方形环边角候选抢在下一环的近边候选之前。 */
         private double minUnsearchedDistanceSquared() {
+            int ring = rings.ring();
             double minimum = Double.MAX_VALUE;
             for (RandomSpreadStructurePlacement placement : placements) {
                 int spacing = placement.spacing();

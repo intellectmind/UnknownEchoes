@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "floating",
+    "rock": {
+      "Name": "minecraft:amethyst_block"
+    },
+    "accent": {
+      "Name": "minecraft:calcite"
+    },
+    "height": 19,
+    "radius": 7,
+    "submerged": false,
+    "drape": 0,
+    "waterline": false
+  }
+}

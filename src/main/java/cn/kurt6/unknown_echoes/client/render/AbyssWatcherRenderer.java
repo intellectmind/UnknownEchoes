@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib.model.DefaultedEntityGeoModel;
+import cn.kurt6.unknown_echoes.client.model.LimitedHeadGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 import software.bernie.geckolib.util.Color;
 
@@ -24,7 +24,7 @@ public class AbyssWatcherRenderer extends GeoEntityRenderer<AbyssWatcher> {
     private static final Color CLONE_GLOW_TINT = Color.WHITE;
 
     public AbyssWatcherRenderer(EntityRendererProvider.Context context) {
-        super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("abyss_watcher"), true));
+        super(context, new LimitedHeadGeoModel<>(UnknownEchoes.id("abyss_watcher"), "head", 8.0F, -3.0F, 3.0F));
         this.shadowRadius = 1.1F;
 
         // 翼/尾/环与攻击特效不参与命中范围，碰撞箱只按主体宽度登记。

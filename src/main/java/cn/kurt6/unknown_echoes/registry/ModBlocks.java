@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.registry;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.AquaticBiomePlantBlock;
 import cn.kurt6.unknown_echoes.block.AquaticSeaPickleBlock;
+import cn.kurt6.unknown_echoes.block.BiomeGrassBlock;
 import cn.kurt6.unknown_echoes.block.CommunalEchoTableBlock;
 import cn.kurt6.unknown_echoes.block.HangingFruitBlock;
 import cn.kurt6.unknown_echoes.block.RealmHabitatChimeBlock;
@@ -54,7 +55,6 @@ import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.StairBlock;
-import net.minecraft.world.level.block.TallGrassBlock;
 import net.minecraft.world.level.block.WallBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -64,6 +64,11 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class ModBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(UnknownEchoes.MODID);
+
+    public static final DeferredBlock<cn.kurt6.unknown_echoes.particle.ParticleEnchantingTableBlock> PARTICLE_ENCHANTING_TABLE =
+            BLOCKS.register("particle_enchanting_table", () -> new cn.kurt6.unknown_echoes.particle.ParticleEnchantingTableBlock(
+                    BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(5.0F, 1200.0F)
+                            .requiresCorrectToolForDrops().noOcclusion().lightLevel(state -> 7)));
 
     /** 关键机关方块 tag:破坏保护等判定统一走这里,新增关键方块只改 JSON(tags/block/critical_blocks.json)。 */
     public static final TagKey<Block> CRITICAL_BLOCKS_TAG =
@@ -241,6 +246,22 @@ public class ModBlocks {
                     .lightLevel(state -> state.getValue(PuzzleCoreBlock.ACTIVE) ? 13 : 5)
                     .noLootTable().noOcclusion()));
 
+    public static final DeferredBlock<cn.kurt6.unknown_echoes.block.puzzle.WonderTrialBlock> WONDER_TRIAL =
+            BLOCKS.register("wonder_trial", () -> new cn.kurt6.unknown_echoes.block.puzzle.WonderTrialBlock(
+                    BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(-1.0F, 3600000.0F)
+                            .sound(SoundType.COPPER).lightLevel(state -> 12).noLootTable()));
+
+    public static final DeferredBlock<cn.kurt6.unknown_echoes.block.puzzle.WonderPuzzleCoreBlock> WONDER_PUZZLE_CORE =
+            BLOCKS.register("wonder_puzzle_core", () -> new cn.kurt6.unknown_echoes.block.puzzle.WonderPuzzleCoreBlock(
+                    BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN).strength(-1.0F, 3600000.0F)
+                            .sound(SoundType.COPPER).lightLevel(state -> state.getValue(PuzzleCoreBlock.ACTIVE) ? 13 : 6).noLootTable()));
+
+    public static final DeferredBlock<cn.kurt6.unknown_echoes.block.puzzle.WonderPuzzleDialBlock> WONDER_PUZZLE_DIAL =
+            BLOCKS.register("wonder_puzzle_dial", () -> new cn.kurt6.unknown_echoes.block.puzzle.WonderPuzzleDialBlock(
+                    BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN).strength(-1.0F, 3600000.0F)
+                            .sound(SoundType.COPPER).lightLevel(state -> state.getValue(
+                                    cn.kurt6.unknown_echoes.block.puzzle.WonderPuzzleDialBlock.LIT) ? 10 : 3).noLootTable()));
+
     public static final DeferredBlock<cn.kurt6.unknown_echoes.block.puzzle.ChimeEchoCoreBlock> CHIME_ECHO_CORE =
             BLOCKS.register("chime_echo_core",
                     () -> new cn.kurt6.unknown_echoes.block.puzzle.ChimeEchoCoreBlock(
@@ -317,10 +338,10 @@ public class ModBlocks {
             BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
                     .strength(0.3F).sound(SoundType.MOSS));
 
-    public static final DeferredBlock<TallGrassBlock> SILENT_POD_BUSH = BLOCKS.register("silent_pod_bush",
-            () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
+    public static final DeferredBlock<BiomeGrassBlock> SILENT_POD_BUSH = BLOCKS.register("silent_pod_bush",
+            () -> new BiomeGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
                     .replaceable().noCollission().instabreak().sound(SoundType.SWEET_BERRY_BUSH)
-                    .offsetType(BlockBehaviour.OffsetType.XZ)
+                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 4)
                     .pushReaction(PushReaction.DESTROY)));
 
     public static final DeferredBlock<Block> WIND_ETCHED_STONE = BLOCKS.registerSimpleBlock("wind_etched_stone",
@@ -362,8 +383,8 @@ public class ModBlocks {
                     BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE)
                             .strength(2.2F, 5.0F).requiresCorrectToolForDrops().sound(SoundType.DEEPSLATE)));
 
-    public static final DeferredBlock<TallGrassBlock> DREAM_MIST_VINE = BLOCKS.register("dream_mist_vine",
-            () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
+    public static final DeferredBlock<BiomeGrassBlock> DREAM_MIST_VINE = BLOCKS.register("dream_mist_vine",
+            () -> new BiomeGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE)
                     .replaceable().noCollission().instabreak().sound(SoundType.VINE)
                     .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 6)
                     .pushReaction(PushReaction.DESTROY)));
@@ -378,10 +399,10 @@ public class ModBlocks {
                     BlockBehaviour.Properties.of().mapColor(MapColor.SNOW)
                             .strength(1.8F, 4.0F).requiresCorrectToolForDrops().sound(SoundType.CALCITE)));
 
-    public static final DeferredBlock<TallGrassBlock> BROKEN_BELL_THORN = BLOCKS.register("broken_bell_thorn",
-            () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN)
+    public static final DeferredBlock<BiomeGrassBlock> BROKEN_BELL_THORN = BLOCKS.register("broken_bell_thorn",
+            () -> new BiomeGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN)
                     .replaceable().noCollission().instabreak().sound(SoundType.SWEET_BERRY_BUSH)
-                    .offsetType(BlockBehaviour.OffsetType.XZ)
+                    .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 4)
                     .pushReaction(PushReaction.DESTROY)));
 
     public static final DeferredBlock<Block> ECHO_CLIFF_STONE = BLOCKS.registerSimpleBlock("echo_cliff_stone",
@@ -457,6 +478,28 @@ public class ModBlocks {
                     BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
                             .strength(2.0F, 3.0F).sound(SoundType.WOOD).ignitedByLava());
 
+    public static final DeferredBlock<Block> TARRED_SHIP_PLANKS = BLOCKS.registerSimpleBlock("tarred_ship_planks",
+            BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_BROWN)
+                    .strength(2.0F, 3.0F).sound(SoundType.WOOD).ignitedByLava());
+    public static final DeferredBlock<Block> SHIP_DECK_PLANKS = BLOCKS.registerSimpleBlock("ship_deck_planks",
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD)
+                    .strength(2.0F, 3.0F).sound(SoundType.WOOD).ignitedByLava());
+    public static final DeferredBlock<RotatedPillarBlock> SHIP_TIMBER = BLOCKS.register("ship_timber",
+            () -> new RotatedPillarBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_BROWN)
+                    .strength(2.0F, 3.0F).sound(SoundType.WOOD).ignitedByLava()));
+    public static final DeferredBlock<Block> RIVETED_BRONZE_CASING = BLOCKS.registerSimpleBlock("riveted_bronze_casing",
+            BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_ORANGE)
+                    .requiresCorrectToolForDrops().strength(3.0F, 6.0F).sound(SoundType.COPPER));
+    public static final DeferredBlock<Block> WEATHERED_SAILCLOTH = BLOCKS.registerSimpleBlock("weathered_sailcloth",
+            BlockBehaviour.Properties.of().mapColor(MapColor.SAND)
+                    .strength(0.8F).sound(SoundType.WOOL).ignitedByLava());
+    public static final DeferredBlock<Block> IVORY_REEF_ASHLAR = BLOCKS.registerSimpleBlock("ivory_reef_ashlar",
+            BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_WHITE)
+                    .requiresCorrectToolForDrops().strength(2.0F, 6.0F).sound(SoundType.STONE));
+    public static final DeferredBlock<Block> CARVED_BELLSTONE = BLOCKS.registerSimpleBlock("carved_bellstone",
+            BlockBehaviour.Properties.of().mapColor(MapColor.DEEPSLATE)
+                    .requiresCorrectToolForDrops().strength(3.0F, 6.0F).sound(SoundType.DEEPSLATE));
+
     public static final DeferredBlock<LeavesBlock> WHISPERING_LEAVES = BLOCKS.register("whispering_leaves",
             () -> new LeavesBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_GREEN)
                     .strength(0.2F).randomTicks().sound(SoundType.AZALEA_LEAVES).noOcclusion()
@@ -483,8 +526,8 @@ public class ModBlocks {
                     .isViewBlocking((state, level, pos) -> false)
                     .pushReaction(PushReaction.DESTROY).ignitedByLava()));
 
-    public static final DeferredBlock<TallGrassBlock> GLOW_GRASS = BLOCKS.register("glow_grass",
-            () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
+    public static final DeferredBlock<BiomeGrassBlock> GLOW_GRASS = BLOCKS.register("glow_grass",
+            () -> new BiomeGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .replaceable().noCollission().instabreak().sound(SoundType.GRASS)
                     .offsetType(BlockBehaviour.OffsetType.XYZ).lightLevel(state -> 8)
                     .pushReaction(PushReaction.DESTROY)));
@@ -496,8 +539,8 @@ public class ModBlocks {
                             .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 10)
                             .pushReaction(PushReaction.DESTROY)));
 
-    public static final DeferredBlock<TallGrassBlock> GLOW_FERN = BLOCKS.register("glow_fern",
-            () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
+    public static final DeferredBlock<BiomeGrassBlock> GLOW_FERN = BLOCKS.register("glow_fern",
+            () -> new BiomeGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .replaceable().noCollission().instabreak().sound(SoundType.GRASS)
                     .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 8)
                     .pushReaction(PushReaction.DESTROY)));
@@ -572,8 +615,8 @@ public class ModBlocks {
                     .strength(0.4F).sound(SoundType.GRAVEL).noOcclusion()
                     .pushReaction(PushReaction.DESTROY)));
 
-    public static final DeferredBlock<TallGrassBlock> MIRROR_REED = BLOCKS.register("mirror_reed",
-            () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
+    public static final DeferredBlock<BiomeGrassBlock> MIRROR_REED = BLOCKS.register("mirror_reed",
+            () -> new BiomeGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE)
                     .replaceable().noCollission().instabreak().sound(SoundType.WET_GRASS)
                     .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 7)
                     .pushReaction(PushReaction.DESTROY)));
@@ -603,8 +646,8 @@ public class ModBlocks {
                             .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 8)
                             .pushReaction(PushReaction.DESTROY)));
 
-    public static final DeferredBlock<TallGrassBlock> ASH_CHIME_GRASS = BLOCKS.register("ash_chime_grass",
-            () -> new TallGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_YELLOW)
+    public static final DeferredBlock<BiomeGrassBlock> ASH_CHIME_GRASS = BLOCKS.register("ash_chime_grass",
+            () -> new BiomeGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.TERRACOTTA_YELLOW)
                     .replaceable().noCollission().instabreak().sound(SoundType.GRASS).noOcclusion()
                     .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 5)
                     .pushReaction(PushReaction.DESTROY)));
@@ -1113,4 +1156,17 @@ public class ModBlocks {
     public static final DeferredBlock<WallBlock> WHISPERING_TIMBER_WALL =
             BLOCKS.register("whispering_timber_wall",
                     () -> new WallBlock(timberPartProperties()));
+
+    public static final DeferredBlock<Block> WIND_ASHLAR = BLOCKS.register("wind_ashlar",
+            () -> new Block(BlockBehaviour.Properties.ofFullCopy(WIND_ETCHED_BRICKS.get())));
+    public static final DeferredBlock<Block> WIND_CARVED_FRIEZE = BLOCKS.register("wind_carved_frieze",
+            () -> new Block(BlockBehaviour.Properties.ofFullCopy(WIND_ETCHED_BRICKS.get())));
+    public static final DeferredBlock<Block> WHISPERING_PANELLED_PLANKS = BLOCKS.register("whispering_panelled_planks",
+            () -> new Block(BlockBehaviour.Properties.ofFullCopy(WHISPERING_TIMBER_FRAME.get())));
+    public static final DeferredBlock<Block> WHISPERING_CARVED_PANELS = BLOCKS.register("whispering_carved_panels",
+            () -> new Block(BlockBehaviour.Properties.ofFullCopy(WHISPERING_TIMBER_FRAME.get())));
+    public static final DeferredBlock<Block> FOLDED_SLATE_TILES = BLOCKS.register("folded_slate_tiles",
+            () -> new Block(BlockBehaviour.Properties.ofFullCopy(FOLDED_SLATE_BRICKS.get())));
+    public static final DeferredBlock<Block> FOLDED_SLATE_RELIEF = BLOCKS.register("folded_slate_relief",
+            () -> new Block(BlockBehaviour.Properties.ofFullCopy(FOLDED_SLATE_BRICKS.get())));
 }

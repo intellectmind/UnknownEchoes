@@ -8,14 +8,13 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
-import java.util.Comparator;
 import java.util.List;
 
 /** 将三域料理的共享效果传递给附近同域栖鸣台与既有生灵。 */
 public final class RealmCommunalFeastManager {
     public static final int CHIME_LINK_RADIUS = 24;
     public static final int CHIME_VERTICAL_RADIUS = 32;
-    public static final int MAX_FEAST_RESIDENTS = 6;
+    public static final int MAX_FEAST_RESIDENTS = RealmHabitatChimeBlock.MAX_RESPONDERS;
 
     private RealmCommunalFeastManager() {
     }
@@ -24,7 +23,8 @@ public final class RealmCommunalFeastManager {
                                          CommunalEchoTableBlock.Mode feastMode) {
         RealmHabitatChimeBlock.Mode expectedMode = modeForFeast(feastMode);
         if (expectedMode == null
-                || RealmHabitatChimeBlock.modeForDimension(level) != expectedMode) {
+                || RealmHabitatChimeBlock.modeForDimension(level) != expectedMode
+                || !isCurrentTable(level, tablePos, feastMode)) {
             return FeastResult.NONE;
         }
 
@@ -43,17 +43,21 @@ public final class RealmCommunalFeastManager {
                                 <= RealmHabitatChimeBlock.CALL_RADIUS
                                 * RealmHabitatChimeBlock.CALL_RADIUS
                         && RealmHabitatChimeBlock.matchesMode(resident, expectedMode));
-        residents.sort(Comparator.comparingDouble(resident -> resident.distanceToSqr(
-                chimePos.getX() + 0.5D, chimePos.getY() + 0.5D,
-                chimePos.getZ() + 0.5D)));
-        if (residents.size() > MAX_FEAST_RESIDENTS) {
-            residents = residents.subList(0, MAX_FEAST_RESIDENTS);
-        }
-
-        int responders = RealmHabitatChimeBlock.activateFromFacility(
+        // 栖鸣台按成功响应数限制名额，保留候选供导航失败或资格失效后补选。
+        var activation = RealmHabitatChimeBlock.activateWithResidents(
                 level, chimePos, expectedMode, residents, resident -> resident.heal(4.0F));
+        if (!activation.active() || !isCurrentTable(level, tablePos, feastMode)) {
+            return new FeastResult(activation.responders(), false);
+        }
         RealmFacilityCircuitManager.arm(level, tablePos, chimePos, feastMode);
-        return new FeastResult(responders, true);
+        return new FeastResult(activation.responders(), true);
+    }
+
+    private static boolean isCurrentTable(ServerLevel level, BlockPos pos, CommunalEchoTableBlock.Mode mode) {
+        if (!level.hasChunkAt(pos)) return false;
+        BlockState state = level.getBlockState(pos);
+        return state.getBlock() instanceof CommunalEchoTableBlock
+                && state.getValue(CommunalEchoTableBlock.MODE) == mode;
     }
 
     private static RealmHabitatChimeBlock.Mode modeForFeast(
@@ -72,40 +76,7 @@ public final class RealmCommunalFeastManager {
         if (isAvailableChime(level, builtInChimePos, expectedMode)) {
             return builtInChimePos;
         }
-
-        BlockPos nearest = null;
-        int nearestDistanceSqr = Integer.MAX_VALUE;
-        int horizontalRadiusSqr = CHIME_LINK_RADIUS * CHIME_LINK_RADIUS;
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-
-        for (int yOffset = -CHIME_VERTICAL_RADIUS;
-             yOffset <= CHIME_VERTICAL_RADIUS; yOffset++) {
-            for (int xOffset = -CHIME_LINK_RADIUS;
-                 xOffset <= CHIME_LINK_RADIUS; xOffset++) {
-                for (int zOffset = -CHIME_LINK_RADIUS;
-                     zOffset <= CHIME_LINK_RADIUS; zOffset++) {
-                    int horizontalDistanceSqr = xOffset * xOffset + zOffset * zOffset;
-                    if (horizontalDistanceSqr > horizontalRadiusSqr) {
-                        continue;
-                    }
-                    cursor.set(tablePos.getX() + xOffset, tablePos.getY() + yOffset,
-                            tablePos.getZ() + zOffset);
-                    if (!level.hasChunkAt(cursor)) {
-                        continue;
-                    }
-                    BlockState state = level.getBlockState(cursor);
-                    if (!isAvailableChime(state, expectedMode)) {
-                        continue;
-                    }
-                    int distanceSqr = horizontalDistanceSqr + yOffset * yOffset;
-                    if (distanceSqr < nearestDistanceSqr) {
-                        nearestDistanceSqr = distanceSqr;
-                        nearest = cursor.immutable();
-                    }
-                }
-            }
-        }
-        return nearest;
+        return RealmChimeLookup.findNearest(level, tablePos, expectedMode, CHIME_LINK_RADIUS, CHIME_VERTICAL_RADIUS);
     }
 
     private static BlockPos builtInChimePos(BlockPos tablePos,

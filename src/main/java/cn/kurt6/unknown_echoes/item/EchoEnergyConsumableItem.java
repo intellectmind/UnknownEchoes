@@ -46,15 +46,17 @@ public final class EchoEnergyConsumableItem extends Item {
 
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (!level.isClientSide && entity instanceof ServerPlayer player
-                && ArtifactManager.getEnergy(player) >= ArtifactManager.getMaxEnergy(player)) {
-            return stack;
-        }
-        ItemStack result = super.finishUsingItem(stack, level, entity);
-        if (!level.isClientSide && entity instanceof ServerPlayer player) {
-            ArtifactManager.refillEnergy(player, restoredEnergy);
-        }
-        return result;
+        return ConsumableCompletion.finish(this, stack, entity, () -> {
+            if (!level.isClientSide && entity instanceof ServerPlayer player
+                    && ArtifactManager.getEnergy(player) >= ArtifactManager.getMaxEnergy(player)) {
+                return stack;
+            }
+            ItemStack result = super.finishUsingItem(stack, level, entity);
+            if (!level.isClientSide && entity instanceof ServerPlayer player) {
+                ArtifactManager.refillEnergy(player, restoredEnergy);
+            }
+            return result;
+        });
     }
 
     @Override

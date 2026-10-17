@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "fins",
+    "rock": {
+      "Name": "unknown_echoes:mirror_dust_stone"
+    },
+    "accent": {
+      "Name": "minecraft:amethyst_block"
+    },
+    "height": 19,
+    "radius": 8,
+    "submerged": false,
+    "drape": 0,
+    "waterline": true
+  }
+}

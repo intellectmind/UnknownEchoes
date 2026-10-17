@@ -3,31 +3,65 @@
   "temperature": 0.1,
   "downfall": 0.0,
   "effects": {
-    "fog_color": 3426397,
-    "sky_color": 1979211,
-    "water_color": 3233899,
-    "water_fog_color": 1191747,
-    "grass_color": 5533799,
-    "foliage_color": 4218455,
+    "fog_color": 10860244,
+    "sky_color": 6314111,
+    "water_color": 9616080,
+    "water_fog_color": 3688817,
+    "grass_color": 10532538,
+    "foliage_color": 10532538,
     "ambient_particle": {
-      "options": { "type": "minecraft:electric_spark" },
-      "probability": 0.006
+      "options": {
+        "type": "minecraft:end_rod"
+      },
+      "probability": 0.0008
     },
     "mood_sound": {
       "sound": "minecraft:ambient.basalt_deltas.mood",
-      "tick_delay": 7500,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.lush_caves",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": "minecraft:block.amethyst_block.chime",
+      "tick_chance": 0.00045
     }
   },
   "carvers": {
-    "air": ["minecraft:cave", "minecraft:cave_extra_underground", "minecraft:canyon"]
+    "air": [
+      "minecraft:cave",
+      "minecraft:cave_extra_underground",
+      "minecraft:canyon"
+    ]
   },
   "features": [
-    [], [], [], [], [], [],
-    ["unknown_echoes:gravity_shale_disk", "unknown_echoes:suspended_crystal_disk", "unknown_echoes:resonant_geode_disk", "unknown_echoes:sky_quartz_ore_disk"],
-    [], [],
-    ["unknown_echoes:inversion_reed_patch", "unknown_echoes:weightless_bloom_patch", "unknown_echoes:gravity_bell_patch", "unknown_echoes:star_mist_bloom_patch"],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:gravity_shale_disk",
+      "unknown_echoes:suspended_crystal_disk",
+      "unknown_echoes:resonant_geode_disk",
+      "unknown_echoes:sky_quartz_ore_disk"
+    ],
+    [],
+    [
+      "unknown_echoes:weightless_grotto_landform"
+    ],
+    [
+      "unknown_echoes:inversion_reed_patch",
+      "unknown_echoes:weightless_bloom_patch",
+      "unknown_echoes:gravity_bell_patch",
+      "unknown_echoes:star_mist_bloom_patch"
+    ],
     []
   ],
   "spawners": {
@@ -43,6 +77,12 @@
         "weight": 16,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:shardwing_skate",
+        "weight": 7,
+        "minCount": 1,
+        "maxCount": 1
       }
     ],
     "creature": [
@@ -59,8 +99,12 @@
         "maxCount": 4
       }
     ],
-    "ambient": [], "axolotls": [],
-    "underground_water_creature": [], "water_creature": [], "water_ambient": [], "misc": []
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
   },
   "spawn_costs": {}
 }

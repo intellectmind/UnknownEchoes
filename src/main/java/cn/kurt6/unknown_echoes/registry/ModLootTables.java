@@ -6,6 +6,52 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.storage.loot.LootTable;
 
 public class ModLootTables {
+    // 七座奇观的最终工坊奖励：原有奖励外固定增加一枚通用粒子核心。
+    public static final ResourceKey<LootTable> WONDER_T4_REWARD =
+            chest("puzzles/wonders/t4_region_core");
+    public static final ResourceKey<LootTable> WONDER_LIGHTHOUSE_REWARD =
+            chest("puzzles/wonders/mirror_lake_cache");
+    public static final ResourceKey<LootTable> WONDER_SKY_RIFT_REWARD =
+            chest("puzzles/wonders/wind_vault");
+
+    // 解谜专用奖励表；普通箱继续使用原表。由 gen_puzzle_rewards.py 维护对应资源。
+    public static final ResourceKey<LootTable> PUZZLE_T4_REGION_CORE =
+            chest("puzzles/common/t4_region_core");
+    public static final ResourceKey<LootTable> PUZZLE_MIRROR_LAKE_CACHE =
+            chest("puzzles/mirror_lake_cache");
+    public static final ResourceKey<LootTable> PUZZLE_T5_MINIBOSS_REPEAT =
+            chest("puzzles/common/t5_miniboss_repeat");
+    public static final ResourceKey<LootTable> PUZZLE_SILENT_HUT_CHEST =
+            chest("puzzles/silent_hut");
+    public static final ResourceKey<LootTable> PUZZLE_BROKEN_ARCHIVE_CHEST =
+            chest("puzzles/broken_archive");
+    public static final ResourceKey<LootTable> PUZZLE_FAR_ECHO_CARTOGRAPHY_CACHE =
+            chest("puzzles/landmarks/far_echo_cartography_cache");
+    public static final ResourceKey<LootTable> PUZZLE_CHORUS_CONFLUENCE_CACHE =
+            chest("puzzles/landmarks/chorus_confluence_cache");
+    public static final ResourceKey<LootTable> PUZZLE_PALIMPSEST_ECOLOGY_CACHE =
+            chest("puzzles/landmarks/palimpsest_ecology_cache");
+    public static final ResourceKey<LootTable> PUZZLE_FAR_BELL_WAYFARER_CACHE =
+            chest("puzzles/landmarks/far_bell_wayfarer_cache");
+    public static final ResourceKey<LootTable> PUZZLE_PRISMATIC_CANOPY_CACHE =
+            chest("puzzles/landmarks/prismatic_canopy_cache");
+    public static final ResourceKey<LootTable> PUZZLE_INTERLAYER_EXPEDITION_CACHE =
+            chest("puzzles/landmarks/interlayer_expedition_cache");
+    public static final ResourceKey<LootTable> PUZZLE_MISFILED_CATALOG_WELL_CHEST =
+            chest("puzzles/deep/misfiled_catalog_well");
+    public static final ResourceKey<LootTable> PUZZLE_SUSPENDED_SURVEY_STATION_CHEST =
+            chest("puzzles/deep/suspended_survey_station");
+    public static final ResourceKey<LootTable> PUZZLE_SEVERED_ARCHIVE_VAULT_CHEST =
+            chest("puzzles/deep/severed_archive_vault");
+    public static final ResourceKey<LootTable> PUZZLE_SPATIAL_RIFT_CHEST =
+            chest("puzzles/spatial_rift");
+    public static final ResourceKey<LootTable> PUZZLE_SHATTERED_CODEX_CACHE =
+            chest("puzzles/deep/shattered_codex_cache");
+    public static final ResourceKey<LootTable> PUZZLE_HUSHED_CATHEDRAL_CACHE =
+            chest("puzzles/deep/hushed_cathedral_cache");
+    public static final ResourceKey<LootTable> PUZZLE_FOLDED_CELESTIAL_ARCHIVE_CACHE =
+            chest("puzzles/deep/folded_celestial_archive_cache");
+
     public static final ResourceKey<LootTable> T1_BASIC =
             chest("common/t1_basic");
     public static final ResourceKey<LootTable> T2_RUIN =

@@ -56,32 +56,34 @@ public final class SimpleEchoFoodItem extends Item {
 
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof Player player && !canBenefit(player)) {
-            return stack;
-        }
-        ItemStack result = super.finishUsingItem(stack, level, entity);
-        if (!level.isClientSide) {
-            switch (tooltipKey) {
-                case "moss_honey_stew" ->
-                        FoodEffectSupport.applyAbsorption(entity, 400, 0, 4.0F);
-                case "dream_nectar_tart" ->
-                        FoodEffectSupport.applyAbsorption(entity, 600, 0, 4.0F);
-                default -> {
+        return ConsumableCompletion.finish(this, stack, entity, () -> {
+            if (entity instanceof Player player && !canBenefit(player)) {
+                return stack;
+            }
+            ItemStack result = super.finishUsingItem(stack, level, entity);
+            if (!level.isClientSide) {
+                switch (tooltipKey) {
+                    case "moss_honey_stew" ->
+                            FoodEffectSupport.applyAbsorption(entity, 400, 0, 4.0F);
+                    case "dream_nectar_tart" ->
+                            FoodEffectSupport.applyAbsorption(entity, 600, 0, 4.0F);
+                    default -> {
+                    }
                 }
             }
-        }
-        if (level.isClientSide || container == null
-                || !(entity instanceof Player player) || player.getAbilities().instabuild) {
+            if (level.isClientSide || container == null
+                    || !(entity instanceof Player player) || player.getAbilities().instabuild) {
+                return result;
+            }
+            ItemStack remainder = new ItemStack(container);
+            if (result.isEmpty()) {
+                return remainder;
+            }
+            if (!player.getInventory().add(remainder)) {
+                player.drop(remainder, false);
+            }
             return result;
-        }
-        ItemStack remainder = new ItemStack(container);
-        if (result.isEmpty()) {
-            return remainder;
-        }
-        if (!player.getInventory().add(remainder)) {
-            player.drop(remainder, false);
-        }
-        return result;
+        });
     }
 
     private boolean canBenefit(Player player) {

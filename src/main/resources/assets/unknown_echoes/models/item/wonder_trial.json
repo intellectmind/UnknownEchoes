@@ -1,0 +1,6 @@
+{
+  "parent": "unknown_echoes:block/wonder_trial",
+  "textures": {
+    "end": "unknown_echoes:item/wonder_trial"
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:block/cross",
+  "parent": "unknown_echoes:block/emissive_cross",
   "render_type": "minecraft:cutout",
   "textures": {
     "cross": "unknown_echoes:block/ash_chime_grass"

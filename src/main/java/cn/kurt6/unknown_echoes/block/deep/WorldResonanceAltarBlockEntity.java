@@ -3,14 +3,14 @@ package cn.kurt6.unknown_echoes.block.deep;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.entity.boss.WorldEcho;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
-import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -21,7 +21,6 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
@@ -45,12 +44,6 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
     private static final long RESONANCE_LOCK_TICKS = 14L;
     private static final int ALL_RESONANCES = (1 << EchoAbilityType.values().length) - 1;
     private static final int[] SAFE_EXIT_Y_OFFSETS = {0, 1, -1, 2, -2, 3, -3};
-    private static final List<ParticleOptions> RITUAL_PARTICLES = List.of(
-            ParticleTypes.CLOUD,
-            ParticleTypes.SPLASH,
-            ParticleTypes.ENCHANT,
-            ParticleTypes.PORTAL,
-            ParticleTypes.REVERSE_PORTAL);
     private static final List<Vec3> LOCAL_RESONATORS = List.of(
             new Vec3(0.5D, 1.12D, -0.19D),
             new Vec3(1.25D, 1.12D, 0.31D),
@@ -65,6 +58,9 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
     @Nullable
     private UUID summonerUuid;
     private boolean adminTestMode;
+    /** 覆盖当前同步调谐、启动或完成召唤的调用，不写入祭坛事务存档。 */
+    private boolean completingSummon;
+    private boolean recoveringBosses;
     private long cooldownUntil;
     private long stateChangedAt;
     private long missingBossSince = -1L;
@@ -130,25 +126,38 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
 
     @Nullable
     public EchoAbilityType resonateNext(ServerLevel level) {
-        reconcile(level);
-        long now = level.getGameTime();
-        if (state != TransactionState.IDLE || isFullyResonant() || isResonanceLocked(now)) {
+        if (completingSummon) {
             return null;
         }
-        for (EchoAbilityType ability : EchoAbilityType.values()) {
-            if (hasResonance(ability)) {
-                continue;
-            }
-            int index = ability.ordinal();
-            resonanceMask |= bit(ability);
-            lastResonanceIndex = index;
-            lastResonanceAt = now;
-            stateChangedAt = now;
-            setChangedAndSync();
-            playResonanceFeedback(level, index);
-            return ability;
+        if (!isCurrentAltar(level)) {
+            return null;
         }
-        return null;
+        completingSummon = true;
+        try {
+            reconcile(level);
+            long now = level.getGameTime();
+            if (!isCurrentAltar(level) || state != TransactionState.IDLE || isFullyResonant() || isResonanceLocked(now)) {
+                return null;
+            }
+            for (EchoAbilityType ability : EchoAbilityType.values()) {
+                if (hasResonance(ability)) {
+                    continue;
+                }
+                int index = ability.ordinal();
+                resonanceMask |= bit(ability);
+                lastResonanceIndex = index;
+                lastResonanceAt = now;
+                stateChangedAt = now;
+                setChangedAndSync();
+                if (isCurrentAltar(level) && state == TransactionState.IDLE) {
+                    playResonanceFeedback(level, index);
+                }
+                return ability;
+            }
+            return null;
+        } finally {
+            completingSummon = false;
+        }
     }
 
     public boolean isGrandArena() {
@@ -187,41 +196,99 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
     }
 
     public boolean beginStarting(ServerLevel level, UUID summoner) {
-        reconcile(level);
-        if (state != TransactionState.IDLE || !isFullyResonant()) {
+        if (completingSummon) {
             return false;
         }
-        state = TransactionState.STARTING;
-        bossUuid = null;
-        summonerUuid = summoner;
-        stateChangedAt = level.getGameTime();
-        missingBossSince = -1L;
-        setChangedAndSync();
-        playRitualOpening(level);
-        updateRitualBossBar(level, 0);
-        return true;
+        return beginRitual(level, summoner, false);
     }
 
     /** 管理员测试入口：跳过正式能力门槛，但保留祭坛仪式、场地绑定和 Boss 事务。 */
     public boolean beginAdminTestStarting(ServerLevel level, UUID summoner) {
-        reconcile(level);
-        if (state != TransactionState.IDLE) {
+        if (completingSummon) {
             return false;
         }
-        resonanceMask = ALL_RESONANCES;
-        lastResonanceIndex = EchoAbilityType.values().length - 1;
-        lastResonanceAt = level.getGameTime();
-        adminTestMode = true;
-        for (int index = 0; index < EchoAbilityType.values().length; index++) {
-            playResonanceFeedback(level, index);
+        return beginRitual(level, summoner, true);
+    }
+
+    private boolean beginRitual(ServerLevel level, UUID summoner, boolean admin) {
+        if (!isCurrentAltar(level)) {
+            return false;
         }
-        if (beginStarting(level, summoner)) {
+        completingSummon = true;
+        try {
+            reconcile(level);
+            if (!isCurrentAltar(level) || !isArenaChunksLoaded(level) || state != TransactionState.IDLE
+                    || (!admin && !isFullyResonant())) {
+                return false;
+            }
+            if (admin) {
+                resonanceMask = ALL_RESONANCES;
+                lastResonanceIndex = EchoAbilityType.values().length - 1;
+                lastResonanceAt = level.getGameTime();
+            }
+            adminTestMode = admin;
+            state = TransactionState.STARTING;
+            bossUuid = null;
+            summonerUuid = summoner;
+            stateChangedAt = level.getGameTime();
+            missingBossSince = -1L;
+            setChangedAndSync();
+            if (admin) {
+                for (int index = 0; index < EchoAbilityType.values().length; index++) {
+                    if (!isCurrentRitualStart(level, summoner)) {
+                        return true;
+                    }
+                    playResonanceFeedback(level, index);
+                }
+            }
+            if (isCurrentRitualStart(level, summoner)) {
+                playRitualOpening(level);
+                if (isCurrentRitualStart(level, summoner)) {
+                    updateRitualBossBar(level, 0);
+                }
+            }
             return true;
+        } finally {
+            completingSummon = false;
         }
-        adminTestMode = false;
-        resetResonances();
-        setChangedAndSync();
-        return false;
+    }
+
+    private boolean isCurrentRitualStart(ServerLevel level, UUID summoner) {
+        var candidate = level.getPlayerByUUID(summoner);
+        return state == TransactionState.STARTING && summoner.equals(summonerUuid)
+                && candidate instanceof ServerPlayer player && isCurrentSummonContext(level, player);
+    }
+
+    public boolean isCurrentAltar(ServerLevel level) {
+        if (isRemoved() || this.level != level || level.isOutsideBuildHeight(worldPosition)) {
+            return false;
+        }
+        var chunk = level.getChunkSource().getChunkNow(worldPosition.getX() >> 4, worldPosition.getZ() >> 4);
+        return chunk != null && chunk.getBlockEntity(worldPosition) == this
+                && chunk.getBlockState(worldPosition).getBlock() instanceof WorldResonanceAltarBlock;
+    }
+
+    @Nullable
+    private BlockState getReadyAltarState(ServerLevel level) {
+        return BossRechallengeAltarBlockEntity.getReadyAltarState(level, worldPosition);
+    }
+
+    public boolean beginSummonCompletion(ServerLevel level, ServerPlayer player) {
+        if (completingSummon || state != TransactionState.STARTING || bossUuid != null
+                || !isCurrentSummonContext(level, player)) {
+            return false;
+        }
+        completingSummon = true;
+        return true;
+    }
+
+    public void finishSummonCompletion() {
+        completingSummon = false;
+    }
+
+    public boolean isCurrentSummonContext(ServerLevel level, ServerPlayer player) {
+        return isCurrentAltar(level) && isArenaChunksLoaded(level)
+                && isQualifiedNearby(player, WorldResonanceLayout.arenaRadius(isGrandArena()) + 8.0D);
     }
 
     public boolean markActive(WorldEcho boss) {
@@ -306,8 +373,10 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
 
     @Nullable
     public WorldEcho findActiveBoss(ServerLevel level) {
-        reconcile(level);
-        return findLinkedBoss(level, false);
+        if (!completingSummon) {
+            reconcile(level);
+        }
+        return findLinkedBoss(level, false).boss();
     }
 
     public void onBossSettled(UUID settledArenaId, UUID settledBossUuid) {
@@ -334,6 +403,12 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
             return;
         }
 
+        if (altar.completingSummon) {
+            return;
+        }
+        if (altar.recoveringBosses) {
+            return;
+        }
         if (altar.state == TransactionState.IDLE) {
             return;
         }
@@ -343,17 +418,22 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
         }
         long now = level.getGameTime();
         WorldEcho checkedBoss = null;
+        BossLookup checkedLookup = null;
         boolean checkedActiveBoss = false;
         if (altar.state == TransactionState.ACTIVE && now % 5L == 0L) {
             checkedActiveBoss = true;
-            checkedBoss = altar.findLinkedBoss(serverLevel, now % 20L == 0L);
+            checkedLookup = altar.findLinkedBoss(serverLevel, now % 20L == 0L);
+            if (checkedLookup.interrupted()) {
+                return;
+            }
+            checkedBoss = checkedLookup.boss();
             if (checkedBoss != null) {
                 altar.enforceArenaBoundary(serverLevel, checkedBoss);
             }
         }
         if (now % 20L == 0L) {
             if (checkedActiveBoss) {
-                altar.reconcile(serverLevel, checkedBoss);
+                altar.reconcile(serverLevel, checkedLookup);
             } else {
                 altar.reconcile(serverLevel);
             }
@@ -361,37 +441,33 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
     }
 
     private void playRitualOpening(ServerLevel level) {
-        Vec3 core = Vec3.atCenterOf(worldPosition).add(0.0D, 2.0D, 0.0D);
-        level.sendParticles(ParticleTypes.FLASH, core.x, core.y, core.z,
-                2, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.sendParticles(ParticleTypes.END_ROD, core.x, core.y, core.z,
-                90, 1.8D, 1.4D, 1.8D, 0.16D);
-        level.playSound(null, worldPosition, SoundEvents.BEACON_ACTIVATE,
-                SoundSource.BLOCKS, 2.4F, 0.55F);
+        MechanismFx.ritualOpening(level, Vec3.atCenterOf(worldPosition));
+        level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_OPEN.get(),
+                SoundSource.BLOCKS, 2.0F, 1.0F);
     }
 
     private void playResonanceFeedback(ServerLevel level, int index) {
-        Vec3 local = LOCAL_RESONATORS.get(index);
-        double x = worldPosition.getX() + local.x;
-        double y = worldPosition.getY() + local.y;
-        double z = worldPosition.getZ() + local.z;
-        ParticleOptions particle = RITUAL_PARTICLES.get(index);
-        level.sendParticles(particle, x, y, z,
-                42, 0.22D, 0.42D, 0.22D, 0.045D);
-        level.sendParticles(ParticleTypes.END_ROD, x, y + 0.18D, z,
-                18, 0.12D, 0.28D, 0.12D, 0.025D);
-        var sound = switch (index) {
-            case 0 -> SoundEvents.AMETHYST_BLOCK_CHIME;
-            case 1 -> SoundEvents.CONDUIT_ACTIVATE;
-            case 2 -> SoundEvents.AMETHYST_BLOCK_RESONATE;
-            case 3 -> SoundEvents.RESPAWN_ANCHOR_CHARGE;
-            default -> SoundEvents.END_PORTAL_FRAME_FILL;
-        };
-        float pitch = 0.72F + index * 0.12F;
-        level.playSound(null, worldPosition, sound, SoundSource.BLOCKS, 1.7F, pitch);
+        Vec3 center = Vec3.atLowerCornerOf(worldPosition).add(LOCAL_RESONATORS.get(index));
+        MechanismFx.resonanceNode(level, center, index);
+        switch (index) {
+            case 0 -> level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_WIND.get(),
+                    SoundSource.BLOCKS, 1.0F, 1.0F);
+            case 1 -> level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_TIDE.get(),
+                    SoundSource.BLOCKS, 1.0F, 1.0F);
+            case 2 -> level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_SIGHT.get(),
+                    SoundSource.BLOCKS, 1.0F, 1.0F);
+            case 3 -> level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_GRAVITY.get(),
+                    SoundSource.BLOCKS, 1.0F, 1.0F);
+            case 4 -> level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_VOID.get(),
+                    SoundSource.BLOCKS, 1.0F, 1.0F);
+            default -> { }
+        }
     }
 
     private void tickRitual(ServerLevel level) {
+        if (!isCurrentAltar(level)) {
+            return;
+        }
         long now = level.getGameTime();
         if (now < stateChangedAt) {
             stateChangedAt = now;
@@ -402,27 +478,28 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
         renderRitual(level, age);
 
         if (age == 45) {
-            level.playSound(null, worldPosition, SoundEvents.CONDUIT_ACTIVATE,
-                    SoundSource.BLOCKS, 2.5F, 0.72F);
+            level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_CONNECT.get(),
+                    SoundSource.BLOCKS, 2.0F, 1.0F);
         } else if (age == 105) {
-            level.playSound(null, worldPosition, SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                    SoundSource.BLOCKS, 2.8F, 0.48F);
+            level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_FOCUS.get(),
+                    SoundSource.BLOCKS, 2.0F, 1.0F);
         } else if (age == 150) {
-            Vec3 core = Vec3.atCenterOf(worldPosition).add(0.0D, 7.0D, 0.0D);
-            level.sendParticles(ParticleTypes.FLASH, core.x, core.y, core.z,
-                    3, 0.0D, 0.0D, 0.0D, 0.0D);
-            level.playSound(null, worldPosition, SoundEvents.WARDEN_SONIC_CHARGE,
-                    SoundSource.HOSTILE, 3.0F, 0.7F);
+            level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_READY.get(),
+                    SoundSource.BLOCKS, 2.0F, 1.0F);
         }
 
         if (age < WorldResonanceLayout.RITUAL_DURATION_TICKS) {
             return;
         }
         if (bossUuid != null) {
-            WorldEcho reservedBoss = findLinkedBoss(level, false);
+            BossLookup reservedLookup = findLinkedBoss(level, false);
+            if (reservedLookup.interrupted()) {
+                return;
+            }
+            WorldEcho reservedBoss = reservedLookup.boss();
             if (reservedBoss != null) {
                 adoptBoss(level, reservedBoss);
-            } else if (elapsed(now, stateChangedAt,
+            } else if (isArenaChunksLoaded(level) && elapsed(now, stateChangedAt,
                     WorldResonanceLayout.RITUAL_DURATION_TICKS + MISSING_BOSS_GRACE_TICKS)) {
                 UnknownEchoes.LOGGER.warn(
                         "World resonance altar {} recovered a reserved summon without a live boss",
@@ -441,60 +518,8 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
     }
 
     private void renderRitual(ServerLevel level, int age) {
-        Vec3 core = Vec3.atCenterOf(worldPosition).add(0.0D,
-                age < 105 ? 4.5D : 7.0D, 0.0D);
-        if ((age & 1) == 0) {
-            List<Vec3> pylons = resonancePylonTops();
-            for (int index = 0; index < pylons.size(); index++) {
-                Vec3 source = pylons.get(index);
-                double reach = Math.min(1.0D, Math.max(0.08D, (age - index * 6) / 58.0D));
-                ParticleOptions particle = RITUAL_PARTICLES.get(index);
-                for (int sample = 0; sample < 7; sample++) {
-                    double t = level.random.nextDouble() * reach;
-                    Vec3 point = source.lerp(core, t);
-                    level.sendParticles(particle, point.x, point.y, point.z,
-                            1, 0.035D, 0.035D, 0.035D, 0.005D);
-                }
-                level.sendParticles(particle, source.x, source.y, source.z,
-                        age >= 45 ? 5 : 2, 0.35D, 0.45D, 0.35D, 0.025D);
-            }
-        }
-
-        if (age >= 45) {
-            double spin = age * 0.12D;
-            double height = Math.min(14.0D, 2.0D + (age - 45) * 0.12D);
-            for (int arm = 0; arm < 5; arm++) {
-                double angle = spin + arm * Math.PI * 0.4D;
-                double radius = 2.5D + Math.sin(age * 0.08D + arm) * 0.8D;
-                level.sendParticles(RITUAL_PARTICLES.get(arm),
-                        core.x + Math.cos(angle) * radius,
-                        worldPosition.getY() + 1.0D + height * (arm + 1) / 5.0D,
-                        core.z + Math.sin(angle) * radius,
-                        2, 0.08D, 0.15D, 0.08D, 0.01D);
-            }
-        }
-        if (age >= 90 && age % 4 == 0) {
-            double radius = 4.0D + (age - 90) % 36 * 0.32D;
-            ritualRing(level, core, radius, age >= 145
-                    ? ParticleTypes.END_ROD : ParticleTypes.ENCHANT);
-        }
-        if (age >= 135) {
-            level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                    core.x, core.y, core.z, 18,
-                    2.2D, 4.5D, 2.2D, 0.18D);
-        }
-    }
-
-    private static void ritualRing(ServerLevel level, Vec3 center, double radius,
-                                   ParticleOptions particle) {
-        for (int step = 0; step < 48; step++) {
-            double angle = step * Math.PI * 2.0D / 48.0D;
-            level.sendParticles(particle,
-                    center.x + Math.cos(angle) * radius,
-                    center.y + Math.sin(angle * 2.0D) * 0.35D,
-                    center.z + Math.sin(angle) * radius,
-                    1, 0.0D, 0.0D, 0.0D, 0.0D);
-        }
+        MechanismFx.emit(level, MechanismFx.ritualFrame(Vec3.atCenterOf(worldPosition),
+                resonancePylonTops(), age, WorldResonanceLayout.RITUAL_DURATION_TICKS));
     }
 
     @Nullable
@@ -549,13 +574,9 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
     }
 
     private void collapseRitual(ServerLevel level) {
-        Vec3 core = Vec3.atCenterOf(worldPosition).add(0.0D, 3.0D, 0.0D);
-        level.sendParticles(ParticleTypes.SMOKE, core.x, core.y, core.z,
-                80, 1.5D, 1.6D, 1.5D, 0.08D);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL, core.x, core.y, core.z,
-                60, 1.2D, 1.2D, 1.2D, 0.15D);
-        level.playSound(null, worldPosition, SoundEvents.BEACON_DEACTIVATE,
-                SoundSource.BLOCKS, 2.0F, 0.55F);
+        MechanismFx.ritualCollapse(level, Vec3.atCenterOf(worldPosition));
+        level.playSound(null, worldPosition, ModSounds.BLOCK_WORLD_RESONANCE_COLLAPSE.get(),
+                SoundSource.BLOCKS, 1.5F, 1.0F);
     }
 
     private void updateRitualBossBar(ServerLevel level, int age) {
@@ -577,8 +598,8 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
             ritualEvent = new ServerBossEvent(
                     Component.translatable("gui.unknown_echoes.world_resonance.ritual.awakening"),
                     BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.NOTCHED_10);
-            ritualEvent.setDarkenScreen(true);
-            ritualEvent.setCreateWorldFog(true);
+            ritualEvent.setDarkenScreen(false);
+            ritualEvent.setCreateWorldFog(false);
         }
         return ritualEvent;
     }
@@ -705,10 +726,17 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
         reconcile(level, findLinkedBoss(level, true));
     }
 
-    private void reconcile(ServerLevel level, @Nullable WorldEcho boss) {
+    private void reconcile(ServerLevel level, BossLookup lookup) {
+        if (!isLookupCurrent(level, lookup)) {
+            return;
+        }
+        WorldEcho boss = lookup.boss();
         if (boss != null) {
             if (state != TransactionState.STARTING && state != TransactionState.ACTIVE) {
                 boss.discard();
+                if (!isRecoveryCurrent(level, lookup.context())) {
+                    return;
+                }
             } else {
                 adoptBoss(level, boss);
                 return;
@@ -768,69 +796,126 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
     }
 
     private boolean isArenaChunksLoaded(ServerLevel level) {
-        return LoadedAreaCheck.horizontalRadiusLoaded(level, worldPosition, BOSS_RANGE_H);
+        return BossRechallengeAltarBlockEntity.areArenaChunksReady(level, worldPosition, BOSS_RANGE_H);
     }
 
-    @Nullable
-    private WorldEcho findLinkedBoss(ServerLevel level, boolean allowAdoption) {
-        if (bossUuid != null) {
-            Entity entity = level.getEntity(bossUuid);
-            if (entity instanceof WorldEcho boss && boss.isAlive() && !boss.isRemoved()) {
-                if (boss.matchesAltar(arenaId, worldPosition)) {
-
-                    return boss;
-                }
-                else if (allowAdoption && state == TransactionState.ACTIVE && boss.canBindToAltar()) {
-                    boss.bindToAltar(arenaId, worldPosition);
-                    return boss;
-                }
-                else if (!allowAdoption) {
-                    return null;
-                }
-                else {
-                    UnknownEchoes.LOGGER.warn(
-                            "World resonance altar {} rejected boss {} with a mismatched arena binding",
-                            worldPosition, bossUuid);
-                    bossUuid = null;
-                    setChangedAndSync();
+    private BossLookup findLinkedBoss(ServerLevel level, boolean allowAdoption) {
+        if (recoveringBosses || !isCurrentAltar(level)) {
+            return new BossLookup(null, null, true, false);
+        }
+        recoveringBosses = true;
+        try {
+            RecoveryContext context = captureRecoveryContext(level);
+            if (allowAdoption && !context.areaLoaded()) {
+                // 未应用的旧实体仍可能拥有场地；不能按暂时为空的索引清理归属或重复体。
+                missingBossSince = -1L;
+                return new BossLookup(null, context, true, false);
+            }
+            if (bossUuid != null) {
+                Entity entity = level.getEntity(bossUuid);
+                if (entity instanceof WorldEcho boss && isRecoveryEntity(level, boss)) {
+                    if (boss.matchesAltar(arenaId, worldPosition)) {
+                        return new BossLookup(boss, context, false, true);
+                    } else if (allowAdoption && state == TransactionState.ACTIVE && boss.canBindToAltar()) {
+                        boss.bindToAltar(arenaId, worldPosition);
+                        return isRecoveryCurrent(level, context) && isRecoveryCandidate(level, boss)
+                                ? new BossLookup(boss, context, false, true)
+                                : new BossLookup(null, null, true, false);
+                    } else if (!allowAdoption) {
+                        return new BossLookup(null, context, false, false);
+                    } else {
+                        UnknownEchoes.LOGGER.warn(
+                                "World resonance altar {} rejected boss {} with a mismatched arena binding",
+                                worldPosition, bossUuid);
+                        bossUuid = null;
+                        context = captureRecoveryContext(level);
+                        setChangedAndSync();
+                        if (!isRecoveryCurrent(level, context)) {
+                            return new BossLookup(null, null, true, false);
+                        }
+                    }
                 }
             }
-        }
-
-        if (!allowAdoption) {
-            return null;
-        }
-
-        AABB arena = new AABB(worldPosition).inflate(BOSS_RANGE_H, BOSS_RANGE_V, BOSS_RANGE_H);
-        List<WorldEcho> nearby = level.getEntitiesOfClass(WorldEcho.class, arena,
-                boss -> boss.isAlive() && !boss.isRemoved());
-
-        WorldEcho owner = null;
-        double ownerDistance = Double.MAX_VALUE;
-        boolean allowLegacyAdoption = bossUuid == null && state == TransactionState.ACTIVE;
-        for (WorldEcho boss : nearby) {
-            if (!boss.matchesAltar(arenaId, worldPosition)) {
-                continue;
+            if (!allowAdoption) {
+                return new BossLookup(null, context, false, false);
             }
-            double distance = boss.distanceToSqr(
-                    worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D,
-                    worldPosition.getZ() + 0.5D);
-            boolean currentOwner = bossUuid != null && bossUuid.equals(boss.getUUID());
-            boolean selectedOwner = owner != null && bossUuid != null
-                    && bossUuid.equals(owner.getUUID());
-            if ((currentOwner && !selectedOwner)
-                    || (allowLegacyAdoption && owner == null)
-                    || (allowLegacyAdoption && distance < ownerDistance)) {
-                owner = boss;
-                ownerDistance = distance;
+
+            AABB arena = new AABB(worldPosition).inflate(BOSS_RANGE_H, BOSS_RANGE_V, BOSS_RANGE_H);
+            List<WorldEcho> nearby = level.getEntitiesOfClass(WorldEcho.class, arena,
+                    boss -> boss.isAlive() && !boss.isRemoved());
+            if (!isRecoveryCurrent(level, context)) {
+                return new BossLookup(null, null, true, false);
             }
-        }
-        for (WorldEcho boss : nearby) {
-            if (boss != owner && boss.matchesAltar(arenaId, worldPosition)) {
-                boss.discard();
+            WorldEcho owner = null;
+            double ownerDistance = Double.MAX_VALUE;
+            boolean allowLegacyAdoption = bossUuid == null && state == TransactionState.ACTIVE;
+            for (WorldEcho boss : nearby) {
+                if (!isRecoveryCandidate(level, boss) || !arena.intersects(boss.getBoundingBox())) {
+                    continue;
+                }
+                double distance = boss.distanceToSqr(
+                        worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D,
+                        worldPosition.getZ() + 0.5D);
+                boolean currentOwner = bossUuid != null && bossUuid.equals(boss.getUUID());
+                boolean selectedOwner = owner != null && bossUuid != null
+                        && bossUuid.equals(owner.getUUID());
+                if ((currentOwner && !selectedOwner)
+                        || (allowLegacyAdoption && owner == null)
+                        || (allowLegacyAdoption && distance < ownerDistance)) {
+                    owner = boss;
+                    ownerDistance = distance;
+                }
             }
+            for (WorldEcho boss : nearby) {
+                if (!isRecoveryCurrent(level, context)
+                        || owner != null && (!isRecoveryCandidate(level, owner)
+                        || !arena.intersects(owner.getBoundingBox()))) {
+                    return new BossLookup(null, null, true, false);
+                }
+                if (boss != owner && isRecoveryCandidate(level, boss)
+                        && arena.intersects(boss.getBoundingBox())) {
+                    boss.discard();
+                }
+            }
+            if (!isRecoveryCurrent(level, context)
+                    || owner != null && (!isRecoveryCandidate(level, owner)
+                    || !arena.intersects(owner.getBoundingBox()))) {
+                return new BossLookup(null, null, true, false);
+            }
+            return new BossLookup(owner, context, false, false);
+        } finally {
+            recoveringBosses = false;
         }
-        return owner;
+    }
+
+    private RecoveryContext captureRecoveryContext(ServerLevel level) {
+        return new RecoveryContext(arenaId, bossUuid, state, stateChangedAt, cooldownUntil,
+                resonanceMask, getReadyAltarState(level), isArenaChunksLoaded(level));
+    }
+
+    private boolean isRecoveryCurrent(ServerLevel level, RecoveryContext context) {
+        return isCurrentAltar(level)
+                && getReadyAltarState(level) == context.altarState()
+                && arenaId.equals(context.arenaId())
+                && java.util.Objects.equals(bossUuid, context.bossUuid())
+                && state == context.state() && stateChangedAt == context.stateChangedAt()
+                && cooldownUntil == context.cooldownUntil() && resonanceMask == context.resonanceMask()
+                && isArenaChunksLoaded(level) == context.areaLoaded();
+    }
+
+    private boolean isRecoveryEntity(ServerLevel level, WorldEcho boss) {
+        return boss.level() == level && boss.isAlive() && level.getEntity(boss.getUUID()) == boss;
+    }
+
+    private boolean isRecoveryCandidate(ServerLevel level, WorldEcho boss) {
+        return isRecoveryEntity(level, boss) && boss.matchesAltar(arenaId, worldPosition);
+    }
+
+    private boolean isLookupCurrent(ServerLevel level, BossLookup lookup) {
+        return !lookup.interrupted() && isRecoveryCurrent(level, lookup.context())
+                && (lookup.boss() == null || isRecoveryCandidate(level, lookup.boss())
+                && (lookup.indexedOwner() || new AABB(worldPosition).inflate(BOSS_RANGE_H, BOSS_RANGE_V, BOSS_RANGE_H)
+                .intersects(lookup.boss().getBoundingBox())));
     }
 
     private void adoptBoss(ServerLevel level, WorldEcho boss) {
@@ -954,6 +1039,15 @@ public class WorldResonanceAltarBlockEntity extends BlockEntity {
 
     private static long safeDeadline(long now, long duration) {
         return now > Long.MAX_VALUE - duration ? Long.MAX_VALUE : now + duration;
+    }
+
+    private record RecoveryContext(UUID arenaId, @Nullable UUID bossUuid, TransactionState state,
+                                   long stateChangedAt, long cooldownUntil, int resonanceMask,
+                                   BlockState altarState, boolean areaLoaded) {
+    }
+
+    private record BossLookup(@Nullable WorldEcho boss, @Nullable RecoveryContext context,
+                              boolean interrupted, boolean indexedOwner) {
     }
 
     private enum TransactionState {

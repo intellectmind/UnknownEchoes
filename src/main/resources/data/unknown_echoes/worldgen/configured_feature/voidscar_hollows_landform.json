@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "arch",
+    "rock": {
+      "Name": "unknown_echoes:abyssal_stone"
+    },
+    "accent": {
+      "Name": "minecraft:obsidian"
+    },
+    "height": 22,
+    "radius": 10,
+    "submerged": false,
+    "drape": 0,
+    "waterline": true
+  }
+}

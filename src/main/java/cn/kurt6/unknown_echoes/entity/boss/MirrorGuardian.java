@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import cn.kurt6.unknown_echoes.fx.BossLifecycleFx;
+import cn.kurt6.unknown_echoes.fx.CombatFx;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.block.truesight.MirrorSigilBlock;
@@ -64,7 +66,7 @@ import java.util.UUID;
 
 public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuard, PhaseGatedBoss,
         BossVisualState,
-        RechallengeBoundBoss {
+        RechallengeBoundBoss, BossMusicSource {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.mirror_guardian.idle");
     private static final RawAnimation WALK_ANIM =
@@ -124,6 +126,10 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
     private final List<UUID> illusionIds = new ArrayList<>();
     private final Set<UUID> participants = new HashSet<>();
     private BlockPos rechallengeAltar;
+    private boolean handlingDeath = false;
+    private boolean cleaningIllusions = false;
+    private ServerLevel arenaCleanupLevel = null;
+    private Vec3 arenaCleanupPos = null;
 
     private static final int SLASH_HIT_DELAY = 9;
     private static final int BARRAGE_WAVE_DELAY = 6;
@@ -346,25 +352,55 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
     }
 
     private void discardIllusions(ServerLevel serverLevel, boolean converge) {
-        for (UUID id : this.illusionIds) {
-            if (serverLevel.getEntity(id) instanceof MirrorGuardian illusion) {
-                if (converge) {
-
-                    spawnConvergence(serverLevel, illusion.position().add(0, 1.5, 0));
-                }
-                serverLevel.sendParticles(BossParticleTheme.MIRROR.body(),
-                        illusion.getX(), illusion.getY() + 1.2, illusion.getZ(), 16, 0.4, 0.8, 0.4, 0.04);
-                illusion.discard();
-            }
+        if (this.cleaningIllusions) {
+            return;
         }
-        this.illusionIds.clear();
+        this.cleaningIllusions = true;
+        Vec3 convergenceTarget = this.arenaCleanupPos == null ? this.position() : this.arenaCleanupPos;
+        try {
+            for (UUID id : List.copyOf(this.illusionIds)) {
+                runDeathStep("owned illusion cleanup", () -> {
+                    var entity = serverLevel.getEntity(id);
+                    if (entity == null) {
+                        return;
+                    }
+                    if (!(entity instanceof MirrorGuardian illusion) || illusion == this || !illusion.isIllusion()
+                            || !this.getUUID().equals(illusion.illusionOwnerUuid)) {
+                        this.illusionIds.remove(id);
+                        return;
+                    }
+                    if (illusion.level() != serverLevel) {
+                        return;
+                    }
+                    Vec3 illusionPos = illusion.position();
+                    illusion.discard();
+                    if (!illusion.isRemoved()) {
+                        return;
+                    }
+                    this.illusionIds.remove(id);
+                    if (converge && this.level() == serverLevel && !this.isRemoved()
+                            && this.position().distanceToSqr(convergenceTarget) < 0.0001D) {
+                        spawnConvergence(serverLevel, illusionPos.add(0, 1.5, 0));
+                    }
+                    serverLevel.sendParticles(BossParticleTheme.MIRROR.body(),
+                            illusionPos.x, illusionPos.y + 1.2, illusionPos.z, 16, 0.4, 0.8, 0.4, 0.04);
+                });
+            }
+        } finally {
+            this.cleaningIllusions = false;
+        }
     }
 
     private void spawnConvergence(ServerLevel serverLevel, Vec3 from) {
-        Vec3 to = this.position().add(0, this.getBbHeight() * 0.6, 0);
+        Vec3 sourcePos = this.position();
+        Vec3 to = sourcePos.add(0, this.getBbHeight() * 0.6, 0);
         Vec3 delta = to.subtract(from);
         int steps = Math.max(4, (int) (delta.length() * 2));
         for (int i = 0; i <= steps; i++) {
+            if (this.level() != serverLevel || this.isRemoved()
+                    || this.position().distanceToSqr(sourcePos) >= 0.0001D) {
+                return;
+            }
             Vec3 p = from.add(delta.scale(i / (double) steps));
             serverLevel.sendParticles(BossParticleTheme.MIRROR.spark(), p.x, p.y, p.z, 1, 0.05, 0.05, 0.05, 0.0);
         }
@@ -382,7 +418,8 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
     }
 
     public void onSigilActivated(ServerPlayer activator, BlockPos activatedSigil) {
-        if (this.level().isClientSide || this.isBroken() || this.isIllusion()
+        if (this.handlingDeath || this.cleaningIllusions || this.dead || this.isRemoved() || !this.isAlive()
+                || this.level().isClientSide || this.isBroken() || this.isIllusion()
                 || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -437,6 +474,7 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
         this.brokenTicksRemaining = ServerConfig.BOSS_BROKEN_DURATION_TICKS.get();
         this.brokenWindowHealthFloor = BossPhaseGate.nextFloor(this.getHealth(), this.getMaxHealth(),
                 0.75F, 0.40F);
+        BossLifecycleFx.phase(serverLevel, this.position(), this.getBbWidth(), this.getBbHeight(), BossParticleTheme.MIRROR.body());
         serverLevel.playSound(null, this.blockPosition(),
                 ModSounds.MIRROR_GUARDIAN_SHATTER.get(), SoundSource.HOSTILE, 2.0F, 1.0F);
 
@@ -523,6 +561,7 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
         // 崩裂阶段的一次性宣告,与 shattering 同一条判据;换位频率与冷却仍由下方逻辑决定。
         if (shattering && !this.fractureAnnounced && !this.isIllusion()) {
             this.fractureAnnounced = true;
+            BossLifecycleFx.phase(serverLevel, this.position(), this.getBbWidth(), this.getBbHeight(), BossParticleTheme.MIRROR.body());
             this.triggerAnim("state_controller", "fracture");
         }
         double distSq = this.distanceToSqr(target);
@@ -532,10 +571,10 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
             this.slashCooldown = 100;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "attack");
-            this.playSound(SoundEvents.AMETHYST_BLOCK_RESONATE, 1.6F, 0.5F);
+            this.playSound(ModSounds.MIRROR_GUARDIAN_ATTACK_SLASH_WARN.get(), 1.6F, 1.0F);
             for (MirrorGuardian illusion : aliveIllusions(serverLevel)) {
                 illusion.triggerAnim("attack_controller", "attack");
-                illusion.playSound(SoundEvents.AMETHYST_BLOCK_RESONATE, 1.2F, 1.5F);
+                illusion.playSound(ModSounds.MIRROR_GUARDIAN_ATTACK_IMAGE_WARN.get(), 1.2F, 1.0F);
             }
         } else if (this.novaCooldown <= 0 && distSq <= NOVA_RANGE * NOVA_RANGE) {
 
@@ -543,7 +582,7 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
             this.novaCooldown = 220;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "nova");
-            this.playSound(SoundEvents.AMETHYST_BLOCK_RESONATE, 1.6F, 0.35F);
+            this.playSound(ModSounds.MIRROR_GUARDIAN_ATTACK_NOVA_WARN.get(), 1.6F, 1.0F);
         } else if (this.barrageCooldown <= 0 && distSq <= BARRAGE_RANGE * BARRAGE_RANGE
                 && distSq > NOVA_RANGE * NOVA_RANGE && this.hasLineOfSight(target)) {
 
@@ -552,7 +591,7 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
             this.barrageCooldown = 200;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "barrage");
-            this.playSound(SoundEvents.AMETHYST_CLUSTER_BREAK, 1.5F, 0.8F);
+            this.playSound(ModSounds.MIRROR_GUARDIAN_ATTACK_BARRAGE_WARN.get(), 1.5F, 1.0F);
         } else if (this.spikeCooldown <= 0 && distSq <= SPIKE_RANGE * SPIKE_RANGE
                 && distSq > SLASH_RANGE * SLASH_RANGE) {
             this.startSpikeSurge(target);
@@ -625,6 +664,11 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
         }
         this.teleportTo(illusionPos.x, illusionPos.y, illusionPos.z);
         illusion.teleportTo(myPos.x, myPos.y, myPos.z);
+        // 两端必须对称，不能用到达演出的差异暴露真身。
+        CombatFx.teleport(serverLevel, myPos, illusionPos, this.getBbWidth() * 0.65 + 0.3,
+                this.getBbHeight(), BossParticleTheme.MIRROR.body());
+        CombatFx.teleport(serverLevel, illusionPos, myPos, this.getBbWidth() * 0.65 + 0.3,
+                this.getBbHeight(), BossParticleTheme.MIRROR.body());
         BossFx.helix(serverLevel, myPos.add(0.0D, 1.2D, 0.0D),
                 illusionPos.add(0.0D, 1.2D, 0.0D), 0.28D, BossParticleTheme.MIRROR.body());
         BossFx.cinematicImpact(serverLevel, illusionPos, 18.0D, 0.22F, 4, 0xB8EAF2);
@@ -758,7 +802,7 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
         this.spikeCooldown = 240;
         this.getNavigation().stop();
         this.triggerAnim("attack_controller", "thrust");
-        this.playSound(SoundEvents.AMETHYST_BLOCK_RESONATE, 1.4F, 0.7F);
+        this.playSound(ModSounds.MIRROR_GUARDIAN_ATTACK_SPIKE_WARN.get(), 1.4F, 1.0F);
     }
 
     /**
@@ -826,17 +870,24 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
         if (this.tickCount % 2 == 0 && this.spikeWaveDist >= 0) {
             Vec3 head = this.spikeOrigin.add(this.spikeDir.scale(this.spikeWaveDist));
             serverLevel.playSound(null, BlockPos.containing(head),
-                    SoundEvents.AMETHYST_CLUSTER_BREAK, SoundSource.HOSTILE, 1.0F, 1.5F);
+                    ModSounds.MIRROR_GUARDIAN_ATTACK_SPIKE_RELEASE.get(), SoundSource.HOSTILE, 1.0F, 1.0F);
         }
     }
 
     @Override
     public void aiStep() {
+        if (this.handlingDeath || this.dead || !this.isAlive()) {
+            return;
+        }
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
-                && this.tickRechallengeBinding(serverLevel)) {
+                && this.tickRechallengeBinding(serverLevel,
+                        () -> !this.handlingDeath && !this.dead)) {
             return;
         }
         super.aiStep();
+        if (this.handlingDeath || this.dead || !this.isAlive()) {
+            return;
+        }
         if (this.level().isClientSide) {
             return;
         }
@@ -880,7 +931,7 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
 
         if (this.isAlive() && this.tickCount % 70 == 0) {
             serverLevel.playSound(null, this.blockPosition(),
-                    SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.HOSTILE, 0.9F, 0.45F);
+                    ModSounds.MIRROR_GUARDIAN_VEILED.get(), SoundSource.HOSTILE, 0.9F, 1.0F);
         }
 
         if (!this.isBroken() && this.getTarget() != null && this.tickCount % 5 == 0) {
@@ -1039,25 +1090,114 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
     }
 
     @Override
+    public boolean isSettlingDeath() {
+        return this.handlingDeath && this.dead;
+    }
+
+    @Override
     public void die(DamageSource source) {
-        boolean wasDead = this.dead;
-        super.die(source);
-        if (wasDead || !this.dead || !(this.level() instanceof ServerLevel serverLevel)) {
+        if (this.handlingDeath || this.dead) {
             return;
         }
-
-        // 分段崩解只属于真身;假身被命中即碎,有自己的碎镜表现(见下方分支)。
-        if (!this.isIllusion()) {
-            this.triggerAnim("state_controller", "collapse");
+        this.handlingDeath = true;
+        try {
+            if (!(this.level() instanceof ServerLevel serverLevel)) {
+                super.die(source);
+                return;
+            }
+            boolean deathIllusion = this.isIllusion();
+            Vec3 deathPos = this.position();
+            AABB deathBounds = this.getBoundingBox().inflate(3.0, 1.5, 3.0);
+            BlockPos deathAltar = this.rechallengeAltar();
+            UUID deathUuid = this.getUUID();
+            Set<UUID> deathParticipants = Set.copyOf(this.participants);
+            try {
+                super.die(source);
+            } finally {
+                if (this.dead) {
+                    if (deathIllusion) {
+                        settleIllusionDeath(serverLevel, deathPos, deathBounds);
+                    } else {
+                        this.arenaCleanupLevel = serverLevel;
+                        this.arenaCleanupPos = deathPos;
+                        settleMirrorDeath(serverLevel, deathPos, deathAltar, deathUuid, deathParticipants);
+                    }
+                }
+            }
+        } finally {
+            this.handlingDeath = false;
         }
+    }
 
-        if (this.isIllusion()) {
-            for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                    this.getBoundingBox().inflate(3.0, 1.5, 3.0),
-                    e -> e != this && !e.isSpectator()
-                            && !(e instanceof net.minecraft.world.entity.monster.Enemy))) {
-                if (victim.hurt(this.damageSources().mobAttack(this), 3.0F)) {
-                    Vec3 away = victim.position().subtract(this.position()).multiply(1, 0, 1);
+    private void settleMirrorDeath(ServerLevel serverLevel, Vec3 deathPos, BlockPos deathAltar,
+                                    UUID deathUuid, Set<UUID> deathParticipants) {
+        try {
+            boolean hasEligibleParticipant = false;
+            for (ServerPlayer player : nearbyDeathPlayers(serverLevel, deathPos)) {
+                if (deathParticipants.contains(player.getUUID())
+                        && isDeathParticipant(serverLevel, deathPos, player)) {
+                    boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
+                            EchoPermission.MIRROR_GUARDIAN_ID);
+                    hasEligibleParticipant = true;
+                    if (firstKill) {
+                        runDeathStep("personal progress", () -> {
+                            if (!EchoAbilityManager.markBossDefeated(player, EchoPermission.MIRROR_GUARDIAN_ID)
+                                    && isDeathParticipant(serverLevel, deathPos, player)) {
+                                player.sendSystemMessage(Component.translatable(
+                                        "message.unknown_echoes.progress_record.full"));
+                            }
+                        });
+                    }
+                }
+            }
+            if (hasEligibleParticipant) {
+                runDeathStep("true sight core", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.TRUE_SIGHT_CORE.get())));
+                runDeathStep("mirror core", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.MIRROR_GUARDIAN_CORE.get())));
+                runDeathStep("broken reflections", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.BROKEN_REFLECTION.get(),
+                    2 + this.random.nextInt(3))));
+                runDeathStep("mirror lake shards", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.MIRROR_LAKE_SHARD.get(),
+                    3 + this.random.nextInt(4))));
+                runDeathStep("echo shards", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.ECHO_SHARD.get(),
+                    2 + this.random.nextInt(4))));
+                runDeathStep("illusion dust", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.ILLUSION_DUST.get(),
+                    2 + this.random.nextInt(3))));
+            }
+        } finally {
+            if (deathAltar != null) {
+                runDeathStep("arena completion", () -> cn.kurt6.unknown_echoes.world.MainBossRechallengeData.onBossDefeated(
+                        serverLevel, deathAltar, this.rechallengeKind(), deathUuid));
+            }
+        }
+        runDeathStep("illusion cleanup", () -> { this.discardIllusions(serverLevel, true); });
+        runDeathStep("collapse", () -> {
+            if (isCurrentDeathPresentation(serverLevel, deathPos)) {
+                this.triggerAnim("state_controller", "collapse");
+                playDeathEffects(serverLevel, deathPos);
+            }
+        });
+    }
+
+    private void settleIllusionDeath(ServerLevel serverLevel, Vec3 deathPos, AABB deathBounds) {
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+            return;
+        }
+        for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class, deathBounds,
+                candidate -> isCurrentIllusionVictim(serverLevel, deathBounds, candidate))) {
+            runDeathStep("illusion burst", () -> {
+                if (!isCurrentDeathPresentation(serverLevel, deathPos)
+                        || !isCurrentIllusionVictim(serverLevel, deathBounds, victim)) {
+                    return;
+                }
+                if (victim.hurt(this.damageSources().mobAttack(this), 3.0F)
+                        && isCurrentDeathPresentation(serverLevel, deathPos)
+                        && isCurrentIllusionVictim(serverLevel, deathBounds, victim)) {
+                    Vec3 away = victim.position().subtract(deathPos).multiply(1, 0, 1);
                     if (away.lengthSqr() > 1.0E-4) {
                         Vec3 dir = away.normalize();
                         victim.setDeltaMovement(victim.getDeltaMovement().add(
@@ -1065,66 +1205,89 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
                         victim.hurtMarked = true;
                     }
                 }
+            });
+        }
+        runDeathStep("illusion effects", () -> {
+            if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+                return;
             }
             serverLevel.sendParticles(BossParticleTheme.MIRROR.body(),
-                    this.getX(), this.getY() + 1.2, this.getZ(), 30, 0.8, 1.0, 0.8, 0.1);
-            serverLevel.playSound(null, this.blockPosition(),
-                    ModSounds.MIRROR_GUARDIAN_COLLAPSE.get(), SoundSource.HOSTILE, 1.4F, 1.0F);
+                    deathPos.x, deathPos.y + 1.2, deathPos.z, 30, 0.8, 1.0, 0.8, 0.1);
+            if (isCurrentDeathPresentation(serverLevel, deathPos)) {
+                serverLevel.playSound(null, this.blockPosition(),
+                        ModSounds.MIRROR_GUARDIAN_COLLAPSE.get(), SoundSource.HOSTILE, 1.4F, 1.0F);
+            }
+        });
+    }
+
+    private boolean isCurrentIllusionVictim(ServerLevel serverLevel, AABB deathBounds, LivingEntity victim) {
+        return victim != this && victim.level() == serverLevel && victim.isAlive() && !victim.isRemoved()
+                && !victim.isSpectator() && !(victim instanceof net.minecraft.world.entity.monster.Enemy)
+                && victim.getBoundingBox().intersects(deathBounds);
+    }
+
+    private List<ServerPlayer> nearbyDeathPlayers(ServerLevel level, Vec3 deathPos) {
+        double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
+        return level.getEntitiesOfClass(ServerPlayer.class, new AABB(deathPos, deathPos).inflate(radius),
+                player -> isDeathParticipant(level, deathPos, player));
+    }
+
+    private boolean isDeathParticipant(ServerLevel level, Vec3 deathPos, ServerPlayer player) {
+        double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.position().distanceToSqr(deathPos) <= radius * radius;
+    }
+
+    private void runDeathStep(String step, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException failure) {
+            cn.kurt6.unknown_echoes.UnknownEchoes.LOGGER.error("Mirror guardian death {} failed for {}", step, this.getUUID(), failure);
+        }
+    }
+
+    private boolean isCurrentDeathPresentation(ServerLevel level, Vec3 deathPos) {
+        return this.dead && !this.isRemoved() && this.level() == level
+                && level.getEntity(this.getUUID()) == this
+                && this.position().distanceToSqr(deathPos) < 0.0001D;
+    }
+
+    private void playDeathEffects(ServerLevel serverLevel, Vec3 deathPos) {
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) return;
+        BossLifecycleFx.death(serverLevel, deathPos, this.getBbWidth(), this.getBbHeight(),
+                BossParticleTheme.MIRROR.body());
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
             return;
         }
-        this.discardIllusions(serverLevel, true);
-
         serverLevel.sendParticles(ParticleTypes.FLASH,
-                this.getX(), this.getY() + this.getBbHeight() * 0.6, this.getZ(), 1, 0, 0, 0, 0);
+                deathPos.x, deathPos.y + this.getBbHeight() * 0.6, deathPos.z, 1, 0, 0, 0, 0);
         for (int ring = 1; ring <= 4; ring++) {
             double r = ring * 1.5;
             for (int i = 0; i < 14; i++) {
+                if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+                    return;
+                }
                 double angle = Math.PI * 2 * i / 14 + ring * 0.3;
                 serverLevel.sendParticles(BossParticleTheme.MIRROR.spark(),
-                        this.getX() + Math.cos(angle) * r,
-                        this.getY() + this.getBbHeight() * 0.5,
-                        this.getZ() + Math.sin(angle) * r, 1, 0.05, 0.05, 0.05, -0.1);
+                        deathPos.x + Math.cos(angle) * r,
+                        deathPos.y + this.getBbHeight() * 0.5,
+                        deathPos.z + Math.sin(angle) * r, 1, 0.05, 0.05, 0.05, -0.1);
             }
         }
-
-        double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
-        boolean hasEligibleParticipant = false;
-        for (ServerPlayer player : serverLevel.getEntitiesOfClass(ServerPlayer.class,
-                this.getBoundingBox().inflate(radius), player -> !player.isSpectator())) {
-            if (!player.isSpectator() && this.participants.contains(player.getUUID())
-                    && player.distanceToSqr(this) <= radius * radius) {
-                boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
-                        EchoPermission.MIRROR_GUARDIAN_ID);
-                hasEligibleParticipant = true;
-                if (firstKill && !EchoAbilityManager.markBossDefeated(
-                        player, EchoPermission.MIRROR_GUARDIAN_ID)) {
-                    player.sendSystemMessage(Component.translatable(
-                            "message.unknown_echoes.progress_record.full"));
-                }
-            }
-        }
-        if (hasEligibleParticipant) {
-            BossMaterialRewards.drop(this, new ItemStack(ModItems.TRUE_SIGHT_CORE.get()));
-            BossMaterialRewards.drop(this, new ItemStack(ModItems.MIRROR_GUARDIAN_CORE.get()));
-            BossMaterialRewards.drop(this, new ItemStack(ModItems.BROKEN_REFLECTION.get(),
-                    2 + this.random.nextInt(3)));
-            BossMaterialRewards.drop(this, new ItemStack(ModItems.MIRROR_LAKE_SHARD.get(),
-                    3 + this.random.nextInt(4)));
-            BossMaterialRewards.drop(this, new ItemStack(ModItems.ECHO_SHARD.get(),
-                    2 + this.random.nextInt(4)));
-            BossMaterialRewards.drop(this, new ItemStack(ModItems.ILLUSION_DUST.get(),
-                    2 + this.random.nextInt(3)));
-        }
-        this.finishRechallenge(serverLevel);
     }
 
     @Override
     public void remove(Entity.RemovalReason reason) {
-        if (!this.isIllusion() && reason.shouldDestroy()
-                && this.level() instanceof ServerLevel serverLevel) {
-            this.discardIllusions(serverLevel, false);
+        try {
+            if ((this.arenaCleanupLevel != null || !this.isIllusion()) && reason.shouldDestroy()
+                    && this.level() instanceof ServerLevel currentLevel) {
+                ServerLevel serverLevel = this.arenaCleanupLevel == null ? currentLevel : this.arenaCleanupLevel;
+                runDeathStep("removal cleanup", () -> { this.discardIllusions(serverLevel, false); });
+            }
+        } finally {
+            super.remove(reason);
         }
-        super.remove(reason);
     }
 
     @Override
@@ -1278,7 +1441,7 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
         if (this.isIllusion()) {
             if (!this.level().isClientSide) {
                 this.triggerAnim("attack_controller", this.random.nextBoolean() ? "attack" : "thrust");
-                this.playSound(SoundEvents.AMETHYST_BLOCK_RESONATE, 1.2F, 1.5F);
+                this.playSound(ModSounds.MIRROR_GUARDIAN_ATTACK_IMAGE_WARN.get(), 1.2F, 1.0F);
                 this.spawnSwingDust();
             }
             return false;
@@ -1287,6 +1450,7 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
         if (hit && !this.level().isClientSide) {
 
             this.triggerAnim("attack_controller", this.random.nextBoolean() ? "attack" : "thrust");
+            this.playSound(ModSounds.MIRROR_GUARDIAN_ATTACK.get(), 1.2F, 1.0F);
             this.spawnSwingDust();
         }
         return hit;
@@ -1384,5 +1548,13 @@ public class MirrorGuardian extends Monster implements GeoEntity, BossDamageGuar
     @Override
     public int visualAttackDuration() {
         return this.entityData.get(DATA_VISUAL_ATTACK_DURATION);
+    }
+    @Override
+    public int musicStage() {
+        if (this.illusion && this.level() instanceof ServerLevel level && this.illusionOwnerUuid != null
+                && level.getEntity(this.illusionOwnerUuid) instanceof MirrorGuardian owner && !owner.illusion) {
+            return owner.musicStage();
+        }
+        return this.getHealth() < this.getMaxHealth() * 0.3F ? 2 : this.isBroken() ? 1 : 0;
     }
 }

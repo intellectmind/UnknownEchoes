@@ -19,7 +19,7 @@ public class AquaticSeaPickleBlock extends SeaPickleBlock {
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         var fluid = context.getLevel().getFluidState(context.getClickedPos());
-        if (!fluid.is(FluidTags.WATER) || fluid.getAmount() != 8) {
+        if (!fluid.is(FluidTags.WATER) || !fluid.isSource()) {
             return null;
         }
         return super.getStateForPlacement(context);
@@ -30,7 +30,7 @@ public class AquaticSeaPickleBlock extends SeaPickleBlock {
         var fluid = level.getFluidState(pos);
         return state.getValue(WATERLOGGED)
                 && fluid.is(FluidTags.WATER)
-                && fluid.getAmount() == 8
+                && fluid.isSource()
                 && super.canSurvive(state, level, pos);
     }
 

@@ -1,6 +1,41 @@
 package cn.kurt6.unknown_echoes.event;
 
+import cn.kurt6.unknown_echoes.entity.mob.RiftPageStalker;
+
+import cn.kurt6.unknown_echoes.entity.mob.BrokenBellAxeman;
+
+import cn.kurt6.unknown_echoes.entity.mob.ReedMaskRaider;
+
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.entity.mob.SporeCrownedWretch;
+import cn.kurt6.unknown_echoes.entity.mob.CairnShellBrute;
+import cn.kurt6.unknown_echoes.entity.mob.MossplateHound;
+import cn.kurt6.unknown_echoes.entity.mob.SawtoothPrawn;
+import cn.kurt6.unknown_echoes.entity.mob.LanternjawAngler;
+import cn.kurt6.unknown_echoes.entity.mob.AmberbackBeetle;
+import cn.kurt6.unknown_echoes.entity.mob.MossfangToad;
+import cn.kurt6.unknown_echoes.entity.mob.NeedlefinLionfish;
+import cn.kurt6.unknown_echoes.entity.mob.RiftfangEel;
+import cn.kurt6.unknown_echoes.entity.mob.HollowReedSerpent;
+import cn.kurt6.unknown_echoes.entity.mob.SlatehornBoar;
+import cn.kurt6.unknown_echoes.entity.mob.ReefjawShark;
+import cn.kurt6.unknown_echoes.entity.mob.LanternSeahorse;
+import cn.kurt6.unknown_echoes.entity.mob.EmberclawScorpion;
+import cn.kurt6.unknown_echoes.entity.mob.MossbackHedgehog;
+import cn.kurt6.unknown_echoes.entity.mob.SailtailMinnow;
+import cn.kurt6.unknown_echoes.entity.mob.MossSailSnail;
+import cn.kurt6.unknown_echoes.entity.mob.CrystalSpineUrchin;
+import cn.kurt6.unknown_echoes.entity.mob.AshSailSerpent;
+import cn.kurt6.unknown_echoes.entity.mob.PetalwingButterfly;
+import cn.kurt6.unknown_echoes.entity.mob.MosslightFirefly;
+import cn.kurt6.unknown_echoes.entity.mob.BellNeedleWasp;
+import cn.kurt6.unknown_echoes.entity.mob.ShardwingSkate;
+
+import cn.kurt6.unknown_echoes.entity.ai.AerialSpawnRules;
+import cn.kurt6.unknown_echoes.entity.mob.WindDriftJelly;
+import cn.kurt6.unknown_echoes.entity.mob.ReedwingDragonfly;
+import cn.kurt6.unknown_echoes.entity.mob.GaleShrike;
+import cn.kurt6.unknown_echoes.entity.mob.AshLanternBat;
 import cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher;
 import cn.kurt6.unknown_echoes.entity.boss.AshScribe;
 import cn.kurt6.unknown_echoes.entity.boss.BrokenBellKeeper;
@@ -64,6 +99,38 @@ public class ModEntityEvents {
 
     @SubscribeEvent
     public static void onRegisterAttributes(EntityAttributeCreationEvent event) {
+        event.put(ModEntities.WIND_DRIFT_JELLY.get(), WindDriftJelly.createAttributes().build());
+        event.put(ModEntities.REEDWING_DRAGONFLY.get(), ReedwingDragonfly.createAttributes().build());
+        event.put(ModEntities.GALE_SHRIKE.get(), GaleShrike.createAttributes().build());
+        event.put(ModEntities.ASH_LANTERN_BAT.get(), AshLanternBat.createAttributes().build());
+        event.put(ModEntities.MOSSBACK_HEDGEHOG.get(), MossbackHedgehog.createAttributes().build());
+        event.put(ModEntities.EMBERCLAW_SCORPION.get(), EmberclawScorpion.createAttributes().build());
+        event.put(ModEntities.LANTERN_SEAHORSE.get(), LanternSeahorse.createAttributes().build());
+        event.put(ModEntities.REEFJAW_SHARK.get(), ReefjawShark.createAttributes().build());
+        event.put(ModEntities.SLATEHORN_BOAR.get(), SlatehornBoar.createAttributes().build());
+        event.put(ModEntities.HOLLOW_REED_SERPENT.get(), HollowReedSerpent.createAttributes().build());
+        event.put(ModEntities.RIFTFANG_EEL.get(), RiftfangEel.createAttributes().build());
+        event.put(ModEntities.NEEDLEFIN_LIONFISH.get(), NeedlefinLionfish.createAttributes().build());
+        event.put(ModEntities.MOSSFANG_TOAD.get(), MossfangToad.createAttributes().build());
+        event.put(ModEntities.RIFT_PAGE_STALKER.get(), RiftPageStalker.createAttributes().build());
+        event.put(ModEntities.BROKEN_BELL_AXEMAN.get(), BrokenBellAxeman.createAttributes().build());
+        event.put(ModEntities.MOSSPLATE_HOUND.get(), MossplateHound.createAttributes().build());
+        event.put(ModEntities.CAIRN_SHELL_BRUTE.get(), CairnShellBrute.createAttributes().build());
+        event.put(ModEntities.SPORE_CROWNED_WRETCH.get(), SporeCrownedWretch.createAttributes().build());
+        event.put(ModEntities.REED_MASK_RAIDER.get(), ReedMaskRaider.createAttributes().build());
+        event.put(ModEntities.AMBERBACK_BEETLE.get(), AmberbackBeetle.createAttributes().build());
+        event.put(ModEntities.LANTERNJAW_ANGLER.get(), LanternjawAngler.createAttributes().build());
+        event.put(ModEntities.SAWTOOTH_PRAWN.get(), SawtoothPrawn.createAttributes().build());
+        event.put(ModEntities.SAILTAIL_MINNOW.get(), SailtailMinnow.createAttributes().build());
+        event.put(ModEntities.MOSS_SAIL_SNAIL.get(), MossSailSnail.createAttributes().build());
+        event.put(ModEntities.CRYSTAL_SPINE_URCHIN.get(), CrystalSpineUrchin.createAttributes().build());
+        event.put(ModEntities.ASH_SAIL_SERPENT.get(), AshSailSerpent.createAttributes().build());
+        event.put(ModEntities.PETALWING_BUTTERFLY.get(), PetalwingButterfly.createAttributes().build());
+        event.put(ModEntities.MOSSLIGHT_FIREFLY.get(), MosslightFirefly.createAttributes().build());
+        event.put(ModEntities.BELL_NEEDLE_WASP.get(), BellNeedleWasp.createAttributes().build());
+        event.put(ModEntities.SHARDWING_SKATE.get(), ShardwingSkate.createAttributes().build());
+
+
         event.put(ModEntities.ECHO_WANDERER.get(), EchoWanderer.createAttributes().build());
         event.put(ModEntities.FORGOTTEN_COLOSSUS.get(), ForgottenColossus.createAttributes().build());
         event.put(ModEntities.ABYSS_WATCHER.get(), AbyssWatcher.createAttributes().build());
@@ -121,6 +188,164 @@ public class ModEntityEvents {
 
     @SubscribeEvent
     public static void onRegisterSpawnPlacements(RegisterSpawnPlacementsEvent event) {
+        event.register(ModEntities.MOSSBACK_HEDGEHOG.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.EMBERCLAW_SCORPION.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.LANTERN_SEAHORSE.get(), SpawnPlacementTypes.IN_WATER,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getFluidState(pos).is(FluidTags.WATER)
+                                && level.getFluidState(pos.above()).is(FluidTags.WATER)
+                                && level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D)),
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.REEFJAW_SHARK.get(), SpawnPlacementTypes.IN_WATER,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getFluidState(pos).is(FluidTags.WATER)
+                                && level.getFluidState(pos.above()).is(FluidTags.WATER)
+                                && level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D))
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.SLATEHORN_BOAR.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.HOLLOW_REED_SERPENT.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.RIFTFANG_EEL.get(), SpawnPlacementTypes.IN_WATER,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getFluidState(pos).is(FluidTags.WATER)
+                                && level.getFluidState(pos.above()).is(FluidTags.WATER)
+                                && level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D))
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.NEEDLEFIN_LIONFISH.get(), SpawnPlacementTypes.IN_WATER,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getFluidState(pos).is(FluidTags.WATER)
+                                && level.getFluidState(pos.above()).is(FluidTags.WATER)
+                                && level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D))
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.MOSSPLATE_HOUND.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.CAIRN_SHELL_BRUTE.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.SPORE_CROWNED_WRETCH.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.REED_MASK_RAIDER.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.BROKEN_BELL_AXEMAN.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.RIFT_PAGE_STALKER.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.MOSSFANG_TOAD.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.AMBERBACK_BEETLE.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        Mob.checkMobSpawnRules(type, level, spawnType, pos, random)
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.LANTERNJAW_ANGLER.get(), SpawnPlacementTypes.IN_WATER,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getFluidState(pos).is(FluidTags.WATER)
+                                && level.getFluidState(pos.above()).is(FluidTags.WATER)
+                                && level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D))
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.SAWTOOTH_PRAWN.get(), SpawnPlacementTypes.IN_WATER,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) ->
+                        level.getFluidState(pos).is(FluidTags.WATER)
+                                && level.getFluidState(pos.above()).is(FluidTags.WATER)
+                                && level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D))
+                                && level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.SAILTAIL_MINNOW.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::openAir,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.MOSS_SAIL_SNAIL.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::openAir,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.CRYSTAL_SPINE_URCHIN.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::hunter,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.ASH_SAIL_SERPENT.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::hunter,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.PETALWING_BUTTERFLY.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::openAir,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.MOSSLIGHT_FIREFLY.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::nightAnimal,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.BELL_NEEDLE_WASP.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::hunter,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.SHARDWING_SKATE.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::cavernHunter,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.WIND_DRIFT_JELLY.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::openAir,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+
+        event.register(ModEntities.REEDWING_DRAGONFLY.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::openAir,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+
+        event.register(ModEntities.GALE_SHRIKE.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::hunter,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+
+        event.register(ModEntities.ASH_LANTERN_BAT.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AerialSpawnRules::nightHunter,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+
 
         event.register(ModEntities.ECHO_WANDERER.get(), SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,

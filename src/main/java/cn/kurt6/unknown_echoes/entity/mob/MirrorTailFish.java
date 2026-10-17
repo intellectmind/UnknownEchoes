@@ -1,7 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.block.truesight.MirrorSigilBlockEntity;
-import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
@@ -12,8 +11,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.animal.AbstractSchoolingFish;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.pathfinder.Path;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
@@ -24,7 +23,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 import java.util.EnumSet;
 
 /** 镜尾鱼:镜湖水域环境鱼群(生命 3)。 */
-public class MirrorTailFish extends AbstractSchoolingFish implements GeoEntity {
+public class MirrorTailFish extends EchoSchoolingFish implements GeoEntity {
     private static final RawAnimation SWIM_ANIM =
             RawAnimation.begin().thenLoop("animation.mirror_tail_fish.swim");
     private static final RawAnimation IDLE_ANIM =
@@ -32,7 +31,7 @@ public class MirrorTailFish extends AbstractSchoolingFish implements GeoEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    public MirrorTailFish(EntityType<? extends AbstractSchoolingFish> type, Level level) {
+    public MirrorTailFish(EntityType<? extends EchoSchoolingFish> type, Level level) {
         super(type, level);
     }
 
@@ -50,11 +49,6 @@ public class MirrorTailFish extends AbstractSchoolingFish implements GeoEntity {
     @Override
     public int getMaxSchoolSize() {
         return 6;
-    }
-
-    @Override
-    public ItemStack getBucketItemStack() {
-        return new ItemStack(ModItems.MIRROR_TAIL_FISH_BUCKET.get());
     }
 
     @Override
@@ -102,12 +96,16 @@ public class MirrorTailFish extends AbstractSchoolingFish implements GeoEntity {
         private static final int SCAN_RADIUS_V = 4;
         /** 两次扫描之间的最小间隔 tick(canUse 失败后)。 */
         private static final int SCAN_INTERVAL = 200;
+        private static final int MOVE_RETRY_TICKS = 20;
 
         private final MirrorTailFish fish;
         private BlockPos sigilPos;
+        private ServerLevel sigilLevel;
+        private Path circlePath;
         private int circleTicks;
         private double angle;
         private int scanCooldown;
+        private int nextMoveAttemptTick;
 
         CircleRealSigilGoal(MirrorTailFish fish) {
             this.fish = fish;
@@ -116,7 +114,8 @@ public class MirrorTailFish extends AbstractSchoolingFish implements GeoEntity {
 
         @Override
         public boolean canUse() {
-            if (!this.fish.isInWater() || this.fish.level().isClientSide) {
+            if (!(this.fish.level() instanceof ServerLevel serverLevel)
+                    || !this.fish.isAlive() || this.fish.isNoAi() || !this.fish.isInWater()) {
                 return false;
             }
             if (this.scanCooldown > 0) {
@@ -125,29 +124,49 @@ public class MirrorTailFish extends AbstractSchoolingFish implements GeoEntity {
             }
             this.scanCooldown = SCAN_INTERVAL + this.fish.getRandom().nextInt(100);
             this.sigilPos = findNearbyRealSigil();
+            this.sigilLevel = this.sigilPos != null ? serverLevel : null;
             return this.sigilPos != null;
         }
 
         @Override
         public boolean canContinueToUse() {
-            return this.circleTicks > 0 && this.sigilPos != null && this.fish.isInWater();
+            return this.circleTicks > 0 && this.sigilPos != null && this.sigilLevel != null
+                    && this.fish.level() == this.sigilLevel && this.fish.isAlive()
+                    && !this.fish.isNoAi() && this.fish.isInWater()
+                    && MirrorSigilBlockEntity.isReal(this.sigilLevel, this.sigilPos);
         }
 
         @Override
         public void start() {
             this.circleTicks = 300 + this.fish.getRandom().nextInt(200);
             this.angle = this.fish.getRandom().nextDouble() * Math.PI * 2;
+            this.circlePath = null;
+            this.nextMoveAttemptTick = 0;
         }
 
         @Override
         public void stop() {
+            if (this.circlePath != null && this.fish.getNavigation().getPath() == this.circlePath) {
+                this.fish.getNavigation().stop();
+            }
+            this.circlePath = null;
+            this.circleTicks = 0;
             this.sigilPos = null;
+            this.sigilLevel = null;
         }
 
         @Override
         public void tick() {
-            --this.circleTicks;
-            if (this.fish.getNavigation().isDone()) {
+            // 仅更新运行中 Goal 的轮次不会调用 canContinueToUse。
+            if (!this.canContinueToUse()) {
+                this.stop();
+                return;
+            }
+            if (--this.circleTicks <= 0) {
+                this.stop();
+                return;
+            }
+            if (this.fish.getNavigation().isDone() && this.fish.tickCount >= this.nextMoveAttemptTick) {
 
                 this.angle += 0.9D;
                 double r = 2.5D;
@@ -155,7 +174,13 @@ public class MirrorTailFish extends AbstractSchoolingFish implements GeoEntity {
                 double z = this.sigilPos.getZ() + 0.5D + Math.sin(this.angle) * r;
                 double y = this.sigilPos.getY() + 0.5D
                         + Mth.clamp(this.fish.getRandom().nextDouble() - 0.5D, -0.4D, 0.4D);
-                this.fish.getNavigation().moveTo(x, y, z, 1.0D);
+                if (this.fish.getNavigation().moveTo(x, y, z, 1.0D)) {
+                    this.circlePath = this.fish.getNavigation().getPath();
+                    this.nextMoveAttemptTick = 0;
+                } else {
+                    this.circlePath = null;
+                    this.nextMoveAttemptTick = this.fish.tickCount + MOVE_RETRY_TICKS;
+                }
             }
         }
 
@@ -171,10 +196,11 @@ public class MirrorTailFish extends AbstractSchoolingFish implements GeoEntity {
             int maxChunkZ = (center.getZ() + SCAN_RADIUS_H) >> 4;
             for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
                 for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-                    if (!level.hasChunk(chunkX, chunkZ)) {
+                    var chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                    if (chunk == null) {
                         continue;
                     }
-                    for (var blockEntity : level.getChunk(chunkX, chunkZ).getBlockEntities().values()) {
+                    for (var blockEntity : java.util.List.copyOf(chunk.getBlockEntities().values())) {
                         if (!(blockEntity instanceof MirrorSigilBlockEntity)) {
                             continue;
                         }

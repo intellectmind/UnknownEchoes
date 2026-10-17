@@ -5,9 +5,9 @@
   "biome_tags": [
     "unknown_echoes:has_broken_bell_tower"
   ],
-  "spacing": 136,
-  "separation": 46,
-  "salt": 702507,
+  "spacing": 64,
+  "separation": 40,
+  "salt": 184300019,
   "allow_multiple": true,
   "priority": 3,
   "mechanic": "great_bell_timing_chain",

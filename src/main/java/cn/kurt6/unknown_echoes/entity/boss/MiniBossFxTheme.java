@@ -82,7 +82,7 @@ public final class MiniBossFxTheme {
 
     /** 风暴的天蓝。色相 215，冷色带最靠蓝的一端。 */
     public static final Theme STORM_WEAVER = theme(
-            0x2982FF, 0x0F53B3, ParticleTypes.GUST, ParticleTypes.CLOUD);
+            0x2982FF, 0x0F53B3, ParticleTypes.ELECTRIC_SPARK, ParticleTypes.CRIT);
 
     /** 潮汐灯的水青。色相 187，夹在晶歌与镜尘之间。 */
     public static final Theme TIDE_LANTERN_KEEPER = theme(

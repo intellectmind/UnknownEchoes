@@ -21,40 +21,12 @@
       "weight": 7
     },
     {
-      "structure": "unknown_echoes:broken_bell_tower",
-      "weight": 1
-    },
-    {
-      "structure": "unknown_echoes:chorus_confluence_court",
-      "weight": 2
-    },
-    {
       "structure": "unknown_echoes:cliff_bridge",
       "weight": 6
     },
     {
       "structure": "unknown_echoes:crystal_song_shrine",
       "weight": 6
-    },
-    {
-      "structure": "unknown_echoes:echo_temple",
-      "weight": 2
-    },
-    {
-      "structure": "unknown_echoes:echo_world_tree",
-      "weight": 2
-    },
-    {
-      "structure": "unknown_echoes:eternal_echo_lighthouse",
-      "weight": 1
-    },
-    {
-      "structure": "unknown_echoes:far_bell_wayfarer_harbor",
-      "weight": 1
-    },
-    {
-      "structure": "unknown_echoes:far_echo_cartography_court",
-      "weight": 2
     },
     {
       "structure": "unknown_echoes:folded_archive",
@@ -73,16 +45,8 @@
       "weight": 6
     },
     {
-      "structure": "unknown_echoes:gravity_crown_observatory",
-      "weight": 3
-    },
-    {
       "structure": "unknown_echoes:gravity_shard_spire",
       "weight": 8
-    },
-    {
-      "structure": "unknown_echoes:hushed_cathedral",
-      "weight": 3
     },
     {
       "structure": "unknown_echoes:hushed_refuge",
@@ -93,20 +57,12 @@
       "weight": 7
     },
     {
-      "structure": "unknown_echoes:interlayer_expedition_ring",
-      "weight": 2
-    },
-    {
       "structure": "unknown_echoes:inverted_archive_tower",
       "weight": 6
     },
     {
       "structure": "unknown_echoes:inverted_chasm_bridge",
       "weight": 6
-    },
-    {
-      "structure": "unknown_echoes:inverted_mountains",
-      "weight": 1
     },
     {
       "structure": "unknown_echoes:lakebed_lighthouse_ruins",
@@ -121,10 +77,6 @@
       "weight": 9
     },
     {
-      "structure": "unknown_echoes:mirror_sea",
-      "weight": 1
-    },
-    {
       "structure": "unknown_echoes:misfiled_catalog_well",
       "weight": 6
     },
@@ -135,14 +87,6 @@
     {
       "structure": "unknown_echoes:overworld_lost_camp",
       "weight": 7
-    },
-    {
-      "structure": "unknown_echoes:palimpsest_ecology_dome",
-      "weight": 2
-    },
-    {
-      "structure": "unknown_echoes:prismatic_canopy_conservatory",
-      "weight": 1
     },
     {
       "structure": "unknown_echoes:reef_hut",
@@ -161,18 +105,6 @@
       "weight": 6
     },
     {
-      "structure": "unknown_echoes:resonance_foundry",
-      "weight": 3
-    },
-    {
-      "structure": "unknown_echoes:riftglass_citadel",
-      "weight": 2
-    },
-    {
-      "structure": "unknown_echoes:riftworn_memorial_court",
-      "weight": 2
-    },
-    {
       "structure": "unknown_echoes:rune_puzzle_room",
       "weight": 6
     },
@@ -181,16 +113,8 @@
       "weight": 5
     },
     {
-      "structure": "unknown_echoes:shattered_codex_vault",
-      "weight": 3
-    },
-    {
       "structure": "unknown_echoes:silent_abyss_anchor",
       "weight": 6
-    },
-    {
-      "structure": "unknown_echoes:silent_great_boat",
-      "weight": 1
     },
     {
       "structure": "unknown_echoes:silent_hut",
@@ -199,10 +123,6 @@
     {
       "structure": "unknown_echoes:silent_ring",
       "weight": 6
-    },
-    {
-      "structure": "unknown_echoes:sky_rift",
-      "weight": 1
     },
     {
       "structure": "unknown_echoes:small_echo_ruin",
@@ -229,14 +149,6 @@
       "weight": 6
     },
     {
-      "structure": "unknown_echoes:voidscar_bastion",
-      "weight": 3
-    },
-    {
-      "structure": "unknown_echoes:weightless_orrery_court",
-      "weight": 3
-    },
-    {
       "structure": "unknown_echoes:wind_eroded_steps",
       "weight": 7
     },
@@ -251,8 +163,8 @@
   ],
   "placement": {
     "type": "minecraft:random_spread",
-    "spacing": 32,
-    "separation": 16,
+    "spacing": 24,
+    "separation": 12,
     "salt": 184299997
   }
 }

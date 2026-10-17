@@ -6,12 +6,17 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.client.ClientAbilityCache;
 import cn.kurt6.unknown_echoes.client.ClientArtifactCache;
 import cn.kurt6.unknown_echoes.client.ClientJournalCache;
+import cn.kurt6.unknown_echoes.client.ClientJourneyCache;
+import cn.kurt6.unknown_echoes.journal.JourneyCatalog;
 import cn.kurt6.unknown_echoes.config.ClientConfig;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.artifact.ArtifactType;
 import cn.kurt6.unknown_echoes.journal.AncientPageCatalog;
 import cn.kurt6.unknown_echoes.journal.DeepEchoesProgressCatalog;
 import cn.kurt6.unknown_echoes.journal.ExplorationClue;
+import cn.kurt6.unknown_echoes.journal.JournalNavigation;
+import cn.kurt6.unknown_echoes.journal.JournalRevisit;
+import cn.kurt6.unknown_echoes.network.JournalDestinationPayload;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.world.DeepEchoesBiomeCatalog;
 import cn.kurt6.unknown_echoes.world.EchoRealmBiomeCatalog;
@@ -19,6 +24,7 @@ import cn.kurt6.unknown_echoes.world.wonder.WorldWonderType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -27,6 +33,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -105,7 +112,7 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private enum JournalChapter {
-        SUMMARY, CLUES, BIOMES, STRUCTURES, MOBS, BOSSES, ABILITIES, PAGES, REVISIT
+        SUMMARY, JOURNEY, CLUES, BIOMES, STRUCTURES, MOBS, BOSSES, ABILITIES, PAGES, REVISIT
     }
 
     private static final ModulePage[] MODULE_PAGES = ModulePage.values();
@@ -223,9 +230,15 @@ public class EchoOverviewScreen extends Screen {
 
     private final List<Line> lines = new ArrayList<>();
     private final List<ActionButton> actionButtons = new ArrayList<>();
+    private final List<ClientOptionSlider> optionSliders = new ArrayList<>();
+    private final Map<ActionButton, Component> optionButtonValues = new HashMap<>();
+    private final List<OptionSection> optionSections = new ArrayList<>();
+    private final List<ModConfigSpec.ConfigValue<?>> configurableOptions = new ArrayList<>();
+    private int optionsContentHeight;
+    private boolean clientConfigDirty;
     private final Map<ArtifactType, ItemStack> artifactIcons = new EnumMap<>(ArtifactType.class);
     private ReadingPopup popup = null;
-    /** 神器/交易页像素滚动(rebuild 时行与按钮一起偏移)。 */
+    /** 像素滚动页的行与控件必须一起偏移。 */
     private int pageScroll = 0;
     /** 弹层文本分行缓存(换弹层才重排,不每帧 split)。 */
     private ReadingPopup popupLinesFor = null;
@@ -241,23 +254,26 @@ public class EchoOverviewScreen extends Screen {
         Minecraft.getInstance().setScreen(screen);
     }
 
-    /** 神器台座上下文:仅在由记录台/升级台打开时非空,按钮操作回传该坐标供服务端校验。 */
+    /** 台座上下文保留打开时的维度，避免旧界面在另一维度发起操作。 */
     private int stationMode = -1;
     private net.minecraft.core.BlockPos stationPos = null;
+    private net.minecraft.resources.ResourceLocation stationDimension = null;
     private final Map<String, Long> artifactActionCooldowns = new HashMap<>();
 
     /** 记录台/升级台交互入口(OpenArtifactStationPayload):打开总览"神器"页并携带台座上下文。 */
-    public static void openArtifactStation(int mode, net.minecraft.core.BlockPos pos) {
+    public static void openArtifactStation(int mode, net.minecraft.core.BlockPos pos,
+                                          net.minecraft.resources.ResourceLocation dimension) {
         EchoOverviewScreen screen = new EchoOverviewScreen(ModulePage.ARTIFACT);
         screen.stationMode = mode;
         screen.stationPos = pos;
+        screen.stationDimension = dimension;
         Minecraft.getInstance().setScreen(screen);
     }
 
     public static void openTrades() {
         if (Minecraft.getInstance().screen instanceof EchoOverviewScreen open
                 && open.page == ModulePage.TRADE) {
-            open.rebuild();
+            open.rebuildKeepingScroll();
             return;
         }
         Minecraft.getInstance().setScreen(new EchoOverviewScreen(ModulePage.TRADE));
@@ -370,32 +386,42 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private void rebuildKeepingScroll() {
+        int previousLineScroll = this.scroll;
         rebuildWithPageScroll(Math.max(0, Math.min(this.pageScroll, pageScrollMax())));
+        this.scroll = Mth.clamp(previousLineScroll, 0, lineScrollMax());
     }
 
     /** pageScroll 必须在 buildPage 之前设好:按钮坐标在构建期算入滚动偏移,否则与卡片错位。 */
     private void rebuildWithPageScroll(int targetScroll) {
+        saveClientConfigIfChanged();
+        this.setFocused(null);
+        this.setDragging(false);
         this.clearWidgets();
         this.lines.clear();
         this.actionButtons.clear();
+        this.optionSliders.clear();
+        this.optionButtonValues.clear();
+        this.optionSections.clear();
+        this.configurableOptions.clear();
         this.scroll = 0;
         this.pageScroll = targetScroll;
         buildPage();
         refreshDynamicText();
     }
 
-    /** ArtifactSyncPayload 到达后刷新打开中的神器页——按钮供给读的是构建时状态。 */
+    /** 神器同步刷新已打开的神器与完成度页，并保留阅读位置。 */
     public static void onArtifactSync() {
         if (Minecraft.getInstance().screen instanceof EchoOverviewScreen open
-                && open.page == ModulePage.ARTIFACT) {
+                && (open.page == ModulePage.ARTIFACT || open.page == ModulePage.INDEX)) {
             open.rebuildKeepingScroll();
         }
     }
 
-    /** 日志同步到达后刷新当前章节，让后台定位结果立即出现在面板。 */
+    /** 能力与日志同步刷新依赖进度的页面，包括研究提示与隐藏调谐词。 */
     public static void onJournalSync() {
         if (Minecraft.getInstance().screen instanceof EchoOverviewScreen open
-                && open.page == ModulePage.JOURNAL) {
+                && (open.page == ModulePage.JOURNAL || open.page == ModulePage.RESEARCH
+                        || open.page == ModulePage.ARTIFACT || open.page == ModulePage.INDEX)) {
             open.rebuildKeepingScroll();
         }
     }
@@ -627,11 +653,13 @@ public class EchoOverviewScreen extends Screen {
 
     private void sendArtifactAction(int action, cn.kurt6.unknown_echoes.artifact.ArtifactType type,
                                     String word) {
-        if (this.stationPos == null) {
+        var level = Minecraft.getInstance().level;
+        if (this.stationPos == null || level == null
+                || !level.dimension().location().equals(this.stationDimension)) {
             return;
         }
         String key = action + ":" + type.getId() + ":" + word;
-        long now = Minecraft.getInstance().level == null ? 0L : Minecraft.getInstance().level.getGameTime();
+        long now = level.getGameTime();
         long nextAllowed = this.artifactActionCooldowns.getOrDefault(key, Long.MIN_VALUE);
         if (now < nextAllowed) {
             return;
@@ -639,7 +667,7 @@ public class EchoOverviewScreen extends Screen {
         this.artifactActionCooldowns.put(key, now + 10L);
         net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                 new cn.kurt6.unknown_echoes.network.ArtifactActionPayload(
-                        action, type.getId(), word, this.stationPos));
+                        action, type.getId(), word, this.stationPos, this.stationDimension));
     }
 
     private void buildAbilityPage() {
@@ -650,6 +678,7 @@ public class EchoOverviewScreen extends Screen {
                         && ClientAbilityCache.getResearchLevel(EchoAbilityType.WIND_ECHO) >= 1,
                 () -> {
                     ClientConfig.WIND_THIRD_JUMP_GLIDE.set(!ClientConfig.WIND_THIRD_JUMP_GLIDE.get());
+                    this.clientConfigDirty = true;
                     rebuild();
                 },
                 true));
@@ -687,7 +716,26 @@ public class EchoOverviewScreen extends Screen {
     private void buildJournalLines() {
         List<Component> content = new ArrayList<>();
         switch (this.chapter) {
+            case JOURNEY -> buildJourneyLines();
             case SUMMARY -> {
+                ExplorationClue destination = ClientJournalCache.destination();
+                addWrapped((destination == null
+                        ? Component.translatable("journal.unknown_echoes.destination.choose")
+                        : Component.translatable("journal.unknown_echoes.destination.current", JournalNavigation.structureName(destination)))
+                        .withStyle(ChatFormatting.AQUA), () -> {
+                    this.chapter = JournalChapter.CLUES;
+                    rebuild();
+                });
+                if (destination != null) {
+                    addWrapped(clueLine(destination), null);
+                }
+                addWrapped(Component.empty(), null);
+                addWrapped(Component.translatable("journey.unknown_echoes.summary", ClientJourneyCache.claimedCount(),
+                        JourneyCatalog.CHAPTERS.size(), ClientJourneyCache.readyCount()).withStyle(ChatFormatting.GOLD), () -> {
+                    this.chapter = JournalChapter.JOURNEY;
+                    rebuild();
+                });
+                addWrapped(Component.empty(), null);
                 content.add(count("journal.unknown_echoes.structures",
                         ClientJournalCache.structures().size(), ClientJournalCache.totalStructures()));
                 content.add(count("journal.unknown_echoes.biomes",
@@ -700,11 +748,22 @@ public class EchoOverviewScreen extends Screen {
                         ClientJournalCache.pages().size(), ClientJournalCache.knownPages()));
             }
             case CLUES -> {
+                addWrapped(Component.translatable("journal.unknown_echoes.destination.hint")
+                        .withStyle(ChatFormatting.GRAY), null);
+                addWrapped(Component.empty(), null);
+                ExplorationClue destination = ClientJournalCache.destination();
                 List<ExplorationClue> clues = ClientJournalCache.clues().stream()
-                        .sorted(Comparator.comparing(ExplorationClue::visited))
+                        .sorted(Comparator.comparing((ExplorationClue clue) -> !clue.sameSite(destination))
+                                .thenComparing(ExplorationClue::visited))
                         .toList();
                 for (ExplorationClue clue : clues) {
-                    content.add(clueLine(clue));
+                    boolean selected = clue.sameSite(destination);
+                    addWrapped(clueLine(clue), null);
+                    addWrapped(Component.translatable(selected
+                                    ? "journal.unknown_echoes.destination.clear" : "journal.unknown_echoes.destination.set")
+                            .withStyle(selected ? ChatFormatting.AQUA : ChatFormatting.GOLD), () ->
+                            PacketDistributor.sendToServer(new JournalDestinationPayload(selected ? "" : clue.encode())));
+                    addWrapped(Component.empty(), null);
                 }
                 if (clues.isEmpty()) {
                     content.add(Component.translatable("journal.unknown_echoes.clue.none")
@@ -760,23 +819,144 @@ public class EchoOverviewScreen extends Screen {
             case PAGES -> {
                 addPageCategories();
             }
-            case REVISIT -> {
-                boolean any = false;
-                any |= addRevisit(content, EchoAbilityType.TIDE_ECHO, "sunken_temple",
-                        "journal.unknown_echoes.revisit.tide_runes");
-                any |= addRevisit(content, EchoAbilityType.TRUE_SIGHT_ECHO, "mirror_temple",
-                        "journal.unknown_echoes.revisit.hidden_room");
-                any |= addRevisit(content, EchoAbilityType.WIND_ECHO, "sky_observatory",
-                        "journal.unknown_echoes.revisit.observatory");
-                if (!any) {
-                    content.add(Component.translatable("journal.unknown_echoes.book.no_revisit")
-                            .withStyle(ChatFormatting.GRAY));
-                }
-            }
+            case REVISIT -> buildRevisitLines();
         }
         for (Component component : content) {
             addWrapped(component, null);
         }
+    }
+
+    private void buildRevisitLines() {
+        if (this.minecraft == null || this.minecraft.level == null || this.minecraft.player == null) return;
+        boolean any = false;
+        for (JournalRevisit revisit : JournalRevisit.values()) {
+            if (!revisit.available(ClientJournalCache.structures(), ClientAbilityCache::hasAbility)) continue;
+            if (!any) {
+                addWrapped(Component.translatable("journal.unknown_echoes.revisit.entry_hint")
+                        .withStyle(ChatFormatting.GRAY), null);
+            }
+            any = true;
+            addWrapped(Component.empty(), null);
+            addWrapped(Component.translatable(revisit.hintKey()).withStyle(ChatFormatting.DARK_PURPLE), null);
+            ExplorationClue route = revisit.visitedSite(ClientJournalCache.clues(), ClientJournalCache.destination(),
+                    this.minecraft.level.dimension().location().toString(), this.minecraft.player.blockPosition());
+            if (route == null) {
+                addWrapped(Component.translatable("journal.unknown_echoes.revisit.unknown")
+                        .withStyle(ChatFormatting.DARK_GRAY), null);
+                continue;
+            }
+            addWrapped(clueLine(route), null);
+            if (route.sameSite(ClientJournalCache.destination())) {
+                addWrapped(Component.translatable("journal.unknown_echoes.route.selected")
+                        .withStyle(ChatFormatting.AQUA), null);
+            } else {
+                addWrapped(Component.translatable("journal.unknown_echoes.destination.set")
+                        .withStyle(ChatFormatting.AQUA), () -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                                new cn.kurt6.unknown_echoes.network.JournalDestinationPayload(route.encode())));
+            }
+        }
+        if (!any) {
+            addWrapped(Component.translatable("journal.unknown_echoes.book.no_revisit")
+                    .withStyle(ChatFormatting.GRAY), null);
+        }
+    }
+
+    private void buildJourneyLines() {
+        addWrapped(Component.translatable("journey.unknown_echoes.intro").withStyle(ChatFormatting.GRAY), null);
+        addWrapped(Component.translatable("journey.unknown_echoes.puzzle_hint").withStyle(ChatFormatting.DARK_AQUA), null);
+        for (int index = 0; index < JourneyCatalog.CHAPTERS.size(); index++) {
+            var entry = JourneyCatalog.CHAPTERS.get(index);
+            boolean claimed = ClientJourneyCache.claimed(index);
+            addWrapped(Component.empty(), null);
+            addWrapped(Component.translatable("journey.unknown_echoes.chapter." + entry.id())
+                    .withStyle(claimed ? ChatFormatting.DARK_AQUA : ChatFormatting.GOLD), null);
+            addWrapped(Component.translatable("journey.unknown_echoes.hint." + entry.id())
+                    .withStyle(ChatFormatting.GRAY), null);
+            for (var goal : entry.goals()) {
+                addWrapped(Component.translatable("journey.unknown_echoes.progress",
+                        Component.translatable("journey.unknown_echoes.metric." + goal.metric().name().toLowerCase(java.util.Locale.ROOT)),
+                        Math.min(goal.target(), goal.current(ClientJourneyCache.values())), goal.target())
+                        .withStyle(goal.complete(ClientJourneyCache.values()) ? ChatFormatting.GREEN : ChatFormatting.GRAY), null);
+            }
+            var rewards = Component.translatable("journey.unknown_echoes.rewards");
+            for (int i = 0; i < entry.rewards().size(); i++) {
+                var reward = entry.rewards().get(i);
+                if (i > 0) rewards.append(Component.translatable("journey.unknown_echoes.separator"));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(UnknownEchoes.id(reward.item()));
+                rewards.append(Component.translatable("journey.unknown_echoes.reward", item.getDescription(), reward.count()));
+            }
+            addWrapped(rewards.withStyle(ChatFormatting.GRAY), null);
+            final int chapterIndex = index;
+            if (claimed) {
+                addWrapped(Component.translatable("journey.unknown_echoes.claimed").withStyle(ChatFormatting.DARK_AQUA), null);
+            } else if (ClientJourneyCache.ready(index)) {
+                addWrapped(Component.translatable("journey.unknown_echoes.claim").withStyle(ChatFormatting.AQUA), () -> {
+                    if (ClientJourneyCache.ready(chapterIndex)) {
+                        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                                new cn.kurt6.unknown_echoes.network.JourneyClaimPayload(chapterIndex));
+                    }
+                });
+            } else {
+                addWrapped(Component.translatable("journey.unknown_echoes.in_progress").withStyle(ChatFormatting.DARK_GRAY), null);
+            }
+        }
+        buildStudyLines();
+        buildChaseLines();
+    }
+
+    private void buildChaseLines() {
+        addWrapped(Component.empty(), null);
+        addWrapped(Component.translatable("chase.unknown_echoes.title").withStyle(ChatFormatting.GOLD), null);
+        addWrapped(Component.translatable("chase.unknown_echoes.entry").withStyle(ChatFormatting.GRAY), null);
+        addWrapped(Component.translatable("chase.unknown_echoes.collection_hint").withStyle(ChatFormatting.GRAY), null);
+        addWrapped(Component.translatable("journal.unknown_echoes.route.entry_hint").withStyle(ChatFormatting.GRAY), null);
+        for (int theme = 0; theme < cn.kurt6.unknown_echoes.block.puzzle.EchoChaseCatalog.THEMES; theme++) {
+            addWrapped(Component.translatable("chase.unknown_echoes.collection",
+                    Component.translatable("structure.unknown_echoes." + cn.kurt6.unknown_echoes.block.puzzle.EchoChaseCatalog.IDS.get(theme)),
+                    Component.translatable("chase.unknown_echoes." + cn.kurt6.unknown_echoes.client.ClientChaseCache.status(theme)))
+                    .withStyle(ChatFormatting.DARK_AQUA), null);
+            if (!cn.kurt6.unknown_echoes.client.ClientChaseCache.completed(theme)
+                    || cn.kurt6.unknown_echoes.client.ClientChaseCache.pending(theme)) {
+                addWorkshopRoute(cn.kurt6.unknown_echoes.block.puzzle.EchoChaseCatalog.IDS.get(theme),
+                        cn.kurt6.unknown_echoes.client.ClientChaseCache.pending(theme));
+            }
+        }
+    }
+
+    private void buildStudyLines() {
+        addWrapped(Component.empty(), null);
+        addWrapped(Component.translatable("study.unknown_echoes.title").withStyle(ChatFormatting.GOLD), null);
+        addWrapped(Component.translatable("study.unknown_echoes.enter").withStyle(ChatFormatting.GRAY), null);
+        addWrapped(Component.translatable("study.unknown_echoes.collection_hint").withStyle(ChatFormatting.GRAY), null);
+        addWrapped(Component.translatable("journal.unknown_echoes.route.entry_hint").withStyle(ChatFormatting.GRAY), null);
+        for (int theme = 0; theme < cn.kurt6.unknown_echoes.study.WorkshopStudyCatalog.THEMES; theme++) {
+            addWrapped(Component.translatable("study.unknown_echoes.collection",
+                    Component.translatable("structure.unknown_echoes." + cn.kurt6.unknown_echoes.study.WorkshopStudyCatalog.IDS.get(theme)),
+                    cn.kurt6.unknown_echoes.client.ClientStudyCache.rating(theme),
+                    cn.kurt6.unknown_echoes.client.ClientStudyCache.pending(theme)).withStyle(ChatFormatting.DARK_AQUA), null);
+            if (cn.kurt6.unknown_echoes.client.ClientStudyCache.rating(theme) < 3
+                    || cn.kurt6.unknown_echoes.client.ClientStudyCache.pending(theme) > 0) {
+                addWorkshopRoute(cn.kurt6.unknown_echoes.study.WorkshopStudyCatalog.IDS.get(theme),
+                        cn.kurt6.unknown_echoes.client.ClientStudyCache.pending(theme) > 0);
+            }
+        }
+    }
+
+    private void addWorkshopRoute(String structurePath, boolean pending) {
+        if (this.minecraft == null || this.minecraft.level == null || this.minecraft.player == null) return;
+        ExplorationClue route = JournalNavigation.knownSite(ClientJournalCache.clues(),
+                UnknownEchoes.id(structurePath).toString(), this.minecraft.level.dimension().location().toString(),
+                this.minecraft.player.blockPosition());
+        if (route == null) {
+            addWrapped(Component.translatable("journal.unknown_echoes.route.unknown").withStyle(ChatFormatting.DARK_GRAY), null);
+            return;
+        }
+        addWrapped(clueLine(route), null);
+        boolean selected = route.sameSite(ClientJournalCache.destination());
+        String key = selected ? "selected" : pending ? "return" : "explore";
+        addWrapped(Component.translatable("journal.unknown_echoes.route." + key).withStyle(ChatFormatting.AQUA),
+                selected ? null : () -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                        new cn.kurt6.unknown_echoes.network.JournalDestinationPayload(route.encode())));
     }
 
     private List<String> knownStructurePaths() {
@@ -793,37 +973,34 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private Component clueLine(ExplorationClue clue) {
-        ResourceLocation structureId = ResourceLocation.tryParse(clue.structureId());
-        Component structureName = structureId == null
-                ? Component.translatable("artifact.unknown_echoes.storm_compass.unknown_ruin")
-                : Component.translatable("structure.unknown_echoes." + structureId.getPath());
+        Component structureName = JournalNavigation.structureName(clue);
         if (clue.visited()) {
-            return Component.literal("◆ ").withStyle(ChatFormatting.DARK_AQUA)
-                    .append(Component.translatable("journal.unknown_echoes.clue.visited", structureName)
-                            .withStyle(ChatFormatting.GRAY));
+            structureName = Component.translatable("journal.unknown_echoes.clue.visited", structureName);
         }
+        var marker = Component.literal(clue.visited() ? "◆ " : "◇ ")
+                .withStyle(clue.sameSite(ClientJournalCache.destination()) ? ChatFormatting.AQUA
+                        : clue.visited() ? ChatFormatting.DARK_AQUA : ChatFormatting.GOLD);
 
         ResourceLocation clueDimension = ResourceLocation.tryParse(clue.dimension());
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null || clueDimension == null
                 || !minecraft.level.dimension().location().equals(clueDimension)) {
-            Component dimensionName = clueDimension == null
-                    ? Component.translatable("overview.unknown_echoes.status.region_unknown")
-                    : Component.translatableWithFallback(
-                            "dimension." + clueDimension.getNamespace() + "." + clueDimension.getPath(),
-                            clueDimension.getPath());
-            return Component.literal("◇ ").withStyle(ChatFormatting.GOLD)
+            return marker
                     .append(Component.translatable("journal.unknown_echoes.clue.other_dimension",
-                                    structureName, dimensionName)
+                                    structureName, JournalNavigation.dimensionName(clue.dimension()))
                             .withStyle(ChatFormatting.GRAY));
         }
 
         double dx = clue.pos().getX() + 0.5D - minecraft.player.getX();
         double dz = clue.pos().getZ() + 0.5D - minecraft.player.getZ();
         double distance = Math.sqrt(dx * dx + dz * dz);
+        if (distance < JournalNavigation.NEARBY_RADIUS) {
+            return marker.append(Component.translatable("journal.unknown_echoes.clue.nearby", structureName)
+                    .withStyle(ChatFormatting.GRAY));
+        }
         String direction = clueDirection(dx, dz);
         String distanceKey = distance < 200.0D ? "near" : distance < 800.0D ? "mid" : "far";
-        return Component.literal("◇ ").withStyle(ChatFormatting.GOLD)
+        return marker
                 .append(Component.translatable("journal.unknown_echoes.clue.active",
                                 structureName,
                                 Component.translatable("direction.unknown_echoes." + direction),
@@ -983,23 +1160,90 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private void buildOptionsPage() {
-
-        int y = contentTop() + 4;
+        int y = addOptionSection(4, "overview.unknown_echoes.option.section.general");
         y = addToggle(y, "overview.unknown_echoes.option.glide", ClientConfig.WIND_THIRD_JUMP_GLIDE);
         y = addToggle(y, "overview.unknown_echoes.option.particles", ClientConfig.ENABLE_ECHO_PARTICLES);
-        addToggle(y, "overview.unknown_echoes.option.ambient", ClientConfig.PLAY_ECHO_AMBIENT_SOUNDS);
+        y = addToggle(y, "overview.unknown_echoes.option.ambient", ClientConfig.PLAY_ECHO_AMBIENT_SOUNDS);
+        y = addOptionSection(y + 8, "overview.unknown_echoes.option.section.boss");
+        y = addToggle(y, "overview.unknown_echoes.option.boss_particles", ClientConfig.ENABLE_BOSS_PARTICLES);
+        y = addSlider(y, "overview.unknown_echoes.option.boss_density", ClientConfig.BOSS_PARTICLE_DENSITY);
+        y = addOptionSection(y + 8, "overview.unknown_echoes.option.section.disaster");
+        y = addToggle(y, "overview.unknown_echoes.option.disaster_effects", ClientConfig.DISASTER_SCREEN_EFFECTS);
+        y = addSlider(y, "overview.unknown_echoes.option.disaster_shake", ClientConfig.DISASTER_SCREEN_SHAKE);
+        y = addSlider(y, "overview.unknown_echoes.option.disaster_density", ClientConfig.DISASTER_VISUAL_DENSITY);
+        y = addSlider(y, "overview.unknown_echoes.option.disaster_volume", ClientConfig.DISASTER_SOUND_VOLUME);
+        y += 8;
+        addActionButton(new ActionButton(contentLeft(), optionRowY(y), optionControlWidth(), 20,
+                Component.translatable("overview.unknown_echoes.option.reset"), () -> true,
+                () -> {
+                    this.configurableOptions.forEach(EchoOverviewScreen::resetOption);
+                    this.clientConfigDirty = true;
+                    rebuildKeepingScroll();
+                }, false, Component.translatable("overview.unknown_echoes.option.reset.hint")));
+        this.optionsContentHeight = y + 20;
+    }
+
+    private int optionsViewportTop() {
+        return contentTop() + 22;
+    }
+
+    private int optionsViewportBottom() {
+        return contentBottom() - 16;
+    }
+
+    private int optionRowY(int offset) {
+        return optionsViewportTop() + offset - this.pageScroll;
+    }
+
+    private int optionControlWidth() {
+        return Math.max(20, Math.min(360, contentWidth() - 16));
+    }
+
+    private int addOptionSection(int y, String key) {
+        this.optionSections.add(new OptionSection(optionRowY(y), Component.translatable(key)));
+        return y + 18;
     }
 
     private int addToggle(int y, String key, ModConfigSpec.BooleanValue value) {
-        addActionButton(new ActionButton(contentLeft(), y, 190, 20,
-                toggleLabel(key, value.get()),
+        this.configurableOptions.add(value);
+        ActionButton button = new ActionButton(contentLeft(), optionRowY(y), optionControlWidth(), 20,
+                Component.translatable(key),
                 () -> true,
                 () -> {
                     value.set(!value.get());
-                    rebuild();
+                    this.clientConfigDirty = true;
+                    rebuildKeepingScroll();
                 },
-                value.get()));
+                value.get(), Component.translatable(key + ".hint"));
+        addActionButton(button);
+        this.optionButtonValues.put(button, Component.translatable(value.get()
+                ? "overview.unknown_echoes.option.on" : "overview.unknown_echoes.option.off"));
         return y + 24;
+    }
+
+    private int addSlider(int y, String key, ModConfigSpec.DoubleValue value) {
+        this.configurableOptions.add(value);
+        ClientOptionSlider slider = new ClientOptionSlider(optionRowY(y), key, value);
+        this.optionSliders.add(slider);
+        this.addWidget(slider);
+        return y + 24;
+    }
+
+    private static <T> void resetOption(ModConfigSpec.ConfigValue<T> value) {
+        value.set(value.getDefault());
+    }
+
+    private void saveClientConfigIfChanged() {
+        if (this.clientConfigDirty) {
+            ClientConfig.SPEC.save();
+            this.clientConfigDirty = false;
+        }
+    }
+
+    @Override
+    public void removed() {
+        saveClientConfigIfChanged();
+        super.removed();
     }
 
     private static Component toggleLabel(String key, boolean on) {
@@ -1209,6 +1453,10 @@ public class EchoOverviewScreen extends Screen {
             renderTradePage(graphics, mouseX, mouseY);
             return;
         }
+        if (this.page == ModulePage.OPTIONS) {
+            renderOptionsPage(graphics, mouseX, mouseY, focus);
+            return;
+        }
         int top = lineListTop();
         int rowHeight = LINE_ROW_HEIGHT;
         int visible = lineListVisibleRows();
@@ -1256,6 +1504,38 @@ public class EchoOverviewScreen extends Screen {
             graphics.fillGradient(trackX - 1, barY, trackX + 3, barY + barH,
                     COL_GOLD_DIM, COL_ACCENT_DIM);
             graphics.fill(trackX, barY + 1, trackX + 2, barY + Math.max(2, barH - 1), COL_ACCENT);
+        }
+    }
+
+    private void renderOptionsPage(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        graphics.drawString(this.font,
+                fitComponent(Component.translatable("overview.unknown_echoes.option.saved"), contentWidth() - 12),
+                contentLeft() + 4, contentTop() + 6, COL_DIM, false);
+        drawFineDivider(graphics, contentLeft() + 4, contentTop() + 17,
+                contentRight() - 8, COL_EDGE_SOFT);
+        int top = optionsViewportTop();
+        int bottom = optionsViewportBottom();
+        graphics.enableScissor(contentLeft(), top, contentRight(), bottom);
+        for (OptionSection section : this.optionSections) {
+            graphics.drawString(this.font, fitComponent(section.title, optionControlWidth()),
+                    contentLeft() + 4, section.y + 2, COL_GOLD, false);
+        }
+        for (ClientOptionSlider slider : this.optionSliders) {
+            slider.render(graphics, mouseX, mouseY, partialTick);
+        }
+        graphics.disableScissor();
+        int max = pageScrollMax();
+        if (max > 0) {
+            int trackHeight = Math.max(1, bottom - top);
+            int barHeight = Math.min(trackHeight,
+                    Math.max(8, trackHeight * trackHeight / this.optionsContentHeight));
+            int barY = top + (trackHeight - barHeight) * this.pageScroll / max;
+            int x = contentRight() - 5;
+            graphics.fill(x - 1, top, x + 3, bottom, 0x66101824);
+            graphics.fillGradient(x - 1, barY, x + 3, barY + barHeight, COL_GOLD_DIM, COL_ACCENT_DIM);
+            graphics.drawString(this.font,
+                    fitComponent(Component.translatable("overview.unknown_echoes.option.scroll"), contentWidth() - 12),
+                    contentLeft() + 4, contentBottom() - 11, COL_DIM, false);
         }
     }
 
@@ -1819,6 +2099,10 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private int pageScrollMax() {
+        if (this.page == ModulePage.OPTIONS) {
+            return Math.max(0, this.optionsContentHeight
+                    - Math.max(1, optionsViewportBottom() - optionsViewportTop()));
+        }
         if (this.page == ModulePage.TRADE) {
             if (!cn.kurt6.unknown_echoes.client.ClientTradeCache.hasSession()) {
                 return 0;
@@ -1927,14 +2211,15 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private void renderActionButtons(GuiGraphics graphics, int mouseX, int mouseY) {
-        boolean clip = this.page == ModulePage.ARTIFACT;
+        boolean clip = this.page == ModulePage.ARTIFACT || this.page == ModulePage.OPTIONS;
         List<Component> tooltip = null;
         if (clip) {
-            graphics.enableScissor(contentLeft(), contentTop(), contentRight(), contentBottom() - 16);
+            graphics.enableScissor(contentLeft(), actionViewportTop(), contentRight(), actionViewportBottom());
         }
         for (ActionButton button : this.actionButtons) {
             boolean enabled = button.enabled.getAsBoolean();
-            boolean hovered = enabled && button.contains(mouseX, mouseY);
+            boolean hovered = this.popup == null && enabled && button.contains(mouseX, mouseY)
+                    && isActionButtonClickable(button, mouseY);
             int state = button.active || hovered ? 1 : 0;
             if (button.active) {
                 state = 2;
@@ -1966,9 +2251,18 @@ public class EchoOverviewScreen extends Screen {
                         button.active ? COL_GOLD_DIM : COL_ACCENT_DIM);
             }
             int color = !enabled ? COL_SILHOUETTE : (button.active ? COL_GOLD : (hovered ? COL_ACCENT : COL_TEXT));
-            Component buttonLabel = fitComponent(button.label, Math.max(0, button.width - 18));
-            graphics.drawCenteredString(this.font, buttonLabel,
-                    button.x + button.width / 2, button.y + (button.height - 8) / 2, color);
+            Component optionValue = this.optionButtonValues.get(button);
+            if (optionValue != null) {
+                int valueWidth = this.font.width(optionValue);
+                graphics.drawString(this.font, fitComponent(button.label, button.width - valueWidth - 28),
+                        button.x + 9, button.y + (button.height - 8) / 2, color, true);
+                graphics.drawString(this.font, optionValue, button.x + button.width - valueWidth - 9,
+                        button.y + (button.height - 8) / 2, color, true);
+            } else {
+                Component buttonLabel = fitComponent(button.label, Math.max(0, button.width - 18));
+                graphics.drawCenteredString(this.font, buttonLabel,
+                        button.x + button.width / 2, button.y + (button.height - 8) / 2, color);
+            }
             if (hovered && button.tooltip != null) {
                 tooltip = List.of(button.label.copy().withStyle(ChatFormatting.GOLD),
                         button.tooltip.copy().withStyle(ChatFormatting.GRAY));
@@ -1976,6 +2270,14 @@ public class EchoOverviewScreen extends Screen {
         }
         if (clip) {
             graphics.disableScissor();
+        }
+        if (this.page == ModulePage.OPTIONS && this.popup == null) {
+            for (ClientOptionSlider slider : this.optionSliders) {
+                if (slider.isMouseOver(mouseX, mouseY)) {
+                    tooltip = List.of(slider.getMessage().copy().withStyle(ChatFormatting.GOLD),
+                            slider.hint.copy().withStyle(ChatFormatting.GRAY));
+                }
+            }
         }
         if (tooltip != null) {
             graphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
@@ -2030,11 +2332,7 @@ public class EchoOverviewScreen extends Screen {
                 if (mouseX >= contentLeft() && mouseX < contentRight() - 4
                         && mouseY >= Math.max(rowY, contentTop() + 16)
                         && mouseY < Math.min(rowY + 22, contentBottom() - 14)) {
-                    if (entries.get(i).usesLeft() != 0) {
-                        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
-                                new cn.kurt6.unknown_echoes.network.TradeRequestPayload(
-                                        cn.kurt6.unknown_echoes.client.ClientTradeCache.getTravelerEntityId(), i));
-                    }
+                    cn.kurt6.unknown_echoes.client.ClientTradeCache.requestTrade(i);
                     return true;
                 }
             }
@@ -2071,19 +2369,33 @@ public class EchoOverviewScreen extends Screen {
         return null;
     }
 
-    /** 神器页按钮随页滚动:点击点必须落在内容区内,滚出/被裁剪的部分不可点。 */
+    private int actionViewportTop() {
+        return this.page == ModulePage.OPTIONS ? optionsViewportTop() : contentTop();
+    }
+
+    private int actionViewportBottom() {
+        return this.page == ModulePage.OPTIONS ? optionsViewportBottom() : contentBottom() - 16;
+    }
+
+    /** 滚动页的按钮只接受裁剪区内的点击。 */
     private boolean isActionButtonClickable(ActionButton button, double mouseY) {
-        if (this.page != ModulePage.ARTIFACT) {
+        if (this.page != ModulePage.ARTIFACT && this.page != ModulePage.OPTIONS) {
             return true;
         }
-        return mouseY >= contentTop() && mouseY < contentBottom() - 16
-                && button.y + button.height > contentTop() && button.y < contentBottom() - 16;
+        return mouseY >= actionViewportTop() && mouseY < actionViewportBottom()
+                && button.y + button.height > actionViewportTop() && button.y < actionViewportBottom();
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         if (this.popup == null
-                && (this.page == ModulePage.ARTIFACT || this.page == ModulePage.TRADE)) {
+                && (this.page == ModulePage.ARTIFACT || this.page == ModulePage.TRADE
+                    || this.page == ModulePage.OPTIONS)) {
+            if (this.page == ModulePage.OPTIONS
+                    && (mouseX < contentLeft() || mouseX >= contentRight()
+                        || mouseY < optionsViewportTop() || mouseY >= optionsViewportBottom())) {
+                return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
+            }
             int max = pageScrollMax();
             if (max > 0) {
                 int target = Mth.clamp(this.pageScroll - (int) Math.signum(deltaY) * 26, 0, max);
@@ -2104,6 +2416,13 @@ public class EchoOverviewScreen extends Screen {
     }
 
     @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        boolean handled = super.mouseReleased(mouseX, mouseY, button);
+        saveClientConfigIfChanged();
+        return handled;
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
@@ -2120,6 +2439,9 @@ public class EchoOverviewScreen extends Screen {
         }
 
         if (keyCode == GLFW.GLFW_KEY_DOWN || keyCode == GLFW.GLFW_KEY_UP) {
+            if (this.page == ModulePage.OPTIONS) {
+                this.setFocused(null);
+            }
             int delta = keyCode == GLFW.GLFW_KEY_DOWN ? 1 : -1;
             this.navFocus = Math.floorMod(
                     (this.navFocus < 0 ? this.page.ordinal() : this.navFocus) + delta,
@@ -2253,15 +2575,6 @@ public class EchoOverviewScreen extends Screen {
         }
     }
 
-    private boolean addRevisit(List<Component> content, EchoAbilityType ability,
-                               String structure, String key) {
-        if (ClientAbilityCache.hasAbility(ability)
-                && ClientJournalCache.structures().contains(id(structure))) {
-            content.add(Component.translatable(key).withStyle(ChatFormatting.DARK_PURPLE));
-            return true;
-        }
-        return false;
-    }
 
     private static Component count(String key, int have, int total) {
         return Component.translatable(key, have, total);
@@ -2446,6 +2759,98 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private record Line(FormattedCharSequence text, Runnable action) {
+    }
+
+    private record OptionSection(int y, Component title) {
+    }
+
+    private final class ClientOptionSlider extends AbstractSliderButton {
+        private final String key;
+        private final ModConfigSpec.DoubleValue configValue;
+        private final Component hint;
+
+        private ClientOptionSlider(int y, String key, ModConfigSpec.DoubleValue configValue) {
+            super(contentLeft(), y, optionControlWidth(), 20, Component.empty(), configValue.get());
+            this.key = key;
+            this.configValue = configValue;
+            this.hint = Component.translatable(key + ".hint");
+            this.visible = y + this.height > optionsViewportTop() && y < optionsViewportBottom();
+            updateMessage();
+        }
+
+        @Override
+        protected void updateMessage() {
+            setMessage(Component.translatable("overview.unknown_echoes.option.percent",
+                    Component.translatable(this.key), Math.round(this.configValue.get() * 100)));
+        }
+
+        @Override
+        protected void applyValue() {
+            double percent = Math.round(this.value * 100) / 100.0D;
+            if (Double.compare(this.configValue.get(), percent) != 0) {
+                this.configValue.set(percent);
+                clientConfigDirty = true;
+            }
+        }
+
+        @Override
+        public boolean isMouseOver(double mouseX, double mouseY) {
+            return popup == null && mouseY >= optionsViewportTop() && mouseY < optionsViewportBottom()
+                    && super.isMouseOver(mouseX, mouseY);
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            return isMouseOver(mouseX, mouseY) && super.mouseClicked(mouseX, mouseY, button);
+        }
+
+        @Override
+        public void setFocused(boolean focused) {
+            super.setFocused(focused);
+            if (focused) {
+                navFocus = -1;
+            }
+        }
+
+        @Override
+        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+            if (isFocused() && (keyCode == GLFW.GLFW_KEY_LEFT || keyCode == GLFW.GLFW_KEY_RIGHT)) {
+                int step = keyCode == GLFW.GLFW_KEY_LEFT ? -1 : 1;
+                this.value = Mth.clamp((Math.round(this.value * 100) + step) / 100.0D, 0.0D, 1.0D);
+                applyValue();
+                updateMessage();
+                saveClientConfigIfChanged();
+                return true;
+            }
+            boolean handled = super.keyPressed(keyCode, scanCode, modifiers);
+            if (handled) {
+                saveClientConfigIfChanged();
+            }
+            return handled;
+        }
+
+        @Override
+        public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            boolean hovered = isMouseOver(mouseX, mouseY);
+            int accent = hovered || isFocused() ? COL_ACCENT : COL_EDGE_SOFT;
+            graphics.fillGradient(getX(), getY(), getX() + this.width, getY() + this.height,
+                    COL_CARD, COL_PANEL_DEEP);
+            graphics.renderOutline(getX(), getY(), this.width, this.height, accent);
+            int handleX = getX() + (int) (this.value * (this.width - 8));
+            graphics.fill(getX() + 2, getY() + this.height - 4,
+                    handleX + 4, getY() + this.height - 2, COL_ACCENT_DIM);
+            graphics.fillGradient(handleX + 1, getY() + 2, handleX + 7, getY() + this.height - 2,
+                    COL_GOLD_DIM, COL_ACCENT_DIM);
+            graphics.renderOutline(handleX + 1, getY() + 2, 6, this.height - 4, accent);
+            Component percent = Component.translatable("overview.unknown_echoes.option.percent_value",
+                    Math.round(this.configValue.get() * 100));
+            int valueWidth = font.width(percent);
+            int color = hovered || isFocused() ? COL_ACCENT : COL_TEXT;
+            graphics.drawString(font, fitComponent(Component.translatable(this.key), this.width - valueWidth - 28),
+                    getX() + 9, getY() + (this.height - 8) / 2, color, true);
+            graphics.drawString(font, percent, getX() + this.width - valueWidth - 9,
+                    getY() + (this.height - 8) / 2, color, true);
+        }
     }
 
     private record ActionButton(int x, int y, int width, int height, Component label,

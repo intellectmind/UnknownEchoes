@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.journal;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.world.structure.LoadedStructureLookup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -164,7 +165,7 @@ public class ClueLocator {
                     if (id == null || start == null || !start.isValid()) {
                         continue;
                     }
-                    BlockPos candidate = start.getBoundingBox().getCenter();
+                    BlockPos candidate = LoadedStructureLookup.currentBounds(start).getCenter();
                     double distance = origin.distSqr(candidate);
                     if (distance < nearestDistance) {
                         nearestDistance = distance;
@@ -207,7 +208,7 @@ public class ClueLocator {
                     continue;
                 }
 
-                BlockPos candidate = start.getBoundingBox().getCenter();
+                BlockPos candidate = LoadedStructureLookup.currentBounds(start).getCenter();
                 double distance = origin.distSqr(candidate);
                 if (distance < nearestDistance) {
                     nearest = candidate;
@@ -242,7 +243,7 @@ public class ClueLocator {
                             || !entry.getValue().isValid()) {
                         continue;
                     }
-                    BlockPos candidate = entry.getValue().getBoundingBox().getCenter();
+                    BlockPos candidate = LoadedStructureLookup.currentBounds(entry.getValue()).getCenter();
                     double distance = origin.distSqr(candidate);
                     if (distance < nearestDistance) {
                         nearest = candidate;

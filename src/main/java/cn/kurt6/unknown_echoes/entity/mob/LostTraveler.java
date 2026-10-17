@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.trade.EchoTradeManager;
+import cn.kurt6.unknown_echoes.trade.TravelerTradeStock;
 import cn.kurt6.unknown_echoes.worldevent.WorldEventType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -54,6 +55,7 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
     /** 驻留截止 gameTime;0=常驻(刷怪蛋/指令生成的旅者不自动离开)。 */
     private long stayUntil;
     private long lastObservedGameTime;
+    private final TravelerTradeStock tradeStock = new TravelerTradeStock();
 
     public LostTraveler(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -126,9 +128,14 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
         return InteractionResult.CONSUME;
     }
 
+    public TravelerTradeStock getTradeStock() {
+        return tradeStock;
+    }
+
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
+        tag.put("TradeStock", tradeStock.save());
         if (this.stayAnchorPos != null) {
 
             tag.put("CampPos", NbtUtils.writeBlockPos(this.stayAnchorPos));
@@ -142,6 +149,7 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        tradeStock.load(tag.getCompound("TradeStock"));
         this.stayAnchorPos = null;
         this.clearRestriction();
         NbtUtils.readBlockPos(tag, "CampPos").filter(this::isValidStayAnchor)
@@ -187,7 +195,7 @@ public class LostTraveler extends PathfinderMob implements GeoEntity {
     @Override
     public void remove(Entity.RemovalReason reason) {
         if (!this.level().isClientSide && reason.shouldDestroy()) {
-            EchoTradeManager.clearUses(this.getUUID());
+            EchoTradeManager.clearTravelerSessions(this.getUUID());
         }
         super.remove(reason);
     }

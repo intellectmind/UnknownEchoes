@@ -15,18 +15,18 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class SilentAltarStructure extends SinglePieceStructure {
+public class SilentAltarStructure extends TerrainAnchoredStructure {
     public static final MapCodec<SilentAltarStructure> CODEC = simpleCodec(SilentAltarStructure::new);
 
     private static final int SIZE = 65;
@@ -60,6 +60,7 @@ public class SilentAltarStructure extends SinglePieceStructure {
                 return;
             }
 
+            clearStructureSpace(level, box, 0);
             BlockState mossy = ModBlocks.ROOTBOUND_MUDSTONE.get().defaultBlockState();
             BlockState bricks = ModBlocks.SILENT_MUDSTONE_BRICKS.get().defaultBlockState();
             BlockState chiseled = ModBlocks.BOGLIGHT_STONE.get().defaultBlockState();
@@ -148,6 +149,16 @@ public class SilentAltarStructure extends SinglePieceStructure {
             buildAccessibleChest(level, random, box, c, 1, c - 7, ModLootTables.T5_MINIBOSS_REPEAT);
             buildTrueSightVaultNiche(level, random, box, c + 6, 1, c + 2, Direction.WEST);
 
+            // 悬冠回音环：高于 Boss 净空的错位冠环保留静默祭坛的垂直焦点。
+            architecturalRing(level, box, c, 22, c, 12, chiseled);
+            for (int[] blade : new int[][]{{-10, 0, 5}, {10, 0, 4}, {0, -10, 6}, {0, 10, 3}}) {
+                for (int y = 17; y < 17 + blade[2]; y++) {
+                    this.placeBlock(level, y % 2 == 0 ? bricks : mossy,
+                            c + blade[0], y, c + blade[1], box);
+                }
+                this.placeBlock(level, candle, c + blade[0], 17 + blade[2], c + blade[1], box);
+            }
+
             architecturalRing(level, box, c, 1, c, 29,
                     ModBlocks.SILENT_MUDSTONE.get().defaultBlockState());
             buildCircularColonnade(level, box, c, 1, c, 17, 16, 9,
@@ -158,14 +169,27 @@ public class SilentAltarStructure extends SinglePieceStructure {
             }
             buildRuneCauseway(level, box, c, 0, c, Direction.NORTH,
                     18, 31, 3, moss, mossy, chiseled);
-            scatterArchitecturalDebris(level, random, box, c, 1, c,
-                    24, 30, 52, mossy, ModBlocks.SILENT_MUDSTONE.get().defaultBlockState());
+            scatterArchitecturalDebris(level, box, "silent_altar", c, 1, c,
+                    mossy, ModBlocks.SILENT_MUDSTONE.get().defaultBlockState());
 
             placeStructureSpawner(level, random, box, c - 10, 1, c - 9,
                     ModEntities.SILENT_WALKER.get(), mossy, chiseled);
 
             buildStepPathSanctum(level, random, box, c - 12, 1, c + 2, Direction.SOUTH,
                     bricks, mossy, chiseled, ModLootTables.T3_PUZZLE);
+            anchorGroundColumns(level, box, 0, mossy);
+            dressStructure(level, box, "silent_altar");
+            buildGroundEntry(level, box);
+        }
+
+        private void buildGroundEntry(WorldGenLevel level, BoundingBox box) {
+            BlockState stairs = ModBlocks.SILENT_MUDSTONE_BRICK_STAIRS.get().defaultBlockState()
+                    .setValue(StairBlock.FACING, Direction.SOUTH);
+            for (int x = 30; x <= 32; x++) {
+                for (int z = 60; z <= 61; z++) {
+                    this.placeBlock(level, stairs, x, 62 - z, z, box);
+                }
+            }
         }
 
         @Override

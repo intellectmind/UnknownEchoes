@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.fx.CombatFx;
+import cn.kurt6.unknown_echoes.network.CombatFxPayload.Shape;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -64,8 +66,10 @@ final class WeaponFx {
         Vec3 look = flatLook(player);
         Vec3 side = new Vec3(-look.z, 0.0D, look.x);
         Vec3 pivot = player.position().add(0.0D, player.getBbHeight() * 0.45D, 0.0D);
+        CombatFx.themed(level, Shape.SLASH, pivot, look, radius, 0, span,
+                theme.core(), theme.edge(), 10);
         int points = Math.min(MAX_ARC_POINTS, 8 + (int) (radius * 2.0D));
-        ParticleOptions trace = theme.trace(1.5F);
+        ParticleOptions trace = theme.trace(.9F);
         for (int i = 0; i < points; i++) {
             double a = -span + 2.0D * span * i / (points - 1);
             Vec3 dir = look.scale(Math.cos(a)).add(side.scale(Math.sin(a)));
@@ -73,7 +77,7 @@ final class WeaponFx {
             double lift = 0.35D * (1.0D - Math.abs(a) / span);
             at(level, trace, pivot.add(dir.scale(radius)).add(0.0D, lift, 0.0D));
             if (i % 3 == 0) {
-                at(level, theme.edgeDust(1.0F), pivot.add(dir.scale(radius * 0.72D)));
+                at(level, theme.edgeDust(.7F), pivot.add(dir.scale(radius * 0.72D)));
             }
             if (i % 5 == 0) {
                 at(level, theme.glint(), pivot.add(dir.scale(radius * 0.9D)).add(0.0D, lift, 0.0D));
@@ -92,7 +96,9 @@ final class WeaponFx {
         Vec3 side = Math.abs(dir.y) > 0.92D
                 ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(-dir.z, 0.0D, dir.x).normalize();
         int steps = Math.min(MAX_BEAM_POINTS, Math.max(3, (int) (length / 0.8D)));
-        ParticleOptions trace = theme.trace(1.3F);
+        CombatFx.themed(level, Shape.BEAM, origin, dir, 0, length, 0,
+                theme.core(), theme.edge(), 10);
+        ParticleOptions trace = theme.trace(.85F);
         for (int i = 0; i < steps; i++) {
             double s = length * (i + 0.5D) / steps;
             Vec3 p = origin.add(dir.scale(s));
@@ -100,8 +106,8 @@ final class WeaponFx {
             // 侧翼随距离收窄:等宽的束读成一根管子,收窄才有"从手里射出去"的方向感。
             double spread = 0.34D * (1.0D - (double) i / steps) + 0.06D;
             if (i % 2 == 0) {
-                at(level, theme.edgeDust(0.9F), p.add(side.scale(spread)));
-                at(level, theme.edgeDust(0.9F), p.add(side.scale(-spread)));
+                at(level, theme.edgeDust(.65F), p.add(side.scale(spread)));
+                at(level, theme.edgeDust(.65F), p.add(side.scale(-spread)));
             }
             if (i % 4 == 0) {
                 at(level, theme.glint(), p);
@@ -118,6 +124,8 @@ final class WeaponFx {
                            double radius) {
         Vec3 feet = player.position();
         int points = Math.min(MAX_RING_POINTS, 10 + (int) (radius * 2.0D));
+        CombatFx.themed(level, Shape.RING, feet.add(0, 0.18, 0), Vec3.ZERO, radius, 0, 0,
+                theme.core(), theme.edge(), 14);
         ParticleOptions trace = theme.trace(1.6F);
         for (int i = 0; i < points; i++) {
             double a = TAU * i / points;
@@ -142,6 +150,8 @@ final class WeaponFx {
         Vec3 feet = player.position();
         int steps = Math.min(MAX_RING_POINTS, 14 + turns * 2);
         double height = player.getBbHeight() + 0.35D;
+        CombatFx.themed(level, Shape.AEGIS, feet, Vec3.ZERO, radius, height, TAU * Math.max(1, turns),
+                theme.core(), theme.edge(), 18);
         ParticleOptions trace = theme.trace(1.2F);
         for (int i = 0; i < steps; i++) {
             double t = (double) i / steps;
@@ -157,6 +167,11 @@ final class WeaponFx {
         }
     }
 
+    static void releaseBurst(ServerLevel level, Vec3 center, WeaponFxTheme.Theme theme, double radius) {
+        CombatFx.themed(level, Shape.BURST, center, Vec3.ZERO, Math.min(1.5, Math.max(0, radius)), 0, 0,
+                theme.core(), theme.edge(), 8);
+    }
+
     /**
      * 单体命中标记:目标腰高一圈收束残辉。每个命中目标调用一次,所以采样固定 8 点 ——
      * 目标数由调用点的 limit 决定,这里再按目标数放大会让群体技的包数翻倍。
@@ -165,6 +180,8 @@ final class WeaponFx {
         Vec3 waist = waistOf(target);
         double radius = markRadiusOf(target);
         ParticleOptions fade = theme.fade(1.4F);
+        CombatFx.themed(level, Shape.IMPACT, waist, Vec3.ZERO, radius, 0, 0,
+                theme.core(), theme.edge(), 8);
         for (int i = 0; i < 8; i++) {
             double a = TAU * i / 8.0D;
             at(level, fade, waist.add(Math.cos(a) * radius, 0.0D, Math.sin(a) * radius));
@@ -195,6 +212,8 @@ final class WeaponFx {
         for (int c = 0; c < columns; c++) {
             double a = TAU * c / columns;
             Vec3 foot = wide ? base.add(Math.cos(a) * radius, 0.0D, Math.sin(a) * radius) : base;
+            CombatFx.themed(level, Shape.COLUMN, foot, Vec3.ZERO, 0.22, 2.1, TAU,
+                    theme.core(), theme.edge(), 10);
             for (int i = 0; i < 5; i++) {
                 at(level, theme.coreDust(1.5F), foot.add(0.0D, 0.25D + i * 0.42D, 0.0D));
             }
@@ -208,6 +227,8 @@ final class WeaponFx {
         Vec3 from = waistOf(target);
         Vec3 to = player.position().add(0.0D, player.getBbHeight() * 0.5D, 0.0D);
         Vec3 span = to.subtract(from);
+        CombatFx.themed(level, Shape.BEAM, from, span, 0, span.length(), 0,
+                theme.core(), theme.edge(), 8);
         // 上限不要放宽:牵引技单次可命中 12 个目标,每个目标一条线,步数按目标数乘上去。
         int steps = Math.min(6, Math.max(3, (int) (span.length() / 0.9D)));
         ParticleOptions trace = theme.trace(1.1F);
@@ -223,6 +244,8 @@ final class WeaponFx {
                           double length, WeaponFxTheme.Theme theme) {
         Vec3 dir = direction.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : direction.normalize();
         int steps = Math.min(MAX_BEAM_POINTS, Math.max(3, (int) (length / 0.7D)));
+        CombatFx.themed(level, Shape.WAKE, origin, dir, .16, length, 0,
+                theme.edge(), theme.core(), 10);
         for (int i = 0; i < steps; i++) {
             Vec3 p = origin.add(dir.scale(length * (i + 0.5D) / steps));
             at(level, theme.fade(1.2F), p);

@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import cn.kurt6.unknown_echoes.fx.BossLifecycleFx;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.block.deep.BossRechallengeAltarBlockEntity;
@@ -8,6 +9,7 @@ import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.entity.EntityHitboxProfiles;
 import cn.kurt6.unknown_echoes.entity.ai.CirclePreferredRangeGoal;
 import cn.kurt6.unknown_echoes.registry.ModItems;
+import cn.kurt6.unknown_echoes.world.EntitySpawnSafety;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -41,6 +43,7 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
@@ -60,7 +63,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, BossVisualState,
-        DeepRechallengeBoundBoss {
+        DeepRechallengeBoundBoss, BossMusicSource {
     private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_MODE =
             SynchedEntityData.defineId(RiftWarden.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_AGE =
@@ -114,6 +117,7 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
     private final List<Vec3> stormMarks = new ArrayList<>();
     private final Set<UUID> attackHits = new HashSet<>();
     private final Set<UUID> participants = new HashSet<>();
+    private boolean handlingDeath = false;
     private final Set<BlockPos> phaseMechanismStabilizers = new HashSet<>();
 
     private AttackMode attackMode = AttackMode.NONE;
@@ -191,11 +195,18 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
 
     @Override
     public void aiStep() {
+        if (this.handlingDeath || this.dead || !this.isAlive()) {
+            return;
+        }
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
-                && this.tickDeepRechallengeBinding(serverLevel)) {
+                && this.tickDeepRechallengeBinding(serverLevel,
+                        () -> !this.handlingDeath && !this.dead)) {
             return;
         }
         super.aiStep();
+        if (this.handlingDeath || this.dead || !this.isAlive()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -341,6 +352,7 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
     private void completePhaseTransition(ServerLevel level) {
         this.phaseTransitionActive = false;
         this.phaseGateStage = Math.min(2, this.phaseGateStage + 1);
+        BossLifecycleFx.phase(level, this.position(), this.getBbWidth(), this.getBbHeight(), BossParticleTheme.RIFT.body());
         level.playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE,
                 SoundSource.HOSTILE, 2.0F, 0.55F + this.phaseGateStage * 0.18F);
         // 两段锚定破裂提示的第二段：护盾碎裂成虚空尘、核心暴露
@@ -404,7 +416,8 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
 
     /** 稳定器由玩家操作后调用；同一场的三座稳定器完成才开始阶段攻击。 */
     public void onStabilizerActivated(ServerLevel level, BlockPos stabilizerPos) {
-        if (!this.phaseTransitionPending || this.arenaCenter == null || !this.isAlive()
+        if (this.handlingDeath || this.dead || this.isRemoved() || !this.phaseTransitionPending
+                || this.arenaCenter == null || !this.isAlive()
                 || this.arenaCenter.distManhattan(stabilizerPos) > 48) {
             return;
         }
@@ -476,22 +489,30 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
         this.setDeltaMovement(Vec3.ZERO);
         level.sendParticles(BossParticleTheme.RIFT.body(),
                 returnPoint.x, returnPoint.y + this.getBbHeight() * 0.5D, returnPoint.z,
-                34, 0.9D, 1.4D, 0.9D, 0.12D);
+                12, 0.9D, 1.4D, 0.9D, 0.05D);
     }
 
     private Vec3 findArenaReturnPoint(ServerLevel level) {
-        if (this.arenaCenter == null || !level.hasChunkAt(this.arenaCenter)
-                || !(level.getBlockState(this.arenaCenter).getBlock() instanceof VoidCoreAltarBlock)) {
+        BlockPos altarPos = this.arenaCenter;
+        if (!this.isAlive() || this.level() != level || altarPos == null) {
             return null;
         }
-        BlockPos returnPos = VoidCoreAltarBlock.findSpawnPos(level, this.arenaCenter);
+        var chunk = level.getChunkSource().getChunkNow(altarPos.getX() >> 4, altarPos.getZ() >> 4);
+        if (chunk == null || !(chunk.getBlockState(altarPos).getBlock() instanceof VoidCoreAltarBlock)) {
+            return null;
+        }
+        BlockPos returnPos = VoidCoreAltarBlock.findSpawnPos(level, altarPos);
         if (returnPos == null) {
             return null;
         }
         Vec3 target = Vec3.atBottomCenterOf(returnPos);
-        AABB movedBounds = this.getBoundingBox().move(target.subtract(this.position()));
-        return level.getWorldBorder().isWithinBounds(movedBounds)
-                && level.noCollision(this, movedBounds) ? target : null;
+        if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, this, target)) {
+            return null;
+        }
+        chunk = level.getChunkSource().getChunkNow(altarPos.getX() >> 4, altarPos.getZ() >> 4);
+        return this.isAlive() && this.level() == level && altarPos.equals(this.arenaCenter)
+                && chunk != null && chunk.getBlockState(altarPos).getBlock() instanceof VoidCoreAltarBlock
+                ? target : null;
     }
 
     private double horizontalDistanceSqr(Vec3 position) {
@@ -520,12 +541,14 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
     private void tickRiftSlash(ServerLevel level) {
         Vec3 body = this.position().add(0.0D, this.getBbHeight() * 0.48D, 0.0D);
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.ENDERMAN_TELEPORT,
-                    SoundSource.HOSTILE, 1.4F, 0.55F);
+            level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_SLASH_WARN.get(),
+                    SoundSource.HOSTILE, 1.4F, 1.0F);
         }
         if (this.attackAge <= 12) {
-            BossFx.chargeSpiral(level, body, this.tickCount, BossParticleTheme.RIFT.body());
-            if (this.attackAge % 3 == 0) {
+            if (level.getGameTime() % 4 == 0) {
+                BossFx.chargeSpiral(level, body, this.tickCount, BossParticleTheme.RIFT.body());
+            }
+            if (this.attackAge % 4 == 0) {
                 BossFx.sweepArc(level, this.position().add(0.0D, 0.05D, 0.0D),
                         this.attackDirection, 7.0D, BossParticleTheme.RIFT.spark());
             }
@@ -541,10 +564,8 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
 
     private void releaseRiftSlash(ServerLevel level) {
         Vec3 origin = this.position().add(0.0D, this.getBbHeight() * 0.42D, 0.0D);
-        level.playSound(null, this.blockPosition(), SoundEvents.IRON_GOLEM_ATTACK,
-                SoundSource.HOSTILE, 2.0F, 0.62F);
-        level.playSound(null, this.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.HOSTILE, 1.6F, 0.45F);
+        level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_SLASH_RELEASE.get(),
+                SoundSource.HOSTILE, 2.0F, 1.0F);
         BossFx.sweepArc(level, origin, this.attackDirection, 8.0D, BossParticleTheme.RIFT.spark());
         BossFx.sparkSpray(level, origin, this.attackDirection, 8.5D, BossParticleTheme.RIFT.spark());
         Vec3 impact = origin.add(this.attackDirection.scale(4.5D));
@@ -564,11 +585,13 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
         Vec3 center = this.position();
         Vec3 core = center.add(0.0D, this.getBbHeight() * 0.48D, 0.0D);
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                    SoundSource.HOSTILE, 2.0F, 0.48F);
+            level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_SLAM_WARN.get(),
+                    SoundSource.HOSTILE, 2.0F, 1.0F);
         }
         if (this.attackAge <= 19) {
-            BossFx.chargeSpiral(level, core, this.tickCount, BossParticleTheme.RIFT.body());
+            if (level.getGameTime() % 4 == 0) {
+                BossFx.chargeSpiral(level, core, this.tickCount, BossParticleTheme.RIFT.body());
+            }
             if (this.attackAge % 4 == 0) {
                 double contraction = 6.8D - this.attackAge / 19.0D * 4.8D;
                 BossFx.ring(level, center, 7.5D, 56, 0.12D, BossParticleTheme.RIFT.ember());
@@ -585,16 +608,14 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
 
     private void releaseAnchorSlam(ServerLevel level) {
         Vec3 center = this.position();
-        level.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),
-                SoundSource.HOSTILE, 2.5F, 0.52F);
-        level.playSound(null, this.blockPosition(), SoundEvents.WITHER_BREAK_BLOCK,
-                SoundSource.HOSTILE, 2.0F, 0.58F);
+        level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_SLAM_RELEASE.get(),
+                SoundSource.HOSTILE, 2.0F, 1.0F);
         BossFx.groundShockwave(level, center.add(0.0D, 0.15D, 0.0D),
                 7.5D, BossParticleTheme.RIFT.ember());
         BossFx.impactBurst(level, center.add(0.0D, 0.35D, 0.0D), BossParticleTheme.RIFT.spark());
         BossFx.cinematicImpact(level, center, 34.0D, 0.86F, 11, 0x6F55C8);
         level.sendParticles(BossParticleTheme.RIFT.body(),
-                center.x, center.y + 0.5D, center.z, 64, 3.1D, 0.9D, 3.1D, 0.1D);
+                center.x, center.y + 0.5D, center.z, 20, 3.1D, 0.9D, 3.1D, 0.04D);
         this.damageAndKnockbackPlayers(level, 7.5D, 22.0F, 1.35D, 0.48D);
         this.addRadialRiftScars(center, 8, 3, 82);
     }
@@ -602,11 +623,13 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
     private void tickVoidPull(ServerLevel level) {
         Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.58D, 0.0D);
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_CHARGE,
-                    SoundSource.HOSTILE, 2.1F, 0.58F);
+            level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_PULL_WARN.get(),
+                    SoundSource.HOSTILE, 2.1F, 1.0F);
         }
         if (this.attackAge <= 29) {
-            BossFx.chargeSpiral(level, core, -this.tickCount, BossParticleTheme.RIFT.body());
+            if (level.getGameTime() % 4 == 0) {
+                BossFx.chargeSpiral(level, core, -this.tickCount, BossParticleTheme.RIFT.body());
+            }
             if (this.attackAge % 2 == 0) {
                 double contraction = 18.0D - this.attackAge / 29.0D * 15.0D;
                 BossFx.ring(level, core, contraction, 40, 0.0D, BossParticleTheme.RIFT.ember());
@@ -620,13 +643,11 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
             this.releaseVoidPull(level, core);
         } else if (this.attackAge >= 34 && this.attackAge <= 40 && this.attackAge % 2 == 0) {
             level.sendParticles(BossParticleTheme.RIFT.body(),
-                    core.x, core.y, core.z, 20, 1.2D, 1.2D, 1.2D, 0.22D);
+                    core.x, core.y, core.z, 6, 1.2D, 1.2D, 1.2D, 0.06D);
         }
     }
 
     private void releaseVoidPull(ServerLevel level, Vec3 core) {
-        level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
-                SoundSource.HOSTILE, 2.3F, 0.72F);
         level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_RIFT.get(),
                 SoundSource.HOSTILE, 1.8F, 1.0F);
         this.pullPlayers(level, core, 20.0D, 1.15D, 0.28D, 11.0F, true);
@@ -638,20 +659,20 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
         level.sendParticles(BossParticleTheme.RIFT.spark(),
                 core.x, core.y, core.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         level.sendParticles(BossParticleTheme.RIFT.body(),
-                core.x, core.y, core.z, 80, 2.6D, 2.6D, 2.6D, 0.08D);
+                core.x, core.y, core.z, 24, 2.6D, 2.6D, 2.6D, 0.04D);
     }
 
     private void tickShieldBreak(ServerLevel level) {
         Vec3 center = this.position();
         Vec3 core = center.add(0.0D, this.getBbHeight() * 0.52D, 0.0D);
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                    SoundSource.HOSTILE, 2.3F, 0.38F);
-            level.playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE,
-                    SoundSource.HOSTILE, 1.8F, 0.62F);
+            level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_BREAK_WARN.get(),
+                    SoundSource.HOSTILE, 2.3F, 1.0F);
         }
         if (this.attackAge <= 26) {
-            BossFx.chargeSpiral(level, core, this.tickCount * 1.35D, BossParticleTheme.RIFT.body());
+            if (level.getGameTime() % 4 == 0) {
+                BossFx.chargeSpiral(level, core, this.tickCount * 1.35D, BossParticleTheme.RIFT.body());
+            }
             if (this.attackAge % 4 == 0) {
                 BossFx.ring(level, center, 4.0D, 28, 0.16D, BossParticleTheme.RIFT.ember());
                 BossFx.ring(level, center, 8.0D, 44, 0.2D, BossParticleTheme.RIFT.ember());
@@ -667,16 +688,14 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
         } else if (this.attackAge == 35) {
             BossFx.ring(level, center, 14.0D, 72, 0.18D, BossParticleTheme.RIFT.ember());
             level.sendParticles(BossParticleTheme.RIFT.body(),
-                    core.x, core.y, core.z, 48, 2.0D, 2.2D, 2.0D, 0.16D);
+                    core.x, core.y, core.z, 16, 2.0D, 2.2D, 2.0D, 0.05D);
         }
     }
 
     private void releaseShieldBreak(ServerLevel level) {
         Vec3 center = this.position().add(0.0D, 0.3D, 0.0D);
-        level.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(),
-                SoundSource.HOSTILE, 2.7F, 0.55F);
-        level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
-                SoundSource.HOSTILE, 2.2F, 0.48F);
+        level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_BREAK_RELEASE.get(),
+                SoundSource.HOSTILE, 2.7F, 1.0F);
         BossFx.groundShockwave(level, center, 11.0D, BossParticleTheme.RIFT.ember());
         BossFx.impactBurst(level, center.add(0.0D, 2.0D, 0.0D), BossParticleTheme.RIFT.spark());
         BossFx.cinematicImpact(level, center, 44.0D, 1.0F, 14, 0x8D68D8);
@@ -694,14 +713,14 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
         Vec3 center = this.position();
         Vec3 core = center.add(0.0D, this.getBbHeight() * 0.48D, 0.0D);
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.ENDERMAN_TELEPORT,
-                    SoundSource.HOSTILE, 1.8F, 0.42F);
-            level.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                    SoundSource.HOSTILE, 1.5F, 1.25F);
+            level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_CHARGE_WARN.get(),
+                    SoundSource.HOSTILE, 1.8F, 1.0F);
         }
         if (this.attackAge <= 10) {
-            BossFx.chargeSpiral(level, core, this.tickCount * 1.4D, BossParticleTheme.RIFT.body());
-            if (this.attackAge % 2 == 0) {
+            if (level.getGameTime() % 4 == 0) {
+                BossFx.chargeSpiral(level, core, this.tickCount * 1.4D, BossParticleTheme.RIFT.body());
+            }
+            if (this.attackAge % 4 == 0) {
                 this.drawChargeLane(level, center, this.attackDirection, 11.0D);
             }
         }
@@ -719,8 +738,8 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
         }
 
         if (this.attackAge == 17) {
-            level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM,
-                    SoundSource.HOSTILE, 1.8F, 1.35F);
+            level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_CHARGE_RELEASE.get(),
+                    SoundSource.HOSTILE, 1.8F, 1.0F);
             BossFx.impactBurst(level, core.add(this.attackDirection.scale(1.5D)),
                     BossParticleTheme.RIFT.spark());
         } else if (this.attackAge == 21) {
@@ -734,7 +753,7 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
             Vec3 center = origin.add(direction.scale(distance)).add(0.0D, 0.12D, 0.0D);
             for (double offset : new double[]{-2.2D, 0.0D, 2.2D}) {
                 Vec3 point = center.add(side.scale(offset));
-                level.sendParticles(offset == 0.0D ? BossParticleTheme.RIFT.spark() : BossParticleTheme.RIFT.spark(),
+                level.sendParticles(BossParticleTheme.RIFT.spark(),
                         point.x, point.y, point.z, 1, 0.04D, 0.03D, 0.04D, 0.0D);
             }
         }
@@ -757,8 +776,8 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
 
     private void releaseChargeSlash(ServerLevel level) {
         Vec3 origin = this.position().add(0.0D, this.getBbHeight() * 0.4D, 0.0D);
-        level.playSound(null, this.blockPosition(), SoundEvents.IRON_GOLEM_ATTACK,
-                SoundSource.HOSTILE, 2.1F, 0.82F);
+        level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_CHARGE_SLASH.get(),
+                SoundSource.HOSTILE, 2.1F, 1.0F);
         BossFx.sweepArc(level, origin, this.attackDirection, 7.0D, BossParticleTheme.RIFT.spark());
         BossFx.sparkSpray(level, origin, this.attackDirection, 8.0D, BossParticleTheme.RIFT.spark());
         this.damageChargeVictims(level, 6.0D, 20.0F);
@@ -770,16 +789,14 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
         Vec3 center = this.position();
         Vec3 core = center.add(0.0D, this.getBbHeight() * 0.58D, 0.0D);
         if (this.attackAge == 0) {
-            level.playSound(null, this.blockPosition(), SoundEvents.WITHER_SPAWN,
-                    SoundSource.HOSTILE, 2.1F, 1.45F);
-            level.playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_CHARGE,
-                    SoundSource.HOSTILE, 2.3F, 0.42F);
+            level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_STORM_WARN.get(),
+                    SoundSource.HOSTILE, 2.3F, 1.0F);
         }
         if (this.attackAge == 8) {
             this.prepareStormMarks(level);
         }
         if (this.attackAge <= 37) {
-            if (this.attackAge % 2 == 0) {
+            if (level.getGameTime() % 4 == 0) {
                 BossFx.chargeSpiral(level, core, this.tickCount * 1.7D, BossParticleTheme.RIFT.body());
             }
             if (this.attackAge % 4 == 0) {
@@ -843,8 +860,8 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
             if (pulse) {
                 BossFx.ring(level, mark, 2.7D, 12, 0.12D, BossParticleTheme.RIFT.ember());
             }
-            if (this.attackAge % 2 == 0) {
-                level.sendParticles(i % 2 == 0 ? BossParticleTheme.RIFT.spark() : BossParticleTheme.RIFT.spark(),
+            if (this.attackAge % 4 == 0) {
+                level.sendParticles(BossParticleTheme.RIFT.spark(),
                         mark.x, mark.y + 0.25D + (this.attackAge - 8) * 0.08D, mark.z,
                         1, 0.12D, 0.22D, 0.12D, 0.0D);
             }
@@ -852,10 +869,8 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
     }
 
     private void releaseRiftStorm(ServerLevel level, Vec3 core) {
-        level.playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_SPAWN,
-                SoundSource.HOSTILE, 2.4F, 0.72F);
-        level.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),
-                SoundSource.HOSTILE, 2.5F, 0.82F);
+        level.playSound(null, this.blockPosition(), ModSounds.RIFT_WARDEN_ATTACK_STORM_RELEASE.get(),
+                SoundSource.HOSTILE, 2.4F, 1.0F);
         this.attackHits.clear();
         for (Vec3 mark : this.stormMarks) {
             BossFx.areaBurst(level, mark.add(0.0D, 0.2D, 0.0D), BossParticleTheme.RIFT.spark());
@@ -1034,17 +1049,12 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
             if (scar.age == 1) {
                 level.sendParticles(BossParticleTheme.RIFT.body(),
                         scar.position.x, scar.position.y + 0.12D, scar.position.z,
-                        8, 0.22D, 0.1D, 0.22D, 0.08D);
+                        3, 0.22D, 0.1D, 0.22D, 0.02D);
             }
-            if (scar.age % 3 == 0) {
+            if (scar.age % 6 == 0) {
                 level.sendParticles(BossParticleTheme.RIFT.spark(),
                         scar.position.x, scar.position.y + 0.12D, scar.position.z,
-                        2, 0.2D, 0.04D, 0.2D, 0.03D);
-            }
-            if (scar.age % 7 == 0) {
-                level.sendParticles(BossParticleTheme.RIFT.spark(),
-                        scar.position.x, scar.position.y + 0.2D, scar.position.z,
-                        1, 0.12D, 0.08D, 0.12D, 0.01D);
+                        1, 0.2D, 0.04D, 0.2D, 0.01D);
             }
             if (scar.age >= scar.lifetime) {
                 iterator.remove();
@@ -1064,69 +1074,160 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
         }
         level.sendParticles(BossParticleTheme.RIFT.body(),
                 center.x, center.y + this.getBbHeight() * 0.5D, center.z,
-                56, 1.8D, 2.4D, 1.8D, 0.08D);
+                20, 1.8D, 2.4D, 1.8D, 0.04D);
+    }
+
+    @Override
+    public boolean isSettlingDeath() {
+        return this.handlingDeath && this.dead;
     }
 
     @Override
     public void die(DamageSource source) {
-        boolean wasDead = this.dead;
-        super.die(source);
-        if (wasDead || !this.dead || !(this.level() instanceof ServerLevel level)) {
+        if (this.handlingDeath || this.dead) {
             return;
         }
-        // 死亡演出：核心向内收束、护盾碎裂成虚空尘,不改变结算
-        this.triggerAnim("state_controller", "death");
+        this.handlingDeath = true;
+        try {
+            if (!(this.level() instanceof ServerLevel serverLevel)) {
+                super.die(source);
+                return;
+            }
+            Vec3 deathPos = this.position();
+            BlockPos deathAltar = this.deepRechallengeAltar();
+            UUID deathUuid = this.getUUID();
+            Set<UUID> deathParticipants = Set.copyOf(this.participants);
+            try {
+                super.die(source);
+            } finally {
+                if (this.dead) {
+                    settleDeepBossDeath(serverLevel, deathPos, deathAltar, deathUuid, deathParticipants);
+                }
+            }
+        } finally {
+            this.handlingDeath = false;
+        }
+    }
+
+    private void settleDeepBossDeath(ServerLevel serverLevel, Vec3 deathPos, BlockPos deathAltar,
+                                     UUID deathUuid, Set<UUID> deathParticipants) {
+        try {
+            boolean hasEligibleParticipant = false;
+            boolean firstKillDrop = false;
+            for (ServerPlayer player : nearbyDeathPlayers(serverLevel, deathPos)) {
+                if (deathParticipants.contains(player.getUUID())
+                        && isDeathParticipant(serverLevel, deathPos, player)) {
+                    boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
+                            EchoPermission.RIFT_WARDEN_ID);
+                    hasEligibleParticipant = true;
+                    firstKillDrop |= firstKill;
+                    runDeathStep("personal progress", () -> {
+                        if (!EchoAbilityManager.markBossDefeated(player, EchoPermission.RIFT_WARDEN_ID)
+                                && isDeathParticipant(serverLevel, deathPos, player)) {
+                            player.sendSystemMessage(Component.translatable(
+                                    "message.unknown_echoes.progress_record.full"));
+                        }
+                    });
+                }
+            }
+            if (hasEligibleParticipant) {
+                grantDeathMaterials(serverLevel, deathPos, firstKillDrop);
+            }
+        } finally {
+            if (deathAltar != null) {
+                runDeathStep("arena completion", () -> BossRechallengeAltarBlockEntity.startCooldown(
+                        serverLevel, deathAltar, deathUuid));
+            }
+        }
         this.riftScars.clear();
         this.stormMarks.clear();
         this.attackHits.clear();
-        double rewardRadius = ServerConfig.BOSS_REWARD_RADIUS.get();
-        boolean hasEligibleParticipant = false;
-        boolean firstKillDrop = false;
-        for (ServerPlayer player : this.nearbyPlayers(
-                level, this.position(), rewardRadius, false)) {
-            if (this.participants.contains(player.getUUID())) {
-                boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
-                        EchoPermission.RIFT_WARDEN_ID);
-                hasEligibleParticipant = true;
-                if (!EchoAbilityManager.markBossDefeated(player, EchoPermission.RIFT_WARDEN_ID)) {
-                    player.sendSystemMessage(Component.translatable(
-                            "message.unknown_echoes.progress_record.full"));
-                    continue;
-                }
-                firstKillDrop |= firstKill;
+        runDeathStep("death presentation", () -> {
+            if (isCurrentDeathPresentation(serverLevel, deathPos)) {
+                this.triggerAnim("state_controller", "death");
+                playDeathEffects(serverLevel, deathPos);
             }
+        });
+    }
+
+    private void grantDeathMaterials(ServerLevel serverLevel, Vec3 deathPos, boolean firstKillDrop) {
+        runDeathStep("rift shards", () -> BossMaterialRewards.drop(serverLevel,
+                deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(
+                ModItems.VOID_RIFT_SHARD.get(), 3 + this.random.nextInt(3))));
+        runDeathStep("anchor shards", () -> BossMaterialRewards.drop(serverLevel,
+                deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(
+                ModItems.SPACE_ANCHOR_SHARD.get(), firstKillDrop ? 2 : 1)));
+        runDeathStep("ore scraps", () -> BossMaterialRewards.drop(serverLevel,
+                deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(
+                ModItems.DEEP_ORE_SCRAP.get(), 2 + this.random.nextInt(3))));
+        if (firstKillDrop || this.random.nextFloat() < 0.25F) {
+            runDeathStep("void rubbing", () -> BossMaterialRewards.drop(serverLevel,
+                deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(
+                    ModItems.VOID_RESEARCH_RUBBING.get())));
         }
-        if (hasEligibleParticipant) {
-            BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
-                    ModItems.VOID_RIFT_SHARD.get(), 3 + this.random.nextInt(3)));
-            BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
-                    ModItems.SPACE_ANCHOR_SHARD.get(), firstKillDrop ? 2 : 1));
-            BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
-                    ModItems.DEEP_ORE_SCRAP.get(), 2 + this.random.nextInt(3)));
-            if (firstKillDrop || this.random.nextFloat() < 0.25F) {
-                BossMaterialRewards.drop(this, new net.minecraft.world.item.ItemStack(
-                        ModItems.VOID_RESEARCH_RUBBING.get()));
-            }
+    }
+
+    private List<ServerPlayer> nearbyDeathPlayers(ServerLevel level, Vec3 deathPos) {
+        double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
+        return level.getEntitiesOfClass(ServerPlayer.class, new AABB(deathPos, deathPos).inflate(radius),
+                player -> isDeathParticipant(level, deathPos, player));
+    }
+
+    private boolean isDeathParticipant(ServerLevel level, Vec3 deathPos, ServerPlayer player) {
+        double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.position().distanceToSqr(deathPos) <= radius * radius;
+    }
+
+    private void runDeathStep(String step, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException failure) {
+            cn.kurt6.unknown_echoes.UnknownEchoes.LOGGER.error("RiftWarden death {} failed for {}", step, this.getUUID(), failure);
         }
-        if (this.arenaCenter != null) {
-            this.finishDeepRechallenge(level);
+    }
+
+    private boolean isCurrentDeathPresentation(ServerLevel level, Vec3 deathPos) {
+        return this.dead && !this.isRemoved() && this.level() == level
+                && level.getEntity(this.getUUID()) == this
+                && this.position().distanceToSqr(deathPos) < 0.0001D;
+    }
+
+    private void playDeathEffects(ServerLevel serverLevel, Vec3 deathPos) {
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) return;
+        BossLifecycleFx.death(serverLevel, deathPos, this.getBbWidth(), this.getBbHeight(),
+                BossParticleTheme.RIFT.body());
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+            return;
         }
-        Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.52D, 0.0D);
-        BossFx.impactBurst(level, core, BossParticleTheme.RIFT.spark());
+        Vec3 core = deathPos.add(0.0D, this.getBbHeight() * 0.52D, 0.0D);
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+            return;
+        }
+        BossFx.impactBurst(serverLevel, core, BossParticleTheme.RIFT.spark());
         for (int ring = 1; ring <= 5; ring++) {
-            BossFx.ring(level, core, ring * 2.2D, 28 + ring * 8,
+            if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+                return;
+            }
+            BossFx.ring(serverLevel, core, ring * 2.2D, 28 + ring * 8,
                     0.0D, ring % 2 == 0 ? BossParticleTheme.RIFT.ember() : BossParticleTheme.RIFT.ember());
         }
-        level.sendParticles(ParticleTypes.FLASH,
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+            return;
+        }
+        serverLevel.sendParticles(ParticleTypes.FLASH,
                 core.x, core.y, core.z, 3, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.sendParticles(BossParticleTheme.RIFT.body(),
-                core.x, core.y, core.z, 220, 3.4D, 3.2D, 3.4D, 0.42D);
-        level.sendParticles(BossParticleTheme.RIFT.body(),
-                core.x, core.y, core.z, 80, 2.2D, 2.8D, 2.2D, 0.18D);
-        level.playSound(null, this.blockPosition(), SoundEvents.WITHER_DEATH,
-                SoundSource.HOSTILE, 2.5F, 0.72F);
-        level.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(),
-                SoundSource.HOSTILE, 2.2F, 0.45F);
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+            return;
+        }
+        serverLevel.sendParticles(BossParticleTheme.RIFT.body(),
+                core.x, core.y, core.z, 48, 3.4D, 3.2D, 3.4D, 0.12D);
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+            return;
+        }
+        serverLevel.sendParticles(BossParticleTheme.RIFT.body(),
+                core.x, core.y, core.z, 16, 2.2D, 2.8D, 2.2D, 0.06D);
     }
 
     private static int decrement(int value) {
@@ -1293,5 +1394,9 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
             this.lifetime = lifetime;
             this.delay = delay;
         }
+    }
+    @Override
+    public int musicStage() {
+        return Math.max(0, Math.min(2, this.phaseGateStage));
     }
 }

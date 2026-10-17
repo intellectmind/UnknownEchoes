@@ -5,6 +5,22 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public class ClientConfig {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
+    public static final ModConfigSpec.DoubleValue DISASTER_SCREEN_SHAKE = BUILDER
+            .comment("Disaster camera shake strength; 0 disables camera movement")
+            .defineInRange("disaster_screen_shake", 0.65D, 0.0D, 1.0D);
+
+    public static final ModConfigSpec.BooleanValue DISASTER_SCREEN_EFFECTS = BUILDER
+            .comment("Show disaster edge pulses and local storm fog")
+            .define("disaster_screen_effects", true);
+
+    public static final ModConfigSpec.DoubleValue DISASTER_VISUAL_DENSITY = BUILDER
+            .comment("Density of volumetric disaster clouds and orbiting rock fragments; warning boundaries remain visible")
+            .defineInRange("disaster_visual_density", 1.0D, 0.0D, 1.0D);
+
+    public static final ModConfigSpec.DoubleValue DISASTER_SOUND_VOLUME = BUILDER
+            .comment("Volume of disaster wind, cracks and delayed rumble; 0 mutes disaster audio")
+            .defineInRange("disaster_sound_volume", 0.85D, 0.0D, 1.0D);
+
     public static final ModConfigSpec.BooleanValue ENABLE_ECHO_PARTICLES = BUILDER
             .comment("Show echo particles (double jump, beacon activation)")
             .define("enable_echo_particles", true);

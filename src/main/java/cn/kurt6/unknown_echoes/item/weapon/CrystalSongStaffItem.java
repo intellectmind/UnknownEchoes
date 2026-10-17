@@ -1,10 +1,9 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -39,7 +38,8 @@ public class CrystalSongStaffItem extends EchoMeleeWeaponItem implements WeaponS
         if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
             this.activateSkill(serverLevel, serverPlayer, stack, hand);
         }
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        // 技能耐久或损坏回调可能更换手持物，按当前栈完成原版使用收尾。
+        return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide());
     }
 
     @Override
@@ -78,8 +78,8 @@ public class CrystalSongStaffItem extends EchoMeleeWeaponItem implements WeaponS
             WeaponFx.hitMark(level, target, WeaponFxTheme.CRYSTAL_SONG_STAFF);
         }
         WeaponFx.groundRing(level, player, WeaponFxTheme.CRYSTAL_SONG_STAFF, 7.0D);
-        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE,
-                SoundSource.PLAYERS, 1.1F, 0.8F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_CRYSTAL_SONG_STAFF_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
     }
@@ -144,8 +144,11 @@ public class CrystalSongStaffItem extends EchoMeleeWeaponItem implements WeaponS
                 }
             }
         }
-        level.sendParticles(ParticleTypes.SONIC_BOOM, impact.x, impact.y, impact.z, 1, 0, 0, 0, 0);
-        level.playSound(null, BlockPos.containing(impact),
-                SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, 1.0F, 1.5F);
+        WeaponFx.releaseBurst(level, impact, WeaponFxTheme.CRYSTAL_SONG_STAFF, .75D);
+        // 末端可能超出可听距离；施法者只收近身反馈，旁观者仍听末端定位声。
+        level.playSound(player, impact.x, impact.y, impact.z,
+                ModSounds.WEAPON_CRYSTAL_SONG_STAFF_PRIMARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+        player.playNotifySound(ModSounds.WEAPON_CRYSTAL_SONG_STAFF_PRIMARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 }

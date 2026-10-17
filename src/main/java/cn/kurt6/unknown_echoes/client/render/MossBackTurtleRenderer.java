@@ -6,11 +6,13 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
-/** 苔背龟 GeckoLib 渲染器(无发光层,沼泽生物保持低调)。 */
+/** 苔背龟渲染器，背苔与甲片中的回响纹使用独立发光遮罩。 */
 public class MossBackTurtleRenderer extends GeoEntityRenderer<MossBackTurtle> {
 
     public MossBackTurtleRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("moss_back_turtle"), true));
         this.shadowRadius = 0.5F;
+        addRenderLayer(new EchoGlowLayer<>(this,
+                UnknownEchoes.id("textures/entity/moss_back_turtle_glowing.png")));
     }
 }

@@ -63,9 +63,15 @@ public class ChimeEchoCoreBlock extends BaseEntityBlock {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!state.getValue(ACTIVE)
-                && level.getBlockEntity(pos) instanceof ChimeEchoCoreBlockEntity core) {
-            core.startDemo(player instanceof ServerPlayer serverPlayer ? serverPlayer : null);
+        if (!level.hasChunkAt(pos) || level.getBlockState(pos) != state) {
+            return InteractionResult.CONSUME;
+        }
+        if (state.getValue(ACTIVE)) {
+            PuzzleSolveEffects.recoverSeals(level, pos, state);
+        } else if (level.getBlockEntity(pos) instanceof ChimeEchoCoreBlockEntity core) {
+            if (!core.tryFinishPending()) {
+                core.startDemo(player instanceof ServerPlayer serverPlayer ? serverPlayer : null);
+            }
         }
         return InteractionResult.CONSUME;
     }

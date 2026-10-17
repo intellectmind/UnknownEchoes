@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -71,8 +72,8 @@ public class JournalEvents {
             LOCATION_SCANS.put(player.getUUID(), scan);
         }
 
-        for (ResourceLocation id : scan.structureIds()) {
-            JournalManager.recordStructure(player, id, pos);
+        for (StructureSite site : scan.sites()) {
+            JournalManager.recordStructureSite(player, site.id(), site.bounds().getCenter(), site.bounds());
         }
         scan.biomeId().ifPresent(id -> JournalManager.recordBiome(player, id));
     }
@@ -88,24 +89,25 @@ public class JournalEvents {
 
     private static LocationScan queryLocation(ServerLevel level, BlockPos pos, long gameTime) {
         var structureRegistry = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
-        List<ResourceLocation> structureIds = LoadedStructureLookup
-                .structuresAt(level, pos, structure -> {
+        List<StructureSite> sites = LoadedStructureLookup
+                .sitesAt(level, pos, structure -> {
                     ResourceLocation id = structureRegistry.getKey(structure);
                     return id != null && id.getNamespace().equals(UnknownEchoes.MODID);
                 })
                 .stream()
-                .map(structureRegistry::getKey)
-                .filter(java.util.Objects::nonNull)
+                .map(site -> new StructureSite(structureRegistry.getKey(site.structure()), site.bounds()))
                 .toList();
         Optional<ResourceLocation> biomeId = level.getBiome(pos)
                 .unwrapKey()
                 .map(ResourceKey::location)
                 .filter(id -> id.getNamespace().equals(UnknownEchoes.MODID));
-        return new LocationScan(level.dimension(), pos.immutable(), gameTime, structureIds, biomeId);
+        return new LocationScan(level.dimension(), pos.immutable(), gameTime, sites, biomeId);
     }
 
+    private record StructureSite(ResourceLocation id, BoundingBox bounds) { }
+
     private record LocationScan(ResourceKey<Level> dimension, BlockPos pos, long refreshedAt,
-                                List<ResourceLocation> structureIds,
+                                List<StructureSite> sites,
                                 Optional<ResourceLocation> biomeId) {
     }
 

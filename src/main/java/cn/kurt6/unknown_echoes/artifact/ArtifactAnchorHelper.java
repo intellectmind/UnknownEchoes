@@ -13,8 +13,11 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -24,6 +27,7 @@ import net.neoforged.neoforge.common.Tags;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 final class ArtifactAnchorHelper {
     private static final int BIND_RANGE = 6;
@@ -38,24 +42,50 @@ final class ArtifactAnchorHelper {
     }
 
     static BindResult bindDimensionAnchor(ServerPlayer player) {
+        ArtifactType type = ArtifactType.DIMENSION_ANCHOR;
+        BindingSnapshot snapshot = bindingSnapshot(player, type);
+        ServerLevel source = snapshot.source;
+        if (!isBindingCurrent(player, snapshot)) {
+            return new BindResult(Failure.INVALID_ANCHOR);
+        }
         if (!isSupportedDimension(player.level().dimension())) {
             return new BindResult(Failure.UNSUPPORTED_DIMENSION);
         }
         BlockPos origin = player.blockPosition();
         BlockPos nearest = null;
         double nearestDistance = Double.MAX_VALUE;
+        int minChunkX = (origin.getX() - BIND_RANGE) >> 4;
+        int minChunkZ = (origin.getZ() - BIND_RANGE) >> 4;
+        int chunksZ = ((origin.getZ() + BIND_RANGE) >> 4) - minChunkZ + 1;
+        int chunksX = ((origin.getX() + BIND_RANGE) >> 4) - minChunkX + 1;
+        LevelChunk[] chunks = new LevelChunk[chunksX * chunksZ];
+        boolean[] checked = new boolean[chunks.length];
         for (BlockPos cursor : BlockPos.betweenClosed(origin.offset(-BIND_RANGE, -3, -BIND_RANGE),
                 origin.offset(BIND_RANGE, 3, BIND_RANGE))) {
-            if (!player.level().hasChunkAt(cursor)) {
+            if (!isBindingCurrent(player, snapshot)) {
+                return new BindResult(Failure.INVALID_ANCHOR);
+            }
+            double distance = cursor.distSqr(origin);
+            if (source.isOutsideBuildHeight(cursor) || distance > BIND_RANGE * BIND_RANGE) {
                 continue;
             }
-            BlockState state = player.level().getBlockState(cursor);
-            boolean authorized = cursor.distSqr(origin) <= BIND_RANGE * BIND_RANGE
-                    && isActivatedForPlayer(player, player.serverLevel(), cursor, state);
+            int index = ((cursor.getX() >> 4) - minChunkX) * chunksZ + (cursor.getZ() >> 4) - minChunkZ;
+            if (!checked[index]) {
+                chunks[index] = source.getChunkSource().getChunkNow(cursor.getX() >> 4, cursor.getZ() >> 4);
+                checked[index] = true;
+            }
+            LevelChunk chunk = chunks[index];
+            if (chunk == null) {
+                continue;
+            }
+            BlockState state = chunk.getBlockState(cursor);
+            if (!isBindingCurrent(player, snapshot)) {
+                return new BindResult(Failure.INVALID_ANCHOR);
+            }
+            boolean authorized = isActivatedForPlayer(player, source, cursor, state);
             if (!authorized) {
                 continue;
             }
-            double distance = cursor.distSqr(origin);
             if (distance < nearestDistance) {
                 nearest = cursor.immutable();
                 nearestDistance = distance;
@@ -64,21 +94,29 @@ final class ArtifactAnchorHelper {
         if (nearest == null) {
             return new BindResult(Failure.NO_ANCHOR);
         }
-        if (hasBossNearby(player.serverLevel(), nearest)) {
+        if (!isBindingCurrent(player, snapshot)
+                || !isValidDimensionAnchor(player, source, nearest) || !isBindingCurrent(player, snapshot)) {
+            return new BindResult(Failure.INVALID_ANCHOR);
+        }
+        if (hasBossNearby(source, nearest)) {
             return new BindResult(Failure.BOSS_NEARBY);
         }
-        ArtifactType type = ArtifactType.DIMENSION_ANCHOR;
-        List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), false);
+        List<Anchor> anchors = boundAnchors(snapshot.binding, false);
         boolean dual = ArtifactManager.getData(player).getLevel(type) >= 2
                 && "dual_anchor".equals(ArtifactManager.getData(player).getTuning(type));
-        anchors = mergeAnchor(anchors, new Anchor(player.level().dimension(), nearest, 0L), dual);
-        ArtifactManager.getData(player).setBinding(type, encodeBoundAnchors(anchors));
-        ArtifactManager.syncToClient(player);
-        return new BindResult(Failure.NONE);
+        anchors = mergeAnchor(anchors, new Anchor(source.dimension(), nearest, 0L), dual);
+        return new BindResult(writeBindingIfCurrent(player, snapshot, encodeBoundAnchors(anchors))
+                ? Failure.NONE : Failure.INVALID_ANCHOR);
     }
 
     /** 记录当前坐标；身处目标维度不等于获得返回权限，传送时仍会重新校验进度。 */
     static BindResult bindRiftAnchor(ServerPlayer player) {
+        ArtifactType type = ArtifactType.RIFT_ANCHOR;
+        BindingSnapshot snapshot = bindingSnapshot(player, type);
+        BooleanSupplier canContinue = () -> isBindingCurrent(player, snapshot);
+        if (!canContinue.getAsBoolean()) {
+            return new BindResult(Failure.INVALID_ANCHOR);
+        }
         BlockPos position = player.blockPosition();
         if (!isSupportedDimension(player.level().dimension())) {
             return new BindResult(Failure.UNSUPPORTED_DIMENSION);
@@ -86,20 +124,18 @@ final class ArtifactAnchorHelper {
         if (hasBossNearby(player.serverLevel(), position)) {
             return new BindResult(Failure.BOSS_NEARBY);
         }
-        if (safePosition(player.serverLevel(), player, player.getBoundingBox(), position) == null) {
+        if (safePosition(snapshot.source, player, player.getBoundingBox(), position, canContinue) == null) {
             return new BindResult(Failure.UNSAFE_POSITION);
         }
-        ArtifactType type = ArtifactType.RIFT_ANCHOR;
-        List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), true);
+        List<Anchor> anchors = boundAnchors(snapshot.binding, true);
         long now = ArtifactManager.gameTime(player);
         normalizeRiftAnchors(player, anchors, now);
         boolean twin = ArtifactManager.getData(player).getLevel(type) >= 2
                 && "twin_spike".equals(ArtifactManager.getData(player).getTuning(type));
-        anchors = mergeAnchor(anchors, new Anchor(player.level().dimension(), position.immutable(),
+        anchors = mergeAnchor(anchors, new Anchor(snapshot.source.dimension(), position.immutable(),
                 maximumRiftExpiry(player, now)), twin);
-        ArtifactManager.getData(player).setBinding(type, encodeBoundAnchors(anchors));
-        ArtifactManager.syncToClient(player);
-        return new BindResult(Failure.NONE);
+        return new BindResult(writeBindingIfCurrent(player, snapshot, encodeBoundAnchors(anchors))
+                ? Failure.NONE : Failure.INVALID_ANCHOR);
     }
 
     static boolean hasRiftBinding(ServerPlayer player) {
@@ -110,6 +146,10 @@ final class ArtifactAnchorHelper {
         changed |= normalizeAnchorCount(player, type, anchors);
         if (changed) {
             persistBinding(player, type, anchors);
+            // 同步中可能发生撤销或重绑；返回当前数据的判断，不把旧结果交给自动绑定入口。
+            anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), true);
+            normalizeRiftAnchors(player, anchors, ArtifactManager.gameTime(player));
+            normalizeAnchorCount(player, type, anchors);
         }
         return !anchors.isEmpty();
     }
@@ -132,7 +172,11 @@ final class ArtifactAnchorHelper {
 
     static ResolveResult resolveDimensionAnchor(ServerPlayer player) {
         ArtifactType type = ArtifactType.DIMENSION_ANCHOR;
-        List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), false);
+        BindingSnapshot snapshot = bindingSnapshot(player, type);
+        if (!isBindingCurrent(player, snapshot)) {
+            return new ResolveResult(null, Failure.INVALID_ANCHOR);
+        }
+        List<Anchor> anchors = boundAnchors(snapshot.binding, false);
         boolean changed = normalizeAnchorCount(player, type, anchors);
         Failure failure = Failure.INVALID_ANCHOR;
         for (int index = 0; index < anchors.size();) {
@@ -149,17 +193,39 @@ final class ArtifactAnchorHelper {
                 failure = Failure.INVALID_ANCHOR;
                 continue;
             }
-            prepareChunks(targetLevel, anchor.pos, SAFE_SEARCH_RADIUS);
+            BooleanSupplier canContinue = () -> isBindingCurrent(player, snapshot)
+                    && player.server.getLevel(anchor.dimension) == targetLevel
+                    && canEnterBoundDimension(player, anchor.dimension);
+            if (!prepareChunks(targetLevel, player, anchor.pos, SAFE_SEARCH_RADIUS, canContinue)) {
+                return new ResolveResult(null, Failure.INVALID_ANCHOR);
+            }
+            // 后续区块的准备可能处理卸载任务；暂不可读不能当作信标已拆除。
+            if (!targetLevel.isOutsideBuildHeight(anchor.pos)
+                    && targetLevel.getChunkSource().getChunkNow(anchor.pos.getX() >> 4, anchor.pos.getZ() >> 4) == null) {
+                failure = Failure.UNSAFE_POSITION;
+                index++;
+                continue;
+            }
             if (!isValidDimensionAnchor(player, targetLevel, anchor.pos)) {
+                if (!canContinue.getAsBoolean()) {
+                    return new ResolveResult(null, Failure.INVALID_ANCHOR);
+                }
                 anchors.remove(index);
                 changed = true;
                 failure = Failure.INVALID_ANCHOR;
                 continue;
             }
-            ResolveResult result = resolvePrepared(player, targetLevel, anchor);
+            ResolveResult result = resolvePrepared(player, targetLevel, anchor, canContinue);
+            if (!canContinue.getAsBoolean()) {
+                return new ResolveResult(null, Failure.INVALID_ANCHOR);
+            }
             if (result.destination != null) {
-                if (changed) {
-                    persistBinding(player, type, anchors);
+                if (changed && !writeBindingIfCurrent(player, snapshot, encodeBoundAnchors(anchors))) {
+                    return new ResolveResult(null, Failure.INVALID_ANCHOR);
+                }
+                if (player.server.getLevel(anchor.dimension) != targetLevel
+                        || !canEnterBoundDimension(player, anchor.dimension)) {
+                    return new ResolveResult(null, Failure.INVALID_ANCHOR);
                 }
                 return result;
             }
@@ -167,7 +233,7 @@ final class ArtifactAnchorHelper {
             index++;
         }
         if (changed) {
-            persistBinding(player, type, anchors);
+            writeBindingIfCurrent(player, snapshot, encodeBoundAnchors(anchors));
         }
         return new ResolveResult(null, failure);
     }
@@ -196,7 +262,11 @@ final class ArtifactAnchorHelper {
 
     static ResolveResult resolveRiftAnchor(ServerPlayer player) {
         ArtifactType type = ArtifactType.RIFT_ANCHOR;
-        List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), true);
+        BindingSnapshot snapshot = bindingSnapshot(player, type);
+        if (!isBindingCurrent(player, snapshot)) {
+            return new ResolveResult(null, Failure.INVALID_ANCHOR);
+        }
+        List<Anchor> anchors = boundAnchors(snapshot.binding, true);
         long now = ArtifactManager.gameTime(player);
         int beforePrune = anchors.size();
         boolean changed = normalizeRiftAnchors(player, anchors, now);
@@ -217,11 +287,23 @@ final class ArtifactAnchorHelper {
                 failure = Failure.INVALID_ANCHOR;
                 continue;
             }
-            prepareChunks(targetLevel, anchor.pos, SAFE_SEARCH_RADIUS);
-            ResolveResult result = resolvePrepared(player, targetLevel, anchor);
+            BooleanSupplier canContinue = () -> isBindingCurrent(player, snapshot)
+                    && player.server.getLevel(anchor.dimension) == targetLevel
+                    && canEnterBoundDimension(player, anchor.dimension) && isRiftExpiryCurrent(player, anchor.expiry);
+            if (!prepareChunks(targetLevel, player, anchor.pos, SAFE_SEARCH_RADIUS, canContinue)) {
+                return new ResolveResult(null, Failure.INVALID_ANCHOR);
+            }
+            ResolveResult result = resolvePrepared(player, targetLevel, anchor, canContinue);
+            if (!canContinue.getAsBoolean()) {
+                return new ResolveResult(null, Failure.INVALID_ANCHOR);
+            }
             if (result.destination != null) {
-                if (changed) {
-                    persistBinding(player, type, anchors);
+                if (changed && !writeBindingIfCurrent(player, snapshot, encodeBoundAnchors(anchors))) {
+                    return new ResolveResult(null, Failure.INVALID_ANCHOR);
+                }
+                if (player.server.getLevel(anchor.dimension) != targetLevel
+                        || !canEnterBoundDimension(player, anchor.dimension) || !isRiftExpiryCurrent(player, anchor.expiry)) {
+                    return new ResolveResult(null, Failure.INVALID_ANCHOR);
                 }
                 return result;
             }
@@ -229,7 +311,7 @@ final class ArtifactAnchorHelper {
             index++;
         }
         if (changed) {
-            persistBinding(player, type, anchors);
+            writeBindingIfCurrent(player, snapshot, encodeBoundAnchors(anchors));
         }
         return new ResolveResult(null, failure);
     }
@@ -275,11 +357,21 @@ final class ArtifactAnchorHelper {
 
     /** 只在传送成功后提交双锚轮换，避免失败请求改变下次目的地。 */
     static void commitUse(ServerPlayer player, ArtifactType type, Destination destination) {
-        List<Anchor> anchors = boundAnchors(ArtifactManager.getData(player).getBinding(type), type == ArtifactType.RIFT_ANCHOR);
-        if (normalizeAnchorCount(player, type, anchors)) {
-            persistBinding(player, type, anchors);
+        BindingSnapshot snapshot = bindingSnapshot(player, type);
+        if (!isBindingCurrent(player, snapshot) || !canEnterBoundDimension(player, destination.anchorDimension)
+                || type == ArtifactType.RIFT_ANCHOR && !isRiftExpiryCurrent(player, destination.expiry)) {
+            return;
         }
-        if (!supportsMultipleAnchors(player, type)) {
+        List<Anchor> anchors = boundAnchors(snapshot.binding, type == ArtifactType.RIFT_ANCHOR);
+        if (normalizeAnchorCount(player, type, anchors)) {
+            String normalized = encodeBoundAnchors(anchors);
+            if (!writeBindingIfCurrent(player, snapshot, normalized)) {
+                return;
+            }
+            snapshot = snapshot.withBinding(normalized);
+        }
+        if (!supportsMultipleAnchors(player, type) || !canEnterBoundDimension(player, destination.anchorDimension)
+                || type == ArtifactType.RIFT_ANCHOR && !isRiftExpiryCurrent(player, destination.expiry)) {
             return;
         }
         for (int index = 0; index < anchors.size(); index++) {
@@ -287,31 +379,46 @@ final class ArtifactAnchorHelper {
             if (anchor.dimension.equals(destination.anchorDimension)
                     && anchor.pos.equals(destination.anchorPos)
                     && anchor.expiry == destination.expiry) {
-                rotateAfterUse(player, type, anchors, index);
+                rotateAfterUse(player, snapshot, anchors, index);
                 return;
             }
         }
     }
 
-    private static ResolveResult resolvePrepared(ServerPlayer player, ServerLevel targetLevel, Anchor anchor) {
-        if (hasBossNearby(player.serverLevel(), player.blockPosition())
-                || hasBossNearby(targetLevel, anchor.pos)) {
+    private static ResolveResult resolvePrepared(ServerPlayer player, ServerLevel targetLevel, Anchor anchor,
+                                                 BooleanSupplier canContinue) {
+        if (!canContinue.getAsBoolean()) {
+            return new ResolveResult(null, Failure.INVALID_ANCHOR);
+        }
+        if (hasBossNearby(player.serverLevel(), player.blockPosition())) {
             return new ResolveResult(null, Failure.BOSS_NEARBY);
         }
-        Vec3 safe = findSafeNear(targetLevel, player, anchor.pos);
+        if (!canContinue.getAsBoolean()) {
+            return new ResolveResult(null, Failure.INVALID_ANCHOR);
+        }
+        if (hasBossNearby(targetLevel, anchor.pos)) {
+            return new ResolveResult(null, Failure.BOSS_NEARBY);
+        }
+        Vec3 safe = findSafeNear(targetLevel, player, anchor.pos, canContinue);
         if (safe == null) {
             return new ResolveResult(null, Failure.UNSAFE_POSITION);
         }
         if (hasBossNearby(targetLevel, BlockPos.containing(safe))) {
             return new ResolveResult(null, Failure.BOSS_NEARBY);
         }
+        if (!canContinue.getAsBoolean()) {
+            return new ResolveResult(null, Failure.INVALID_ANCHOR);
+        }
         return new ResolveResult(new Destination(targetLevel, safe, anchor.expiry,
                 anchor.dimension, anchor.pos), Failure.NONE);
     }
 
     private static boolean isValidDimensionAnchor(ServerPlayer player, ServerLevel level, BlockPos pos) {
-        BlockState state = level.getBlockState(pos);
-        return isActivatedForPlayer(player, level, pos, state);
+        if (level.isOutsideBuildHeight(pos)) {
+            return false;
+        }
+        LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk != null && isActivatedForPlayer(player, level, pos, chunk.getBlockState(pos));
     }
 
     private static boolean isActivatedForPlayer(ServerPlayer player, ServerLevel level,
@@ -347,9 +454,10 @@ final class ArtifactAnchorHelper {
     }
 
     @Nullable
-    private static Vec3 findSafeNear(ServerLevel level, ServerPlayer player, BlockPos anchor) {
+    private static Vec3 findSafeNear(ServerLevel level, ServerPlayer player, BlockPos anchor,
+                                     BooleanSupplier canContinue) {
         AABB original = player.getBoundingBox();
-        Vec3 exact = safePosition(level, player, original, anchor);
+        Vec3 exact = safePosition(level, player, original, anchor, canContinue);
         if (exact != null) {
             return exact;
         }
@@ -360,8 +468,11 @@ final class ArtifactAnchorHelper {
                         continue;
                     }
                     for (int dy : new int[]{1, 0, 2, -1}) {
+                        if (!canContinue.getAsBoolean()) {
+                            return null;
+                        }
                         BlockPos feet = anchor.offset(dx, dy, dz);
-                        Vec3 target = safePosition(level, player, original, feet);
+                        Vec3 target = safePosition(level, player, original, feet, canContinue);
                         if (target != null) {
                             return target;
                         }
@@ -373,16 +484,36 @@ final class ArtifactAnchorHelper {
     }
 
     @Nullable
-    private static Vec3 safePosition(ServerLevel level, ServerPlayer player, AABB original, BlockPos feet) {
+    private static Vec3 safePosition(ServerLevel level, ServerPlayer player, AABB original, BlockPos feet,
+                                      BooleanSupplier canContinue) {
         Vec3 target = new Vec3(feet.getX() + 0.5D, feet.getY(), feet.getZ() + 0.5D);
         AABB moved = original.move(target.subtract(player.position()));
-        return level.getWorldBorder().isWithinBounds(moved)
-                && level.noCollision(player, moved)
-                && Block.canSupportCenter(level, feet.below(), Direction.UP) ? target : null;
+        return canContinue.getAsBoolean() && level.getWorldBorder().isWithinBounds(moved)
+                && hasReadableChunks(level, Mth.floor(moved.minX - 1.0e-7D) - 1,
+                Mth.floor(moved.minZ - 1.0e-7D) - 1, Mth.floor(moved.maxX + 1.0e-7D) + 1,
+                Mth.floor(moved.maxZ + 1.0e-7D) + 1)
+                && canContinue.getAsBoolean() && level.noCollision(player, moved)
+                && canContinue.getAsBoolean() && Block.canSupportCenter(level, feet.below(), Direction.UP)
+                && canContinue.getAsBoolean() ? target : null;
+    }
+
+    private static boolean hasReadableChunks(ServerLevel level, int minX, int minZ, int maxX, int maxZ) {
+        for (int x = minX >> 4; x <= maxX >> 4; x++) {
+            for (int z = minZ >> 4; z <= maxZ >> 4; z++) {
+                if (level.getChunkSource().getChunkNow(x, z) == null) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     static boolean isDestinationCurrent(ServerPlayer player, ArtifactType type,
                                         Destination destination) {
+        BindingSnapshot snapshot = bindingSnapshot(player, type);
+        if (!isBindingCurrent(player, snapshot)) {
+            return false;
+        }
         if (!canEnterBoundDimension(player, destination.anchorDimension)
                 || player.server.getLevel(destination.anchorDimension) != destination.level) {
             return false;
@@ -390,14 +521,26 @@ final class ArtifactAnchorHelper {
 
         boolean rift = type == ArtifactType.RIFT_ANCHOR;
         List<Anchor> anchors = boundAnchors(
-                ArtifactManager.getData(player).getBinding(type), rift);
+                snapshot.binding, rift);
         boolean changed = normalizeAnchorCount(player, type, anchors);
         if (rift) {
             long now = ArtifactManager.gameTime(player);
             changed |= normalizeRiftAnchors(player, anchors, now);
         }
         if (changed) {
-            persistBinding(player, type, anchors);
+            String normalized = encodeBoundAnchors(anchors);
+            if (!writeBindingIfCurrent(player, snapshot, normalized)) {
+                return false;
+            }
+            snapshot = snapshot.withBinding(normalized);
+        }
+        BindingSnapshot current = snapshot;
+        BooleanSupplier canContinue = () -> isBindingCurrent(player, current)
+                && canEnterBoundDimension(player, destination.anchorDimension)
+                && player.server.getLevel(destination.anchorDimension) == destination.level
+                && (!rift || isRiftExpiryCurrent(player, destination.expiry));
+        if (!canContinue.getAsBoolean()) {
+            return false;
         }
         boolean stillBound = anchors.stream().anyMatch(anchor ->
                 anchor.dimension.equals(destination.anchorDimension)
@@ -409,34 +552,49 @@ final class ArtifactAnchorHelper {
         }
 
         BlockPos feet = BlockPos.containing(destination.target);
-        if (hasBossNearby(player.serverLevel(), player.blockPosition())
-                || hasBossNearby(destination.level, destination.anchorPos)
-                || hasBossNearby(destination.level, feet)) {
+        if (!canContinue.getAsBoolean() || hasBossNearby(player.serverLevel(), player.blockPosition())
+                || !canContinue.getAsBoolean() || hasBossNearby(destination.level, destination.anchorPos)
+                || !canContinue.getAsBoolean() || hasBossNearby(destination.level, feet)) {
             return false;
         }
         AABB original = player.getBoundingBox();
-        return safePosition(destination.level, player, original, feet) != null;
+        return safePosition(destination.level, player, original, feet, canContinue) != null;
+    }
+
+    private static boolean isRiftExpiryCurrent(ServerPlayer player, long expiry) {
+        long now = ArtifactManager.gameTime(player);
+        return expiry > now && expiry <= maximumRiftExpiry(player, now);
     }
 
     private static boolean hasBossNearby(ServerLevel level, BlockPos pos) {
         AABB area = new AABB(pos).inflate(BOSS_LOCK_RANGE);
-        return !level.getEntitiesOfClass(LivingEntity.class, area,
+        List<LivingEntity> bosses = new ArrayList<>(1);
+        level.getEntities(EntityTypeTest.forClass(LivingEntity.class), area,
                 entity -> entity.isAlive() && (entity.getType().is(ModEntityTags.ECHO_BOSSES)
                         || entity.getType().is(Tags.EntityTypes.BOSSES))
                         && entity.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D,
-                        pos.getZ() + 0.5D) <= BOSS_LOCK_RANGE * BOSS_LOCK_RANGE).isEmpty();
+                        pos.getZ() + 0.5D) <= BOSS_LOCK_RANGE * BOSS_LOCK_RANGE, bosses, 1);
+        return !bosses.isEmpty();
     }
 
-    private static void prepareChunks(ServerLevel level, BlockPos center, int radiusBlocks) {
-        int minChunkX = (center.getX() - radiusBlocks) >> 4;
-        int maxChunkX = (center.getX() + radiusBlocks) >> 4;
-        int minChunkZ = (center.getZ() - radiusBlocks) >> 4;
-        int maxChunkZ = (center.getZ() + radiusBlocks) >> 4;
+    private static boolean prepareChunks(ServerLevel level, ServerPlayer player, BlockPos center, int radiusBlocks,
+                                          BooleanSupplier canContinue) {
+        AABB footprint = player.getBoundingBox().move(new Vec3(center.getX() + 0.5D, center.getY(),
+                center.getZ() + 0.5D).subtract(player.position())).inflate(radiusBlocks, 0.0D, radiusBlocks);
+        // 原生 BlockCollisions 会读取身体边缘外一格；搜索半径还需加上玩家的实际体积。
+        int minChunkX = (Mth.floor(footprint.minX - 1.0e-7D) - 1) >> 4;
+        int maxChunkX = (Mth.floor(footprint.maxX + 1.0e-7D) + 1) >> 4;
+        int minChunkZ = (Mth.floor(footprint.minZ - 1.0e-7D) - 1) >> 4;
+        int maxChunkZ = (Mth.floor(footprint.maxZ + 1.0e-7D) + 1) >> 4;
         for (int x = minChunkX; x <= maxChunkX; x++) {
             for (int z = minChunkZ; z <= maxChunkZ; z++) {
                 level.getChunk(x, z);
+                if (!canContinue.getAsBoolean()) {
+                    return false;
+                }
             }
         }
+        return true;
     }
 
     private static String encode(ResourceKey<Level> dimension, BlockPos pos, long expiry) {
@@ -486,7 +644,7 @@ final class ArtifactAnchorHelper {
         }
         anchors.add(next);
         if (anchors.size() > MAX_BOUND_ANCHORS) {
-            anchors.remove(0);
+            anchors.subList(0, anchors.size() - MAX_BOUND_ANCHORS).clear();
         }
         return anchors;
     }
@@ -512,15 +670,47 @@ final class ArtifactAnchorHelper {
         };
     }
 
-    private static void rotateAfterUse(ServerPlayer player, ArtifactType type,
+    private static void rotateAfterUse(ServerPlayer player, BindingSnapshot snapshot,
                                        List<Anchor> anchors, int index) {
         if (anchors.size() <= 1 || index < 0 || index >= anchors.size()) {
             return;
         }
         Anchor used = anchors.remove(index);
         anchors.add(used);
-        ArtifactManager.getData(player).setBinding(type, encodeBoundAnchors(anchors));
+        writeBindingIfCurrent(player, snapshot, encodeBoundAnchors(anchors));
+    }
+
+    private static BindingSnapshot bindingSnapshot(ServerPlayer player, ArtifactType type) {
+        ArtifactData data = ArtifactManager.getData(player);
+        return new BindingSnapshot(type, data, data.getBinding(type), data.getSerial(type),
+                data.getLevel(type), data.getTuning(type), player.serverLevel());
+    }
+
+    private static boolean isBindingCurrent(ServerPlayer player, BindingSnapshot snapshot) {
+        ArtifactData data = snapshot.data;
+        return player.isAlive() && !player.isRemoved() && !player.isSpectator() && !player.hasDisconnected()
+                && player.level() == snapshot.source
+                && player.server.getPlayerList().getPlayer(player.getUUID()) == player
+                && player.server.getLevel(snapshot.source.dimension()) == snapshot.source
+                && ArtifactManager.isEnabled(snapshot.type) && ArtifactManager.getData(player) == data
+                && data.isClaimed(snapshot.type) && data.getSerial(snapshot.type) == snapshot.serial
+                && data.getLevel(snapshot.type) == snapshot.level
+                && data.getTuning(snapshot.type).equals(snapshot.tuning)
+                && data.getBinding(snapshot.type).equals(snapshot.binding);
+    }
+
+    /** 区块等待和同步能执行其他任务；只提交仍属于当前会话和绑定的数据。 */
+    private static boolean writeBindingIfCurrent(ServerPlayer player, BindingSnapshot snapshot, String binding) {
+        if (!isBindingCurrent(player, snapshot)) {
+            return false;
+        }
+        snapshot.data.setBinding(snapshot.type, binding);
+        BindingSnapshot written = snapshot.withBinding(binding);
+        if (!isBindingCurrent(player, written)) {
+            return false;
+        }
         ArtifactManager.syncToClient(player);
+        return isBindingCurrent(player, written);
     }
 
     private static void persistBinding(ServerPlayer player, ArtifactType type, List<Anchor> anchors) {
@@ -597,5 +787,12 @@ final class ArtifactAnchorHelper {
     }
 
     private record Anchor(ResourceKey<Level> dimension, BlockPos pos, long expiry) {
+    }
+
+    private record BindingSnapshot(ArtifactType type, ArtifactData data, String binding, int serial,
+                                   int level, String tuning, ServerLevel source) {
+        private BindingSnapshot withBinding(String value) {
+            return new BindingSnapshot(type, data, value, serial, level, tuning, source);
+        }
     }
 }

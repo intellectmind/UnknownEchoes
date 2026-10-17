@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:item/bow_pulling_1",
+  "parent": "unknown_echoes:item/dream_bloom_bow",
   "textures": {
     "layer0": "unknown_echoes:item/dream_bloom_bow_pulling_1"
   }

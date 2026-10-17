@@ -6,9 +6,11 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /** 客户端 → 服务端:神器页操作请求(领取/复领、升级、调谐)。 */
-public record ArtifactActionPayload(int action, String artifactId, String word, BlockPos stationPos)
+public record ArtifactActionPayload(int action, String artifactId, String word, BlockPos stationPos,
+                                    ResourceLocation dimension)
         implements CustomPacketPayload {
 
     public static final int ACTION_CLAIM = 0;
@@ -26,6 +28,7 @@ public record ArtifactActionPayload(int action, String artifactId, String word, 
                     ByteBufCodecs.stringUtf8(MAX_ARTIFACT_ID_LENGTH), ArtifactActionPayload::artifactId,
                     ByteBufCodecs.stringUtf8(MAX_TUNING_WORD_LENGTH), ArtifactActionPayload::word,
                     BlockPos.STREAM_CODEC, ArtifactActionPayload::stationPos,
+                    ResourceLocation.STREAM_CODEC, ArtifactActionPayload::dimension,
                     ArtifactActionPayload::new);
 
     @Override

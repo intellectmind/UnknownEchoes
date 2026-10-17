@@ -68,6 +68,8 @@
     "unknown_echoes:reef_limestone_brick_wall",
     "unknown_echoes:silent_mudstone_brick_stairs",
     "unknown_echoes:silent_mudstone_brick_slab",
-    "unknown_echoes:silent_mudstone_brick_wall"
+    "unknown_echoes:silent_mudstone_brick_wall",
+    "unknown_echoes:folded_slate_tiles",
+    "unknown_echoes:folded_slate_relief"
   ]
 }

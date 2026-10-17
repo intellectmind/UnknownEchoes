@@ -10,6 +10,8 @@ import cn.kurt6.unknown_echoes.registry.ModCreativeTabs;
 import cn.kurt6.unknown_echoes.registry.ModDataComponents;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModItems;
+import cn.kurt6.unknown_echoes.registry.ModFeatures;
+import cn.kurt6.unknown_echoes.registry.ModLootModifiers;
 import cn.kurt6.unknown_echoes.registry.ModRecipeSerializers;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
@@ -29,6 +31,7 @@ public class UnknownEchoes {
     public UnknownEchoes(IEventBus modEventBus, ModContainer modContainer) {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
+        ModFeatures.FEATURES.register(modEventBus);
         ModEntities.ENTITY_TYPES.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
@@ -37,7 +40,10 @@ public class UnknownEchoes {
         ModStructures.STRUCTURE_TYPES.register(modEventBus);
         ModStructures.STRUCTURE_PIECE_TYPES.register(modEventBus);
         ModDataComponents.DATA_COMPONENT_TYPES.register(modEventBus);
+        cn.kurt6.unknown_echoes.registry.ModMenus.MENUS.register(modEventBus);
+        cn.kurt6.unknown_echoes.registry.ModParticleEffects.EFFECTS.register(modEventBus);
         ModRecipeSerializers.RECIPE_SERIALIZERS.register(modEventBus);
+        ModLootModifiers.LOOT_MODIFIERS.register(modEventBus);
         cn.kurt6.unknown_echoes.registry.ModArmorMaterials.ARMOR_MATERIALS.register(modEventBus);
 
         modContainer.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);

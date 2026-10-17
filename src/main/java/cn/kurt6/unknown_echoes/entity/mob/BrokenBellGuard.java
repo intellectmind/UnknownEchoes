@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.fx.CombatFx;
+import cn.kurt6.unknown_echoes.network.CombatFxPayload.Shape;
 import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
@@ -94,7 +96,9 @@ public class BrokenBellGuard extends Zombie implements GeoEntity {
 
     @Override
     public boolean doHurtTarget(Entity target) {
-        if (this.level().isClientSide || !target.isAlive()
+        if (this.level().isClientSide || !this.isAlive() || this.isNoAi()
+                || !(target instanceof LivingEntity living) || !living.isAlive()
+                || living.level() != this.level() || this.getTarget() != living || !this.canAttack(living)
                 || this.attackWindupTicks > 0 || this.attackRecoveryTicks > 0) {
             return false;
         }
@@ -110,6 +114,19 @@ public class BrokenBellGuard extends Zombie implements GeoEntity {
     @Override
     public void aiStep() {
         super.aiStep();
+        if (!this.isAlive() || this.isNoAi()) {
+            this.attackWindupTicks = 0;
+            this.pendingTargetId = -1;
+            return;
+        }
+        if (!this.level().isClientSide && this.attackWindupTicks > 0) {
+            LivingEntity target = this.getTarget();
+            if (target == null || target.getId() != this.pendingTargetId || !target.isAlive()
+                    || target.level() != this.level() || !this.canAttack(target)) {
+                this.attackWindupTicks = 0;
+                this.pendingTargetId = -1;
+            }
+        }
         if (this.staggerCooldownTicks > 0) {
             this.staggerCooldownTicks--;
         }
@@ -150,8 +167,8 @@ public class BrokenBellGuard extends Zombie implements GeoEntity {
                 living.getX(), impactY, living.getZ(), 9, 0.35D, 0.25D, 0.35D, 0.08D);
         level.sendParticles(ParticleTypes.NOTE,
                 living.getX(), impactY + 0.2D, living.getZ(), 3, 0.3D, 0.15D, 0.3D, 0.0D);
-        level.sendParticles(ParticleTypes.SONIC_BOOM,
-                living.getX(), impactY, living.getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        CombatFx.emit(level, Shape.IMPACT, living.position().add(0.0D, living.getBbHeight() * 0.45D, 0.0D),
+                net.minecraft.world.phys.Vec3.ZERO, 0.6D, 0, 0, 0xE0A83C, 0x6B4210, 7, true);
         level.playSound(null, living.blockPosition(), SoundEvents.ANVIL_LAND,
                 SoundSource.HOSTILE, 0.9F, 0.72F + this.getRandom().nextFloat() * 0.08F);
     }

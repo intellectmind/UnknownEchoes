@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:forge_true_sight_blade",
+  "parent": "unknown_echoes:blueprint_found",
   "display": {
     "icon": {
       "id": "unknown_echoes:echo_metal_ingot"

@@ -3,23 +3,33 @@
   "temperature": 0.7,
   "downfall": 0.5,
   "effects": {
-    "fog_color": 7915954,
-    "sky_color": 4942991,
-    "water_color": 3383976,
-    "water_fog_color": 407098,
-    "grass_color": 7124866,
-    "foliage_color": 7849325,
+    "fog_color": 9222582,
+    "sky_color": 6389423,
+    "water_color": 5737862,
+    "water_fog_color": 2444368,
+    "grass_color": 7645324,
+    "foliage_color": 7645324,
     "ambient_particle": {
       "options": {
         "type": "minecraft:glow"
       },
-      "probability": 0.008
+      "probability": 0.002
     },
     "mood_sound": {
       "sound": "minecraft:ambient.cave",
-      "tick_delay": 6000,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.old_growth_taiga",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": "minecraft:ambient.warped_forest.additions",
+      "tick_chance": 0.00035
     }
   },
   "carvers": {
@@ -40,7 +50,9 @@
       "unknown_echoes:echo_amber_ore_disk"
     ],
     [],
-    [],
+    [
+      "unknown_echoes:echo_forest_landform"
+    ],
     [
       "minecraft:brown_mushroom_normal",
       "minecraft:patch_grass_forest",
@@ -68,6 +80,48 @@
         "weight": 28,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:ash_lantern_bat",
+        "weight": 7,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:hollow_reed_serpent",
+        "weight": 4,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:mossfang_toad",
+        "weight": 3,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:amberback_beetle",
+        "weight": 3,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:reed_mask_raider",
+        "weight": 3,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:mossplate_hound",
+        "weight": 4,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:spore_crowned_wretch",
+        "weight": 2,
+        "minCount": 1,
+        "maxCount": 1
       }
     ],
     "creature": [
@@ -81,6 +135,24 @@
         "type": "unknown_echoes:glow_rabbit",
         "weight": 25,
         "minCount": 2,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:mosslight_firefly",
+        "weight": 16,
+        "minCount": 2,
+        "maxCount": 4
+      },
+      {
+        "type": "unknown_echoes:moss_sail_snail",
+        "weight": 10,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:mossback_hedgehog",
+        "weight": 10,
+        "minCount": 1,
         "maxCount": 3
       }
     ],

@@ -1,14 +1,12 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.artifact.ArtifactManager;
 import cn.kurt6.unknown_echoes.item.tool.DeepAlloyTier;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -127,10 +125,12 @@ public class WorldEchoWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         }
         WeaponFx.pierceBeam(level, player, fx, eye, direction, reach);
         Vec3 impact = eye.add(direction.scale(reach));
-        level.sendParticles(ParticleTypes.SONIC_BOOM,
-                impact.x, impact.y, impact.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.playSound(null, BlockPos.containing(impact),
-                SoundEvents.WITHER_SHOOT, SoundSource.PLAYERS, 1.2F, 0.75F);
+        WeaponFx.releaseBurst(level, impact, fx, 1.2D);
+        // 末端可能超出可听距离；施法者只收近身反馈，旁观者仍听末端定位声。
+        level.playSound(player, impact.x, impact.y, impact.z,
+                ModSounds.WEAPON_WORLD_RIFT_GREATSWORD_PRIMARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+        player.playNotifySound(ModSounds.WEAPON_WORLD_RIFT_GREATSWORD_PRIMARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void worldCollapse(ServerLevel level, ServerPlayer player) {
@@ -161,10 +161,9 @@ public class WorldEchoWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         }
         Vec3 center = player.position().add(0.0D, 1.0D, 0.0D);
         WeaponFx.groundRing(level, player, fx, 9.0D);
-        level.sendParticles(ParticleTypes.FLASH,
-                center.x, center.y, center.z, 2, 0.0D, 0.0D, 0.0D, 0.0D);
+        WeaponFx.releaseBurst(level, center, fx, 1.35D);
         level.playSound(null, player.blockPosition(),
-                SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(), SoundSource.PLAYERS, 1.5F, 0.65F);
+                ModSounds.WEAPON_WORLD_RIFT_GREATSWORD_SECONDARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void starPierce(ServerLevel level, ServerPlayer player) {
@@ -188,7 +187,7 @@ public class WorldEchoWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         player.hurtMarked = true;
         player.fallDistance = 0.0F;
         level.playSound(null, player.blockPosition(),
-                SoundEvents.TRIDENT_THROW.value(), SoundSource.PLAYERS, 1.0F, 1.35F);
+                ModSounds.WEAPON_FIVEFOLD_STAR_SPEAR_PRIMARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void fivefoldJudgment(ServerLevel level, ServerPlayer player) {
@@ -213,13 +212,9 @@ public class WorldEchoWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
             WeaponFx.dashTrail(level, new Vec3(target.getX(), y + 4.5D, target.getZ()),
                     new Vec3(0.0D, -1.0D, 0.0D), 4.5D, fx);
             WeaponFx.heavyHitMark(level, target, fx);
-            level.sendParticles(ParticleTypes.FLASH,
-                    target.getX(), y, target.getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
-            level.sendParticles(ParticleTypes.SONIC_BOOM,
-                    target.getX(), y, target.getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
         level.playSound(null, player.blockPosition(),
-                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 1.35F, 1.4F);
+                ModSounds.WEAPON_FIVEFOLD_STAR_SPEAR_SECONDARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private static double clippedReach(ServerLevel level, ServerPlayer player,

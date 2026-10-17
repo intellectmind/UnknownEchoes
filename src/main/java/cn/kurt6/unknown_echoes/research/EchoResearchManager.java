@@ -42,6 +42,21 @@ public class EchoResearchManager {
 
     public static void addResearchPoints(ServerPlayer player, EchoResearchLine line, int amount) {
         EchoAbilityManager.getData(player).addResearchPoints(line, amount);
+        completeResearchUpdate(player);
+    }
+
+    public static boolean recordRevisit(ServerPlayer player, EchoResearchLine line, String key) {
+        if (EchoAbilityManager.hasActivatedMechanism(player, key)
+                || !EchoAbilityManager.activateMechanisms(player,
+                () -> EchoAbilityManager.getData(player).addResearchPoints(line, 1), key)) {
+            return false;
+        }
+        completeResearchUpdate(player);
+        return true;
+    }
+
+    /** 批量研究写入、耗材与余量返还完成后调用；成就检查会同步派发外部事件。 */
+    public static void completeResearchUpdate(ServerPlayer player) {
         EchoAbilityManager.syncToClient(player);
         ModAdvancements.checkResearchAdvancements(player);
     }

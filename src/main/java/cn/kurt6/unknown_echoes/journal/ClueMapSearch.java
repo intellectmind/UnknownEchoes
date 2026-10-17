@@ -53,12 +53,16 @@ public final class ClueMapSearch {
 
     @FunctionalInterface
     public interface Completion {
-        void accept(ServerPlayer player, ClueLocator.LocateOutcome outcome);
+        void accept(ServerPlayer player, @Nullable ExplorationClue clue);
+    }
+
+    public static boolean isSearching(ServerPlayer player) {
+        return ACTIVE.containsKey(player.getUUID());
     }
 
     public static RequestResult request(ServerPlayer player, List<ResourceLocation> structureIds,
                                         ResourceLocation preferredId, Completion completion) {
-        if (!(player.level() instanceof ServerLevel level)) {
+        if (!player.isAlive() || !(player.level() instanceof ServerLevel level)) {
             return RequestResult.UNAVAILABLE;
         }
         if (ACTIVE.containsKey(player.getUUID())) {
@@ -117,11 +121,11 @@ public final class ClueMapSearch {
         }
         ServerLevel level = server.getLevel(task.dimension);
         if (level == null) {
-            finish(server, task, new ClueLocator.LocateOutcome(ClueLocator.LocateResult.NOT_FOUND, null));
+            finish(server, task, null);
             return;
         }
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
-        if (player == null || !player.level().dimension().equals(task.dimension)) {
+        if (player == null || !player.isAlive() || !player.level().dimension().equals(task.dimension)) {
             ACTIVE.remove(task.playerId, task);
             return;
         }
@@ -129,13 +133,14 @@ public final class ClueMapSearch {
             return;
         }
         if (task.searchedCandidates >= MAX_CANDIDATES) {
-            finish(server, task, new ClueLocator.LocateOutcome(ClueLocator.LocateResult.NOT_FOUND, null));
+            finish(server, task, null);
             return;
         }
 
         Candidate candidate = task.cursor.next();
         if (candidate == null) {
-            finish(server, task, new ClueLocator.LocateOutcome(ClueLocator.LocateResult.NOT_FOUND, null));
+            if (task.cursor.isExhausted()) finish(server, task, null);
+            else deferNext(level, task);
             return;
         }
         task.searchedCandidates++;
@@ -147,18 +152,18 @@ public final class ClueMapSearch {
 
     private static void handleStructureStarts(MinecraftServer server, SearchTask task, ServerLevel level,
                                               Candidate candidate, ChunkAccess chunk, Throwable error) {
-        if (ACTIVE.get(task.playerId) != task) {
+        if (server.isStopped() || ACTIVE.get(task.playerId) != task) {
             return;
         }
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
-        if (player == null || !player.level().dimension().equals(task.dimension)) {
-            ACTIVE.remove(task.playerId);
+        if (player == null || !player.isAlive() || !player.level().dimension().equals(task.dimension)) {
+            ACTIVE.remove(task.playerId, task);
             return;
         }
         if (error != null || chunk == null) {
             task.consecutiveErrors++;
             if (task.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                finish(server, task, new ClueLocator.LocateOutcome(ClueLocator.LocateResult.NOT_FOUND, null));
+                finish(server, task, null);
                 return;
             }
             deferNext(level, task);
@@ -178,12 +183,12 @@ public final class ClueMapSearch {
 
     private static void handleFullChunk(MinecraftServer server, SearchTask task, ServerLevel level,
                                         Candidate candidate, ChunkAccess chunk, Throwable error) {
-        if (ACTIVE.get(task.playerId) != task) {
+        if (server.isStopped() || ACTIVE.get(task.playerId) != task) {
             return;
         }
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
-        if (player == null || !player.level().dimension().equals(task.dimension)) {
-            ACTIVE.remove(task.playerId);
+        if (player == null || !player.isAlive() || !player.level().dimension().equals(task.dimension)) {
+            ACTIVE.remove(task.playerId, task);
             return;
         }
         if (error != null || chunk == null) {
@@ -197,14 +202,8 @@ public final class ClueMapSearch {
         }
 
         var position = start.getBoundingBox().getCenter();
-        boolean added = JournalManager.addClue(player, new ExplorationClue(
+        finish(server, task, new ExplorationClue(
                 candidate.target().id().toString(), level.dimension().location().toString(), position, false));
-        if (added) {
-            JournalManager.syncJournal(player);
-        }
-        finish(server, task, new ClueLocator.LocateOutcome(
-                added ? ClueLocator.LocateResult.ADDED : ClueLocator.LocateResult.ALREADY_KNOWN,
-                candidate.target().id()));
     }
 
     private static void deferNext(ServerLevel level, SearchTask task) {
@@ -222,13 +221,14 @@ public final class ClueMapSearch {
         }
     }
 
-    private static void finish(MinecraftServer server, SearchTask task, ClueLocator.LocateOutcome outcome) {
-        if (ACTIVE.remove(task.playerId) != task) {
+    private static void finish(MinecraftServer server, SearchTask task, @Nullable ExplorationClue clue) {
+        if (!ACTIVE.remove(task.playerId, task)) {
             return;
         }
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
-        if (player != null) {
-            task.completion.accept(player, outcome);
+        if (!server.isStopped() && player != null && player.isAlive()
+                && player.level().dimension().equals(task.dimension)) {
+            task.completion.accept(player, clue);
         }
     }
 
@@ -249,7 +249,14 @@ public final class ClueMapSearch {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        if (ACTIVE.isEmpty()) {
+            return;
+        }
         MinecraftServer server = event.getServer();
+        if (ACTIVE.size() == 1) {
+            searchNext(server, ACTIVE.values().iterator().next());
+            return;
+        }
         for (SearchTask task : List.copyOf(ACTIVE.values())) {
             searchNext(server, task);
         }
@@ -297,7 +304,7 @@ public final class ClueMapSearch {
         private final ResourceLocation preferredId;
         private final Set<CandidateKey> seen = new HashSet<>();
         private final PriorityQueue<Candidate> pending;
-        private int ring;
+        private final StructureSearchRings rings;
 
         private CandidateCursor(net.minecraft.core.BlockPos origin, long seed,
                                 ChunkGeneratorStructureState generatorState,
@@ -306,33 +313,37 @@ public final class ClueMapSearch {
             this.seed = seed;
             this.generatorState = generatorState;
             this.targets = List.copyOf(targets);
+            this.rings = new StructureSearchRings(targets.size());
             this.preferredId = preferredId;
             this.pending = new PriorityQueue<>(Comparator
                     .comparing((Candidate candidate) -> !candidate.target().id().equals(preferredId))
                     .thenComparingDouble(Candidate::distanceSquared));
         }
 
-    /**
-     * 只有队首不远于所有未扫描区域的理论最近点时才出队。按"第一个非空环就出队"会让方形环的
-     * 远角候选(可达 700 格)抢在下一环近边候选(可能只 16 格)之前。
-     */
+        /**
+         * 完整扫描当前环后才按未扫描区域的距离下界出队；null 须配合 isExhausted 区分暂停与结束。
+         */
         @Nullable
         private Candidate next() {
-            while (ring <= MAX_RING) {
-                if (pending.isEmpty()) {
-                    fillRing(ring++);
-                    continue;
-                }
-                if (pending.peek().distanceSquared() <= minUnsearchedDistanceSquared()) {
+            int remaining = StructureSearchRings.CHECKS_PER_STEP;
+            while (rings.ring() <= MAX_RING) {
+                if (rings.atRingStart() && !pending.isEmpty()
+                        && pending.peek().distanceSquared() <= minUnsearchedDistanceSquared()) {
                     return pending.remove();
                 }
-                fillRing(ring++);
+                if (remaining-- == 0) return null;
+                scanPlacement();
             }
             return pending.isEmpty() ? null : pending.remove();
         }
 
+        private boolean isExhausted() {
+            return rings.ring() > MAX_RING && pending.isEmpty();
+        }
+
         /** 未扫描区域的理论最近点:环外侧最近的一条区域边界。 */
         private double minUnsearchedDistanceSquared() {
+            int ring = rings.ring();
             double minimum = Double.MAX_VALUE;
             for (SearchTarget target : targets) {
                 int spacing = target.placement().spacing();
@@ -357,30 +368,21 @@ public final class ClueMapSearch {
             return chunkCoordinate * 16.0D + 8.0D;
         }
 
-        private void fillRing(int radius) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                for (int dx = -radius; dx <= radius; dx++) {
-                    if (radius > 0 && Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
-                        continue;
-                    }
-                    for (SearchTarget target : targets) {
-                        RandomSpreadStructurePlacement placement = target.placement();
-                        ChunkPos candidate = placement.getPotentialStructureChunk(seed,
-                                originChunk.x + dx * placement.spacing(),
-                                originChunk.z + dz * placement.spacing());
-                        if (!placement.isStructureChunk(generatorState, candidate.x, candidate.z)
-                                || !seen.add(new CandidateKey(target.id(), candidate.toLong()))) {
-                            continue;
-                        }
-                        double candidateX = candidate.x * 16.0D + 8.0D;
-                        double candidateZ = candidate.z * 16.0D + 8.0D;
-                        double distanceX = candidateX - originChunk.getMiddleBlockX();
-                        double distanceZ = candidateZ - originChunk.getMiddleBlockZ();
-                        pending.add(new Candidate(candidate, target,
-                                distanceX * distanceX + distanceZ * distanceZ));
-                    }
-                }
+        private void scanPlacement() {
+            SearchTarget target = targets.get(rings.targetIndex());
+            RandomSpreadStructurePlacement placement = target.placement();
+            ChunkPos candidate = placement.getPotentialStructureChunk(seed,
+                    originChunk.x + rings.offsetX() * placement.spacing(),
+                    originChunk.z + rings.offsetZ() * placement.spacing());
+            rings.advance();
+            if (!placement.isStructureChunk(generatorState, candidate.x, candidate.z)
+                    || !seen.add(new CandidateKey(target.id(), candidate.toLong()))) {
+                return;
             }
+            double distanceX = chunkCenter(candidate.x) - originChunk.getMiddleBlockX();
+            double distanceZ = chunkCenter(candidate.z) - originChunk.getMiddleBlockZ();
+            pending.add(new Candidate(candidate, target,
+                    distanceX * distanceX + distanceZ * distanceZ));
         }
     }
 

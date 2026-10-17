@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
 import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
+import cn.kurt6.unknown_echoes.entity.ai.AerialFlight;
 import cn.kurt6.unknown_echoes.entity.ai.FlankTargetGoal;
 import cn.kurt6.unknown_echoes.entity.ai.RetreatWhenLowGoal;
 import net.minecraft.core.BlockPos;
@@ -11,6 +12,7 @@ import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -137,15 +139,25 @@ public class VoidWanderer extends Monster implements GeoEntity {
             double distance = 2.8D + this.random.nextDouble() * 3.8D;
             double x = target.getX() + Math.cos(angle) * distance;
             double z = target.getZ() + Math.sin(angle) * distance;
+            AABB horizontalBox = this.getBoundingBox().move(x - this.getX(), 0.0D, z - this.getZ());
+            // BlockCollisions 会读取包围盒外一圈；同一水平候选的各高度共用可读性检查。
+            int minX = Mth.floor(horizontalBox.minX - 1.0e-7D) - 1;
+            int maxX = Mth.floor(horizontalBox.maxX + 1.0e-7D) + 1;
+            int minZ = Mth.floor(horizontalBox.minZ - 1.0e-7D) - 1;
+            int maxZ = Mth.floor(horizontalBox.maxZ + 1.0e-7D) + 1;
+            if (!AerialFlight.hasReadableChunks(level,
+                    new BlockPos(minX, level.getMinBuildHeight(), minZ),
+                    new BlockPos(maxX, level.getMinBuildHeight(), maxZ))) {
+                continue;
+            }
             for (int dy = 2; dy >= -3; dy--) {
                 double y = target.getY() + dy;
                 BlockPos floor = BlockPos.containing(x, y - 0.1D, z);
-                if (!level.isLoaded(floor)
+                if (level.isOutsideBuildHeight(floor)
                         || !level.getBlockState(floor).isFaceSturdy(level, floor, Direction.UP)) {
                     continue;
                 }
-                AABB movedBox = this.getBoundingBox().move(
-                        x - this.getX(), y - this.getY(), z - this.getZ());
+                AABB movedBox = horizontalBox.move(0.0D, y - this.getY(), 0.0D);
                 if (level.getWorldBorder().isWithinBounds(movedBox)
                         && level.noCollision(this, movedBox)) {
                     return new Vec3(x, y, z);

@@ -282,7 +282,7 @@ public class StormWeaver extends MiniBossEntity {
             this.tickDiveTelegraph(serverLevel);
             if (--this.diveTelegraphTicks == 0) {
                 this.diving = true;
-                this.playSound(SoundEvents.PHANTOM_SWOOP, 2.0F, 0.7F);
+                this.playSound(ModSounds.STORM_WEAVER_ATTACK_DIVE_RELEASE.get(), 2.0F, 1.0F);
             }
             return;
         }
@@ -318,7 +318,7 @@ public class StormWeaver extends MiniBossEntity {
         this.bladeWavesLeft = 3;
         this.bladeCooldown = scaleCooldown(110);
         this.triggerAnim("attack_controller", "blades");
-        this.playSound(SoundEvents.BREEZE_CHARGE, 1.6F, 0.8F);
+        this.playSound(ModSounds.STORM_WEAVER_ATTACK_BLADES_WARN.get(), 1.6F, 1.0F);
     }
 
     private void tickBladeTelegraph(ServerLevel serverLevel) {
@@ -334,6 +334,9 @@ public class StormWeaver extends MiniBossEntity {
                     0.24F, 4, this.combatImpactColor());
         }
         for (int seg = 0; seg < 2 && this.bladeWaveDist >= 0; seg++) {
+            if (this.bladeWaveDist == 1.0D) {
+                this.playSound(ModSounds.STORM_WEAVER_ATTACK_BLADE_RELEASE.get(), 1.4F, 1.0F);
+            }
             Vec3 p = this.bladeOrigin.add(this.bladeDir.scale(this.bladeWaveDist));
             // 刃波是逐帧推进的立方判定，环画在半宽上让玩家读出"这一段现在危险"。
             MiniBossFx.impactZone(serverLevel, p, this.fxTheme(), BLADE_HIT_HALF_WIDTH,
@@ -361,7 +364,6 @@ public class StormWeaver extends MiniBossEntity {
                     }
                     this.bladeWaveDist = 1.0D;
                     this.bladeHitVictims.clear();
-                    this.playSound(SoundEvents.BREEZE_SHOOT, 1.4F, 1.0F + (3 - this.bladeWavesLeft) * 0.15F);
                 } else {
                     this.bladeWaveDist = -1.0D;
                 }
@@ -387,7 +389,7 @@ public class StormWeaver extends MiniBossEntity {
         }
         this.cycloneCooldown = scaleCooldown(200);
         this.triggerAnim("attack_controller", "cyclone");
-        this.playSound(SoundEvents.BREEZE_IDLE_GROUND, 1.8F, 0.6F);
+        this.playSound(ModSounds.STORM_WEAVER_ATTACK_CYCLONE.get(), 1.8F, 1.0F);
         BossFx.cinematicImpact(serverLevel, target.position().add(0, 0.6, 0),
                 22.0D, 0.24F, 4, this.combatImpactColor());
     }
@@ -425,7 +427,7 @@ public class StormWeaver extends MiniBossEntity {
         this.diveTelegraphTicks = DIVE_TELEGRAPH_TICKS;
         this.diveCooldown = scaleCooldown(280);
         this.triggerAnim("attack_controller", "dive");
-        this.playSound(SoundEvents.BREEZE_INHALE, 2.0F, 0.5F);
+        this.playSound(ModSounds.STORM_WEAVER_ATTACK_DIVE_WARN.get(), 2.0F, 1.0F);
     }
 
     private void tickDiveTelegraph(ServerLevel serverLevel) {
@@ -462,8 +464,8 @@ public class StormWeaver extends MiniBossEntity {
         this.setDeltaMovement(Vec3.ZERO);
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.2F;
         // 落地冲击波，环画在结算半径上让玩家读出"散这么开就安全"。
-        MiniBossFx.expandingRing(serverLevel, this.position(), this.fxTheme(),
-                DIVE_IMPACT_RADIUS, 1.2D);
+        MiniBossFx.groundImpact(serverLevel, this.position(), this.fxTheme(),
+                DIVE_IMPACT_RADIUS, 1.1D);
         for (LivingEntity victim : serverLevel.getEntitiesOfClass(LivingEntity.class,
                 this.getBoundingBox().inflate(DIVE_IMPACT_RADIUS, 1.5, DIVE_IMPACT_RADIUS),
                 e -> e != this && !e.isSpectator() && !(e instanceof Enemy))) {
@@ -575,5 +577,9 @@ public class StormWeaver extends MiniBossEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
+    }
+    @Override
+    public int musicStage() {
+        return this.getHealth() < this.getMaxHealth() * 0.3F ? 2 : this.isBroken() ? 1 : 0;
     }
 }

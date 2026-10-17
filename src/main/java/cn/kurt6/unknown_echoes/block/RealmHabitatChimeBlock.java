@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /** 三域公共巨构的生态设施，只召集附近既有生灵，不生成实体或写入进度。 */
 public final class RealmHabitatChimeBlock extends Block {
@@ -48,6 +49,12 @@ public final class RealmHabitatChimeBlock extends Block {
     public static final int ACTIVE_TICKS = 200;
     public static final double CALL_RADIUS = 24.0D;
     public static final int MAX_RESPONDERS = 6;
+    private record ActivationKey(ServerLevel level, BlockPos pos) { }
+    private static final java.util.Set<ActivationKey> ACTIVATING = new java.util.HashSet<>();
+
+    public record ActivationResult(int responders, boolean active) {
+        private static final ActivationResult NONE = new ActivationResult(0, false);
+    }
 
     private static final VoxelShape SHAPE = Shapes.or(
             Block.box(1, 0, 1, 15, 3, 15),
@@ -96,7 +103,11 @@ public final class RealmHabitatChimeBlock extends Block {
         }
         if (!(level instanceof ServerLevel serverLevel)
                 || !(player instanceof ServerPlayer serverPlayer)
-                || serverPlayer.isSpectator()) {
+                || !serverPlayer.isAlive()
+                || !serverPlayer.canInteractWithBlock(pos, 1.0D)
+                || serverPlayer.isSpectator()
+                || serverPlayer.level() != serverLevel
+                || serverLevel.getBlockState(pos) != state) {
             return InteractionResult.CONSUME;
         }
 
@@ -117,6 +128,8 @@ public final class RealmHabitatChimeBlock extends Block {
     }
 
     public static int activateFromFacility(ServerLevel level, BlockPos pos, Mode expectedMode) {
+        if (!level.hasChunkAt(pos) || !isAvailable(level.getBlockState(pos), expectedMode)
+                || modeForDimension(level) != expectedMode) return 0;
         List<PathfinderMob> residents = level.getEntitiesOfClass(PathfinderMob.class,
                 new AABB(pos).inflate(CALL_RADIUS),
                 mob -> mob.isAlive() && mob.getTarget() == null && !mob.isLeashed()
@@ -131,44 +144,89 @@ public final class RealmHabitatChimeBlock extends Block {
     public static int activateFromFacility(ServerLevel level, BlockPos pos, Mode expectedMode,
                                            List<PathfinderMob> residents,
                                            Consumer<PathfinderMob> onResponder) {
-        BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof RealmHabitatChimeBlock block)
-                || state.getValue(MODE) != expectedMode
-                || state.getValue(ACTIVE)
-                || modeForDimension(level) != expectedMode) {
-            return 0;
-        }
-
-        int responders = callNearbyResidents(pos, expectedMode, residents, onResponder);
-        level.setBlock(pos, state.setValue(ACTIVE, true), Block.UPDATE_ALL);
-        level.scheduleTick(pos, block, ACTIVE_TICKS);
-        playCall(level, pos, expectedMode);
-        return responders;
+        return activateWithResidents(level, pos, expectedMode, residents, onResponder).responders();
     }
 
-    private static int callNearbyResidents(BlockPos pos, Mode mode,
+    public static ActivationResult activateWithResidents(ServerLevel level, BlockPos pos, Mode expectedMode,
+                                                           List<PathfinderMob> residents,
+                                                           Consumer<PathfinderMob> onResponder) {
+        return activateWithResidents(level, pos, expectedMode, residents, mob -> true, onResponder);
+    }
+
+    /** 调用方的额外资格随导航回调重新校验，不能只在收集候选时检查一次。 */
+    public static ActivationResult activateWithResidents(ServerLevel level, BlockPos pos, Mode expectedMode,
+                                                           List<PathfinderMob> residents,
+                                                           Predicate<PathfinderMob> canRespond,
+                                                           Consumer<PathfinderMob> onResponder) {
+        ActivationKey key = new ActivationKey(level, pos.immutable());
+        if (!ACTIVATING.add(key)) return ActivationResult.NONE;
+        try {
+            if (!level.hasChunkAt(pos)) return ActivationResult.NONE;
+            BlockState state = level.getBlockState(pos);
+            if (!isAvailable(state, expectedMode)
+                    || modeForDimension(level) != expectedMode) {
+                return ActivationResult.NONE;
+            }
+            BlockState activeState = state.setValue(ACTIVE, true);
+            boolean written;
+            try {
+                written = level.setBlock(pos, activeState, Block.UPDATE_ALL);
+            } finally {
+                // 方块通知抛异常时，已提交的冷却仍必须按原排期恢复。
+                if (isCurrentChime(level, pos, activeState)) {
+                    level.scheduleTick(pos, activeState.getBlock(), ACTIVE_TICKS);
+                }
+            }
+            if (!written || !isCurrentChime(level, pos, activeState)) return ActivationResult.NONE;
+            int responders = callNearbyResidents(level, pos, expectedMode, activeState, residents, canRespond, onResponder);
+            if (isCurrentChime(level, pos, activeState)) playCall(level, pos, expectedMode);
+            return new ActivationResult(responders, isCurrentChime(level, pos, activeState));
+        } finally {
+            ACTIVATING.remove(key);
+        }
+    }
+
+    private static boolean isAvailable(BlockState state, Mode mode) {
+        return state.getBlock() instanceof RealmHabitatChimeBlock
+                && state.getValue(MODE) == mode && !state.getValue(ACTIVE);
+    }
+
+    private static boolean isCurrentChime(ServerLevel level, BlockPos pos, BlockState expected) {
+        return level.hasChunkAt(pos) && level.getBlockState(pos) == expected;
+    }
+
+    private static boolean isEligibleResident(ServerLevel level, BlockPos pos, Mode mode, PathfinderMob mob) {
+        return mob.level() == level && !mob.isRemoved() && mob.isAlive() && mob.getTarget() == null
+                && !mob.isLeashed() && !mob.isPassenger() && !mob.isVehicle() && matchesMode(mob, mode)
+                && mob.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D)
+                <= CALL_RADIUS * CALL_RADIUS;
+    }
+
+    private static int callNearbyResidents(ServerLevel level, BlockPos pos, Mode mode, BlockState expected,
                                            List<PathfinderMob> residents,
+                                           Predicate<PathfinderMob> canRespond,
                                            Consumer<PathfinderMob> onResponder) {
         List<PathfinderMob> responders = new ArrayList<>(residents);
-        double callRadiusSqr = CALL_RADIUS * CALL_RADIUS;
-        responders.removeIf(mob -> !mob.isAlive() || mob.getTarget() != null || mob.isLeashed()
-                || mob.isPassenger() || mob.isVehicle() || !matchesMode(mob, mode)
-                || mob.distanceToSqr(pos.getX() + 0.5D,
-                        pos.getY() + 0.5D, pos.getZ() + 0.5D) > callRadiusSqr);
+        responders.removeIf(mob -> !isEligibleResident(level, pos, mode, mob) || !canRespond.test(mob));
         responders.sort(Comparator.comparingDouble(mob -> mob.distanceToSqr(
                 pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D)));
 
         int moved = 0;
         for (PathfinderMob mob : responders) {
-            if (moved >= MAX_RESPONDERS) {
+            if (moved >= MAX_RESPONDERS || !isCurrentChime(level, pos, expected)) {
                 break;
             }
+            if (!isEligibleResident(level, pos, mode, mob)) continue;
+            if (!canRespond.test(mob)) continue;
             double angle = moved * Math.PI * 2.0D / MAX_RESPONDERS;
             double targetX = pos.getX() + 0.5D + Math.cos(angle) * 3.0D;
             double targetZ = pos.getZ() + 0.5D + Math.sin(angle) * 3.0D;
             mob.getLookControl().setLookAt(pos.getX() + 0.5D,
                     pos.getY() + 1.0D, pos.getZ() + 0.5D);
             if (mob.getNavigation().moveTo(targetX, pos.getY(), targetZ, 1.0D)) {
+                if (!isCurrentChime(level, pos, expected)) break;
+                if (!isEligibleResident(level, pos, mode, mob)) continue;
+                if (!canRespond.test(mob)) continue;
                 onResponder.accept(mob);
                 moved++;
             }

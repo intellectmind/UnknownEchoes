@@ -17,6 +17,12 @@ public class ModDataComponents {
     public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENT_TYPES =
             DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, UnknownEchoes.MODID);
 
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<cn.kurt6.unknown_echoes.particle.ParticleData>> PARTICLES =
+            DATA_COMPONENT_TYPES.register("particles", () -> DataComponentType.<cn.kurt6.unknown_echoes.particle.ParticleData>builder()
+                    .persistent(cn.kurt6.unknown_echoes.particle.ParticleData.CODEC)
+                    .networkSynchronized(cn.kurt6.unknown_echoes.particle.ParticleData.STREAM_CODEC)
+                    .cacheEncoding().build());
+
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> PAGE_ID =
             DATA_COMPONENT_TYPES.register("page_id",
                     () -> DataComponentType.<Integer>builder()

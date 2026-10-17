@@ -4,6 +4,7 @@ import cn.kurt6.unknown_echoes.block.beacon.EchoBeaconBlock;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
@@ -24,7 +25,13 @@ public class EchoKeyItem extends Item {
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
-        if (!level.getBlockState(context.getClickedPos()).is(ModBlocks.RESONANCE_BEACON.get())) {
+        if (level instanceof ServerLevel serverLevel) {
+            var pos = context.getClickedPos();
+            var chunk = serverLevel.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+            if (chunk == null || !chunk.getBlockState(pos).is(ModBlocks.RESONANCE_BEACON.get())) {
+                return super.useOn(context);
+            }
+        } else if (!level.getBlockState(context.getClickedPos()).is(ModBlocks.RESONANCE_BEACON.get())) {
             return super.useOn(context);
         }
         if (level.isClientSide) {

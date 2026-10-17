@@ -82,12 +82,27 @@ public final class RealmServicePlinthBlock extends Block {
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level,
                                               BlockPos pos, Player player, InteractionHand hand,
                                               BlockHitResult hitResult) {
+        // 有效主手材料优先；否则让副手材料先于空手调谐和提示得到处理。
+        if (hand == InteractionHand.MAIN_HAND && !isServiceInput(stack, level)
+                && isServiceInput(player.getOffhandItem(), level)) {
+            return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+        }
+        if (stack.isEmpty()) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
         if (level.isClientSide) {
             return ItemInteractionResult.SUCCESS;
         }
         if (!(level instanceof ServerLevel serverLevel)
                 || !(player instanceof ServerPlayer serverPlayer)
+                || !serverPlayer.isAlive()
+                || !serverPlayer.canInteractWithBlock(pos, 1.0D)
                 || serverPlayer.isSpectator()) {
+            return ItemInteractionResult.CONSUME;
+        }
+
+        // 原版在右键事件前缓存方块状态；事件回调可能已移走设施或传送玩家。
+        if (serverPlayer.level() != serverLevel || serverLevel.getBlockState(pos) != state) {
             return ItemInteractionResult.CONSUME;
         }
 
@@ -117,9 +132,16 @@ public final class RealmServicePlinthBlock extends Block {
         }
         if (!(level instanceof ServerLevel serverLevel)
                 || !(player instanceof ServerPlayer serverPlayer)
+                || !serverPlayer.isAlive()
+                || !serverPlayer.canInteractWithBlock(pos, 1.0D)
                 || serverPlayer.isSpectator()) {
             return InteractionResult.CONSUME;
         }
+        // 原版在右键事件前缓存方块状态；事件回调可能已移走设施或传送玩家。
+        if (serverPlayer.level() != serverLevel || serverLevel.getBlockState(pos) != state) {
+            return InteractionResult.CONSUME;
+        }
+
         Mode current = modeForDimension(level);
         if (current == null || state.getValue(MODE) != current) {
             serverPlayer.displayClientMessage(Component.translatable(
@@ -133,6 +155,18 @@ public final class RealmServicePlinthBlock extends Block {
             showHint(serverPlayer, current);
         }
         return InteractionResult.CONSUME;
+    }
+
+    private static boolean isServiceInput(ItemStack stack, Level level) {
+        Mode mode = modeForDimension(level);
+        if (mode == null) {
+            return false;
+        }
+        return switch (mode) {
+            case WAYFARER -> stack.is(ModItems.RECORD_TRACING_PAPER.get()) || stack.is(Items.BREAD);
+            case CONFLUENCE -> stack.is(Items.BONE_MEAL) || stack.is(ModItems.ECHO_SHARD.get());
+            case INTERLAYER -> deepFoodFor(stack) != null || stack.is(ModItems.RESONANCE_ALLOY_INGOT.get());
+        };
     }
 
     private static boolean useWayfarerService(ServerLevel level, BlockPos pos,

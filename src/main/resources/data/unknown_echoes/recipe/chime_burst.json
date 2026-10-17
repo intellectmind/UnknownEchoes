@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:broken_bell_gear"
+    },
+    {
+      "item": "unknown_echoes:wind_sac_membrane"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:chime_burst",
+    "count": 2
+  }
+}

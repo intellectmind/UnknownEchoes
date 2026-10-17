@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:orrery_prism_core"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.study_mastery.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.study_mastery.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:study_all_themes",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

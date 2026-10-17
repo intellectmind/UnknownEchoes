@@ -1,0 +1,32 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:particle_enchanting_table"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.equipment_root.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.equipment_root.desc"
+    },
+    "frame": "task",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "hidden": false,
+    "background": "minecraft:textures/block/polished_deepslate.png"
+  },
+  "criteria": {
+    "has_item": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:echo_shard"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

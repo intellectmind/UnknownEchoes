@@ -1,10 +1,10 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -90,8 +90,8 @@ public class EchoOathbladeItem extends EchoMeleeWeaponItem implements WeaponSkil
         WeaponSkillSupport.applyAbsorption(player, 100, 1, 8.0F);
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 50, 0, true, false, true));
         spawnBulwarkEffect(level, player);
-        level.playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK,
-                SoundSource.PLAYERS, 1.0F, 0.75F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_OATHBLADE_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
         finishSkill(player, stack, hand, 1);
         return true;
     }
@@ -161,8 +161,8 @@ public class EchoOathbladeItem extends EchoMeleeWeaponItem implements WeaponSkil
 
         WeaponFx.slashArc(level, player, WeaponFxTheme.ECHO_OATHBLADE,
                 JUDGMENT_RANGE, WeaponFx.halfAngleOf(JUDGMENT_MIN_DOT));
-        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.PLAYERS, 1.2F, 0.7F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_OATHBLADE_PRIMARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private static boolean isInsideJudgmentCone(ServerPlayer player, Vec3 origin,
@@ -193,8 +193,8 @@ public class EchoOathbladeItem extends EchoMeleeWeaponItem implements WeaponSkil
             WeaponFx.hitMark(level, target, WeaponFxTheme.ECHO_OATHBLADE);
         }
         WeaponFx.hitMark(level, primary, WeaponFxTheme.ECHO_OATHBLADE);
-        level.playSound(null, primary.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
-                SoundSource.PLAYERS, 0.8F, 1.25F);
+        level.playSound(null, primary.blockPosition(), ModSounds.WEAPON_ECHO_OATHBLADE_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.8F, 1.0F);
     }
 
     private void finishSkill(ServerPlayer player, ItemStack stack, InteractionHand hand,

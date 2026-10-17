@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:particle_fire",
+    "unknown_echoes:particle_frost",
+    "unknown_echoes:particle_venom",
+    "unknown_echoes:particle_thunder",
+    "unknown_echoes:particle_void",
+    "unknown_echoes:particle_holy",
+    "unknown_echoes:particle_shadow",
+    "unknown_echoes:particle_earth"
+  ]
+}

@@ -1,5 +1,4 @@
 {
-  "_comment": "Echo Realm final density. The interpolated+squeeze wrapper is NOT optional: noise is only sampled on a 1x2-block cell grid, and without minecraft:interpolated each cell keeps its own constant density, which renders as the stair-stepped terraces seen in-game. Vanilla overworld/final_density applies exactly this chain (blend_density -> interpolated -> squeeze); blend_density is omitted here because the Echo Realm never blends against an old-world region.",
   "type": "minecraft:squeeze",
   "argument": {
     "type": "minecraft:mul",

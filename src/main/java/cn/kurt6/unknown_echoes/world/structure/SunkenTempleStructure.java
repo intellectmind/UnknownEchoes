@@ -20,17 +20,17 @@ import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 沉没圣殿:镜湖湖底的水下遗迹( 潮汐回响获取点)。 */
-public class SunkenTempleStructure extends SinglePieceStructure {
+public class SunkenTempleStructure extends TerrainAnchoredStructure {
     public static final MapCodec<SunkenTempleStructure> CODEC = simpleCodec(SunkenTempleStructure::new);
 
     private static final int WIDTH = 65;
     private static final int DEPTH = 65;
-    private static final int HEIGHT = 30;
+    private static final int HEIGHT = 36;
+    private static final int SHELL_HEIGHT = 30;
     private static final int BOSS_ARENA_SIZE = 29;
     private static final int CENTER_X = WIDTH / 2;
     private static final int CENTER_Z = DEPTH / 2;
@@ -45,12 +45,8 @@ public class SunkenTempleStructure extends SinglePieceStructure {
         Piece piece = new Piece(context.random(),
                 context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ());
         BoundingBox footprint = piece.getBoundingBox();
-        if (!LakeBedPlacement.hasSubmergedFootprint(context,
-                footprint.minX(), footprint.minZ(), WIDTH, 25, 21)) {
-            return java.util.Optional.empty();
-        }
-        int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(
-                context, footprint.minX(), footprint.minZ(), WIDTH, DEPTH);
+        int floorY = LakeBedPlacement.findOceanFloor(context,
+                footprint.minX(), footprint.minZ(), WIDTH, DEPTH, 25, 21);
         if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
             return java.util.Optional.empty();
         }
@@ -68,7 +64,7 @@ public class SunkenTempleStructure extends SinglePieceStructure {
         private static final int[][] SUNKEN_TEMPLE_MIRROR_NODES = {
                 {8, 8}, {32, 8}, {56, 8},
                 {8, 32}, {56, 32},
-                {8, 56}, {32, 56}, {56, 56},
+                {6, 56}, {32, 56}, {56, 56},
                 {16, 16}, {32, 16}, {48, 16},
                 {16, 32}, {48, 32},
                 {16, 48}, {32, 48}, {48, 48}
@@ -164,16 +160,16 @@ public class SunkenTempleStructure extends SinglePieceStructure {
             BlockState water = Blocks.WATER.defaultBlockState();
 
             // 先清掉足印内的自然地形并回填水，避免湖床山丘穿进 Boss 场地。
-            this.generateBox(level, box, 1, 1, 1, WIDTH - 2, HEIGHT - 2, DEPTH - 2,
+            this.generateBox(level, box, 1, 1, 1, WIDTH - 2, SHELL_HEIGHT - 2, DEPTH - 2,
                     water, water, false);
 
             buildTempleShell(level, random, box, bricks, rune);
             buildSurfaceTower(level, box, bricks, rune);
             buildBubbleCorridor(level, random, box, bricks);
-            buildTidePillarCourt(level, box, bricks, pillar, altar);
             buildWatcherArena(level, box, random, bricks, rune);
             buildRevisitReservoir(level, box, random, bricks);
             buildMonumentFrame(level, random, box);
+            buildTidePillarCourt(level, box, bricks, pillar, altar);
 
             placeSubmergedStructureSpawner(level, random, box, 10, 1, 40,
                     ModEntities.WATER_SHADOW.get(), bricks, bricks);
@@ -182,6 +178,27 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                         node[0], 0, node[1], box);
             }
             spawnWatcher(level, box);
+            dressStructure(level, box, "sunken_temple");
+            // 南侧灯柱的净化符文位于露出的柱脚，不能埋在地坪内。
+            this.placeBlock(level, ModBlocks.TIDE_SMOOTH_STONE.get().defaultBlockState(),
+                    CENTER_X, 1, CENTER_Z + 28, box);
+            this.placeBlock(level, rune, CENTER_X, 2, CENTER_Z + 28, box);
+            finishBubbleColumns(level, box);
+        }
+
+        private void finishBubbleColumns(WorldGenLevel level, BoundingBox box) {
+            for (int z = 10; z <= CENTER_Z - 11; z++) {
+                if (z % 6 == 0) placeBubbleColumnBase(level, box, CENTER_X, z);
+            }
+            for (int dx : new int[]{-10, 10}) {
+                placeBubbleColumnBase(level, box, CENTER_X + dx, CENTER_Z + 16);
+            }
+        }
+
+        private void placeBubbleColumnBase(WorldGenLevel level, BoundingBox box, int x, int z) {
+            this.placeBlock(level, Blocks.SOUL_SAND.defaultBlockState(), x, 1, z, box);
+            this.placeBlock(level, Blocks.BUBBLE_COLUMN.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.DRAG, false), x, 2, z, box);
         }
 
         private void buildMonumentFrame(WorldGenLevel level, RandomSource random, BoundingBox box) {
@@ -199,8 +216,8 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                 architecturalRing(level, box, CENTER_X, 3 + radius / 6, CENTER_Z,
                         radius, ModBlocks.MIRROR_STONE_BRICKS.get().defaultBlockState());
             }
-            scatterArchitecturalDebris(level, random, box, CENTER_X, 2, CENTER_Z,
-                    25, 30, 46, worn, reef);
+            scatterArchitecturalDebris(level, box, "sunken_temple", CENTER_X, 2, CENTER_Z,
+                    worn, reef);
         }
 
         private void buildTempleShell(WorldGenLevel level, RandomSource random, BoundingBox box,
@@ -233,7 +250,7 @@ public class SunkenTempleStructure extends SinglePieceStructure {
         private void buildSurfaceTower(WorldGenLevel level, BoundingBox box, BlockState bricks, BlockState rune) {
             int towerX = CENTER_X;
             int towerZ = 7;
-            for (int y = 1; y <= HEIGHT - 1; y++) {
+            for (int y = 1; y <= SHELL_HEIGHT - 1; y++) {
                 int radius = y > 12 ? 3 : 5;
                 for (int x = towerX - radius; x <= towerX + radius; x++) {
                     for (int z = towerZ - radius; z <= towerZ + radius; z++) {
@@ -245,6 +262,9 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                     }
                 }
             }
+            // 潮汐冠塔：塔顶用收分环和单枚潮符文收束，成为沉殿唯一的竖向远景锚点。
+            architecturalRing(level, box, towerX, SHELL_HEIGHT - 4, towerZ, 4, bricks);
+            this.placeBlock(level, rune, towerX, SHELL_HEIGHT - 1, towerZ, box);
         }
 
         private void buildBubbleCorridor(WorldGenLevel level, RandomSource random,
@@ -255,10 +275,6 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                 }
                 if (z % 6 == 0) {
 
-                    this.placeBlock(level, net.minecraft.world.level.block.Blocks.SOUL_SAND.defaultBlockState(),
-                            CENTER_X, 1, z, box);
-                    this.placeBlock(level, net.minecraft.world.level.block.Blocks.BUBBLE_COLUMN.defaultBlockState(),
-                            CENTER_X, 2, z, box);
                     this.placeBlock(level, net.minecraft.world.level.block.Blocks.SEA_LANTERN.defaultBlockState(),
                             CENTER_X - 2, 2, z, box);
                 }
@@ -268,9 +284,11 @@ public class SunkenTempleStructure extends SinglePieceStructure {
 
         private void buildTidePillarCourt(WorldGenLevel level, BoundingBox box,
                                           BlockState bricks, BlockState pillar, BlockState altar) {
-            placePillar(level, box, bricks, pillar, CENTER_X - PILLAR_OFFSET, CENTER_Z - PILLAR_OFFSET);
-            placePillar(level, box, bricks, pillar, CENTER_X + PILLAR_OFFSET, CENTER_Z - PILLAR_OFFSET);
-            placePillar(level, box, bricks, pillar, CENTER_X, CENTER_Z + PILLAR_OFFSET);
+            // 北柱位于穹顶墙内侧一格，砌体完成后放置，保留三柱之间的仪式搜索距离。
+            placePillar(level, box, bricks, pillar, CENTER_X - PILLAR_OFFSET, CENTER_Z - PILLAR_OFFSET + 1);
+            placePillar(level, box, bricks, pillar, CENTER_X + PILLAR_OFFSET, CENTER_Z - PILLAR_OFFSET + 1);
+            placePillar(level, box, ModBlocks.TIDE_SMOOTH_STONE.get().defaultBlockState(), pillar,
+                    CENTER_X, CENTER_Z + PILLAR_OFFSET);
             for (int x = CENTER_X - 2; x <= CENTER_X + 2; x++) {
                 for (int z = CENTER_Z - 2; z <= CENTER_Z + 2; z++) {
                     this.placeBlock(level, bricks, x, 1, z, box);
@@ -310,12 +328,6 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                     ModBlocks.TIDE_RUNE.get().defaultBlockState(),
                     ModBlocks.TIDE_SMOOTH_STONE.get().defaultBlockState(),
                     ModBlocks.TIDELIGHT_CORAL_BLOCK.get().defaultBlockState());
-            for (int dx : new int[]{-10, 10}) {
-                this.placeBlock(level, net.minecraft.world.level.block.Blocks.SOUL_SAND.defaultBlockState(),
-                        CENTER_X + dx, 1, arenaZ, box);
-                this.placeBlock(level, net.minecraft.world.level.block.Blocks.BUBBLE_COLUMN.defaultBlockState(),
-                        CENTER_X + dx, 2, arenaZ, box);
-            }
             buildArenaLightRing(level, box, CENTER_X, 3, arenaZ, r - 2, 12, 11, reef, ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState());
             buildStairCornice(level, box, CENTER_X, 17, CENTER_Z + 6, Footprint.of(16, 26), ModBlocks.REEF_LIMESTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.REEF_LIMESTONE_BRICK_SLAB.get().defaultBlockState(), true);
             buildParapet(level, box, CENTER_X, 18, CENTER_Z + 6, Footprint.of(16, 26), 7, ModBlocks.REEF_LIMESTONE_BRICK_WALL.get().defaultBlockState(), worn);
@@ -329,8 +341,8 @@ public class SunkenTempleStructure extends SinglePieceStructure {
                     this.placeBlock(level, bricks, x, 1, z, box);
                 }
             }
-            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState(), 10, 2, DEPTH - 11, box);
             buildTrueSightVaultNiche(level, random, box, 10, 2, DEPTH - 8, Direction.NORTH);
+            this.placeBlock(level, ModBlocks.TIDE_RUNE_SEAT.get().defaultBlockState(), 7, 2, DEPTH - 11, box);
         }
 
         private void spawnWatcher(WorldGenLevel level, BoundingBox box) {

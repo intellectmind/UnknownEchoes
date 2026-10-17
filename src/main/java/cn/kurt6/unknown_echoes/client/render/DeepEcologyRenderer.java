@@ -9,10 +9,9 @@ import net.minecraft.world.entity.Mob;
 import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
-import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 /** 深层生态实体共享渲染器:每个实体仍使用独立模型、贴图与发光遮罩。 */
-public class DeepEcologyRenderer<T extends Mob & GeoAnimatable> extends GeoEntityRenderer<T> {
+public class DeepEcologyRenderer<T extends Mob & GeoAnimatable> extends BodyAlignedEntityRenderer<T> {
     /**
      * 把模型底面抬到碰撞箱底面。碰撞箱以脚底为原点,模型自己的最低面不在 y=0 时会陷进地里或悬空;
      * 本渲染器被多个实体共用,抬升量必须逐实体传入,不能做成共享常量。

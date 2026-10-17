@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.block.deep;
 
+import cn.kurt6.unknown_echoes.fx.PlayerSoundFeedback;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
@@ -172,25 +173,36 @@ public class WorldResonanceAltarBlock extends BaseEntityBlock {
                 || serverPlayer.isSpectator()) {
             return InteractionResult.CONSUME;
         }
+        if (!isCurrentInteraction(state, serverLevel, pos, serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
         if (!level.dimension().equals(DeepEchoTeleporter.DEEP_ECHOES)) {
             reject(serverPlayer, level, pos, "message.unknown_echoes.world_resonance.wrong_dimension");
             return InteractionResult.CONSUME;
         }
-        WorldResonanceAltarBlockEntity altar = getOrCreateAltar(serverLevel, pos, state);
 
         EchoAbilityType missing = firstMissingAbility(serverPlayer);
         if (missing != null || !EchoPermission.canSummonWorldEcho(serverPlayer)) {
             Component missingName = missing == null
                     ? Component.translatable("dimension.unknown_echoes.deep_echoes")
                     : Component.translatable("ability.unknown_echoes." + missing.getId());
-            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE,
-                    SoundSource.BLOCKS, 0.8F, 0.4F);
+            PlayerSoundFeedback.deny(serverPlayer);
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.world_resonance.missing", missingName), true);
             return InteractionResult.CONSUME;
         }
 
+        WorldResonanceAltarBlockEntity altar = getOrCreateAltar(serverLevel, pos, state);
+        if (altar == null || !altar.isCurrentAltar(serverLevel)
+                || !isCurrentInteraction(state, serverLevel, pos, serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
         WorldEcho active = altar.findActiveBoss(serverLevel);
+        if (!isCurrentInteraction(state, serverLevel, pos, serverPlayer)
+                || !altar.isCurrentAltar(serverLevel)
+                || firstMissingAbility(serverPlayer) != null || !EchoPermission.canSummonWorldEcho(serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
         if (active != null) {
             active.registerParticipant(serverPlayer);
             active.onPhasePylonActivated(serverLevel, pos);
@@ -232,6 +244,10 @@ public class WorldResonanceAltarBlock extends BaseEntityBlock {
                 serverPlayer.displayClientMessage(Component.translatable(message), true);
                 return InteractionResult.CONSUME;
             }
+            if (!isCurrentInteraction(state, serverLevel, pos, serverPlayer)
+                    || !altar.isCurrentAltar(serverLevel)) {
+                return InteractionResult.CONSUME;
+            }
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.world_resonance.resonated",
                     Component.translatable("ability.unknown_echoes." + resonated.getId()),
@@ -241,6 +257,11 @@ public class WorldResonanceAltarBlock extends BaseEntityBlock {
             }
         }
 
+        if (!isCurrentInteraction(state, serverLevel, pos, serverPlayer)
+                || !altar.isCurrentAltar(serverLevel)
+                || firstMissingAbility(serverPlayer) != null || !EchoPermission.canSummonWorldEcho(serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
         if (!altar.beginStarting(serverLevel, serverPlayer.getUUID())) {
             String message = altar.isRitualInProgress()
                     ? "message.unknown_echoes.world_resonance.ritual_active"
@@ -249,6 +270,12 @@ public class WorldResonanceAltarBlock extends BaseEntityBlock {
             return InteractionResult.CONSUME;
         }
         return InteractionResult.CONSUME;
+    }
+
+    private static boolean isCurrentInteraction(BlockState state, ServerLevel level, BlockPos pos,
+                                                 ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && BossRechallengeAltarBlockEntity.getReadyAltarState(level, pos) == state;
     }
 
     @Nullable
@@ -261,75 +288,107 @@ public class WorldResonanceAltarBlock extends BaseEntityBlock {
         return null;
     }
 
+    @Nullable
     public static WorldResonanceAltarBlockEntity getOrCreateAltar(ServerLevel level, BlockPos pos,
                                                                    BlockState state) {
-        if (level.getBlockEntity(pos) instanceof WorldResonanceAltarBlockEntity altar) {
-            return altar;
+        var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        if (chunk == null || level.isOutsideBuildHeight(pos) || chunk.getBlockState(pos) != state
+                || !(state.getBlock() instanceof WorldResonanceAltarBlock)) {
+            return null;
         }
-
+        BlockEntity existing = chunk.getBlockEntity(pos);
+        if (existing instanceof WorldResonanceAltarBlockEntity altar) {
+            return altar.isCurrentAltar(level) ? altar : null;
+        }
+        if (existing != null) {
+            return null;
+        }
         WorldResonanceAltarBlockEntity altar = new WorldResonanceAltarBlockEntity(pos, state);
         level.setBlockEntity(altar);
-        return altar;
+        chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk != null && chunk.getBlockState(pos) == state
+                && chunk.getBlockEntity(pos) == altar && !altar.isRemoved() ? altar : null;
     }
 
     static boolean completeSummon(ServerLevel level, BlockPos altarPos, ServerPlayer player,
                                   WorldResonanceAltarBlockEntity altar) {
-        WorldEcho echo = ModEntities.WORLD_ECHO.get().create(level);
-        if (echo == null) {
-            altar.abortStarting();
-            reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
+        if (!altarPos.equals(altar.getBlockPos()) || !altar.beginSummonCompletion(level, player)) {
             return false;
         }
-        BlockPos spawnPos = findSpawnPos(level, altarPos, altar.isGrandArena());
-        if (spawnPos == null) {
-            echo.discard();
-            altar.abortStarting();
-            reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
-            return false;
+        WorldEcho echo = null;
+        boolean summoned = false;
+        try {
+            BlockState altarState = BossRechallengeAltarBlockEntity.getReadyAltarState(level, altarPos);
+            echo = ModEntities.WORLD_ECHO.get().create(level);
+            if (echo == null) {
+                reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
+                return false;
+            }
+            BlockPos spawnPos = findSpawnPos(level, altarPos, altar.isGrandArena());
+            if (spawnPos == null) {
+                reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
+                return false;
+            }
+            echo.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5,
+                    level.random.nextFloat() * 360.0F, 0.0F);
+            if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, echo)) {
+                reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
+                return false;
+            }
+            echo.setPersistenceRequired();
+            echo.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos),
+                    MobSpawnType.TRIGGERED, null);
+            if (!altar.isCurrentSummonContext(level, player)
+                    || BossRechallengeAltarBlockEntity.getReadyAltarState(level, altarPos) != altarState
+                    || !EntitySpawnSafety.isLoadedAndCollisionFree(level, echo)) {
+                reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
+                return false;
+            }
+            if (!altar.reserveStartingBoss(echo)) {
+                reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
+                return false;
+            }
+            echo.registerParticipant(player);
+            if (!level.addFreshEntity(echo)) {
+                reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
+                return false;
+            }
+            if (!isCurrentSummon(level, altarPos, altarState, player, altar, echo)
+                    || !altar.markActive(echo)
+                    || !isCurrentSummon(level, altarPos, altarState, player, altar, echo)
+                    || !altar.ownsActiveBoss(altar.getArenaId(), echo.getUUID())) {
+                reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
+                return false;
+            }
+            summoned = true;
+            return true;
+        } finally {
+            try {
+                if (!summoned) {
+                    try {
+                        if (echo != null) {
+                            altar.abortSummon(echo.getUUID());
+                        }
+                        altar.abortStarting();
+                    } finally {
+                        if (echo != null) {
+                            echo.discard();
+                        }
+                    }
+                }
+            } finally {
+                altar.finishSummonCompletion();
+            }
         }
-        echo.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5,
-                level.random.nextFloat() * 360.0F, 0.0F);
-        if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, echo)) {
-            echo.discard();
-            altar.abortStarting();
-            reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
-            return false;
-        }
-        echo.setPersistenceRequired();
-        echo.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos),
-                MobSpawnType.TRIGGERED, null);
-        if (!altar.reserveStartingBoss(echo)) {
-            echo.discard();
-            altar.abortStarting();
-            reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
-            return false;
-        }
-        echo.registerParticipant(player);
-        if (!level.addFreshEntity(echo)) {
-            echo.discard();
-            altar.abortSummon(echo.getUUID());
-            reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
-            return false;
-        }
-        if (!altar.markActive(echo)) {
-            echo.discard();
-            altar.abortSummon(echo.getUUID());
-            reject(player, level, altarPos, "message.unknown_echoes.world_resonance.summon_failed");
-            return false;
-        }
+    }
 
-        level.sendParticles(ParticleTypes.FLASH,
-                spawnPos.getX() + 0.5, spawnPos.getY() + 6.0, spawnPos.getZ() + 0.5,
-                4, 0.0, 0.0, 0.0, 0.0);
-        level.sendParticles(ParticleTypes.END_ROD,
-                spawnPos.getX() + 0.5, spawnPos.getY() + 6.0, spawnPos.getZ() + 0.5,
-                320, 4.2, 6.0, 4.2, 0.32);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                spawnPos.getX() + 0.5, spawnPos.getY() + 6.0, spawnPos.getZ() + 0.5,
-                420, 4.0, 5.5, 4.0, 0.45);
-        level.playSound(null, spawnPos, SoundEvents.END_PORTAL_SPAWN,
-                SoundSource.HOSTILE, 3.5F, 0.72F);
-        return true;
+    private static boolean isCurrentSummon(ServerLevel level, BlockPos altarPos, BlockState altarState,
+                                           ServerPlayer player, WorldResonanceAltarBlockEntity altar,
+                                           WorldEcho echo) {
+        return altar.isCurrentSummonContext(level, player)
+                && BossRechallengeAltarBlockEntity.getReadyAltarState(level, altarPos) == altarState
+                && echo.isAlive() && level.getEntity(echo.getUUID()) == echo
+                && echo.matchesAltar(altar.getArenaId(), altarPos);
     }
 
     @Nullable
@@ -340,19 +399,19 @@ public class WorldResonanceAltarBlock extends BaseEntityBlock {
             for (Direction direction : directions) {
                 BlockPos candidate = altarPos.relative(direction, distance);
                 BlockPos clearanceTop = candidate.above(14);
-                if (!level.hasChunkAt(candidate)
-                        || !level.getWorldBorder().isWithinBounds(candidate)
+                BlockPos floor = candidate.below();
+                if (!level.getWorldBorder().isWithinBounds(candidate)
                         || !level.isInWorldBounds(candidate)
-                        || !level.isInWorldBounds(clearanceTop)) {
+                        || !level.isInWorldBounds(clearanceTop) || !level.isInWorldBounds(floor)) {
                     continue;
                 }
-                BlockPos floor = candidate.below();
-                if (!level.getBlockState(floor).isFaceSturdy(level, floor, Direction.UP)) {
+                var chunk = level.getChunkSource().getChunkNow(candidate.getX() >> 4, candidate.getZ() >> 4);
+                if (chunk == null || !chunk.getBlockState(floor).isFaceSturdy(level, floor, Direction.UP)) {
                     continue;
                 }
                 boolean clear = true;
                 for (int y = 0; y <= 14; y++) {
-                    if (!level.getBlockState(candidate.above(y)).getCollisionShape(
+                    if (!chunk.getBlockState(candidate.above(y)).getCollisionShape(
                             level, candidate.above(y)).isEmpty()) {
                         clear = false;
                         break;
@@ -367,8 +426,7 @@ public class WorldResonanceAltarBlock extends BaseEntityBlock {
     }
 
     private static void reject(ServerPlayer player, Level level, BlockPos pos, String messageKey) {
-        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE,
-                SoundSource.BLOCKS, 0.8F, 0.5F);
+        PlayerSoundFeedback.deny(player);
         player.displayClientMessage(Component.translatable(messageKey), true);
     }
 }

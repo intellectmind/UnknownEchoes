@@ -99,7 +99,7 @@ public class HushlightJelly extends Animal implements GeoEntity {
         level.sendParticles(ParticleTypes.GLOW,
                 this.getX(), this.getY() + this.getBbHeight() * 0.55D, this.getZ(),
                 10, 0.65D, 0.5D, 0.65D, 0.01D);
-        this.playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 0.45F, 1.7F);
+        this.playSound(ModSounds.HUSHLIGHT_JELLY_PULSE.get(), 0.45F, 1.0F);
     }
 
     @Override

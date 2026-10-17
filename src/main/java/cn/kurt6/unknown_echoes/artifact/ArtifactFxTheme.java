@@ -49,7 +49,7 @@ final class ArtifactFxTheme {
 
     /** 罗盘的黄铜盘面配青铜刻度：暖 core 在六件神器里独一份，飞行时远处也认得出。 */
     static final Theme STORM_COMPASS = theme(
-            0xF2C878, 0x0E6E70, ParticleTypes.GUST, ParticleTypes.CLOUD);
+            0xF2C878, 0x0E6E70, ParticleTypes.ELECTRIC_SPARK, ParticleTypes.CRIT);
 
     /** 薄荷 core 必须配亮青 edge：深青会与回声长剑、镜隙刃挤在同一条冷色带上。 */
     static final Theme TIDE_LANTERN = theme(

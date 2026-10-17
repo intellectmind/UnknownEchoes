@@ -1,14 +1,15 @@
 package cn.kurt6.unknown_echoes.block.tide;
 
+import cn.kurt6.unknown_echoes.fx.ExplorationFx;
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.entity.boss.TideLanternKeeper;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
@@ -26,6 +27,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -83,8 +85,8 @@ public class TideRuneSeatBlock extends Block implements SimpleWaterloggedBlock {
     protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
         if (!state.getValue(LIT)) {
             level.setBlock(pos, state.setValue(LIT, Boolean.TRUE), 3);
-            level.sendParticles(ParticleTypes.GLOW,
-                    pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.02);
+            MechanismFx.emit(level, ExplorationFx.tideSeat(Vec3.atBottomCenterOf(pos), true));
+            level.playSound(null, pos, ModSounds.BLOCK_TIDE_SEAT_READY.get(), SoundSource.BLOCKS, 0.5F, 1.0F);
         }
     }
 
@@ -115,9 +117,8 @@ public class TideRuneSeatBlock extends Block implements SimpleWaterloggedBlock {
         keeper.applyRuneBlind(player);
         level.setBlock(pos, state.setValue(LIT, Boolean.FALSE), 3);
         serverLevel.scheduleTick(pos, this, COOLDOWN_TICKS);
-        serverLevel.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.4F, 0.5F);
-        serverLevel.sendParticles(ParticleTypes.SONIC_BOOM,
-                pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 1, 0, 0, 0, 0);
+        serverLevel.playSound(null, pos, ModSounds.BLOCK_TIDE_SEAT_FLASH.get(), SoundSource.BLOCKS, 0.85F, 1.0F);
+        MechanismFx.emit(serverLevel, ExplorationFx.tideSeat(Vec3.atBottomCenterOf(pos), false));
         player.displayClientMessage(
                 Component.translatable("message.unknown_echoes.tide_rune_seat.flash"), true);
         return InteractionResult.CONSUME;

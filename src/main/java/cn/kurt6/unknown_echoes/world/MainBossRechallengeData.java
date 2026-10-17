@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.world;
 
+import cn.kurt6.unknown_echoes.entity.boss.BossParticleTheme;
+import cn.kurt6.unknown_echoes.fx.BossLifecycleFx;
 import cn.kurt6.unknown_echoes.block.RewardAltarBlock;
 import cn.kurt6.unknown_echoes.block.tide.TideCoreAltarBlock;
 import cn.kurt6.unknown_echoes.block.truesight.TrueSightAltarBlock;
@@ -26,6 +28,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.Structure;
@@ -41,6 +44,7 @@ import java.util.UUID;
 
 /** 三座能力祭坛的世界级复战状态；每个维度独立持久化活动 Boss 与共享冷却。 */
 public final class MainBossRechallengeData extends SavedData {
+    public static final int INITIAL_RECOVERY_INTERVAL_TICKS = 40;
     private static final String DATA_NAME = "unknown_echoes_main_boss_rechallenge";
     private static final SavedData.Factory<MainBossRechallengeData> FACTORY =
             new SavedData.Factory<>(MainBossRechallengeData::new, MainBossRechallengeData::load);
@@ -57,61 +61,100 @@ public final class MainBossRechallengeData extends SavedData {
 
         MainBossRechallengeData data = get(level);
         Entry entry = data.entry(altarPos, kind);
-        Mob activeBoss = findActiveBoss(level, arena, altarPos, kind, entry.activeBossUuid,
-                !entry.ownershipInitialized);
-        if (activeBoss != null) {
-            if (activeBoss instanceof RechallengeBoundBoss boundBoss) {
-                boundBoss.bindRechallengeArena(altarPos, arena.spawnAnchor());
+        if (entry.spawning) {
+            return;
+        }
+        entry.spawning = true;
+        try {
+            RecoveryResult recovery = data.findActiveBoss(level, arena, altarPos, kind, entry);
+            if (recovery.interrupted()) {
+                return;
             }
-            data.setActive(entry, activeBoss.getUUID());
-            reject(player, altarPos, kind, "active");
-            return;
-        }
-        if (entry.activeBossUuid != null) {
-            // addFreshEntity 失败或旧存档异常时可能留下失效 UUID;完整场地已加载,此时可安全重试。
-            data.clearStaleActiveForRetry(entry);
-        }
+            Mob activeBoss = recovery.boss();
+            if (activeBoss != null) {
+                if (activeBoss instanceof RechallengeBoundBoss boundBoss) {
+                    boundBoss.bindRechallengeArena(altarPos, arena.spawnAnchor());
+                }
+                data.setActive(entry, activeBoss.getUUID());
+                reject(player, altarPos, kind, "active");
+                return;
+            }
+            if (entry.activeBossUuid != null) {
+                // 场地方块与实体加载均完成后，才可把仍查不到的 UUID 视作失效。
+                data.clearStaleActiveForRetry(entry);
+            }
 
-        long remaining = data.remainingCooldown(level, entry);
-        if (remaining > 0L) {
-            reject(player, altarPos, kind, "cooldown", (remaining + 19L) / 20L);
-            return;
-        }
+            long remaining = data.remainingCooldown(level, entry);
+            if (remaining > 0L) {
+                reject(player, altarPos, kind, "cooldown", (remaining + 19L) / 20L);
+                return;
+            }
 
-        Mob boss = createBoss(level, kind);
-        if (boss == null) {
-            reject(player, altarPos, kind, "failed");
-            return;
+            BlockState altarState = getReadyAltarState(level, altarPos);
+            if (altarState == null || !kind.isAltar(altarState) || player.level() != level || player.isSpectator()) {
+                reject(player, altarPos, kind, "failed");
+                return;
+            }
+            Mob boss = createBoss(level, kind);
+            if (boss == null) {
+                reject(player, altarPos, kind, "failed");
+                return;
+            }
+            boolean reserved = false;
+            boolean spawned = false;
+            try {
+                BlockPos spawnPos = findSpawnPos(level, boss, arena.spawnAnchor(), arena.bounds());
+                if (spawnPos == null) {
+                    reject(player, altarPos, kind, "failed");
+                    return;
+                }
+                boss.moveTo(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D,
+                        player.getYRot() + 180.0F, 0.0F);
+                boss.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos), MobSpawnType.TRIGGERED, null);
+                boss.setPersistenceRequired();
+                ((RechallengeBoundBoss) boss).bindRechallengeArena(altarPos, arena.spawnAnchor());
+                if (!isAreaLoaded(level, arena.bounds()) || !isCurrentAltar(level, altarPos, altarState)
+                        || !EntitySpawnSafety.isLoadedAndCollisionFree(level, boss)
+                        || !isAreaLoaded(level, arena.bounds()) || !isCurrentAltar(level, altarPos, altarState)) {
+                    reject(player, altarPos, kind, "failed");
+                    return;
+                }
+                data.setActive(entry, boss.getUUID());
+                reserved = true;
+                if (!level.addFreshEntity(boss)) {
+                    reject(player, altarPos, kind, "failed");
+                    return;
+                }
+                if (!boss.isAlive() || level.getEntity(boss.getUUID()) != boss
+                        || !isAreaLoaded(level, arena.bounds()) || !isCurrentAltar(level, altarPos, altarState)
+                        || data.entries.get(altarPos.asLong()) != entry
+                        || !boss.getUUID().equals(entry.activeBossUuid) || player.level() != level || player.isSpectator()) {
+                    reject(player, altarPos, kind, "failed");
+                    return;
+                }
+                spawned = true;
+                BossLifecycleFx.summon(level, boss.position(), boss.getBbWidth(), boss.getBbHeight(), switch (kind) {
+                    case FORGOTTEN_COLOSSUS -> BossParticleTheme.COLOSSUS.body();
+                    case ABYSS_WATCHER -> BossParticleTheme.ABYSS.body();
+                    case MIRROR_GUARDIAN -> BossParticleTheme.MIRROR.body();
+                });
+                level.playSound(null, spawnPos, SoundEvents.END_PORTAL_SPAWN,
+                        SoundSource.HOSTILE, 1.8F, 0.75F);
+            } finally {
+                if (!spawned) {
+                    try {
+                        if (reserved) {
+                            data.clearActiveIfOwned(entry, boss.getUUID());
+                        }
+                    } finally {
+                        // 先回滚本次归属，再销毁实体；外层保护持续覆盖移除回调。
+                        boss.discard();
+                    }
+                }
+            }
+        } finally {
+            entry.spawning = false;
         }
-        BlockPos spawnPos = findSpawnPos(level, boss, arena.spawnAnchor(), arena.bounds());
-        if (spawnPos == null) {
-            boss.discard();
-            reject(player, altarPos, kind, "failed");
-            return;
-        }
-
-        boss.moveTo(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D,
-                player.getYRot() + 180.0F, 0.0F);
-        boss.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos), MobSpawnType.TRIGGERED, null);
-        boss.setPersistenceRequired();
-        ((RechallengeBoundBoss) boss).bindRechallengeArena(altarPos, arena.spawnAnchor());
-        if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, boss)) {
-            boss.discard();
-            reject(player, altarPos, kind, "failed");
-            return;
-        }
-        data.setActive(entry, boss.getUUID());
-        if (!level.addFreshEntity(boss)) {
-            boss.discard();
-            data.clearActiveIfOwned(entry, boss.getUUID());
-            reject(player, altarPos, kind, "failed");
-            return;
-        }
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                boss.getX(), boss.getY() + boss.getBbHeight() * 0.5D, boss.getZ(),
-                120, 1.5D, Math.max(1.0D, boss.getBbHeight() * 0.35D), 1.5D, 0.25D);
-        level.playSound(null, spawnPos, SoundEvents.END_PORTAL_SPAWN,
-                SoundSource.HOSTILE, 1.8F, 0.75F);
     }
 
     /** 进入已生成的主线场地时补救旧结构中漏掉的首次 Boss。 */
@@ -130,7 +173,8 @@ public final class MainBossRechallengeData extends SavedData {
                 continue;
             }
             BlockPos altarPos = transform(piece, kind.altarX, kind.altarY, kind.altarZ);
-            if (!kind.isAltar(level.getBlockState(altarPos))) {
+            BlockState altarState = getReadyAltarState(level, altarPos);
+            if (altarState == null || !kind.isAltar(altarState)) {
                 continue;
             }
             ensureInitialBoss(level, start, altarPos, kind,
@@ -151,47 +195,93 @@ public final class MainBossRechallengeData extends SavedData {
         if (entry == null) {
             entry = data.entry(altarPos, kind);
         }
-
-        ArenaContext arena = new ArenaContext(start, spawnAnchor, structureBounds);
-        Mob activeBoss = findActiveBoss(level, arena, altarPos, kind,
-                entry.activeBossUuid, !entry.ownershipInitialized);
-        if (activeBoss != null) {
-            data.setActive(entry, activeBoss.getUUID());
+        if (entry.spawning) {
             return;
         }
+        entry.spawning = true;
+        try {
+            long now = level.getGameTime();
+            if (entry.lastInitialRecoveryTick != Long.MIN_VALUE && now >= entry.lastInitialRecoveryTick
+                    && now - entry.lastInitialRecoveryTick < INITIAL_RECOVERY_INTERVAL_TICKS) {
+                return;
+            }
+            entry.lastInitialRecoveryTick = now;
+
+            ArenaContext arena = new ArenaContext(start, spawnAnchor, structureBounds);
+            RecoveryResult recovery = data.findActiveBoss(level, arena, altarPos, kind, entry);
+            if (recovery.interrupted()) {
+                return;
+            }
+            Mob activeBoss = recovery.boss();
+            if (activeBoss != null) {
+                data.setActive(entry, activeBoss.getUUID());
+                return;
+            }
             // 不能在这里判定 active UUID 失效:Boss 离开包围盒或区块不可查询时 findActiveBoss
             // 也返回 null,清掉绑定会让活着的 Boss 自我 discard 并再补一只。
-        if (entry.activeBossUuid != null || entry.ownershipInitialized) {
-            return;
-        }
+            if (entry.activeBossUuid != null || entry.ownershipInitialized) {
+                return;
+            }
 
-        Mob boss = createBoss(level, kind);
-        if (boss == null) {
-            return;
-        }
-        BlockPos spawnPos = findSpawnPos(level, boss, spawnAnchor, arena.bounds());
-        if (spawnPos == null) {
-            boss.discard();
-            return;
-        }
-        boss.moveTo(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D,
-                0.0F, 0.0F);
-        boss.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos),
-                MobSpawnType.TRIGGERED, null);
-        boss.setPersistenceRequired();
-        if (!(boss instanceof RechallengeBoundBoss boundBoss)) {
-            boss.discard();
-            return;
-        }
-        boundBoss.bindRechallengeArena(altarPos, spawnAnchor);
-        if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, boss)) {
-            boss.discard();
-            return;
-        }
-        data.setActive(entry, boss.getUUID());
-        if (!level.addFreshEntity(boss)) {
-            boss.discard();
-            data.clearActiveIfOwned(entry, boss.getUUID());
+            BlockState altarState = getReadyAltarState(level, altarPos);
+            if (altarState == null || !kind.isAltar(altarState)) {
+                return;
+            }
+            Mob boss = createBoss(level, kind);
+            if (boss == null) {
+                return;
+            }
+            boolean reserved = false;
+            boolean spawned = false;
+            try {
+                BlockPos spawnPos = findSpawnPos(level, boss, spawnAnchor, arena.bounds());
+                if (spawnPos == null) {
+                    return;
+                }
+                boss.moveTo(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D,
+                        0.0F, 0.0F);
+                boss.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos), MobSpawnType.TRIGGERED, null);
+                boss.setPersistenceRequired();
+                if (!(boss instanceof RechallengeBoundBoss boundBoss)) {
+                    return;
+                }
+                boundBoss.bindRechallengeArena(altarPos, spawnAnchor);
+                if (!isAreaLoaded(level, arena.bounds()) || !isCurrentAltar(level, altarPos, altarState)
+                        || !EntitySpawnSafety.isLoadedAndCollisionFree(level, boss)
+                        || !isAreaLoaded(level, arena.bounds()) || !isCurrentAltar(level, altarPos, altarState)) {
+                    return;
+                }
+                data.setActive(entry, boss.getUUID());
+                reserved = true;
+                if (!level.addFreshEntity(boss)) {
+                    return;
+                }
+                if (!boss.isAlive() || level.getEntity(boss.getUUID()) != boss
+                        || !isAreaLoaded(level, arena.bounds()) || !isCurrentAltar(level, altarPos, altarState)
+                        || data.entries.get(altarPos.asLong()) != entry
+                        || !boss.getUUID().equals(entry.activeBossUuid)) {
+                    return;
+                }
+                spawned = true;
+                BossLifecycleFx.summon(level, boss.position(), boss.getBbWidth(), boss.getBbHeight(), switch (kind) {
+                    case FORGOTTEN_COLOSSUS -> BossParticleTheme.COLOSSUS.body();
+                    case ABYSS_WATCHER -> BossParticleTheme.ABYSS.body();
+                    case MIRROR_GUARDIAN -> BossParticleTheme.MIRROR.body();
+                });
+            } finally {
+                if (!spawned) {
+                    try {
+                        if (reserved) {
+                            data.rollbackInitialSpawn(entry, boss.getUUID());
+                        }
+                    } finally {
+                        // 先回滚本次归属，再销毁实体；外层保护持续覆盖移除回调。
+                        boss.discard();
+                    }
+                }
+            }
+        } finally {
+            entry.spawning = false;
         }
     }
 
@@ -293,6 +383,14 @@ public final class MainBossRechallengeData extends SavedData {
         }
     }
 
+    private void rollbackInitialSpawn(Entry entry, UUID uuid) {
+        if (uuid.equals(entry.activeBossUuid)) {
+            entry.activeBossUuid = null;
+            entry.ownershipInitialized = false;
+            setDirty();
+        }
+    }
+
     /**
      * 只清失效的 active UUID,不动 ownershipInitialized:一起清会把"已击败/已认领"退化成
      * "首次生成未完成",于是给一只仍活着但暂时查不到的 Boss 之外再补一只。
@@ -324,7 +422,8 @@ public final class MainBossRechallengeData extends SavedData {
 
     @Nullable
     private static ArenaContext findArena(ServerLevel level, BlockPos altarPos, BossKind kind) {
-        if (!kind.isAltar(level.getBlockState(altarPos))) {
+        BlockState altarState = getReadyAltarState(level, altarPos);
+        if (altarState == null || !kind.isAltar(altarState)) {
             return null;
         }
         StructureStart start = LoadedStructureLookup.loadedStructureStartAt(level, altarPos, kind::matchesStructure);
@@ -344,34 +443,80 @@ public final class MainBossRechallengeData extends SavedData {
         return null;
     }
 
-    @Nullable
-    private static Mob findActiveBoss(ServerLevel level, ArenaContext arena, BlockPos altarPos, BossKind kind,
-                                       @Nullable UUID activeUuid, boolean allowUnownedAdoption) {
+    private RecoveryResult findActiveBoss(ServerLevel level, ArenaContext arena, BlockPos altarPos,
+                                          BossKind kind, Entry entry) {
+        if (entry.kind != kind) {
+            return new RecoveryResult(null, true);
+        }
+        BlockState altarState = getReadyAltarState(level, altarPos);
+        if (altarState == null || !kind.isAltar(altarState)) {
+            return new RecoveryResult(null, true);
+        }
+        RecoveryContext context = new RecoveryContext(entry, entry.activeBossUuid,
+                entry.ownershipInitialized, entry.cooldownUntil, altarState);
+        if (!isRecoveryCurrent(level, arena, altarPos, context)) {
+            return new RecoveryResult(null, true);
+        }
+
         Mob owner = null;
-        if (activeUuid != null && level.getEntity(activeUuid) instanceof Mob knownBoss
-                && knownBoss.isAlive() && kind.isRealBoss(knownBoss)
-                && hasExactBinding(knownBoss, altarPos)) {
+        boolean ownerFromIndex = false;
+        if (context.activeUuid() != null && level.getEntity(context.activeUuid()) instanceof Mob knownBoss
+                && isRecoveryCandidate(level, altarPos, kind, knownBoss)) {
+            // An indexed owner may have left the original structure bounds while still owning this arena.
             owner = knownBoss;
+            ownerFromIndex = true;
         }
         BoundingBox box = arena.bounds();
         AABB bounds = new AABB(box.minX(), box.minY(), box.minZ(),
                 box.maxX() + 1.0D, box.maxY() + 1.0D, box.maxZ() + 1.0D);
         var candidates = level.getEntities((Entity) null, bounds,
                 entity -> kind.isRealBoss(entity) && hasExactBinding(entity, altarPos));
+        if (!isRecoveryCurrent(level, arena, altarPos, context)) {
+            return new RecoveryResult(null, true);
+        }
         for (Entity entity : candidates) {
-            if (entity instanceof Mob boss && boss.isAlive()) {
-                if (owner == null && (activeUuid != null && activeUuid.equals(boss.getUUID())
-                        || activeUuid == null && allowUnownedAdoption)) {
+            if (entity instanceof Mob boss && isRecoveryCandidate(level, altarPos, kind, boss)
+                    && bounds.intersects(boss.getBoundingBox())) {
+                if (owner == null && (context.activeUuid() != null && context.activeUuid().equals(boss.getUUID())
+                        || context.activeUuid() == null && !context.ownershipInitialized())) {
                     owner = boss;
                 }
             }
         }
         for (Entity entity : candidates) {
-            if (entity instanceof Mob boss && boss.isAlive() && boss != owner) {
-                    boss.discard();
+            // Removing a duplicate can synchronously change the remaining candidates or the arena owner.
+            if (!isRecoveryCurrent(level, arena, altarPos, context)
+                    || owner != null && (!isRecoveryCandidate(level, altarPos, kind, owner)
+                    || !ownerFromIndex && !bounds.intersects(owner.getBoundingBox()))) {
+                return new RecoveryResult(null, true);
+            }
+            if (entity instanceof Mob boss && boss != owner
+                    && isRecoveryCandidate(level, altarPos, kind, boss)
+                    && bounds.intersects(boss.getBoundingBox())) {
+                boss.discard();
             }
         }
-        return owner;
+        if (!isRecoveryCurrent(level, arena, altarPos, context)
+                || owner != null && (!isRecoveryCandidate(level, altarPos, kind, owner)
+                || !ownerFromIndex && !bounds.intersects(owner.getBoundingBox()))) {
+            return new RecoveryResult(null, true);
+        }
+        return new RecoveryResult(owner, false);
+    }
+
+    private boolean isRecoveryCurrent(ServerLevel level, ArenaContext arena, BlockPos altarPos,
+                                      RecoveryContext context) {
+        return isAreaLoaded(level, arena.bounds()) && isCurrentAltar(level, altarPos, context.altarState())
+                && entries.get(altarPos.asLong()) == context.entry()
+                && java.util.Objects.equals(context.entry().activeBossUuid, context.activeUuid())
+                && context.entry().ownershipInitialized == context.ownershipInitialized()
+                && context.entry().cooldownUntil == context.cooldownUntil();
+    }
+
+    private static boolean isRecoveryCandidate(ServerLevel level, BlockPos altarPos, BossKind kind, Mob boss) {
+        return boss.level() == level && boss.isAlive()
+                && level.getEntity(boss.getUUID()) == boss
+                && kind.isRealBoss(boss) && hasExactBinding(boss, altarPos);
     }
 
     private static boolean hasExactBinding(Entity entity, BlockPos altarPos) {
@@ -403,7 +548,28 @@ public final class MainBossRechallengeData extends SavedData {
     }
 
     private static boolean isAreaLoaded(ServerLevel level, BoundingBox box) {
-        return LoadedAreaCheck.boundsLoaded(level, box);
+        for (int chunkX = box.minX() >> 4; chunkX <= box.maxX() >> 4; chunkX++) {
+            for (int chunkZ = box.minZ() >> 4; chunkZ <= box.maxZ() >> 4; chunkZ++) {
+                if (level.getChunkSource().getChunkNow(chunkX, chunkZ) == null
+                        || !level.areEntitiesLoaded(ChunkPos.asLong(chunkX, chunkZ))) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    @Nullable
+    private static BlockState getReadyAltarState(ServerLevel level, BlockPos altarPos) {
+        if (level.isOutsideBuildHeight(altarPos)) {
+            return null;
+        }
+        var chunk = level.getChunkSource().getChunkNow(altarPos.getX() >> 4, altarPos.getZ() >> 4);
+        return chunk == null ? null : chunk.getBlockState(altarPos);
+    }
+
+    private static boolean isCurrentAltar(ServerLevel level, BlockPos altarPos, BlockState state) {
+        return getReadyAltarState(level, altarPos) == state;
     }
 
     private static BlockPos transform(StructurePiece piece, int localX, int localY, int localZ) {
@@ -565,10 +731,20 @@ public final class MainBossRechallengeData extends SavedData {
         private UUID activeBossUuid;
         private long cooldownUntil;
         private boolean ownershipInitialized;
+        // 只保护当前同步调用，不写入存档；首次补生与主动复战共用。
+        private boolean spawning;
+        private long lastInitialRecoveryTick = Long.MIN_VALUE;
 
         private Entry(BossKind kind) {
             this.kind = kind;
         }
+    }
+
+    private record RecoveryContext(Entry entry, @Nullable UUID activeUuid, boolean ownershipInitialized,
+                                   long cooldownUntil, BlockState altarState) {
+    }
+
+    private record RecoveryResult(@Nullable Mob boss, boolean interrupted) {
     }
 
     private record ArenaContext(StructureStart start, BlockPos spawnAnchor, BoundingBox bounds) {

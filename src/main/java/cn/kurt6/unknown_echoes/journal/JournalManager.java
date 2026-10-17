@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.journal;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
@@ -11,6 +12,9 @@ import cn.kurt6.unknown_echoes.registry.ModAttachments;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.world.EchoRealmBiomeCatalog;
 import cn.kurt6.unknown_echoes.world.DeepEchoesBiomeCatalog;
+import cn.kurt6.unknown_echoes.world.structure.LoadedStructureLookup;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -49,10 +53,25 @@ public class JournalManager {
     }
 
     public static void recordStructure(ServerPlayer player, ResourceLocation structureId, net.minecraft.core.BlockPos pos) {
+        if (structureId == null) return;
+        var registry = player.serverLevel().registryAccess().registryOrThrow(Registries.STRUCTURE);
+        BoundingBox bounds = LoadedStructureLookup.loadedStructureBoundsAt(player.serverLevel(), pos,
+                structure -> structureId.equals(registry.getKey(structure)));
+        recordStructureSite(player, structureId, bounds == null ? pos : bounds.getCenter(), bounds);
+    }
+
+    public static void recordStructureSite(ServerPlayer player, ResourceLocation structureId,
+                                           BlockPos anchor, BoundingBox bounds) {
         if (structureId == null) {
             return;
         }
-        if (getData(player).addStructure(structureId.toString())) {
+        ExplorationJournalData data = getData(player);
+        boolean firstDiscovery = data.addStructure(structureId.toString());
+        boolean newSite = data.visitStructure(structureId.toString(),
+                player.level().dimension().location().toString(), anchor, bounds);
+        if (firstDiscovery) {
+            cn.kurt6.unknown_echoes.artifact.ArtifactManager.refillEnergy(player,
+                    cn.kurt6.unknown_echoes.config.ServerConfig.ENERGY_REFILL_STRUCTURE.get());
             notebookFlip(player);
             ModAdvancements.award(player, ModAdvancements.FIRST_RUIN);
             if (getData(player).getStructures().size() >= 5) {
@@ -64,70 +83,33 @@ public class JournalManager {
             ModAdvancements.awardStructureDiscovery(player, structureId.toString(), getData(player).getStructures());
             ModAdvancements.checkDeepExplorationAdvancements(player,
                     getData(player).getStructures(), getData(player).getBiomes());
-
-            addClue(player, new ExplorationClue(structureId.toString(),
-                    player.level().dimension().location().toString(), pos, true));
-            cn.kurt6.unknown_echoes.artifact.ArtifactManager.refillEnergy(player,
-                    cn.kurt6.unknown_echoes.config.ServerConfig.ENERGY_REFILL_STRUCTURE.get());
+        }
+        if (firstDiscovery || newSite) {
             syncJournal(player);
-        } else {
-
-            if (markClueVisited(player, structureId.toString(), pos)) {
-                syncJournal(player);
-            }
         }
     }
 
-    /** 写入一条探索线索:同结构 96 格内已有线索时合并,不重复记。 */
+    // 写入与容量淘汰统一由个人日志处理。
     public static boolean addClue(ServerPlayer player, ExplorationClue clue) {
-        ExplorationJournalData data = getData(player);
-        String encodedClue = clue == null ? null : clue.encode();
-        if (!data.canStoreClue(encodedClue)) {
-            return false;
-        }
-        var clues = data.getClues();
-        for (int i = 0; i < clues.size(); i++) {
-            ExplorationClue existing = ExplorationClue.decode(clues.get(i));
-            if (existing != null && existing.structureId().equals(clue.structureId())
-                    && existing.dimension().equals(clue.dimension())
-                    && existing.pos().distSqr(clue.pos()) <= 96 * 96) {
-                if (clue.visited() && !existing.visited()) {
-                    clues.set(i, existing.asVisited().encode());
-                    return true;
-                }
-                return false;
-            }
-        }
-        clues.add(encodedClue);
-        if (clues.size() > ExplorationJournalData.MAX_CLUES) {
-
-            int removeIdx = 0;
-            for (int i = 0; i < clues.size(); i++) {
-                ExplorationClue existing = ExplorationClue.decode(clues.get(i));
-                if (existing == null || existing.visited()) {
-                    removeIdx = i;
-                    break;
-                }
-            }
-            clues.remove(removeIdx);
-        }
-        return true;
+        return getData(player).addClue(clue);
     }
 
-    /** 玩家亲身抵达某结构时,把附近同结构的未踏入线索改为已踏入。 */
-    private static boolean markClueVisited(ServerPlayer player, String structureId, net.minecraft.core.BlockPos pos) {
-        var clues = getData(player).getClues();
-        String dim = player.level().dimension().location().toString();
-        boolean changed = false;
-        for (int i = 0; i < clues.size(); i++) {
-            ExplorationClue clue = ExplorationClue.decode(clues.get(i));
-            if (clue != null && !clue.visited() && clue.structureId().equals(structureId)
-                    && clue.dimension().equals(dim) && clue.pos().distSqr(pos) <= 128 * 128) {
-                clues.set(i, clue.asVisited().encode());
-                changed = true;
-            }
+    public static void selectDestination(ServerPlayer player, String destination) {
+        if (!player.isAlive() || player.isSpectator()) {
+            return;
         }
-        return changed;
+        ExplorationJournalData data = getData(player);
+        if (data.setDestination(destination)) {
+            ExplorationClue selected = data.getDestination();
+            player.displayClientMessage(selected == null
+                    ? Component.translatable("message.unknown_echoes.journal.destination_cleared")
+                    : Component.translatable("journal.unknown_echoes.destination.current",
+                            JournalNavigation.structureName(selected)), true);
+        } else if (!"".equals(destination)
+                && (data.getDestination() == null || !data.getDestination().sameSite(ExplorationClue.decode(destination)))) {
+            player.displayClientMessage(Component.translatable("message.unknown_echoes.journal.destination_unavailable"), true);
+        }
+        syncJournal(player);
     }
 
     public static List<ExplorationClue> getClues(ServerPlayer player) {
@@ -150,19 +132,24 @@ public class JournalManager {
     }
 
     public static void recordBiome(ServerPlayer player, ResourceLocation biomeId) {
-        if (biomeId != null && getData(player).addBiome(biomeId.toString())) {
+        if (biomeId == null) {
+            return;
+        }
+        boolean firstDiscovery = getData(player).addBiome(biomeId.toString());
+        // 已知群系也要补写完成记录，容量不足时下次扫描仍可重试。
+        if (DeepEchoesBiomeCatalog.hasVisitedAll(getData(player).getBiomes())
+                && !EchoAbilityManager.hasActivatedMechanism(player, ALL_DEEP_BIOMES_KEY)) {
+            if (EchoAbilityManager.activateMechanism(player, ALL_DEEP_BIOMES_KEY)) {
+                EchoAbilityManager.syncToClient(player);
+            }
+        }
+        if (firstDiscovery) {
             notebookFlip(player);
             if (EchoRealmBiomeCatalog.hasVisitedAll(getData(player).getBiomes())) {
                 ModAdvancements.award(player, ModAdvancements.ALL_BIOMES);
             }
             ModAdvancements.checkDeepExplorationAdvancements(player,
                     getData(player).getStructures(), getData(player).getBiomes());
-            if (DeepEchoesBiomeCatalog.hasVisitedAll(getData(player).getBiomes())
-                    && !EchoAbilityManager.hasActivatedMechanism(player, ALL_DEEP_BIOMES_KEY)) {
-                if (EchoAbilityManager.activateMechanism(player, ALL_DEEP_BIOMES_KEY)) {
-                    EchoAbilityManager.syncToClient(player);
-                }
-            }
             syncJournal(player);
         }
     }
@@ -173,7 +160,8 @@ public class JournalManager {
             return;
         }
         if (getData(player).addPage(pageId)) {
-
+            cn.kurt6.unknown_echoes.artifact.ArtifactManager.refillEnergy(player,
+                    cn.kurt6.unknown_echoes.config.ServerConfig.ENERGY_REFILL_PAGE.get());
             EchoAbilityManager.syncToClient(player);
             ModAdvancements.award(player, ModAdvancements.FIRST_PAGE);
             int releasePages = AncientPageCatalog.countReleasePages(getData(player).getPages());
@@ -192,9 +180,6 @@ public class JournalManager {
                 ModAdvancements.award(player, ModAdvancements.ALL_FIRST_DIMENSION_PAGES);
             }
             ModAdvancements.checkResearchAdvancements(player);
-
-            cn.kurt6.unknown_echoes.artifact.ArtifactManager.refillEnergy(player,
-                    cn.kurt6.unknown_echoes.config.ServerConfig.ENERGY_REFILL_PAGE.get());
             syncJournal(player);
         }
     }
@@ -220,17 +205,17 @@ public class JournalManager {
             player.displayClientMessage(Component.translatable("message.unknown_echoes.pages.need_space"), true);
             return false;
         }
-        if (!EchoAbilityManager.activateMechanism(player, ALL_PAGES_REWARD_KEY)) {
+        if (!EchoAbilityManager.activateMechanisms(player, () -> {
+            for (ItemStack reward : rewards) {
+                player.getInventory().add(reward);
+            }
+        }, ALL_PAGES_REWARD_KEY)) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.progress_record.full"), true);
             return false;
         }
         EchoAbilityManager.syncToClient(player);
-        for (ItemStack reward : rewards) {
-            player.getInventory().add(reward);
-        }
-        player.level().playSound(null, player.blockPosition(),
-                SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 0.6F);
+        player.playNotifySound(ModSounds.FEEDBACK_PAGES_COMPLETE.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
         return true;
     }
 
@@ -254,7 +239,9 @@ public class JournalManager {
                         .sorted()
                         .toList(),
                 List.copyOf(journal.getClues()),
-                List.of(totalStructures, totalBiomes, totalMobs, totalBosses, KNOWN_PAGES)));
+                List.of(totalStructures, totalBiomes, totalMobs, totalBosses, KNOWN_PAGES),
+                journal.getEncodedDestination()));
+        JourneyManager.sync(player);
     }
 
     /** 能力研究等级兼容入口;实际由 EchoResearchManager 处理六研究线。 */
@@ -304,27 +291,13 @@ public class JournalManager {
             }
         }
 
-        addRevisitHint(lines, player, journal, EchoAbilityType.TIDE_ECHO,
-                "sunken_temple", "journal.unknown_echoes.revisit.tide_runes");
-        addRevisitHint(lines, player, journal, EchoAbilityType.TRUE_SIGHT_ECHO,
-                "mirror_temple", "journal.unknown_echoes.revisit.hidden_room");
-        addRevisitHint(lines, player, journal, EchoAbilityType.WIND_ECHO,
-                "sky_observatory", "journal.unknown_echoes.revisit.observatory");
-
-        addRevisitHint(lines, player, journal, EchoAbilityType.TIDE_ECHO,
-                "submerged_record_room", "journal.unknown_echoes.revisit.record_room");
+        for (JournalRevisit revisit : JournalRevisit.values()) {
+            if (revisit.available(journal.getStructures(), ability -> EchoAbilityManager.hasAbility(player, ability))) {
+                lines.add(Component.translatable(revisit.hintKey()).withStyle(ChatFormatting.DARK_PURPLE));
+            }
+        }
         lines.addAll(EchoCompletionManager.buildIndexFeedback(player));
         return lines;
-    }
-
-    /** 玩家拥有能力且发现过对应结构时,在日志末尾追加一条回访提示。 */
-    private static void addRevisitHint(List<Component> lines, ServerPlayer player,
-                                       ExplorationJournalData journal, EchoAbilityType ability,
-                                       String structureName, String langKey) {
-        if (EchoAbilityManager.hasAbility(player, ability)
-                && journal.getStructures().contains(UnknownEchoes.id(structureName).toString())) {
-            lines.add(Component.translatable(langKey).withStyle(ChatFormatting.DARK_PURPLE));
-        }
     }
 
     private static Component line(String key, long have, long total) {

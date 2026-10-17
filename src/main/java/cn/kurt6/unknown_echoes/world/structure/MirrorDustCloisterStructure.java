@@ -16,16 +16,16 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-public class MirrorDustCloisterStructure extends SinglePieceStructure {
+public class MirrorDustCloisterStructure extends TerrainAnchoredStructure {
     public static final MapCodec<MirrorDustCloisterStructure> CODEC =
             simpleCodec(MirrorDustCloisterStructure::new);
 
@@ -64,6 +64,11 @@ public class MirrorDustCloisterStructure extends SinglePieceStructure {
         @Override
         protected void addAdditionalSaveData(StructurePieceSerializationContext context, CompoundTag tag) {
             super.addAdditionalSaveData(context, tag);
+        }
+
+        @Override
+        protected int surfaceAnchorOffset() {
+            return -GROUND_Y;
         }
 
         @Override
@@ -165,7 +170,7 @@ public class MirrorDustCloisterStructure extends SinglePieceStructure {
             for (int yy = 1; yy <= 2; yy++) {
                 this.placeBlock(level, hidden, cx - 3, yy, 9, box);
             }
-            buildAccessibleChest(level, random, box, cx - 5, 1, 9, ModLootTables.ECHO_TEMPLE_HIDDEN);
+            buildAccessibleChest(level, random, box, cx - 5, 1, 9, ModLootTables.ECHO_TEMPLE_HIDDEN, Direction.EAST);
 
             this.generateBox(level, box, cx + 3, 0, 13, cx + 5, 4, 15, bricks, bricks, false);
             this.placeBlock(level, air, cx + 4, 1, 14, box);
@@ -247,6 +252,16 @@ public class MirrorDustCloisterStructure extends SinglePieceStructure {
                 this.placeBlock(level, prism, sconce[0], 13, sconce[1], box);
             }
 
+            // 镜尘冠冕：后殿封印壳上方的分裂棱镜冠，与前段回廊的低矮线脚形成高低对照。
+            architecturalRing(level, box, cx, 17, roomCz, 5, mirrorDecor);
+            for (int[] shard : new int[][]{{-4, 0, 20}, {4, 0, 21}, {0, -4, 19}}) {
+                for (int shardY = 16; shardY <= shard[2]; shardY++) {
+                    this.placeBlock(level, shardY % 2 == 0 ? cracked : mirrorDecor,
+                            cx + shard[0], shardY, roomCz + shard[1], box);
+                }
+                this.placeBlock(level, prism, cx + shard[0], shard[2] + 1, roomCz + shard[1], box);
+            }
+
             this.placeBlock(level, ModBlocks.TRUE_SIGHT_CHEST.get().defaultBlockState(),
                     2, 1, 30, box);
             BlockPos vaultPos = new BlockPos(this.getWorldX(2, 30), this.getWorldY(1),
@@ -272,6 +287,18 @@ public class MirrorDustCloisterStructure extends SinglePieceStructure {
                 this.placeBlock(level, ModBlocks.MIRROR_STONE.get().defaultBlockState(),
                         node[0], node[1], node[2], box);
             }
+            dressStructure(level, box, "mirror_dust_cloister");
+            buildSurfaceEntry(level, box, bricks);
+        }
+
+        private void buildSurfaceEntry(WorldGenLevel level, BoundingBox box, BlockState bricks) {
+            int center = WIDTH / 2;
+            BlockState stairs = ModBlocks.MIRROR_STONE_BRICK_STAIRS.get().defaultBlockState()
+                    .setValue(StairBlock.HALF, Half.BOTTOM);
+            placeBlock(level, bricks, center, GROUND_Y - 2, 0, box);
+            placeBlock(level, stairs.setValue(StairBlock.FACING, Direction.NORTH), center, GROUND_Y - 1, 0, box);
+            placeBlock(level, stairs.setValue(StairBlock.FACING, Direction.EAST), center - 1, GROUND_Y - 2, 0, box);
+            placeBlock(level, stairs.setValue(StairBlock.FACING, Direction.WEST), center + 1, GROUND_Y - 2, 0, box);
         }
 
         /** 隐藏奖励/挑战区的外壳与下方两层封底使用锚定封印石。 */

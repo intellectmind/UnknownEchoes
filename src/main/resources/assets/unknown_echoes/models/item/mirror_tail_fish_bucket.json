@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "unknown_echoes:item/mirror_tail_fish_bucket"
-  }
-}

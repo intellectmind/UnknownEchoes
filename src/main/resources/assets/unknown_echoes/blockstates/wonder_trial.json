@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "phase=0": {
+      "model": "unknown_echoes:block/wonder_trial"
+    },
+    "phase=1": {
+      "model": "unknown_echoes:block/wonder_trial_1"
+    },
+    "phase=2": {
+      "model": "unknown_echoes:block/wonder_trial_2"
+    },
+    "phase=3": {
+      "model": "unknown_echoes:block/wonder_trial_3"
+    }
+  }
+}

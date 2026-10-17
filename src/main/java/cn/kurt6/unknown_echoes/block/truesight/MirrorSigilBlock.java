@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.block.truesight;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -97,7 +98,7 @@ public class MirrorSigilBlock extends BaseEntityBlock {
             if (!recorded) {
                 return InteractionResult.CONSUME;
             }
-            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.3F, 1.2F);
+            level.playSound(null, pos, ModSounds.BLOCK_MIRROR_SIGIL_CONFIRM.get(), SoundSource.BLOCKS, 1.3F, 1.0F);
             serverLevel.sendParticles(ParticleTypes.END_ROD,
                     pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 10, 0.3, 0.3, 0.3, 0.03);
 

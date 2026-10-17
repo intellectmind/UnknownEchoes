@@ -2,7 +2,6 @@ package cn.kurt6.unknown_echoes.block.truesight;
 
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
 import cn.kurt6.unknown_echoes.registry.ModStructures;
-import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
 import cn.kurt6.unknown_echoes.world.structure.LoadedStructureLookup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -11,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import java.util.ArrayList;
@@ -40,7 +40,8 @@ public class MirrorSigilBlockEntity extends BlockEntity {
 
     /** 服务端读取真假的唯一入口:未初始化时先对整簇做一次确定性重排。 */
     public static boolean isReal(ServerLevel level, BlockPos pos) {
-        if (!(level.getBlockEntity(pos) instanceof MirrorSigilBlockEntity sigil)) {
+        MirrorSigilBlockEntity sigil = loadedSigil(level, pos);
+        if (sigil == null) {
             return false;
         }
         ensureInitialized(level, pos, sigil);
@@ -49,10 +50,20 @@ public class MirrorSigilBlockEntity extends BlockEntity {
 
     /** 符印簇未完整加载时暂不判定，避免误判真符印。 */
     public static boolean ensureInitialized(ServerLevel level, BlockPos pos) {
-        if (!(level.getBlockEntity(pos) instanceof MirrorSigilBlockEntity sigil)) {
+        MirrorSigilBlockEntity sigil = loadedSigil(level, pos);
+        if (sigil == null) {
             return false;
         }
         return ensureInitialized(level, pos, sigil);
+    }
+
+    private static MirrorSigilBlockEntity loadedSigil(ServerLevel level, BlockPos pos) {
+        if (level.isOutsideBuildHeight(pos)) {
+            return null;
+        }
+        LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk != null && chunk.getBlockEntity(pos, LevelChunk.EntityCreationType.IMMEDIATE)
+                instanceof MirrorSigilBlockEntity sigil ? sigil : null;
     }
 
     private static boolean ensureInitialized(ServerLevel level, BlockPos pos,
@@ -81,9 +92,14 @@ public class MirrorSigilBlockEntity extends BlockEntity {
                 ? REAL_PER_CLUSTER
                 : Math.max(1, shuffled.size() / 3);
         for (int i = 0; i < shuffled.size(); i++) {
-            if (level.getBlockEntity(shuffled.get(i)) instanceof MirrorSigilBlockEntity sigil
-                    && !sigil.initialized) {
-                sigil.setReal(i < realCount);
+            BlockPos pos = shuffled.get(i);
+            LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+            if (chunk != null && chunk.getBlockEntity(pos, LevelChunk.EntityCreationType.IMMEDIATE)
+                    instanceof MirrorSigilBlockEntity sigil && !sigil.initialized) {
+                // 真伪只保存在服务端 NBT，初始化无需派发邻块的红石更新。
+                sigil.real = i < realCount;
+                sigil.initialized = true;
+                chunk.setUnsaved(true);
             }
         }
     }
@@ -91,9 +107,6 @@ public class MirrorSigilBlockEntity extends BlockEntity {
     /** 返回所属镜面神殿内的全部符印；没有结构引用时使用旧档兼容范围。 */
     public static List<BlockPos> findCluster(ServerLevel level, BlockPos center) {
         BoundingBox bounds = findClusterBounds(level, center);
-        if (!isBoundsLoaded(level, bounds)) {
-            return List.of();
-        }
         int minChunkX = bounds.minX() >> 4;
         int maxChunkX = bounds.maxX() >> 4;
         int minChunkZ = bounds.minZ() >> 4;
@@ -101,8 +114,12 @@ public class MirrorSigilBlockEntity extends BlockEntity {
         List<BlockPos> cluster = new ArrayList<>();
         for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
             for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-                for (BlockEntity blockEntity : level.getChunk(chunkX, chunkZ).getBlockEntities().values()) {
-                    if (!(blockEntity instanceof MirrorSigilBlockEntity)) {
+                LevelChunk chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                if (chunk == null) {
+                    return List.of();
+                }
+                for (BlockEntity blockEntity : chunk.getBlockEntities().values()) {
+                    if (!(blockEntity instanceof MirrorSigilBlockEntity) || blockEntity.isRemoved()) {
                         continue;
                     }
                     BlockPos pos = blockEntity.getBlockPos();
@@ -134,7 +151,14 @@ public class MirrorSigilBlockEntity extends BlockEntity {
     }
 
     private static boolean isBoundsLoaded(ServerLevel level, BoundingBox bounds) {
-        return LoadedAreaCheck.boundsLoaded(level, bounds);
+        for (int chunkX = bounds.minX() >> 4; chunkX <= bounds.maxX() >> 4; chunkX++) {
+            for (int chunkZ = bounds.minZ() >> 4; chunkZ <= bounds.maxZ() >> 4; chunkZ++) {
+                if (level.getChunkSource().getChunkNow(chunkX, chunkZ) == null) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     @Override

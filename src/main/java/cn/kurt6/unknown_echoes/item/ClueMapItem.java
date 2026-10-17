@@ -4,6 +4,8 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.journal.ClueMapSearch;
 import cn.kurt6.unknown_echoes.journal.ClueLocator;
+import cn.kurt6.unknown_echoes.journal.ExplorationClue;
+import cn.kurt6.unknown_echoes.journal.JournalManager;
 import cn.kurt6.unknown_echoes.registry.ModDataComponents;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
@@ -21,6 +23,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
+import javax.annotation.Nullable;
 
 /** 线索地图（迷途旅者出售）：右键后定位附近已注册探索点并写入个人日志，之后由风暴罗盘指向或在日志中查看。 */
 public class ClueMapItem extends Item {
@@ -52,6 +55,11 @@ public class ClueMapItem extends Item {
         if (level.isClientSide || !(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResultHolder.success(stack);
         }
+        if (ClueMapSearch.isSearching(serverPlayer)) {
+            serverPlayer.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.clue_map.searching"), true);
+            return InteractionResultHolder.consume(stack);
+        }
         if (serverPlayer.getCooldowns().isOnCooldown(this)) {
             return InteractionResultHolder.consume(stack);
         }
@@ -73,37 +81,48 @@ public class ClueMapItem extends Item {
             List<ResourceLocation> candidates = bound == null
                     ? resolvePool(serverPlayer)
                     : target == null ? List.of() : List.of(target);
+            ItemStack requestedMap = stack.copyWithCount(1);
             ClueMapSearch.RequestResult request = ClueMapSearch.request(serverPlayer, candidates, bound == null ? null : target,
-                    ClueMapItem::completeGeneratedLocate);
+                    (owner, clue) -> completeGeneratedLocate(owner, requestedMap, clue));
             if (request == ClueMapSearch.RequestResult.STARTED
                     || request == ClueMapSearch.RequestResult.ALREADY_SEARCHING) {
-                serverPlayer.displayClientMessage(Component.translatable(
-                        "message.unknown_echoes.clue_map.searching"), true);
-                return InteractionResultHolder.consume(stack);
+                if (ClueMapSearch.isSearching(serverPlayer)) {
+                    serverPlayer.displayClientMessage(Component.translatable(
+                            "message.unknown_echoes.clue_map.searching"), true);
+                }
+                // 已加载区块的搜索可能同步完成，回调也可能已经替换手持物。
+                return InteractionResultHolder.consume(player.getItemInHand(hand));
             }
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.clue_map.unavailable"), true);
             return InteractionResultHolder.consume(stack);
         }
         completeLocate(serverPlayer, stack, bound, outcome);
-        return InteractionResultHolder.consume(stack);
+        // 最后一张重复地图返还的拓印纸可能进入当前手持槽。
+        return InteractionResultHolder.consume(player.getItemInHand(hand));
     }
 
     private static void completeLocate(ServerPlayer serverPlayer, ItemStack stack,
                                        String bound, ClueLocator.LocateOutcome outcome) {
         Level level = serverPlayer.level();
         if (outcome.result() == ClueLocator.LocateResult.ADDED) {
+            // 新线索已写入，先完成支付，避免声音回调再次回收同一张地图。
+            if (!serverPlayer.getAbilities().instabuild) {
+                stack.shrink(1);
+            }
             serverPlayer.sendSystemMessage(
                     Component.translatable("message.unknown_echoes.clue_map.read",
                             Component.translatable("structure.unknown_echoes."
                                     + outcome.structureId().getPath())));
             level.playSound(null, serverPlayer.blockPosition(),
                     SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 1.0F);
-            if (!serverPlayer.getAbilities().instabuild) {
-                stack.shrink(1);
-            }
         } else if (outcome.result() == ClueLocator.LocateResult.ALREADY_KNOWN && bound != null) {
-
+            if (serverPlayer.getAbilities().instabuild) {
+                serverPlayer.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.clue_map.known"), true);
+                return;
+            }
+            stack.shrink(1);
             ItemStack refund = new ItemStack(ModItems.RECORD_TRACING_PAPER.get(), 2);
             if (!serverPlayer.getInventory().add(refund)) {
                 serverPlayer.drop(refund, false);
@@ -112,9 +131,6 @@ public class ClueMapItem extends Item {
                     "message.unknown_echoes.clue_map.recovered"));
             level.playSound(null, serverPlayer.blockPosition(),
                     SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.8F, 0.7F);
-            if (!serverPlayer.getAbilities().instabuild) {
-                stack.shrink(1);
-            }
         } else if (outcome.result() == ClueLocator.LocateResult.ALREADY_KNOWN) {
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.clue_map.known"), true);
@@ -125,27 +141,41 @@ public class ClueMapItem extends Item {
         }
     }
 
-    /**
-     * 生成兜底的回调结算。兜底已扫过全部候选区块,所以 NOT_FOUND 走独立文案并明确地图未消耗,
-     * 不能再报"换个区域再查看"。命中路径与同步结算一致。
-     */
+    /** 先确认背包仍有同组件地图，再把生成结果写入个人日志并结算。 */
     private static void completeGeneratedLocate(ServerPlayer serverPlayer,
-                                                ClueLocator.LocateOutcome outcome) {
-        if (outcome.result() == ClueLocator.LocateResult.NOT_FOUND) {
+                                                ItemStack requestedMap, @Nullable ExplorationClue clue) {
+        if (clue == null) {
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.clue_map.search_failed"), true);
             return;
         }
-        ItemStack held = serverPlayer.getMainHandItem();
-        if (!(held.getItem() instanceof ClueMapItem)) {
-            held = serverPlayer.getOffhandItem();
-        }
-        if (!(held.getItem() instanceof ClueMapItem)) {
+        ItemStack payment = findRequestedMap(serverPlayer, requestedMap);
+        if (payment.isEmpty()) {
             serverPlayer.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.clue_map.search_failed"), true);
+                    "message.unknown_echoes.clue_map.cancelled"), true);
             return;
         }
-        completeLocate(serverPlayer, held, held.get(ModDataComponents.CLUE_STRUCTURE.get()), outcome);
+        boolean known = JournalManager.getClues(serverPlayer).stream()
+                .anyMatch(existing -> existing.dimension().equals(clue.dimension())
+                        && existing.structureId().equals(clue.structureId()));
+        boolean added = !known && JournalManager.addClue(serverPlayer, clue);
+        if (added) {
+            JournalManager.syncJournal(serverPlayer);
+        }
+        completeLocate(serverPlayer, payment, requestedMap.get(ModDataComponents.CLUE_STRUCTURE.get()),
+                new ClueLocator.LocateOutcome(added ? ClueLocator.LocateResult.ADDED
+                        : ClueLocator.LocateResult.ALREADY_KNOWN, ResourceLocation.parse(clue.structureId())));
+    }
+
+    private static ItemStack findRequestedMap(ServerPlayer player, ItemStack requestedMap) {
+        // 同组件地图允许拆分、合并或换槽，绑定目标和自定义名称不同的地图不能代扣。
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack candidate = player.getInventory().getItem(slot);
+            if (!candidate.isEmpty() && ItemStack.isSameItemSameComponents(candidate, requestedMap)) {
+                return candidate;
+            }
+        }
+        return ItemStack.EMPTY;
     }
 
     private ResourceLocation parseBoundTarget(String bound) {

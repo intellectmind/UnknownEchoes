@@ -4,9 +4,12 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
+import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -37,6 +40,7 @@ public class FlankTargetGoal extends Goal {
     private int retryDelay;
     private int runTicks;
     private Vec3 flankTarget;
+    private LivingEntity maneuverTarget;
 
     /** movementLocked 在抬手/施法期返回 true,期间不启动也立刻让位。 */
     public FlankTargetGoal(PathfinderMob mob, double speedModifier, BooleanSupplier movementLocked) {
@@ -61,7 +65,9 @@ public class FlankTargetGoal extends Goal {
             return false;
         }
         LivingEntity target = this.mob.getTarget();
-        if (target == null || !target.isAlive()) {
+        if (!this.mob.isAlive() || this.mob.isNoAi() || target == null || !target.isAlive()
+                || target.level() != this.mob.level() || !this.mob.canAttack(target)
+                || this.mob.isAlliedTo(target)) {
             return false;
         }
         double distanceSqr = this.mob.distanceToSqr(target);
@@ -73,20 +79,24 @@ public class FlankTargetGoal extends Goal {
             return false;
         }
         this.flankTarget = this.findFlankTarget(target);
+        this.maneuverTarget = this.flankTarget != null ? target : null;
         return this.flankTarget != null;
     }
 
     @Override
     public boolean canContinueToUse() {
         LivingEntity target = this.mob.getTarget();
-        return this.runTicks > 0 && target != null && target.isAlive()
-                && !this.movementLocked.getAsBoolean()
+        return this.runTicks > 0 && this.isManeuverTargetValid()
                 && this.mob.distanceToSqr(target) > ENGAGE_DISTANCE_SQR
                 && !this.mob.getNavigation().isDone();
     }
 
     @Override
     public void start() {
+        if (this.flankTarget == null || !this.isManeuverTargetValid()) {
+            this.stop();
+            return;
+        }
         this.runTicks = MAX_DURATION_TICKS;
         this.mob.getNavigation().moveTo(this.flankTarget.x, this.flankTarget.y, this.flankTarget.z,
                 this.speedModifier);
@@ -95,7 +105,9 @@ public class FlankTargetGoal extends Goal {
     @Override
     public void stop() {
         this.flankTarget = null;
+        this.maneuverTarget = null;
         this.runTicks = 0;
+        this.mob.getNavigation().stop();
     }
 
     @Override
@@ -110,19 +122,23 @@ public class FlankTargetGoal extends Goal {
     /** 同族且更靠近目标的个体算"已在正面缠住";用类相等而不是 instanceof,避免不同种混算一队。 */
     private boolean hasPackmateEngaged(LivingEntity target) {
         double ownDistanceSqr = this.mob.distanceToSqr(target);
-        int engaged = 1;
-        for (PathfinderMob packmate : this.mob.level().getEntitiesOfClass(PathfinderMob.class,
+        List<PathfinderMob> engaged = new ArrayList<>(MIN_PACK_SIZE - 1);
+        this.mob.level().getEntities(EntityTypeTest.forClass(PathfinderMob.class),
                 this.mob.getBoundingBox().inflate(SEARCH_RADIUS),
                 other -> other != this.mob && other.getClass() == this.mob.getClass()
-                        && other.isAlive() && other.getTarget() == target)) {
-            if (packmate.distanceToSqr(target) < ownDistanceSqr) {
-                ++engaged;
-                if (engaged >= MIN_PACK_SIZE) {
-                    return true;
-                }
-            }
-        }
-        return false;
+                        && other.isAlive() && !other.isNoAi() && other.getTarget() == target
+                        && other.canAttack(target) && !other.isAlliedTo(target)
+                        && other.distanceToSqr(target) < ownDistanceSqr,
+                engaged, MIN_PACK_SIZE - 1);
+        return engaged.size() >= MIN_PACK_SIZE - 1;
+    }
+
+    private boolean isManeuverTargetValid() {
+        LivingEntity target = this.mob.getTarget();
+        return this.mob.isAlive() && !this.mob.isNoAi() && !this.movementLocked.getAsBoolean()
+                && target != null && target == this.maneuverTarget && target.isAlive()
+                && target.level() == this.mob.level() && this.mob.canAttack(target)
+                && !this.mob.isAlliedTo(target);
     }
 
     /** 取目标背侧的落点:以"目标 → 自己"的反向为基准角,再让原版落点搜索在其扇区里挑一个可站点。 */

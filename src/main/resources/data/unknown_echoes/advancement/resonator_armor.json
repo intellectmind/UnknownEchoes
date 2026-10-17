@@ -1,0 +1,47 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:resonator_chestplate"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.resonator_armor.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.resonator_armor.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:oath_armor",
+  "criteria": {
+    "full_set": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "unknown_echoes:resonator_helmet"
+            ]
+          },
+          {
+            "items": [
+              "unknown_echoes:resonator_chestplate"
+            ]
+          },
+          {
+            "items": [
+              "unknown_echoes:resonator_leggings"
+            ]
+          },
+          {
+            "items": [
+              "unknown_echoes:resonator_boots"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

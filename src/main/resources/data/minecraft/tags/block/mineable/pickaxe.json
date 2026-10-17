@@ -113,6 +113,14 @@
     "unknown_echoes:abyssal_stone_brick_wall",
     "unknown_echoes:wind_etched_brick_stairs",
     "unknown_echoes:wind_etched_brick_slab",
-    "unknown_echoes:wind_etched_brick_wall"
+    "unknown_echoes:wind_etched_brick_wall",
+    "unknown_echoes:riveted_bronze_casing",
+    "unknown_echoes:ivory_reef_ashlar",
+    "unknown_echoes:carved_bellstone",
+    "unknown_echoes:particle_enchanting_table",
+    "unknown_echoes:wind_ashlar",
+    "unknown_echoes:wind_carved_frieze",
+    "unknown_echoes:folded_slate_tiles",
+    "unknown_echoes:folded_slate_relief"
   ]
 }

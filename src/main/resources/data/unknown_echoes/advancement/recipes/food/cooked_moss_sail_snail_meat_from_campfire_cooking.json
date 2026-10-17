@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_meat": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "unknown_echoes:moss_sail_snail_meat"
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "unknown_echoes:cooked_moss_sail_snail_meat_from_campfire_cooking"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_meat",
+      "has_the_recipe"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "unknown_echoes:cooked_moss_sail_snail_meat_from_campfire_cooking"
+    ]
+  }
+}

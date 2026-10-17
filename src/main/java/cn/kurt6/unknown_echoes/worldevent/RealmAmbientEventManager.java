@@ -1,13 +1,12 @@
 package cn.kurt6.unknown_echoes.worldevent;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.item.NightVisionSupport;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -39,7 +38,7 @@ public final class RealmAmbientEventManager {
                                List<ServerPlayer> nearbyPlayers) {
         switch (type) {
             case METEOR_AFTERGLOW -> presentMeteorAfterglow(level, center, nearbyPlayers);
-            case ECHO_STORM -> presentEchoStorm(level, center);
+            case ECHO_STORM -> presentEchoStorm(level, center, nearbyPlayers);
             case STRATA_AFTERSHOCK -> presentStrataAftershock(level, center, nearbyPlayers);
             default -> {
             }
@@ -54,26 +53,27 @@ public final class RealmAmbientEventManager {
             addEffectIfMissing(player, MobEffects.LUCK, 60);
         }
 
-        RandomSource random = level.random;
-        for (int streak = 0; streak < 6; streak++) {
-            double x = center.getX() + random.nextGaussian() * 8.0D;
-            double y = center.getY() + 5.0D + random.nextDouble() * 6.0D;
-            double z = center.getZ() + random.nextGaussian() * 8.0D;
-            for (int step = 0; step < 4; step++) {
-                level.sendParticles(step == 0
-                                ? ParticleTypes.ELECTRIC_SPARK : ParticleTypes.END_ROD,
-                        x - step * 0.65D, y + step * 0.45D, z + step * 0.25D,
-                        1, 0.02D, 0.02D, 0.02D, 0.0D);
+        if (Math.floorMod(level.getGameTime(), 5L) == 0L) {
+            RandomSource random = level.random;
+            for (int streak = 0; streak < 6; streak++) {
+                double x = center.getX() + random.nextGaussian() * 8.0D;
+                double y = center.getY() + 5.0D + random.nextDouble() * 6.0D;
+                double z = center.getZ() + random.nextGaussian() * 8.0D;
+                for (int step = 0; step < 4; step++) {
+                    level.sendParticles(step == 0
+                                    ? ParticleTypes.ELECTRIC_SPARK : ParticleTypes.END_ROD,
+                            x - step * 0.65D, y + step * 0.45D, z + step * 0.25D,
+                            1, 0.02D, 0.02D, 0.02D, 0.0D);
+                }
             }
         }
-        if (random.nextInt(16) == 0) {
-            level.playSound(null, center, SoundEvents.AMETHYST_BLOCK_RESONATE,
-                    SoundSource.AMBIENT, 0.45F, 1.65F);
+        if (Math.floorMod(level.getGameTime(), 180L) == 0L) {
+            WorldEventSounds.pulse(nearbyPlayers, ModSounds.WORLD_EVENT_METEOR_AFTERGLOW_PULSE.get(), 0.45F, 1.0F);
         }
     }
 
     /** 风暴只激化普通敌对生物，Boss 始终不受世界事件增益。 */
-    private static void presentEchoStorm(ServerLevel level, BlockPos center) {
+    private static void presentEchoStorm(ServerLevel level, BlockPos center, List<ServerPlayer> nearbyPlayers) {
         AABB area = new AABB(center).inflate(EVENT_RADIUS, 8.0D, EVENT_RADIUS);
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, area,
                 entity -> entity instanceof Enemy && entity.isAlive()
@@ -85,16 +85,16 @@ public final class RealmAmbientEventManager {
             addEffectIfMissing(target, MobEffects.GLOWING, 30);
         }
 
-        RandomSource random = level.random;
-        level.sendParticles(ParticleTypes.CLOUD,
-                center.getX(), center.getY() + 3.5D, center.getZ(),
-                18, 12.0D, 2.5D, 12.0D, 0.04D);
-        level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                center.getX(), center.getY() + 1.5D, center.getZ(),
-                10, 10.0D, 2.0D, 10.0D, 0.08D);
-        if (random.nextInt(8) == 0) {
-            level.playSound(null, center, SoundEvents.LIGHTNING_BOLT_THUNDER,
-                    SoundSource.AMBIENT, 0.22F, 1.15F);
+        if (Math.floorMod(level.getGameTime(), 5L) == 0L) {
+            level.sendParticles(ParticleTypes.CLOUD,
+                    center.getX(), center.getY() + 7.0D, center.getZ(),
+                    8, 12.0D, 1.0D, 12.0D, 0.04D);
+            level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                    center.getX(), center.getY() + 1.5D, center.getZ(),
+                    10, 10.0D, 2.0D, 10.0D, 0.08D);
+        }
+        if (Math.floorMod(level.getGameTime(), 240L) == 0L) {
+            WorldEventSounds.pulse(nearbyPlayers, ModSounds.WORLD_EVENT_ECHO_STORM_PULSE.get(), 0.22F, 1.0F);
         }
     }
 
@@ -106,24 +106,24 @@ public final class RealmAmbientEventManager {
             addEffectIfMissing(player, MobEffects.FIRE_RESISTANCE, 60);
         }
 
-        RandomSource random = level.random;
-        level.sendParticles(ParticleTypes.ASH,
-                center.getX(), center.getY() + 4.0D, center.getZ(),
-                20, 12.0D, 3.0D, 12.0D, 0.015D);
-        double offset = level.getGameTime() * 0.025D;
-        for (int point = 0; point < 16; point++) {
-            double angle = point * Math.PI / 8.0D + offset;
-            double radius = 5.0D + Math.floorMod(point, 4) * 2.5D;
-            level.sendParticles(point % 4 == 0
-                            ? ParticleTypes.POOF : ParticleTypes.SCULK_SOUL,
-                    center.getX() + Math.cos(angle) * radius,
-                    center.getY() + 0.25D,
-                    center.getZ() + Math.sin(angle) * radius,
-                    1, 0.04D, 0.05D, 0.04D, 0.0D);
+        if (Math.floorMod(level.getGameTime(), 5L) == 0L) {
+            level.sendParticles(ParticleTypes.ASH,
+                    center.getX(), center.getY() + 4.0D, center.getZ(),
+                    20, 12.0D, 3.0D, 12.0D, 0.015D);
+            double offset = level.getGameTime() * 0.025D;
+            for (int point = 0; point < 16; point++) {
+                double angle = point * Math.PI / 8.0D + offset;
+                double radius = 5.0D + Math.floorMod(point, 4) * 2.5D;
+                level.sendParticles(point % 4 == 0
+                                ? ParticleTypes.POOF : ParticleTypes.SCULK_SOUL,
+                        center.getX() + Math.cos(angle) * radius,
+                        center.getY() + 0.25D,
+                        center.getZ() + Math.sin(angle) * radius,
+                        1, 0.04D, 0.05D, 0.04D, 0.0D);
+            }
         }
-        if (random.nextInt(10) == 0) {
-            level.playSound(null, center, SoundEvents.SCULK_CLICKING,
-                    SoundSource.AMBIENT, 0.5F, 0.55F);
+        if (Math.floorMod(level.getGameTime(), 140L) == 0L) {
+            WorldEventSounds.pulse(nearbyPlayers, ModSounds.WORLD_EVENT_STRATA_AFTERSHOCK_PULSE.get(), 0.5F, 1.0F);
         }
     }
 

@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.item;
 
+import cn.kurt6.unknown_echoes.fx.PlayerSoundFeedback;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.artifact.ArtifactManager;
@@ -61,7 +62,10 @@ public final class FractureSurveyorItem extends Item implements ItemActiveSkill 
     @Override
     public boolean activateItemSkill(ServerLevel level, ServerPlayer player,
                                      ItemStack stack, InteractionHand hand) {
-        return survey(level, player, hand);
+        if (!canActivate(level, player, stack, hand)) {
+            return false;
+        }
+        return survey(level, player, stack, hand);
     }
 
     @Override
@@ -72,6 +76,9 @@ public final class FractureSurveyorItem extends Item implements ItemActiveSkill 
     @Override
     public boolean activateAlternateItemSkill(ServerLevel serverLevel, ServerPlayer serverPlayer,
                                               ItemStack stack, InteractionHand hand) {
+        if (!canActivate(serverLevel, serverPlayer, stack, hand)) {
+            return false;
+        }
         List<ResourceLocation> targets = targetsFor(serverLevel);
         if (targets.isEmpty()) {
             serverPlayer.displayClientMessage(Component.translatable(
@@ -85,13 +92,17 @@ public final class FractureSurveyorItem extends Item implements ItemActiveSkill 
         serverPlayer.displayClientMessage(Component.translatable(
                 "message.unknown_echoes.fracture_surveyor.selected",
                 structureName(targets.get(selected))), true);
+        if (!canActivate(serverLevel, serverPlayer, stack, hand)) {
+            return true;
+        }
         serverLevel.playSound(null, serverPlayer.blockPosition(),
                 SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.65F,
                 0.85F + selected * 0.05F);
         return true;
     }
 
-    private boolean survey(ServerLevel serverLevel, ServerPlayer serverPlayer, InteractionHand hand) {
+    private boolean survey(ServerLevel serverLevel, ServerPlayer serverPlayer,
+                           ItemStack stack, InteractionHand hand) {
         List<ResourceLocation> targets = targetsFor(serverLevel);
         if (targets.isEmpty()) {
             serverPlayer.displayClientMessage(Component.translatable(
@@ -113,8 +124,9 @@ public final class FractureSurveyorItem extends Item implements ItemActiveSkill 
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.fracture_surveyor.no_echo",
                     structureName(targetId)), true);
-            serverLevel.playSound(null, serverPlayer.blockPosition(),
-                    SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 0.5F, 0.45F);
+            if (canActivate(serverLevel, serverPlayer, stack, hand)) {
+                PlayerSoundFeedback.deny(serverPlayer);
+            }
             return false;
         }
         if (!targetId.equals(located.id())) {
@@ -122,14 +134,21 @@ public final class FractureSurveyorItem extends Item implements ItemActiveSkill 
             serverPlayer.getPersistentData().putInt(selectionKey, targets.indexOf(targetId));
         }
         BlockPos target = located.pos();
+        serverPlayer.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
         if (!ArtifactManager.spendEnergy(serverPlayer, ENERGY_COST)) {
+            serverPlayer.getCooldowns().removeCooldown(this);
             return false;
         }
-        serverPlayer.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
+        if (!canActivate(serverLevel, serverPlayer, stack, hand)) {
+            return true;
+        }
         boolean recorded = JournalManager.addClue(serverPlayer, new ExplorationClue(
                 targetId.toString(), serverLevel.dimension().location().toString(), target, false));
         if (recorded) {
             JournalManager.syncJournal(serverPlayer);
+        }
+        if (!canActivate(serverLevel, serverPlayer, stack, hand)) {
+            return true;
         }
 
         double dx = target.getX() - serverPlayer.getX();
@@ -143,6 +162,9 @@ public final class FractureSurveyorItem extends Item implements ItemActiveSkill 
                 structureName(targetId),
                 Component.translatable("direction.unknown_echoes." + DIRECTIONS[directionIndex]),
                 Component.translatable("range.unknown_echoes." + range)), true);
+        if (!canActivate(serverLevel, serverPlayer, stack, hand)) {
+            return true;
+        }
 
         Vec3 direction = new Vec3(dx, 0.0D, dz).normalize();
         Vec3 origin = serverPlayer.position().add(0.0D, 1.2D, 0.0D);
@@ -154,8 +176,16 @@ public final class FractureSurveyorItem extends Item implements ItemActiveSkill 
         }
         serverLevel.playSound(null, serverPlayer.blockPosition(),
                 SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.PLAYERS, 0.8F, 1.35F);
-        serverPlayer.swing(hand, true);
+        if (canActivate(serverLevel, serverPlayer, stack, hand)) {
+            serverPlayer.swing(hand, true);
+        }
         return true;
+    }
+
+    private boolean canActivate(ServerLevel level, ServerPlayer player,
+                                ItemStack stack, InteractionHand hand) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && stack.is(this) && player.getItemInHand(hand) == stack;
     }
 
     private static List<ResourceLocation> targetsFor(ServerLevel level) {

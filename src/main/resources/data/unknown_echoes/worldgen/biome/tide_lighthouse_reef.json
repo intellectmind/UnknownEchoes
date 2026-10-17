@@ -3,23 +3,33 @@
   "temperature": 0.72,
   "downfall": 0.82,
   "effects": {
-    "fog_color": 7389152,
-    "sky_color": 3496606,
-    "water_color": 5555408,
-    "water_fog_color": 1194076,
-    "grass_color": 5285502,
-    "foliage_color": 4889462,
+    "fog_color": 10013652,
+    "sky_color": 7712456,
+    "water_color": 3312287,
+    "water_fog_color": 2314081,
+    "grass_color": 7121822,
+    "foliage_color": 7121822,
     "ambient_particle": {
       "options": {
         "type": "minecraft:underwater"
       },
-      "probability": 0.012
+      "probability": 0.002
     },
     "mood_sound": {
-      "sound": "minecraft:ambient.underwater.loop",
-      "tick_delay": 6000,
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.jagged_peaks",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": "minecraft:ambient.underwater.loop.additions.rare",
+      "tick_chance": 0.00025
     }
   },
   "carvers": {
@@ -43,7 +53,9 @@
       "unknown_echoes:tide_salt_ore_disk"
     ],
     [],
-    [],
+    [
+      "unknown_echoes:tide_lighthouse_reef_landform"
+    ],
     [
       "unknown_echoes:lantern_seafan_patch",
       "unknown_echoes:shell_bloom_patch",
@@ -67,6 +79,36 @@
         "weight": 12,
         "minCount": 1,
         "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:reefjaw_shark",
+        "weight": 6,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:riftfang_eel",
+        "weight": 7,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:needlefin_lionfish",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:lanternjaw_angler",
+        "weight": 4,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:sawtooth_prawn",
+        "weight": 6,
+        "minCount": 1,
+        "maxCount": 2
       }
     ],
     "creature": [],
@@ -89,6 +131,12 @@
       },
       {
         "type": "unknown_echoes:pearlback_ray",
+        "weight": 16,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:lantern_seahorse",
         "weight": 16,
         "minCount": 1,
         "maxCount": 2

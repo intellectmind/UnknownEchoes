@@ -20,7 +20,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
@@ -28,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** 后期区域同名结构发行候选版，补齐晶歌、沉眠和档案馆入口结构。 */
-public class LateRegionSiteStructure extends SinglePieceStructure {
+public class LateRegionSiteStructure extends TerrainAnchoredStructure {
     public static final MapCodec<LateRegionSiteStructure> CRYSTAL_SONG_SHRINE_CODEC =
             simpleCodec(settings -> new LateRegionSiteStructure(settings, Kind.CRYSTAL_SONG_SHRINE));
     public static final MapCodec<LateRegionSiteStructure> CRYSTAL_SONG_HALL_CODEC =
@@ -133,8 +132,94 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
                 case ECHO_GRAND_ARCHIVE -> buildGrandArchive(level, random, box);
             }
             buildLateRegionFrame(level, random, box);
+            buildLateRegionSignature(level, box);
             addThemedEncounter(level, random, box);
+            if (kind == Kind.CRYSTAL_SONG_SHRINE) {
+                int c = kind.size / 2;
+                // 封壳须晚于台座砌体，植物与晶核须晚于壁龛入口清理。
+                buildTrueSightVaultNiche(level, random, box, c + 4, 1, c - 4, Direction.SOUTH);
+                this.placeBlock(level, Blocks.MOSS_BLOCK.defaultBlockState(), c - 3, 0, c - 2, box);
+                this.placeBlock(level, Blocks.MOSS_BLOCK.defaultBlockState(), c + 3, 0, c - 1, box);
+                this.placeBlock(level, ModBlocks.RESONANT_MUSHROOM.get().defaultBlockState(), c - 3, 1, c - 2, box);
+                this.placeBlock(level, ModBlocks.RESONANT_MUSHROOM.get().defaultBlockState(), c + 3, 1, c - 1, box);
+            }
             placeBudgetedResourceNodes(level, box);
+            if (kind == Kind.CRYSTAL_SONG_HALL) {
+                int c = kind.size / 2;
+                // 奖励须在砌体完成后落位，封壳与支柱留在中央 14 格战斗半径之外。
+                buildSiteBranchReward(level, random, box, c - 12, 2, c + 12, ModLootTables.T4_REGION_CORE);
+                buildTrueSightVaultNiche(level, random, box, c - 13, 2, c - 11, Direction.EAST);
+            }
+            if (kind == Kind.ECHO_GRAND_ARCHIVE) {
+                int c = kind.size / 2;
+                // 南翼封壳与隐纹须晚于山墙和外侧引道，入口朝南衔接引道。
+                this.placeBlock(level, ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState(), c - 5, 2, c + 28, box);
+                this.placeBlock(level, ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState(), c + 5, 2, c + 28, box);
+                buildSiteHiddenReward(level, random, box, c, 2, c + 30);
+            }
+            BlockState foundation = switch (kind) {
+                case CRYSTAL_SONG_SHRINE, CRYSTAL_SONG_HALL -> ModBlocks.SONGSTONE_BRICKS.get().defaultBlockState();
+                case DREAM_FLOWER_HOUSE -> ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState();
+                case ECHO_GRAND_ARCHIVE -> ModBlocks.ECHO_STONE_BRICKS.get().defaultBlockState();
+            };
+            anchorGroundColumns(level, box, 0, foundation);
+            dressStructure(level, box, kind.id);
+        }
+
+        /** 后期结构的专属冠饰:晶歌、沉眠花海与总档案馆各用不同的立面节奏。 */
+        private void buildLateRegionSignature(WorldGenLevel level, BoundingBox box) {
+            int c = kind.size / 2;
+            switch (kind) {
+                case CRYSTAL_SONG_SHRINE -> {
+                    BlockState song = ModBlocks.SONGSTONE_BRICKS.get().defaultBlockState();
+                    BlockState lantern = ModBlocks.SONG_LANTERN_GLASS.get().defaultBlockState();
+                    for (int i = 0; i < 6; i++) {
+                        double angle = i * Math.PI / 3.0D;
+                        int x = c + (int) Math.round(Math.cos(angle) * 8);
+                        int z = c + (int) Math.round(Math.sin(angle) * 8);
+                        architecturalPillar(level, box, x, 9, z, 5 + i % 2, song);
+                        placeCorniceBlock(level, box, lantern, x, 15 + i % 2, z);
+                    }
+                }
+                case CRYSTAL_SONG_HALL -> {
+                    BlockState song = ModBlocks.SONGSTONE_BRICKS.get().defaultBlockState();
+                    BlockState chime = ModBlocks.CHISELED_SONGSTONE.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        for (int x = c - 16; x <= c + 16; x += 8) {
+                            architecturalPillar(level, box, x, 20, c + side * 18, 8, song);
+                            placeCorniceBlock(level, box, chime, x, 28, c + side * 18);
+                        }
+                    }
+                }
+                case DREAM_FLOWER_HOUSE -> {
+                    BlockState moss = ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState();
+                    BlockState flower = ModBlocks.DREAM_FLOWER.get().defaultBlockState();
+                    for (int layer = 0; layer < 3; layer++) {
+                        int radius = 18 + layer * 7;
+                        int y = 18 + layer * 5;
+                        architecturalRing(level, box, c, y, c, radius, moss);
+                        for (Direction direction : Direction.Plane.HORIZONTAL) {
+                            placeCorniceBlock(level, box, Blocks.MOSS_BLOCK.defaultBlockState(),
+                                    c + direction.getStepX() * radius, y,
+                                    c + direction.getStepZ() * radius);
+                            placeCorniceBlock(level, box, flower,
+                                    c + direction.getStepX() * radius, y + 1,
+                                    c + direction.getStepZ() * radius);
+                        }
+                    }
+                }
+                case ECHO_GRAND_ARCHIVE -> {
+                    BlockState strata = ModBlocks.ECHO_STRATA_BRICKS.get().defaultBlockState();
+                    BlockState mosaic = ModBlocks.ARCHIVE_MOSAIC.get().defaultBlockState();
+                    for (int side : new int[]{-1, 1}) {
+                        for (int z = c - 24; z <= c + 24; z += 8) {
+                            architecturalPillar(level, box, c + side * 27, 21, z, 10, strata);
+                            placeCorniceBlock(level, box, mosaic, c + side * 27, 31, z);
+                        }
+                    }
+                    architecturalRing(level, box, c, 33, c, 22, mosaic);
+                }
+            }
         }
 
         /** 晶歌结构闹晶噪浮灵,总档案馆有迷途记录员游荡;梦花屋保持柔和,不加遭遇。 */
@@ -284,10 +369,8 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
                             ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState());
                 }
             }
-            scatterArchitecturalDebris(level, random, box, c, 1, c,
-                    Math.max(6, c - 6), Math.max(7, c - 2), Math.max(12, c),
-                    ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState(),
-                    ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState());
+            scatterArchitecturalDebris(level, box, kind.id, c, 1, c,
+                    ModBlocks.CRACKED_ECHO_STONE_BRICKS.get().defaultBlockState(), ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState());
         }
 
         private void buildCrystalShrine(WorldGenLevel level, RandomSource random, BoundingBox box) {
@@ -295,7 +378,8 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
             BlockState floor = ModBlocks.SONGSTONE_TILES.get().defaultBlockState();
             BlockState pillarState = ModBlocks.SONGSTONE_BRICKS.get().defaultBlockState();
             BlockState crystal = ModBlocks.CRYSTAL_SONG_CLUSTER.get().defaultBlockState();
-            addSiteRewardLoop(level, random, box, c, ModLootTables.T3_PUZZLE);
+            buildSiteGuidedEntrance(level, box, c, ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState());
+            buildSiteBranchReward(level, random, box, c - 4, 1, c + 3, ModLootTables.T3_PUZZLE);
             disk(level, box, c, 0, c, 5, floor);
             for (int[] node : CRYSTAL_SHRINE_CLUSTER_NODES) {
                 int x = c + node[0];
@@ -304,10 +388,6 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
                 pillar(level, box, x, 1, z, y - 1, pillarState);
                 this.placeBlock(level, crystal, x, y, z, box);
             }
-            this.placeBlock(level, Blocks.MOSS_BLOCK.defaultBlockState(), c - 3, 0, c - 2, box);
-            this.placeBlock(level, Blocks.MOSS_BLOCK.defaultBlockState(), c + 3, 0, c - 1, box);
-            this.placeBlock(level, ModBlocks.RESONANT_MUSHROOM.get().defaultBlockState(), c - 3, 1, c - 2, box);
-            this.placeBlock(level, ModBlocks.RESONANT_MUSHROOM.get().defaultBlockState(), c + 3, 1, c - 1, box);
             this.placeBlock(level, ModBlocks.RESONANCE_CANDLE.get().defaultBlockState(), c, 1, c, box);
             buildAccessibleChest(level, random, box, c, 1, c - 4, ModLootTables.T3_PUZZLE);
 
@@ -339,15 +419,16 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
             BlockState cracked = ModBlocks.CRACKED_SONGSTONE_BRICKS.get().defaultBlockState();
             BlockState crystal = ModBlocks.CRYSTAL_SONG_CLUSTER.get().defaultBlockState();
             List<BlockPos> crystalPositions = new ArrayList<>();
-            addSiteRewardLoop(level, random, box, c, ModLootTables.T4_REGION_CORE);
+            buildSiteGuidedEntrance(level, box, c, ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState());
 
-            buildRibbedVaultHall(level, box, c, 2, c, Footprint.of(17, 21), 13, 6, tiles, song, brick, crystal);
+            BlockState lantern = ModBlocks.SONG_LANTERN_GLASS.get().defaultBlockState();
+            buildRibbedVaultHall(level, box, c, 2, c, Footprint.of(17, 21), 13, 6, tiles, song, brick, lantern);
             buildTwinTowerFacade(level, box, c, 1, 3,
-                    18, 3, 24, song, brick, crystal);
-            buildArcadedWing(level, box, 6, 2, c, Footprint.of(4, 14), 11, 4, tiles, song, cracked, crystal);
-            buildArcadedWing(level, box, kind.size - 7, 2, c, Footprint.of(4, 14), 11, 4, tiles, song, cracked, crystal);
+                    18, 3, 24, song, brick, lantern);
+            buildArcadedWing(level, box, 6, 2, c, Footprint.of(4, 14), 11, 4, tiles, song, cracked, lantern);
+            buildArcadedWing(level, box, kind.size - 7, 2, c, Footprint.of(4, 14), 11, 4, tiles, song, cracked, lantern);
             buildBossApse(level, box, c, 2, c + 15,
-                    Direction.SOUTH, 7, 12, tiles, song, brick, crystal);
+                    Direction.SOUTH, 7, 12, tiles, song, brick, lantern);
             // 回廊只占外沿 3 格带,中央 14 格战斗半径必须保持开放天井。
             buildCourtyardCloister(level, box, c, 2, c, Footprint.square(21), 12, 3, tiles, song, brick, ModBlocks.SONG_LANTERN_GLASS.get().defaultBlockState());
 
@@ -360,7 +441,7 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
                 int y = node[1];
                 int z = c + node[2];
                 pillar(level, box, x, 1, z, y - 1, pillarIndex++ % 2 == 0 ? brick : song);
-                this.placeBlock(level, ModBlocks.CRYSTAL_SONG_CLUSTER.get().defaultBlockState(), x, y, z, box);
+                this.placeBlock(level, crystal, x, y, z, box);
                 crystalPositions.add(new BlockPos(this.getWorldX(x, z), this.getWorldY(y), this.getWorldZ(x, z)));
             }
             buildBossArenaMandala(level, box, c, 0, c, 14,
@@ -387,7 +468,9 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
             BlockState moss = Blocks.MOSS_BLOCK.defaultBlockState();
             BlockState glass = ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState();
             BlockState path = ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState();
-            addSiteRewardLoop(level, random, box, c, ModLootTables.T2_RUIN);
+            buildSiteGuidedEntrance(level, box, c, ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState());
+            // 真视奖励位于东南外翼，通用暗奖会在战斗半径内重复生成密室。
+            buildSiteBranchReward(level, random, box, c - 4, 1, c + 3, ModLootTables.T2_RUIN);
 
             disk(level, box, c, 0, c, 30, moss);
             buildRibbedVaultHall(level, box, c, 1, c + 2, Footprint.of(16, 24), 14, 6, plank, lattice, log, glass);
@@ -496,9 +579,6 @@ public class LateRegionSiteStructure extends SinglePieceStructure {
 
             platform(level, box, c - 12, 1, c + 10, 25, brick);
             this.placeBlock(level, ModBlocks.TRUE_SIGHT_STELE.get().defaultBlockState(), c, 2, c + 16, box);
-            this.placeBlock(level, ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState(), c - 5, 2, c + 28, box);
-            this.placeBlock(level, ModBlocks.HIDDEN_RUNE_BRICKS.get().defaultBlockState(), c + 5, 2, c + 28, box);
-            buildSiteHiddenReward(level, random, box, c, 2, c + 30);
         }
 
         private void buildArchiveTerminalHall(WorldGenLevel level, RandomSource random, BoundingBox box, int c,

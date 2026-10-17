@@ -252,8 +252,8 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
         this.getNavigation().stop();
         this.triggerAnim("attack_controller", "burn");
         this.broadcastHint(level, "message.unknown_echoes.ash_scribe.burn");
-        level.playSound(null, this.blockPosition(), SoundEvents.FIRECHARGE_USE,
-                SoundSource.HOSTILE, 2.1F, 0.65F);
+        level.playSound(null, this.blockPosition(), ModSounds.ASH_SCRIBE_ATTACK_BURN_WARN.get(),
+                SoundSource.HOSTILE, 2.1F, 1.0F);
         BossFx.cinematicImpact(level, this.position().add(0.0D, 1.0D, 0.0D),
                 28.0D, 0.58F, 8, 0xFF9E4D);
     }
@@ -262,7 +262,7 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
     public void onExtinguishingMechanismActivated(ServerLevel level, BlockPos pos) {
         if (!this.burnPending || !this.isAlive()
                 || this.arenaAnchor().distManhattan(pos) > 48
-                || !(level.getBlockState(pos).getBlock() instanceof VoidStabilizerBlock)
+                || !isExtinguishingMechanism(level, pos)
                 || !nearbyExtinguishingMechanisms(level).contains(pos)) {
             return;
         }
@@ -278,15 +278,17 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
     }
 
     private java.util.List<BlockPos> nearbyExtinguishingMechanisms(ServerLevel level) {
-        BlockPos center = this.arenaAnchor();
+        // 稳定器固定在刷怪器上方一格，避障出生点与归巢点不能平移阵列。
+        BlockPos center = this.hasSpawnerBinding()
+                ? this.spawnerPos().offset(0, 1, 0)
+                : this.arenaAnchor().offset(0, EXTINGUISHING_Y_OFFSET, 0);
         List<BlockPos> best = List.of();
         for (int rotation = 0; rotation < 4; rotation++) {
             List<BlockPos> candidates = new ArrayList<>(EXTINGUISHING_OFFSETS.length);
             for (int[] offset : EXTINGUISHING_OFFSETS) {
                 int[] rotated = rotateOffset(offset[0], offset[1], rotation);
-                BlockPos pos = center.offset(rotated[0], EXTINGUISHING_Y_OFFSET, rotated[1]);
-                if (level.hasChunkAt(pos)
-                        && level.getBlockState(pos).getBlock() instanceof VoidStabilizerBlock) {
+                BlockPos pos = center.offset(rotated[0], 0, rotated[1]);
+                if (isExtinguishingMechanism(level, pos)) {
                     candidates.add(pos.immutable());
                 }
             }
@@ -295,6 +297,12 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
             }
         }
         return best;
+    }
+
+    private static boolean isExtinguishingMechanism(ServerLevel level, BlockPos pos) {
+        // 区块票据不保证完整数据已就绪，读取不能等待加载。
+        var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk != null && chunk.getBlockState(pos).getBlock() instanceof VoidStabilizerBlock;
     }
 
     private static int[] rotateOffset(int x, int z, int rotation) {
@@ -318,8 +326,8 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
         if (this.burnTicks == 1) {
             this.inkcutCooldown = 15;
             this.pagestormCooldown = 45;
-            level.playSound(null, this.blockPosition(), SoundEvents.BLAZE_SHOOT,
-                    SoundSource.HOSTILE, 1.8F, 0.75F);
+            level.playSound(null, this.blockPosition(), ModSounds.ASH_SCRIBE_ATTACK_BURN_RELEASE.get(),
+                    SoundSource.HOSTILE, 1.8F, 1.0F);
         }
     }
 
@@ -348,8 +356,12 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
         this.attackTarget = target.position().add(0.0D, target.getBbHeight() * 0.45D, 0.0D);
         this.getNavigation().stop();
         this.triggerAnim("attack_controller", animation);
-        level.playSound(null, this.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE,
-                SoundSource.HOSTILE, 1.5F, mode == AttackMode.INKCUT ? 1.25F : 0.7F);
+        switch (mode) {
+            case REWRITE -> this.playSound(ModSounds.ASH_SCRIBE_ATTACK_REWRITE_WARN.get(), 1.3F, 1.0F);
+            case INKCUT -> this.playSound(ModSounds.ASH_SCRIBE_ATTACK_INKCUT_WARN.get(), 1.3F, 1.0F);
+            case PAGESTORM -> this.playSound(ModSounds.ASH_SCRIBE_ATTACK_PAGESTORM_WARN.get(), 1.3F, 1.0F);
+            default -> { }
+        }
     }
 
     private void tickAttack(ServerLevel level) {
@@ -396,7 +408,7 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
             case MELEE -> {
                 Vec3 center = this.position().add(0.0D, 0.6D, 0.0D);
                 damageRewriteArea(level, center, 4.2D, damage, 0.8D);
-                MiniBossFx.groundRing(level, center, this.fxTheme(), 4.8D);
+                MiniBossFx.groundImpact(level, center, this.fxTheme(), 4.2D, 0.75D);
                 MiniBossFx.coneSpray(level, center, this.getLookAngle(), this.fxTheme(), 4.5D, Math.PI / 3.0D);
             }
             case PROJECTILE -> {
@@ -413,10 +425,11 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
             case MAGIC -> {
                 damageRewriteArea(level, this.attackTarget, 3.2D, damage, 0.45D);
                 MiniBossFx.impactZone(level, this.attackTarget, this.fxTheme(), 3.2D, 1.0D);
+                MiniBossFx.sealRelease(level, this.attackTarget, this.fxTheme(), 3.2D);
             }
             case EXPLOSION -> {
                 damageRewriteArea(level, this.attackTarget, 4.8D, damage * 1.1F, 1.0D);
-                MiniBossFx.groundRing(level, this.attackTarget, this.fxTheme(), 4.8D);
+                MiniBossFx.groundImpact(level, this.attackTarget, this.fxTheme(), 4.8D, 1.0D);
             }
         }
         BossFx.cinematicImpact(level, this.attackTarget, 22.0D, 0.3F, 4,
@@ -474,8 +487,8 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
                 }
             }
         }
-        level.playSound(null, BlockPos.containing(end), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.HOSTILE, 1.8F, 0.6F);
+        level.playSound(null, BlockPos.containing(end), ModSounds.ASH_SCRIBE_ATTACK_INKCUT_RELEASE.get(),
+                SoundSource.HOSTILE, 1.8F, 1.0F);
     }
 
     private void resolvePagestorm(ServerLevel level) {
@@ -518,8 +531,8 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
         MiniBossFx.groundRing(level, center, this.fxTheme(), range);
         BossFx.cinematicImpact(level, center, 30.0D, 0.52F, 7,
                 MiniBossFxTheme.packedCore(this.fxTheme()));
-        level.playSound(null, this.blockPosition(), SoundEvents.EVOKER_CAST_SPELL,
-                SoundSource.HOSTILE, 2.0F, 0.8F);
+        level.playSound(null, this.blockPosition(), ModSounds.ASH_SCRIBE_ATTACK_PAGES_RELEASE.get(),
+                SoundSource.HOSTILE, 2.0F, 1.0F);
     }
 
     @Override
@@ -603,6 +616,9 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
         boolean hit = super.doHurtTarget(target);
         if (hit) {
             this.triggerAnim("attack_controller", "attack");
+            if (!this.level().isClientSide) {
+                this.playSound(ModSounds.ASH_SCRIBE_ATTACK_MELEE.get(), 1.1F, 1.0F);
+            }
             if (target instanceof LivingEntity living && this.level() instanceof ServerLevel level) {
                 MiniBossFx.hitMark(level, living, this.fxTheme());
             }
@@ -682,5 +698,9 @@ public class AshScribe extends MiniBossEntity implements PhaseGatedBoss {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
+    }
+    @Override
+    public int musicStage() {
+        return this.burnTriggered ? 2 : this.burnPending ? 1 : 0;
     }
 }

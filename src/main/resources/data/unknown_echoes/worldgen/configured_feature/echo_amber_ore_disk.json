@@ -13,11 +13,28 @@
     "target": {
       "type": "minecraft:matching_blocks",
       "blocks": [
+        "minecraft:andesite",
+        "minecraft:calcite",
+        "minecraft:deepslate",
         "minecraft:dirt",
         "minecraft:grass_block",
         "minecraft:rooted_dirt",
         "minecraft:stone",
-        "minecraft:tuff"
+        "minecraft:terracotta",
+        "minecraft:tuff",
+        "unknown_echoes:abyssal_stone",
+        "unknown_echoes:ashen_bellstone",
+        "unknown_echoes:banded_gravity_shale",
+        "unknown_echoes:echo_strata",
+        "unknown_echoes:folded_slate",
+        "unknown_echoes:gravity_shale",
+        "unknown_echoes:mirror_dust_stone",
+        "unknown_echoes:mirror_sand",
+        "unknown_echoes:reef_limestone",
+        "unknown_echoes:silent_mudstone",
+        "unknown_echoes:songstone",
+        "unknown_echoes:tide_smooth_stone",
+        "unknown_echoes:veined_abyssal_stone"
       ]
     },
     "half_height": 1,

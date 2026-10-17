@@ -8,14 +8,15 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib.model.DefaultedEntityGeoModel;
+import cn.kurt6.unknown_echoes.client.model.LimitedHeadGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public class VoidProphetRenderer extends GeoEntityRenderer<VoidProphet> {
     /** 把模型底面抬到碰撞箱底面：碰撞箱以脚底为原点，模型自己的最低面不在 y=0 时会陷进地里或悬空。 */
     private static final double MODEL_Y_OFFSET = 0.0836D;
     public VoidProphetRenderer(EntityRendererProvider.Context context) {
-        super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("void_prophet"), true));
+        // 长枪与核心破裂动作会抬肩；转幅按完整动作叠加视线后的头肩间隙限制。
+        super(context, new LimitedHeadGeoModel<>(UnknownEchoes.id("void_prophet"), "head", 6.0F, -2.0F, 2.0F));
         this.shadowRadius = 2.0F;
         this.withScale(1.04F);
         addRenderLayer(new EchoGlowLayer<>(this,

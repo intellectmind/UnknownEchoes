@@ -17,6 +17,8 @@ import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public record EchoTrade(List<Cost> costs, ResourceLocation resultItem, int resultCount,
                         int minStage, int maxUses, String requiredAbility,
@@ -155,6 +157,18 @@ public record EchoTrade(List<Cost> costs, ResourceLocation resultItem, int resul
             stack.set(ModDataComponents.CLUE_STRUCTURE.get(), resultClueStructure);
         }
         return stack;
+    }
+
+    /** 按实际货款与产物识别库存；调序、阶段门槛或限购数量变更不抹掉成交记录。 */
+    public String stockKey() {
+        Map<String, Integer> normalizedCosts = new TreeMap<>();
+        for (Cost cost : costs) {
+            normalizedCosts.merge(cost.item().toString(), cost.count(), Integer::sum);
+        }
+        List<String> encodedCosts = new ArrayList<>();
+        normalizedCosts.forEach((item, count) -> encodedCosts.add(item + "@" + count));
+        return String.join(";", encodedCosts) + "|" + resultItem + "@" + resultCount
+                + "#" + resultPageId + "~" + resultClueStructure;
     }
 
     /** 同步给客户端的展示行(纯展示;成交校验全在服务端)。 */

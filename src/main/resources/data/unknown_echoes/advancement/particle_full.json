@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:world_rift_greatsword"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.particle_full.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.particle_full.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:particle_master",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

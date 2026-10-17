@@ -74,6 +74,7 @@ public final class RealmFacilityCircuitManager {
 
     public static Result tryTune(ServerLevel level, BlockPos plinthPos,
                                  ServerPlayer player, RealmServicePlinthBlock.Mode mode) {
+        if (!isEligiblePlayer(level, player)) return Result.NOT_LINKED;
         FacilityLink link = findLink(level, plinthPos, mode);
         if (link == null) {
             return Result.NOT_LINKED;
@@ -92,11 +93,12 @@ public final class RealmFacilityCircuitManager {
                     "message.unknown_echoes.realm_service_plinth.circuit.resting"), true);
             return Result.COOLDOWN;
         }
-        player.getPersistentData().remove(cooldownKey);
-
-        applySupport(player, mode);
+        // 效果与治疗会同步派发外部回调，必须先占用本次个人冷却。
+        // 已派发的支援保留冷却；玩家中途失效时结束本次交互。
         player.getPersistentData().putLong(cooldownKey, maximumReadyAt);
+        if (!applySupport(level, player, mode)) return Result.TUNED;
         playCircuit(level, plinthPos, link, mode);
+        if (!isEligiblePlayer(level, player)) return Result.TUNED;
         player.displayClientMessage(Component.translatable(
                 "message.unknown_echoes.realm_service_plinth.circuit.tuned."
                         + mode.getSerializedName()), true);
@@ -145,6 +147,10 @@ public final class RealmFacilityCircuitManager {
                     CHIME_LINK_RADIUS, CHIME_VERTICAL_RADIUS)) {
                 continue;
             }
+            // 未加载只表示暂时无法验证，不能把仍在有效期内的联动当成已拆除。
+            if (!level.hasChunkAt(circuit.tablePos()) || !level.hasChunkAt(circuit.chimePos())) {
+                continue;
+            }
             if (!isStillValid(level, circuit)) {
                 iterator.remove();
                 continue;
@@ -165,9 +171,6 @@ public final class RealmFacilityCircuitManager {
     }
 
     private static boolean isStillValid(ServerLevel level, ActiveCircuit circuit) {
-        if (!level.hasChunkAt(circuit.tablePos()) || !level.hasChunkAt(circuit.chimePos())) {
-            return false;
-        }
         BlockState tableState = level.getBlockState(circuit.tablePos());
         BlockState chimeState = level.getBlockState(circuit.chimePos());
         return tableState.getBlock() instanceof CommunalEchoTableBlock
@@ -187,7 +190,13 @@ public final class RealmFacilityCircuitManager {
                 <= (long) horizontalRadius * horizontalRadius;
     }
 
-    private static void applySupport(ServerPlayer player, RealmServicePlinthBlock.Mode mode) {
+    private static boolean isEligiblePlayer(ServerLevel level, ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.isSpectator();
+    }
+
+    private static boolean applySupport(ServerLevel level, ServerPlayer player,
+                                        RealmServicePlinthBlock.Mode mode) {
+        if (!isEligiblePlayer(level, player)) return false;
         switch (mode) {
             case WAYFARER -> {
                 player.getFoodData().eat(4, 0.6F);
@@ -196,17 +205,22 @@ public final class RealmFacilityCircuitManager {
             }
             case CONFLUENCE -> {
                 player.removeEffect(MobEffects.BLINDNESS);
+                if (!isEligiblePlayer(level, player)) return false;
                 player.addEffect(new MobEffectInstance(
                         MobEffects.NIGHT_VISION, SUPPORT_TICKS, 0, true, false, true));
+                if (!isEligiblePlayer(level, player)) return false;
                 ArtifactManager.refillEnergy(player, ENERGY_REFILL);
             }
             case INTERLAYER -> {
                 player.removeEffect(MobEffects.DARKNESS);
+                if (!isEligiblePlayer(level, player)) return false;
                 player.fallDistance = 0.0F;
                 player.heal(4.0F);
+                if (!isEligiblePlayer(level, player)) return false;
                 FoodEffectSupport.applyAbsorption(player, SUPPORT_TICKS, 0, 4.0F);
             }
         }
+        return isEligiblePlayer(level, player);
     }
 
     private static void playCircuit(ServerLevel level, BlockPos plinthPos, FacilityLink link,

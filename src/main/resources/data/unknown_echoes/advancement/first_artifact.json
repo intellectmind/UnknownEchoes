@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:ability_wind_echo",
+  "parent": "unknown_echoes:equipment_root",
   "display": {
     "icon": {
       "id": "unknown_echoes:artifact_record_table"
@@ -12,7 +12,7 @@
     },
     "frame": "task",
     "show_toast": true,
-    "announce_to_chat": true,
+    "announce_to_chat": false,
     "hidden": false
   },
   "criteria": {

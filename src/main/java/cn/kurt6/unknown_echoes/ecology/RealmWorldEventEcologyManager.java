@@ -9,7 +9,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
 import java.util.Comparator;
@@ -34,33 +33,28 @@ public final class RealmWorldEventEcologyManager {
             return 0;
         }
 
-        List<PathfinderMob> residents = level.getEntitiesOfClass(PathfinderMob.class,
-                new AABB(center).inflate(RESPONSE_RADIUS, 8.0D, RESPONSE_RADIUS),
-                resident -> resident.isAlive() && resident.getTarget() == null
-                        && !resident.isLeashed()
-                        && !resident.isPassenger() && !resident.isVehicle()
-                        && !RealmLivingTrailManager.hasActiveTrail(resident)
-                        && resident.distanceToSqr(center.getX() + 0.5D,
-                                resident.getY(), center.getZ() + 0.5D)
-                                <= RESPONSE_RADIUS * RESPONSE_RADIUS
-                        && RealmHabitatChimeBlock.matchesMode(resident, mode));
+        AABB responseBounds = new AABB(center).inflate(RESPONSE_RADIUS, 8.0D, RESPONSE_RADIUS);
+        List<PathfinderMob> residents = level.getEntitiesOfClass(PathfinderMob.class, responseBounds,
+                resident -> isEligibleResident(level, center, responseBounds, mode, resident));
         residents.sort(Comparator.comparingDouble(
                 resident -> resident.distanceToSqr(center.getX() + 0.5D,
                         center.getY() + 0.5D, center.getZ() + 0.5D)));
 
         BlockPos chimePos = findNearestChime(level, center, mode);
         if (chimePos != null) {
-            int chimeResponders = RealmHabitatChimeBlock.activateFromFacility(
+            int chimeResponders = RealmHabitatChimeBlock.activateWithResidents(
                     level, chimePos, mode, residents,
-                    resident -> presentResidentResponse(level, resident, mode));
+                    resident -> isEligibleResident(level, center, responseBounds, mode, resident),
+                    resident -> presentResidentResponse(level, resident, mode)).responders();
             if (chimeResponders > 0) {
                 return chimeResponders;
             }
         }
-        return guideToEvent(level, center, mode, residents);
+        return guideToEvent(level, center, responseBounds, mode, residents);
     }
 
     private static int guideToEvent(ServerLevel level, BlockPos center,
+                                    AABB responseBounds,
                                     RealmHabitatChimeBlock.Mode mode,
                                     List<PathfinderMob> residents) {
         int moved = 0;
@@ -68,6 +62,7 @@ public final class RealmWorldEventEcologyManager {
             if (moved >= MAX_RESPONDERS) {
                 break;
             }
+            if (!isEligibleResident(level, center, responseBounds, mode, resident)) continue;
             double angle = moved * Math.PI * 2.0D / MAX_RESPONDERS;
             double radius = responseRingRadius(mode);
             double targetX = center.getX() + 0.5D + Math.cos(angle) * radius;
@@ -80,6 +75,7 @@ public final class RealmWorldEventEcologyManager {
                     center.getY() + 0.8D, center.getZ() + 0.5D);
             if (resident.getNavigation().moveTo(targetX, center.getY(), targetZ,
                     responseSpeed(mode))) {
+                if (!isEligibleResident(level, center, responseBounds, mode, resident)) continue;
                 presentResidentResponse(level, resident, mode);
                 moved++;
             }
@@ -90,43 +86,22 @@ public final class RealmWorldEventEcologyManager {
         return moved;
     }
 
+    /** 候选只是快照；栖鸣台与导航回调之后仍要保留事件自己的范围和寻迹避让条件。 */
+    private static boolean isEligibleResident(ServerLevel level, BlockPos center, AABB responseBounds,
+                                               RealmHabitatChimeBlock.Mode mode, PathfinderMob resident) {
+        return resident.level() == level && !resident.isRemoved() && resident.isAlive()
+                && resident.getTarget() == null && !resident.isLeashed()
+                && !resident.isPassenger() && !resident.isVehicle()
+                && !RealmLivingTrailManager.hasActiveTrail(resident)
+                && responseBounds.intersects(resident.getBoundingBox())
+                && resident.distanceToSqr(center.getX() + 0.5D, resident.getY(), center.getZ() + 0.5D)
+                <= RESPONSE_RADIUS * RESPONSE_RADIUS
+                && RealmHabitatChimeBlock.matchesMode(resident, mode);
+    }
+
     private static BlockPos findNearestChime(ServerLevel level, BlockPos center,
                                              RealmHabitatChimeBlock.Mode mode) {
-        BlockPos nearest = null;
-        int nearestDistanceSqr = Integer.MAX_VALUE;
-        int horizontalRadiusSqr = CHIME_SEARCH_RADIUS * CHIME_SEARCH_RADIUS;
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-
-        for (int yOffset = -CHIME_VERTICAL_RADIUS;
-             yOffset <= CHIME_VERTICAL_RADIUS; yOffset++) {
-            for (int xOffset = -CHIME_SEARCH_RADIUS;
-                 xOffset <= CHIME_SEARCH_RADIUS; xOffset++) {
-                for (int zOffset = -CHIME_SEARCH_RADIUS;
-                     zOffset <= CHIME_SEARCH_RADIUS; zOffset++) {
-                    int horizontalDistanceSqr = xOffset * xOffset + zOffset * zOffset;
-                    if (horizontalDistanceSqr > horizontalRadiusSqr) {
-                        continue;
-                    }
-                    cursor.set(center.getX() + xOffset, center.getY() + yOffset,
-                            center.getZ() + zOffset);
-                    if (!level.hasChunkAt(cursor)) {
-                        continue;
-                    }
-                    BlockState state = level.getBlockState(cursor);
-                    if (!(state.getBlock() instanceof RealmHabitatChimeBlock)
-                            || state.getValue(RealmHabitatChimeBlock.MODE) != mode
-                            || state.getValue(RealmHabitatChimeBlock.ACTIVE)) {
-                        continue;
-                    }
-                    int distanceSqr = horizontalDistanceSqr + yOffset * yOffset;
-                    if (distanceSqr < nearestDistanceSqr) {
-                        nearestDistanceSqr = distanceSqr;
-                        nearest = cursor.immutable();
-                    }
-                }
-            }
-        }
-        return nearest;
+        return RealmChimeLookup.findNearest(level, center, mode, CHIME_SEARCH_RADIUS, CHIME_VERTICAL_RADIUS);
     }
 
     private static RealmHabitatChimeBlock.Mode modeForEvent(WorldEventType type) {

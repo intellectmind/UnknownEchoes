@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:echo_index"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.journey_complete.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.journey_complete.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:journey_first_steps",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

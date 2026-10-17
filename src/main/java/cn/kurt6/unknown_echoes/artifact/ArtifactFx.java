@@ -1,13 +1,19 @@
 package cn.kurt6.unknown_echoes.artifact;
 
+import cn.kurt6.unknown_echoes.fx.CombatFx;
+import cn.kurt6.unknown_echoes.network.CombatFxPayload;
+import cn.kurt6.unknown_echoes.network.CombatFxPayload.Shape;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.function.BooleanSupplier;
 
 /**
- * 神器演出形状库：自身增益画螺旋或穹顶、指向技画束、半径技画环、传送画光柱。
+ * 神器演出形状库：自身增益用脚边短闪或花瓣、指向技画束、半径技画环、传送画光柱。
  * 形状必须与作用几何同构，不一致时玩家会照着特效判断范围，然后在没有特效的一侧被结算。
  * 神器演出只改这里，不要改 `BossFx`：那边被全部 Boss 与 Mini Boss 共用。
  */
@@ -16,7 +22,6 @@ final class ArtifactFx {
 
     /** 单次演出的采样上限。粒子是纯表现，预算不能随作用半径或目标数无限增长。 */
     private static final int MAX_RING_POINTS = 30;
-    private static final int MAX_SPIRAL_STEPS = 26;
     private static final int MAX_BEAM_POINTS = 20;
     private static final int MAX_COLUMN_POINTS = 14;
 
@@ -39,26 +44,14 @@ final class ArtifactFx {
         level.sendParticles(particle, p.x, p.y, p.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
     }
 
-    /** 起飞升柱：双臂螺旋向上。增益技不画环 —— 环会被读成“这里有作用范围”。 */
-    static void liftSpiral(ServerLevel level, ServerPlayer player,
-                           ArtifactFxTheme.Theme theme, double radius, int turns) {
-        int steps = Math.min(MAX_SPIRAL_STEPS, 14 + Math.max(0, turns) * 3);
-        int arcs = Math.max(1, turns);
-        double height = player.getBbHeight() + 0.9D;
-        Vec3 feet = player.position();
-        ParticleOptions trace = theme.trace(1.3F);
-        for (int i = 0; i < steps; i++) {
-            double t = (double) i / steps;
-            double a = TAU * arcs * t;
-            double y = height * t;
-            // 两条臂相位差 π：单臂螺旋绕到背面就整段消失，双臂任何视角都至少有一条可见。
-            at(level, trace, feet.add(Math.cos(a) * radius, y, Math.sin(a) * radius));
-            at(level, theme.edgeDust(1.0F),
-                    feet.add(Math.cos(a + Math.PI) * radius, y, Math.sin(a + Math.PI) * radius));
-            if (i % 4 == 0) {
-                at(level, theme.glint(), feet.add(0.0D, y + 0.25D, 0.0D));
-            }
-        }
+    /** 起飞时脚边短闪，不遮住视线或暗示额外作用范围。 */
+    static void liftPulse(ServerLevel level, ServerPlayer player,
+                          ArtifactFxTheme.Theme theme) {
+        Vec3 feet = player.position().add(0.0D, 0.12D, 0.0D);
+        CombatFx.themed(level, Shape.BURST, feet, Vec3.ZERO, 0.45D, 0, 0,
+                theme.core(), theme.edge(), 6);
+        level.sendParticles(theme.trace(0.6F), feet.x, feet.y, feet.z,
+                4, 0.2D, 0.04D, 0.2D, 0.0D);
     }
 
     /**
@@ -69,6 +62,8 @@ final class ArtifactFx {
                          ArtifactFxTheme.Theme theme, double radius) {
         Vec3 feet = player.position();
         int rings = 3;
+        CombatFx.themed(level, Shape.PETALS, feet, Vec3.ZERO, radius, player.getBbHeight() + 0.3, 0,
+                theme.core(), theme.edge(), 24);
         ParticleOptions trace = theme.trace(1.4F);
         for (int ring = 0; ring < rings; ring++) {
             // 由下到上收窄成壳：等宽的三层环读成三个独立的环而不是一个罩子。
@@ -94,8 +89,14 @@ final class ArtifactFx {
      */
     static void fieldRing(ServerLevel level, ServerPlayer player,
                           ArtifactFxTheme.Theme theme, double radius) {
-        Vec3 feet = player.position();
+        fieldRing(level, player.position(), theme, radius);
+    }
+
+    static void fieldRing(ServerLevel level, Vec3 feet,
+                          ArtifactFxTheme.Theme theme, double radius) {
         int points = Math.min(MAX_RING_POINTS, 12 + (int) (radius * 1.6D));
+        CombatFx.themed(level, Shape.SIGIL, feet.add(0, 0.18, 0), Vec3.ZERO, radius, 0, 0,
+                theme.core(), theme.edge(), 18);
         ParticleOptions trace = theme.trace(1.7F);
         for (int i = 0; i < points; i++) {
             double a = TAU * i / points;
@@ -123,6 +124,8 @@ final class ArtifactFx {
         Vec3 side = Math.abs(dir.y) > 0.92D
                 ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(-dir.z, 0.0D, dir.x).normalize();
         int steps = Math.min(MAX_BEAM_POINTS, Math.max(3, (int) (length / 0.9D)));
+        CombatFx.themed(level, Shape.BEAM, origin, dir, 0, length, 0,
+                theme.core(), theme.edge(), 14);
         ParticleOptions trace = theme.trace(1.2F);
         for (int i = 0; i < steps; i++) {
             Vec3 p = origin.add(dir.scale(length * (i + 0.5D) / steps));
@@ -147,6 +150,8 @@ final class ArtifactFx {
         Vec3 waist = target.position().add(0.0D, target.getBbHeight() * 0.55D, 0.0D);
         double radius = markRadiusOf(target);
         ParticleOptions fade = theme.fade(1.5F);
+        CombatFx.themed(level, Shape.IMPACT, waist, Vec3.ZERO, radius, 0, 0,
+                theme.core(), theme.edge(), 12);
         for (int i = 0; i < MARK_RING_POINTS; i++) {
             double a = TAU * i / MARK_RING_POINTS;
             at(level, fade, waist.add(Math.cos(a) * radius, 0.0D, Math.sin(a) * radius));
@@ -174,6 +179,8 @@ final class ArtifactFx {
     static void portalColumn(ServerLevel level, ArtifactFxTheme.Theme theme,
                              Vec3 center, double radius) {
         int points = Math.min(MAX_RING_POINTS, 14 + (int) (radius * 6.0D));
+        CombatFx.themed(level, Shape.ARRIVAL, center.add(0, 1.2, 0), Vec3.ZERO, radius, 2.4, 0,
+                theme.core(), theme.edge(), 20);
         ParticleOptions trace = theme.trace(1.5F);
         for (int i = 0; i < points; i++) {
             double a = TAU * i / points;
@@ -203,6 +210,8 @@ final class ArtifactFx {
     static void releaseMark(ServerLevel level, Entity target, ArtifactFxTheme.Theme theme) {
         Vec3 waist = target.position().add(0.0D, target.getBbHeight() * 0.55D, 0.0D);
         double spread = markRadiusOf(target) * 0.8D;
+        CombatFx.themed(level, Shape.BURST, waist, Vec3.ZERO, spread, 0, 0,
+                theme.core(), theme.edge(), 8);
         level.sendParticles(theme.edgeDust(1.1F), waist.x, waist.y, waist.z,
                 5, spread, 0.2D, spread, 0.02D);
         level.sendParticles(theme.residue(), waist.x, waist.y, waist.z,
@@ -216,6 +225,8 @@ final class ArtifactFx {
      * 落点柱留给目的地；两端都画柱时一次传送就是九十多个广播包。
      */
     static void departureWisp(ServerLevel level, ArtifactFxTheme.Theme theme, Vec3 origin) {
+        CombatFx.themed(level, Shape.COLLAPSE, origin.add(0, 0.9, 0), Vec3.ZERO, 0.8, 1.8, 0,
+                theme.core(), theme.edge(), 12);
         level.sendParticles(theme.fade(1.4F), origin.x, origin.y + 0.9D, origin.z,
                 8, 0.3D, 0.6D, 0.3D, 0.03D);
         level.sendParticles(theme.residue(), origin.x, origin.y + 0.5D, origin.z,
@@ -223,13 +234,25 @@ final class ArtifactFx {
     }
 
     /** 隐纹显形：方块面上的小十字。方块是格子对齐的，散点会读成周围有雾。 */
-    static void revealCross(ServerLevel level, ArtifactFxTheme.Theme theme, Vec3 center) {
+    static void revealCross(ServerLevel level, ServerPlayer player, ArtifactFxTheme.Theme theme, Vec3 center,
+                            BooleanSupplier canContinue) {
+        if (!canContinue.getAsBoolean()) return;
+        CombatFxPayload payload = new CombatFxPayload(Shape.BURST, center, Vec3.ZERO, 0.35F, 0, 0,
+                CombatFx.color(theme.core()), CombatFx.color(theme.edge()), 10, false, -1);
+        if (!payload.valid()) return;
+        PacketDistributor.sendToPlayer(player, payload);
         ParticleOptions trace = theme.trace(1.1F);
-        at(level, trace, center);
+        if (!canContinue.getAsBoolean()) return;
+        at(level, player, trace, center);
         for (int axis = 0; axis < 4; axis++) {
+            if (!canContinue.getAsBoolean()) return;
             double a = TAU * axis / 4.0D;
-            at(level, trace, center.add(Math.cos(a) * 0.3D, 0.0D, Math.sin(a) * 0.3D));
+            at(level, player, trace, center.add(Math.cos(a) * 0.3D, 0.0D, Math.sin(a) * 0.3D));
         }
-        at(level, theme.glint(), center.add(0.0D, 0.2D, 0.0D));
+        if (canContinue.getAsBoolean()) at(level, player, theme.glint(), center.add(0.0D, 0.2D, 0.0D));
+    }
+
+    private static void at(ServerLevel level, ServerPlayer player, ParticleOptions particle, Vec3 pos) {
+        level.sendParticles(player, particle, false, pos.x, pos.y, pos.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
     }
 }

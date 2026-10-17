@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "fins",
+    "rock": {
+      "Name": "unknown_echoes:ashen_bellstone"
+    },
+    "accent": {
+      "Name": "minecraft:terracotta"
+    },
+    "height": 22,
+    "radius": 9,
+    "submerged": false,
+    "drape": 0,
+    "waterline": false
+  }
+}

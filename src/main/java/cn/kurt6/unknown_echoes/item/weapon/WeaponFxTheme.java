@@ -61,7 +61,7 @@ final class WeaponFxTheme {
             0xD2E86B, 0x566E1C, ParticleTypes.CRIT, ParticleTypes.GLOW);
 
     static final Theme WIND_SPEAR = theme(
-            0x9DF2B0, 0x2C7A4A, ParticleTypes.GUST, ParticleTypes.CLOUD);
+            0x9DF2B0, 0x2C7A4A, ParticleTypes.ELECTRIC_SPARK, ParticleTypes.CRIT);
 
     static final Theme TIDE_CROSSBOW = theme(
             0x3FA8E0, 0x10405E, ParticleTypes.NAUTILUS, ParticleTypes.UNDERWATER);

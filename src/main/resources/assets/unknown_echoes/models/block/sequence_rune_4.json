@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:block/cube_column",
   "textures": {
-    "end": "unknown_echoes:block/sequence_rune_side",
-    "side": "unknown_echoes:block/sequence_rune_4"
+    "end": "unknown_echoes:block/sequence_rune_4",
+    "side": "unknown_echoes:block/sequence_rune_side"
   }
 }

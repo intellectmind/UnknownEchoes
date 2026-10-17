@@ -33,24 +33,34 @@ public class EchoRealmCoreItem extends Item implements ItemActiveSkill {
     @Override
     public boolean activateItemSkill(ServerLevel serverLevel, ServerPlayer serverPlayer,
                                      ItemStack stack, InteractionHand hand) {
-        if (serverPlayer.getCooldowns().isOnCooldown(this)) {
+        if (serverPlayer.level() != serverLevel || !serverPlayer.isAlive()
+                || serverPlayer.isSpectator() || !stack.is(this)
+                || serverPlayer.getItemInHand(hand) != stack
+                || serverPlayer.getCooldowns().isOnCooldown(this)) {
             return false;
         }
 
         ArtifactManager.getEnergy(serverPlayer);
         int maxEnergyTwentieths = ArtifactManager.getMaxEnergy(serverPlayer) * 20;
-        if (ArtifactManager.getData(serverPlayer).getEnergyTwentieths() >= maxEnergyTwentieths) {
+        boolean overflow = ArtifactManager.getData(serverPlayer).getEnergyTwentieths() >= maxEnergyTwentieths;
+        if (overflow) {
             if (!canBenefitFromOverflow(serverPlayer)) {
                 serverPlayer.displayClientMessage(Component.translatable(
                         "message.unknown_echoes.echo_realm_core.full"), true);
                 return false;
             }
-            applyOverflow(serverPlayer);
+        }
+
+        // 治疗与效果会同步回调，确认有收益后先占用冷却。
+        serverPlayer.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
+        if (overflow) {
+            applyOverflow(serverLevel, serverPlayer, stack, hand);
         } else {
             ArtifactManager.refillEnergy(serverPlayer, ENERGY_RESTORE);
         }
-
-        serverPlayer.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
+        if (!canContinue(serverLevel, serverPlayer, stack, hand)) {
+            return true;
+        }
         serverLevel.sendParticles(ParticleTypes.END_ROD,
                 serverPlayer.getX(), serverPlayer.getY() + 1.0D, serverPlayer.getZ(),
                 24, 0.45D, 0.7D, 0.45D, 0.08D);
@@ -59,7 +69,9 @@ public class EchoRealmCoreItem extends Item implements ItemActiveSkill {
                 36, 0.55D, 0.55D, 0.55D, 0.12D);
         serverLevel.playSound(null, serverPlayer.blockPosition(),
                 SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.PLAYERS, 0.9F, 1.15F);
-        serverPlayer.swing(hand, true);
+        if (canContinue(serverLevel, serverPlayer, stack, hand)) {
+            serverPlayer.swing(hand, true);
+        }
         return true;
     }
 
@@ -70,11 +82,21 @@ public class EchoRealmCoreItem extends Item implements ItemActiveSkill {
                 OVERFLOW_ABSORPTION_HEALTH);
     }
 
-    private static void applyOverflow(ServerPlayer player) {
+    private void applyOverflow(ServerLevel level, ServerPlayer player,
+                               ItemStack stack, InteractionHand hand) {
         player.heal(OVERFLOW_HEAL);
+        if (!canContinue(level, player, stack, hand)) {
+            return;
+        }
         FoodEffectSupport.applyAbsorption(player,
                 OVERFLOW_ABSORPTION_TICKS, OVERFLOW_ABSORPTION_AMPLIFIER,
                 OVERFLOW_ABSORPTION_HEALTH);
+    }
+
+    private boolean canContinue(ServerLevel level, ServerPlayer player,
+                                ItemStack stack, InteractionHand hand) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && stack.is(this) && player.getItemInHand(hand) == stack;
     }
 
     @Override

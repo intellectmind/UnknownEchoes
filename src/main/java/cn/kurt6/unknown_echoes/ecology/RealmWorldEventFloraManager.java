@@ -63,36 +63,51 @@ public final class RealmWorldEventFloraManager {
         FloraCandidate[] nearestBySector = new FloraCandidate[MAX_RESPONDERS];
         int horizontalRadiusSqr = SCAN_RADIUS * SCAN_RADIUS;
         TagKey<Block> tag = floraTag(mode);
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-
-        for (int yOffset = -VERTICAL_RADIUS; yOffset <= VERTICAL_RADIUS; yOffset++) {
-            for (int xOffset = -SCAN_RADIUS; xOffset <= SCAN_RADIUS; xOffset++) {
-                for (int zOffset = -SCAN_RADIUS; zOffset <= SCAN_RADIUS; zOffset++) {
-                    int horizontalDistanceSqr = xOffset * xOffset + zOffset * zOffset;
-                    if (horizontalDistanceSqr > horizontalRadiusSqr) {
-                        continue;
-                    }
-                    cursor.set(center.getX() + xOffset, center.getY() + yOffset,
-                            center.getZ() + zOffset);
-                    if (!level.hasChunkAt(cursor)) {
-                        continue;
-                    }
-                    BlockState state = level.getBlockState(cursor);
-                    if (!state.is(tag)) {
-                        continue;
-                    }
-
-                    int sector = sectorFor(xOffset, zOffset);
-                    int distanceSqr = horizontalDistanceSqr + yOffset * yOffset;
-                    FloraCandidate current = nearestBySector[sector];
-                    if (current == null || distanceSqr < current.distanceSqr()) {
-                        nearestBySector[sector] = new FloraCandidate(
-                                cursor.immutable(), distanceSqr);
+        java.util.function.Predicate<BlockState> matches = state -> state.is(tag);
+        int minY = Math.max(level.getMinBuildHeight(), center.getY() - VERTICAL_RADIUS);
+        int maxY = Math.min(level.getMaxBuildHeight() - 1, center.getY() + VERTICAL_RADIUS);
+        if (minY > maxY) return nearestBySector;
+        int minX = center.getX() - SCAN_RADIUS, maxX = center.getX() + SCAN_RADIUS;
+        int minZ = center.getZ() - SCAN_RADIUS, maxZ = center.getZ() + SCAN_RADIUS;
+        for (int chunkX = minX >> 4; chunkX <= maxX >> 4; chunkX++) {
+            for (int chunkZ = minZ >> 4; chunkZ <= maxZ >> 4; chunkZ++) {
+                var chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                if (chunk == null) continue;
+                int fromX = Math.max(minX, chunkX << 4), toX = Math.min(maxX, (chunkX << 4) + 15);
+                int fromZ = Math.max(minZ, chunkZ << 4), toZ = Math.min(maxZ, (chunkZ << 4) + 15);
+                for (int sectionY = minY >> 4; sectionY <= maxY >> 4; sectionY++) {
+                    var section = chunk.getSection(chunk.getSectionIndex(sectionY << 4));
+                    if (!section.maybeHas(matches)) continue;
+                    int fromY = Math.max(minY, sectionY << 4), toY = Math.min(maxY, (sectionY << 4) + 15);
+                    for (int y = fromY; y <= toY; y++) {
+                        int dy = y - center.getY();
+                        for (int x = fromX; x <= toX; x++) {
+                            int dx = x - center.getX();
+                            for (int z = fromZ; z <= toZ; z++) {
+                                int dz = z - center.getZ();
+                                int horizontalDistanceSqr = dx * dx + dz * dz;
+                                if (horizontalDistanceSqr > horizontalRadiusSqr
+                                        || !matches.test(section.getBlockState(x & 15, y & 15, z & 15))) continue;
+                                int sector = sectorFor(dx, dz);
+                                int distanceSqr = horizontalDistanceSqr + dy * dy;
+                                FloraCandidate current = nearestBySector[sector];
+                                if (current == null || distanceSqr < current.distanceSqr()
+                                        || distanceSqr == current.distanceSqr() && earlier(y, x, z, current.pos())) {
+                                    nearestBySector[sector] = new FloraCandidate(new BlockPos(x, y, z), distanceSqr);
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
         return nearestBySector;
+    }
+
+    /** 分区遍历不决定同距优先级；同一扇区仍按 Y、X、Z 选择。 */
+    private static boolean earlier(int y, int x, int z, BlockPos current) {
+        return y < current.getY()
+                || y == current.getY() && (x < current.getX() || x == current.getX() && z < current.getZ());
     }
 
     private static int sectorFor(int xOffset, int zOffset) {

@@ -308,7 +308,7 @@ public class LostRecorderChief extends MiniBossEntity {
                 }
             }
         }
-        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), PULSE_RADIUS);
+        MiniBossFx.releasePulse(serverLevel, this.position(), this.fxTheme(), PULSE_RADIUS);
         BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
                 26.0D, 0.52F, 7, this.combatImpactColor());
     }
@@ -320,6 +320,9 @@ public class LostRecorderChief extends MiniBossEntity {
             player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 70, 0), this);
             player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0), this);
             this.triggerAnim("attack_controller", "swipe");
+            if (!this.level().isClientSide) {
+                this.playSound(ModSounds.LOST_RECORDER_CHIEF_ATTACK_MELEE.get(), 1.1F, 1.0F);
+            }
         }
         return hit;
     }
@@ -393,5 +396,9 @@ public class LostRecorderChief extends MiniBossEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return geoCache;
+    }
+    @Override
+    public int musicStage() {
+        return this.exposedTicks > 0 ? 2 : this.readTicks > 0 ? 1 : 0;
     }
 }

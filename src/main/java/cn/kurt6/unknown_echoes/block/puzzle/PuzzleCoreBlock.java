@@ -50,6 +50,14 @@ public class PuzzleCoreBlock extends BaseEntityBlock {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
+        if (!level.hasChunkAt(pos) || level.getBlockState(pos) != state) {
+            return InteractionResult.CONSUME;
+        }
+        if (state.getValue(ACTIVE)) {
+            PuzzleSolveEffects.recoverSeals(level, pos, state);
+        } else if (level.getBlockEntity(pos) instanceof PuzzleCoreBlockEntity core) {
+            core.tryFinishPending();
+        }
         return InteractionResult.CONSUME;
     }
 }

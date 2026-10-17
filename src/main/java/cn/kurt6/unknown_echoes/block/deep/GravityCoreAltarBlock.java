@@ -1,20 +1,20 @@
 package cn.kurt6.unknown_echoes.block.deep;
 
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
+import cn.kurt6.unknown_echoes.fx.ProgressionFx;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.ability.ResonanceTokenManager;
 import cn.kurt6.unknown_echoes.block.RewardAltarBlock;
 import cn.kurt6.unknown_echoes.block.beacon.DeepEchoTeleporter;
-import cn.kurt6.unknown_echoes.entity.boss.BossFx;
 import cn.kurt6.unknown_echoes.entity.boss.VoidProphet;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.world.EntitySpawnSafety;
-import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -33,7 +33,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -108,6 +107,11 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
                 || serverPlayer.isSpectator()) {
             return InteractionResult.CONSUME;
         }
+        // 右键事件缓存的状态可能已因换块或传送失效。
+        if (!RewardAltarBlock.isCurrentInteraction(state, level, pos, serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
+
         if (!level.dimension().equals(DeepEchoTeleporter.DEEP_ECHOES)) {
             reject(serverPlayer, level, pos, "message.unknown_echoes.gravity_core.wrong_dimension");
             return InteractionResult.CONSUME;
@@ -143,6 +147,9 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
                 serverPlayer, EchoPermission.VOID_PROPHET_ID);
         if (!ResonanceTokenManager.hasRitualRecord(serverPlayer, EchoAbilityType.GRAVITY_ECHO)) {
             ResonanceTokenManager.grantRitual(serverPlayer, EchoAbilityType.GRAVITY_ECHO);
+            if (!RewardAltarBlock.isCurrentInteraction(state, level, pos, serverPlayer)) {
+                return InteractionResult.CONSUME;
+            }
             if (bossDefeated) {
                 serverPlayer.displayClientMessage(Component.translatable(
                         "message.unknown_echoes.gravity_core.ready"), true);
@@ -166,8 +173,13 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
                     "message.unknown_echoes.progress_record.full"), true);
             return InteractionResult.CONSUME;
         }
+        // 个人试炼记录会检查成就；回调结束后再确认本次祭坛仍有效。
+        if (!RewardAltarBlock.isCurrentInteraction(state, level, pos, serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
         if (ResonanceTokenManager.consumeToken(serverPlayer, EchoAbilityType.GRAVITY_ECHO)
-                && EchoAbilityManager.unlockAbility(serverPlayer, EchoAbilityType.GRAVITY_ECHO)) {
+                && EchoAbilityManager.unlockAbility(serverPlayer, EchoAbilityType.GRAVITY_ECHO)
+                && RewardAltarBlock.isCurrentInteraction(state, level, pos, serverPlayer)) {
             RewardAltarBlock.playAbsorbCeremony(level, pos);
         }
         return InteractionResult.CONSUME;
@@ -175,8 +187,14 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
 
     private static boolean rejectDuringRechallengeCooldown(ServerLevel level, BlockState state,
                                                             BlockPos pos, ServerPlayer player) {
-        long remaining = BossRechallengeAltarBlockEntity.getOrCreate(level, pos, state)
-                .remainingCooldownTicks(level);
+        BossRechallengeAltarBlockEntity altar = BossRechallengeAltarBlockEntity.getOrCreate(level, pos, state);
+        if (altar == null || !altar.isCurrentAltar(level, state)) {
+            return true;
+        }
+        long remaining = altar.remainingCooldownTicks(level);
+        if (!altar.isCurrentAltar(level, state)) {
+            return true;
+        }
         if (remaining <= 0L) {
             return false;
         }
@@ -195,11 +213,8 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
 
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             BlockPos cursor = center.relative(direction, NODE_DISTANCE);
-            if (!level.hasChunkAt(cursor)) {
-                continue;
-            }
-            BlockState state = level.getBlockState(cursor);
-            if (!(state.getBlock() instanceof DeepCalibrationNodeBlock)) {
+            BlockState state = DeepArrayBlockAccess.getIfReady(level, cursor);
+            if (state == null || !(state.getBlock() instanceof DeepCalibrationNodeBlock)) {
                 continue;
             }
             DeepCalibrationNodeBlock.Calibration calibration =
@@ -214,23 +229,24 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
     private static void guideIncompleteCalibrations(ServerLevel level, BlockPos center,
                                                     ServerPlayer player) {
         Vec3 altar = Vec3.atCenterOf(center).add(0.0D, 0.65D, 0.0D);
-        BossFx.guidanceMarker(level, altar, ParticleTypes.ELECTRIC_SPARK);
+        MechanismFx.emit(level, ProgressionFx.node(altar, ProgressionFx.Theme.GRAVITY, false));
         for (BlockPos nodePos : findCalibrationNodes(level, center)) {
-            BlockState nodeState = level.getBlockState(nodePos);
+            BlockState nodeState = DeepArrayBlockAccess.getIfReady(level, nodePos);
+            if (nodeState == null || !(nodeState.getBlock() instanceof DeepCalibrationNodeBlock)) {
+                continue;
+            }
             DeepCalibrationNodeBlock.Calibration calibration =
                     nodeState.getValue(DeepCalibrationNodeBlock.CALIBRATION);
             if (DeepCalibrationNodeBlock.isActivated(player, level, nodePos, calibration)) {
                 continue;
             }
-            var particle = switch (calibration) {
-                case WIND -> ParticleTypes.CLOUD;
-                case TIDE -> ParticleTypes.SPLASH;
-                case TRUE_SIGHT -> ParticleTypes.ENCHANT;
+            var theme = switch (calibration) {
+                case WIND -> ProgressionFx.Theme.WIND;
+                case TIDE -> ProgressionFx.Theme.TIDE;
+                case TRUE_SIGHT -> ProgressionFx.Theme.TRUE_SIGHT;
             };
             Vec3 node = Vec3.atCenterOf(nodePos).add(0.0D, 0.45D, 0.0D);
-            BossFx.guidanceMarker(level, node, particle);
-            BossFx.guidanceFlow(level, altar, node,
-                    ParticleTypes.GLOW, particle, level.getGameTime());
+            MechanismFx.emit(level, ProgressionFx.guidance(node, altar, theme));
         }
     }
 
@@ -238,8 +254,8 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
     static BlockPos findCoreNear(Level level, BlockPos nodePos) {
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             BlockPos candidate = nodePos.relative(direction, NODE_DISTANCE);
-            if (level.hasChunkAt(candidate)
-                    && level.getBlockState(candidate).getBlock() instanceof GravityCoreAltarBlock
+            BlockState state = DeepArrayBlockAccess.getIfReady(level, candidate);
+            if (state != null && state.getBlock() instanceof GravityCoreAltarBlock
                     && findCalibrationNodes(level, candidate).size()
                     == DeepCalibrationNodeBlock.Calibration.values().length) {
                 return candidate;
@@ -252,8 +268,8 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
         List<BlockPos> nodes = new ArrayList<>(3);
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             BlockPos candidate = center.relative(direction, NODE_DISTANCE);
-            if (level.hasChunkAt(candidate)
-                    && level.getBlockState(candidate).getBlock() instanceof DeepCalibrationNodeBlock) {
+            BlockState state = DeepArrayBlockAccess.getIfReady(level, candidate);
+            if (state != null && state.getBlock() instanceof DeepCalibrationNodeBlock) {
                 nodes.add(candidate);
             }
         }
@@ -261,8 +277,15 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
     }
 
     private static void summonOrJoinProphet(ServerLevel level, BlockPos altarPos, ServerPlayer player) {
+        BlockState state = BossRechallengeAltarBlockEntity.getReadyAltarState(level, altarPos);
+        if (state == null || !(state.getBlock() instanceof GravityCoreAltarBlock)) {
+            return;
+        }
         BossRechallengeAltarBlockEntity altar = BossRechallengeAltarBlockEntity.getOrCreate(
-                level, altarPos, level.getBlockState(altarPos));
+                level, altarPos, state);
+        if (altar == null || !altar.isCurrentAltar(level, state) || altar.isRecoveryInProgress()) {
+            return;
+        }
         if (altar.findActiveBoss(level) instanceof VoidProphet active) {
             active.registerParticipant(player);
             player.displayClientMessage(Component.translatable(
@@ -274,27 +297,15 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
                     "message.unknown_echoes.gravity_core.arena_loading"), true);
             return;
         }
-        List<VoidProphet> recovered = level.getEntitiesOfClass(VoidProphet.class,
-                new AABB(altarPos).inflate(BOSS_RANGE_H, BOSS_RANGE_V, BOSS_RANGE_H),
-                boss -> boss.isAlive() && !boss.isRemoved()
-                        && altarPos.equals(boss.deepRechallengeAltar()));
-        if (!recovered.isEmpty()) {
-            VoidProphet owner = recovered.stream()
-                    .filter(boss -> altar.ownsBoss(boss.getUUID()))
-                    .findFirst()
-                    .orElse(altar.canAdoptUnownedBoss() ? recovered.getFirst() : null);
-            for (VoidProphet boss : recovered) {
-                if (boss != owner) {
-                    boss.discard();
-                }
-            }
-            if (owner != null) {
-                altar.replaceActiveBoss(owner.getUUID());
-                owner.registerParticipant(player);
-                player.displayClientMessage(Component.translatable(
-                        "message.unknown_echoes.gravity_core.boss_active"), true);
-                return;
-            }
+        var recovery = altar.recoverBosses(level, state, VoidProphet.class, BOSS_RANGE_H, BOSS_RANGE_V);
+        if (recovery.interrupted()) {
+            return;
+        }
+        if (recovery.boss() instanceof VoidProphet owner) {
+            owner.registerParticipant(player);
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.gravity_core.boss_active"), true);
+            return;
         }
         if (altar.hasActiveBoss()) {
             player.displayClientMessage(Component.translatable(
@@ -325,24 +336,38 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
                 MobSpawnType.TRIGGERED, null);
         prophet.bindArena(altarPos);
         prophet.registerParticipant(player);
-        if (!altar.reserveBoss(prophet.getUUID())) {
-            prophet.discard();
-            player.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.gravity_core.boss_active"), true);
-            return;
-        }
-        if (!level.addFreshEntity(prophet)) {
-            prophet.discard();
-            altar.releaseBossReservation(prophet.getUUID());
-            reject(player, level, altarPos, "message.unknown_echoes.gravity_core.summon_failed");
-            return;
+        boolean spawned = false;
+        try {
+            if (!altar.reserveBoss(prophet.getUUID())) {
+                player.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.gravity_core.boss_active"), true);
+                return;
+            }
+            if (!altar.isCurrentAltar(level, state) || !areArenaChunksLoaded(level, altarPos)
+                    || !level.addFreshEntity(prophet)
+                    || !prophet.isAlive() || level.getEntity(prophet.getUUID()) != prophet
+                    || player.level() != level || player.isSpectator()
+                    || !altar.isCurrentAltar(level, state) || !areArenaChunksLoaded(level, altarPos)
+                    || !altar.ownsBoss(prophet.getUUID())) {
+                reject(player, level, altarPos, "message.unknown_echoes.gravity_core.summon_failed");
+                return;
+            }
+            spawned = true;
+        } finally {
+            // 入世或登记回调也可能抛异常；先清候选实体，再释放本次 UUID 的预留。
+            if (!spawned) {
+                try {
+                    prophet.discard();
+                } finally {
+                    altar.releaseBossReservation(prophet.getUUID());
+                }
+            }
         }
 
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                spawnPos.getX() + 0.5, spawnPos.getY() + 2.5, spawnPos.getZ() + 0.5,
-                120, 1.5, 2.5, 1.5, 0.25);
-        level.playSound(null, spawnPos, SoundEvents.END_PORTAL_SPAWN,
-                SoundSource.HOSTILE, 1.8F, 0.75F);
+        MechanismFx.emit(level, ProgressionFx.summon(prophet.position(),
+                prophet.getBbWidth(), prophet.getBbHeight(), ProgressionFx.Theme.GRAVITY));
+        level.playSound(null, spawnPos, ModSounds.BLOCK_GRAVITY_CORE_MANIFEST.get(),
+                SoundSource.HOSTILE, 1.6F, 1.0F);
     }
 
     /** 落点判据由 EntitySpawnSafety.findAltarSpawnPos 统一持有;两座祭坛与其 Boss 归位共用。 */
@@ -352,7 +377,7 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
     }
 
     private static boolean areArenaChunksLoaded(ServerLevel level, BlockPos altarPos) {
-        return LoadedAreaCheck.horizontalRadiusLoaded(level, altarPos, BOSS_RANGE_H);
+        return BossRechallengeAltarBlockEntity.areArenaChunksReady(level, altarPos, BOSS_RANGE_H);
     }
 
     private static void reject(ServerPlayer player, Level level, BlockPos pos, String messageKey,

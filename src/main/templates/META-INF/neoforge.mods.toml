@@ -2,6 +2,9 @@ modLoader = "javafml"
 loaderVersion = "${loader_version_range}"
 license = "${mod_license}"
 
+[[mixins]]
+config = "unknown_echoes.mixins.json"
+
 [[mods]]
 modId = "${mod_id}"
 version = "${mod_version}"

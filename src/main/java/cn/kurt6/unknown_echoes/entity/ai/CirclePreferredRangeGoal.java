@@ -33,6 +33,7 @@ public class CirclePreferredRangeGoal extends Goal {
     private int retryDelay;
     private int runTicks;
     private Vec3 circleTarget;
+    private LivingEntity maneuverTarget;
 
     /**
      * engageDistance:目标近于该距离(格)才开始绕圈。
@@ -60,25 +61,30 @@ public class CirclePreferredRangeGoal extends Goal {
             return false;
         }
         LivingEntity target = this.mob.getTarget();
-        if (target == null || !target.isAlive()
+        if (!this.mob.isAlive() || this.mob.isNoAi() || target == null || !target.isAlive()
+                || target.level() != this.mob.level() || !this.mob.canAttack(target)
+                || this.mob.isAlliedTo(target)
                 || this.mob.distanceToSqr(target) > this.engageDistance * this.engageDistance) {
             return false;
         }
         this.retryDelay = RETRY_TICKS;
         this.circleTarget = this.findCircleTarget(target);
+        this.maneuverTarget = this.circleTarget != null ? target : null;
         return this.circleTarget != null;
     }
 
     @Override
     public boolean canContinueToUse() {
-        LivingEntity target = this.mob.getTarget();
-        return this.runTicks > 0 && target != null && target.isAlive()
-                && !this.movementLocked.getAsBoolean()
+        return this.runTicks > 0 && this.isManeuverTargetValid()
                 && !this.mob.getNavigation().isDone();
     }
 
     @Override
     public void start() {
+        if (this.circleTarget == null || !this.isManeuverTargetValid()) {
+            this.stop();
+            return;
+        }
         this.runTicks = MAX_DURATION_TICKS;
         this.mob.getNavigation().moveTo(this.circleTarget.x, this.circleTarget.y, this.circleTarget.z,
                 this.speedModifier);
@@ -87,8 +93,17 @@ public class CirclePreferredRangeGoal extends Goal {
     @Override
     public void stop() {
         this.circleTarget = null;
+        this.maneuverTarget = null;
         this.runTicks = 0;
         this.mob.getNavigation().stop();
+    }
+
+    private boolean isManeuverTargetValid() {
+        LivingEntity target = this.mob.getTarget();
+        return this.mob.isAlive() && !this.mob.isNoAi() && !this.movementLocked.getAsBoolean()
+                && target != null && target == this.maneuverTarget && target.isAlive()
+                && target.level() == this.mob.level() && this.mob.canAttack(target)
+                && !this.mob.isAlliedTo(target);
     }
 
     @Override

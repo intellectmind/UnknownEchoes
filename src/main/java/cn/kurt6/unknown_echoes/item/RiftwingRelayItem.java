@@ -40,13 +40,25 @@ public class RiftwingRelayItem extends Item implements ItemActiveSkill {
                     "message.unknown_echoes.riftwing_relay.passenger"), true);
             return false;
         }
-        if (serverPlayer.getCooldowns().isOnCooldown(this)
-                || !ArtifactManager.spendEnergy(serverPlayer, ENERGY_COST)) {
+        if (serverPlayer.level() != serverLevel || !serverPlayer.isAlive()
+                || serverPlayer.isSpectator() || !stack.is(this)
+                || serverPlayer.getItemInHand(hand) != stack
+                || serverPlayer.getCooldowns().isOnCooldown(this)) {
             return false;
         }
 
         boolean wingResonance = serverPlayer.getItemBySlot(EquipmentSlot.CHEST)
                 .is(ModItems.WORLD_ECHO_WINGS.get());
+        // 支付及缓降效果之前预留冷却，只有明确支付失败才允许立即重试。
+        serverPlayer.getCooldowns().addCooldown(this,
+                wingResonance ? WING_RESONANCE_COOLDOWN_TICKS : COOLDOWN_TICKS);
+        if (!ArtifactManager.spendEnergy(serverPlayer, ENERGY_COST)) {
+            serverPlayer.getCooldowns().removeCooldown(this);
+            return false;
+        }
+        if (!canContinue(serverLevel, serverPlayer, stack, hand)) {
+            return true;
+        }
         Vec3 origin = serverPlayer.position();
         Vec3 look = serverPlayer.getLookAngle().normalize();
         double horizontalBoost = wingResonance ? 2.05D : 1.65D;
@@ -59,9 +71,10 @@ public class RiftwingRelayItem extends Item implements ItemActiveSkill {
         serverPlayer.fallDistance = 0.0F;
         serverPlayer.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING,
                 wingResonance ? 180 : 120, 0, true, false, true));
-        serverPlayer.getCooldowns().addCooldown(this,
-                wingResonance ? WING_RESONANCE_COOLDOWN_TICKS : COOLDOWN_TICKS);
 
+        if (!canContinue(serverLevel, serverPlayer, stack, hand)) {
+            return true;
+        }
         serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
                 origin.x, origin.y + 0.8D, origin.z,
                 42, 0.35D, 0.45D, 0.35D, 0.16D);
@@ -75,8 +88,16 @@ public class RiftwingRelayItem extends Item implements ItemActiveSkill {
         }
         serverLevel.playSound(null, serverPlayer.blockPosition(),
                 SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.85F, 1.25F);
-        serverPlayer.swing(hand, true);
+        if (canContinue(serverLevel, serverPlayer, stack, hand)) {
+            serverPlayer.swing(hand, true);
+        }
         return true;
+    }
+
+    private boolean canContinue(ServerLevel level, ServerPlayer player,
+                                ItemStack stack, InteractionHand hand) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isPassenger() && stack.is(this) && player.getItemInHand(hand) == stack;
     }
 
     private static Vec3 momentumSafeBoost(Vec3 current, Vec3 look,

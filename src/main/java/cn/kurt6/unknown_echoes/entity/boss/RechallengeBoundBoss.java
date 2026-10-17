@@ -6,11 +6,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.Vec3;
+import java.util.function.BooleanSupplier;
 import org.jetbrains.annotations.Nullable;
 
 /** 由原场地祭坛管理的主线 Boss；绑定只记录祭坛位置，不改变个人奖励结算。 */
-public interface RechallengeBoundBoss {
+public interface RechallengeBoundBoss extends BossDeathSettlement {
     String RECHALLENGE_ALTAR_TAG = "RechallengeAltar";
 
     MainBossRechallengeData.BossKind rechallengeKind();
@@ -60,15 +60,16 @@ public interface RechallengeBoundBoss {
     }
 
     /** 区块卸载时暂停战斗，祭坛被替换时销毁异常实例。 */
-    default boolean tickRechallengeBinding(ServerLevel level) {
+    default boolean tickRechallengeBinding(ServerLevel level, BooleanSupplier combatActive) {
         BlockPos altarPos = rechallengeAltar();
         if (altarPos == null || !(this instanceof Entity boss)) {
             return false;
         }
         BindingState state;
-        if (!level.hasChunkAt(altarPos)) {
+        var altarChunk = level.getChunkSource().getChunkNow(altarPos.getX() >> 4, altarPos.getZ() >> 4);
+        if (altarChunk == null) {
             state = BindingState.UNAVAILABLE;
-        } else if (!rechallengeKind().isAltarState(level.getBlockState(altarPos))) {
+        } else if (!rechallengeKind().isAltarState(altarChunk.getBlockState(altarPos))) {
             state = BindingState.INVALID;
         } else if (!rechallengeKind().isRealBossEntity(boss)) {
 
@@ -79,13 +80,9 @@ public interface RechallengeBoundBoss {
                     ? BindingState.VALID : BindingState.INVALID;
         }
         if (state == BindingState.UNAVAILABLE) {
-            if (boss instanceof net.minecraft.world.entity.Mob mob) {
-                mob.setTarget(null);
-                mob.getNavigation().stop();
-                mob.setDeltaMovement(Vec3.ZERO);
-            } else {
-                boss.setDeltaMovement(Vec3.ZERO);
-            }
+            BossBindingPause.pause(level, boss, combatActive,
+                    () -> altarPos.equals(rechallengeAltar())
+                            && level.getChunkSource().getChunkNow(altarPos.getX() >> 4, altarPos.getZ() >> 4) == null);
             return true;
         }
         if (state == BindingState.INVALID) {
@@ -101,10 +98,11 @@ public interface RechallengeBoundBoss {
         if (altarPos == null || !(this instanceof Entity boss)) {
             return false;
         }
-        if (!level.hasChunkAt(altarPos)) {
+        var altarChunk = level.getChunkSource().getChunkNow(altarPos.getX() >> 4, altarPos.getZ() >> 4);
+        if (altarChunk == null) {
             return true;
         }
-        if (!rechallengeKind().isAltarState(level.getBlockState(altarPos))) {
+        if (!rechallengeKind().isAltarState(altarChunk.getBlockState(altarPos))) {
             return true;
         }
         return rechallengeKind().isRealBossEntity(boss)

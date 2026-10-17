@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:item/crossbow_pulling_2",
+  "parent": "unknown_echoes:item/tide_crossbow",
   "textures": {
     "layer0": "unknown_echoes:item/tide_crossbow_pulling_2"
   }

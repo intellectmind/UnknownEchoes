@@ -41,6 +41,9 @@
     "unknown_echoes:tide_sensor_door",
     "unknown_echoes:true_sight_stele",
     "unknown_echoes:true_sight_chest",
-    "unknown_echoes:echo_archive_terminal"
+    "unknown_echoes:echo_archive_terminal",
+    "unknown_echoes:wonder_puzzle_core",
+    "unknown_echoes:wonder_puzzle_dial",
+    "unknown_echoes:wonder_trial"
   ]
 }

@@ -4,12 +4,15 @@ import cn.kurt6.unknown_echoes.entity.boss.ForgottenColossus;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -59,10 +62,18 @@ public class MemoryPillarBlock extends Block {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        List<ForgottenColossus> bosses = level.getEntitiesOfClass(ForgottenColossus.class,
+        if (!(level instanceof ServerLevel serverLevel)
+                || !(player instanceof ServerPlayer serverPlayer)
+                || !isCurrentInteraction(serverLevel, pos, state, serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
+        List<ForgottenColossus> bosses = serverLevel.getEntitiesOfClass(ForgottenColossus.class,
                 new AABB(pos).inflate(BOSS_SEARCH_RADIUS), ForgottenColossus::isAlive);
 
-        if (bosses.isEmpty() && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
+        if (!isCurrentInteraction(serverLevel, pos, state, serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
+        if (bosses.isEmpty()
                 && cn.kurt6.unknown_echoes.ability.EchoAbilityManager.hasDefeatedBoss(serverPlayer,
                         cn.kurt6.unknown_echoes.ability.EchoPermission.FORGOTTEN_COLOSSUS_ID)
                 && !cn.kurt6.unknown_echoes.ability.EchoAbilityManager.hasAbility(serverPlayer,
@@ -73,19 +84,51 @@ public class MemoryPillarBlock extends Block {
                         cn.kurt6.unknown_echoes.ability.EchoAbilityType.WIND_ECHO);
                 return InteractionResult.CONSUME;
             }
-            if (cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.reissueIfMissing(serverPlayer,
+            if (!cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.hasValidToken(serverPlayer,
                     cn.kurt6.unknown_echoes.ability.EchoAbilityType.WIND_ECHO)) {
+                cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.reissueIfMissing(serverPlayer,
+                        cn.kurt6.unknown_echoes.ability.EchoAbilityType.WIND_ECHO);
                 return InteractionResult.CONSUME;
             }
         }
 
         if (bosses.isEmpty()) {
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.5F);
-            player.displayClientMessage(Component.translatable("message.unknown_echoes.pillar.silent"), true);
+            if (isCurrentInteraction(serverLevel, pos, state, serverPlayer)) {
+                serverPlayer.displayClientMessage(Component.translatable("message.unknown_echoes.pillar.silent"), true);
+            }
             return InteractionResult.CONSUME;
         }
 
-        bosses.get(0).onMemoryPillarClicked(pos, player);
+        for (ForgottenColossus boss : bosses) {
+            if (isCurrentBoss(serverLevel, pos, boss)) {
+                boss.onMemoryPillarClicked(pos, serverPlayer);
+                break;
+            }
+        }
         return InteractionResult.CONSUME;
+    }
+
+    private boolean isCurrentInteraction(ServerLevel level, BlockPos pos, BlockState state,
+                                         ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.canInteractWithBlock(pos, 1.0D) && isCurrentPillar(level, pos, state);
+    }
+
+    private boolean isCurrentPillar(ServerLevel level, BlockPos pos, BlockState state) {
+        if (level.isOutsideBuildHeight(pos) || !state.is(this)) {
+            return false;
+        }
+        LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk != null && chunk.getBlockState(pos) == state;
+    }
+
+    private static boolean isCurrentBoss(ServerLevel level, BlockPos pos, ForgottenColossus boss) {
+        return boss.isAlive() && !boss.isRemoved() && boss.level() == level
+                && level.getChunkSource().getChunkNow(boss.blockPosition().getX() >> 4,
+                        boss.blockPosition().getZ() >> 4) != null
+                && level.getEntity(boss.getUUID()) == boss
+                && boss.getBoundingBox().intersects(new AABB(pos).inflate(BOSS_SEARCH_RADIUS));
     }
 }

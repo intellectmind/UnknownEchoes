@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:entity",
+  "random_sequence": "unknown_echoes:entities/moss_sail_snail",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:echo_fiber"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.6
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:moss_sail_snail_meat"
+        }
+      ]
+    }
+  ]
+}

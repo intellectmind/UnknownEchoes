@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import cn.kurt6.unknown_echoes.fx.BossLifecycleFx;
+import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
@@ -10,7 +12,6 @@ import cn.kurt6.unknown_echoes.entity.ai.CirclePreferredRangeGoal;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
-import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -43,6 +44,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -60,10 +63,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import javax.annotation.Nullable;
 
 public class ForgottenColossus extends Monster implements GeoEntity, BossDamageGuard, PhaseGatedBoss,
         BossVisualState,
-        RechallengeBoundBoss {
+        RechallengeBoundBoss, BossMusicSource {
     private static final RawAnimation IDLE_ANIM =
             RawAnimation.begin().thenLoop("animation.forgotten_colossus.idle");
     private static final RawAnimation WALK_ANIM =
@@ -136,6 +140,11 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
     private int pillarRescanCooldown = 0;
     /** Simon 阶段遇到区块卸载后,等待相关区域重新加载再熄灭旧柱。 */
     private boolean pillarCleanupPending = false;
+    /** 同一次机关结算期间不接受声音、方块或进度回调再次推进 Simon。 */
+    private boolean handlingSimon = false;
+    private boolean handlingDeath = false;
+    private boolean cleaningArena = false;
+    private ServerLevel arenaCleanupLevel = null;
 
     private static final int SLAM_HIT_DELAY = 15;
     private static final int STOMP_HIT_DELAY = 11;
@@ -225,74 +234,105 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
     }
 
     public void onMemoryPillarClicked(BlockPos pos, Player activator) {
-        if (this.level().isClientSide || this.isBroken()) {
+        if (!(this.level() instanceof ServerLevel serverLevel)
+                || !(activator instanceof ServerPlayer player) || this.handlingSimon
+                || this.isBroken() || !isCurrentPillarInput(serverLevel, pos, player)) {
             return;
         }
-        BossNbtData.addParticipant(this.participants, activator.getUUID());
-
-        if (this.simonPhase != SimonPhase.INPUT) {
-            if (this.simonPhase == SimonPhase.IDLE) {
-                startSimonRound();
+        this.handlingSimon = true;
+        try {
+            BossNbtData.addParticipant(this.participants, player.getUUID());
+            if (this.simonPhase != SimonPhase.INPUT) {
+                if (this.simonPhase == SimonPhase.IDLE) {
+                    startSimonRound();
+                }
+                if (isCurrentPillarInput(serverLevel, pos, player) && !this.isBroken()) {
+                    player.displayClientMessage(
+                            Component.translatable("message.unknown_echoes.colossus.simon_listen"), true);
+                }
+                return;
             }
-            activator.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.colossus.simon_listen"), true);
-            return;
-        }
-        int idx = this.orderedPillars.indexOf(pos);
-        if (idx < 0 || this.simonInputProgress >= this.simonSequence.length) {
-            return;
-        }
-
-        BlockState clicked = this.level().getBlockState(pos);
-        if (clicked.is(ModBlocks.MEMORY_PILLAR.get()) && clicked.getValue(MemoryPillarBlock.ACTIVATED)) {
-            return;
-        }
-        if (idx == this.simonSequence[this.simonInputProgress]) {
-            setPillarLit(pos, true);
-            this.simonInputProgress++;
-            this.level().playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS,
-                    1.2F, 0.8F + 0.12F * this.simonInputProgress);
-            if (this.simonInputProgress >= this.simonSequence.length) {
-                enterBrokenState();
+            if (!isCurrentSimonInput(serverLevel)) {
+                suspendSimonRound();
+                return;
             }
-        } else {
-
-            allPillarsOff();
-            this.simonInputProgress = 0;
-            this.level().playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE,
-                    SoundSource.HOSTILE, 1.0F, 0.6F);
-            broadcastNearby(Component.translatable("message.unknown_echoes.colossus.simon_wrong"));
-            beginDemo();
+            int idx = this.orderedPillars.indexOf(pos);
+            if (idx < 0 || this.simonInputProgress >= this.simonSequence.length
+                    || isPillarLit(serverLevel, pos)) {
+                return;
+            }
+            if (idx == this.simonSequence[this.simonInputProgress]) {
+                if (!setPillarLit(pos, true) || !isCurrentSimonInput(serverLevel)
+                        || !isCurrentPillarInput(serverLevel, pos, player)
+                        || !isPillarLit(serverLevel, pos)) {
+                    suspendSimonRound();
+                    return;
+                }
+                this.simonInputProgress++;
+                if (this.simonInputProgress >= this.simonSequence.length) {
+                    enterBrokenState();
+                }
+                if (isCurrentPillarInput(serverLevel, pos, player)) {
+                    serverLevel.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS,
+                            1.2F, 0.8F + 0.12F * this.simonInputProgress);
+                }
+            } else {
+                suspendSimonRound();
+                if (!allPillarsOff()) {
+                    return;
+                }
+                beginDemo();
+                serverLevel.playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE,
+                        SoundSource.HOSTILE, 1.0F, 0.6F);
+                broadcastSimon(serverLevel, SimonPhase.DEMO,
+                        Component.translatable("message.unknown_echoes.colossus.simon_wrong"));
+            }
+        } catch (RuntimeException | Error failure) {
+            if (!this.isBroken()) {
+                suspendSimonRound();
+            }
+            throw failure;
+        } finally {
+            this.handlingSimon = false;
         }
     }
 
     private void tickSimonTrial(List<ServerPlayer> arenaPlayers) {
-        if (this.isBroken()) {
+        if (!(this.level() instanceof ServerLevel serverLevel) || this.handlingSimon
+                || this.isBroken() || !isCurrentSimonBoss(serverLevel)) {
             return;
         }
-        if (this.level() instanceof ServerLevel serverLevel
-                && this.simonPhase != SimonPhase.IDLE
+        this.handlingSimon = true;
+        try {
+            advanceSimonTrial(serverLevel, arenaPlayers);
+        } catch (RuntimeException | Error failure) {
+            if (!this.isBroken()) {
+                suspendSimonRound();
+            }
+            throw failure;
+        } finally {
+            this.handlingSimon = false;
+        }
+    }
+
+    private void advanceSimonTrial(ServerLevel serverLevel, List<ServerPlayer> arenaPlayers) {
+        if (this.simonPhase != SimonPhase.IDLE
                 && !isScanAreaLoaded(serverLevel, this.blockPosition(), PILLAR_SCAN_RADIUS)) {
-            this.simonPhase = SimonPhase.IDLE;
-            this.simonInputProgress = 0;
-            this.pillarCleanupPending = true;
+            suspendSimonRound();
             this.pillarRescanCooldown = Math.max(this.pillarRescanCooldown, 40);
             return;
         }
-
         if (this.simonPhase != SimonPhase.IDLE && this.tickCount % 40 == 0
                 && !hasArenaParticipant(arenaPlayers)) {
-            allPillarsOff();
-            this.simonPhase = SimonPhase.IDLE;
-            this.simonInputProgress = 0;
+            suspendSimonRound();
             return;
         }
         switch (this.simonPhase) {
             case IDLE -> {
-                if (this.pillarCleanupPending
-                        && this.level() instanceof ServerLevel serverLevel
-                        && isScanAreaLoaded(serverLevel, this.blockPosition(), PILLAR_SCAN_RADIUS)) {
-                    allPillarsOff();
+                if (this.pillarCleanupPending) {
+                    if (!allPillarsOff()) {
+                        return;
+                    }
                     this.pillarCleanupPending = false;
                 }
                 if (this.pillarRescanCooldown > 0) {
@@ -302,65 +342,102 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
                 }
             }
             case DEMO -> tickSimonDemo();
-            case INPUT -> {  }
+            case INPUT -> {
+                if (!isCurrentSimonInput(serverLevel)) {
+                    suspendSimonRound();
+                }
+            }
         }
     }
 
     private void startSimonRound() {
-        if (!(this.level() instanceof ServerLevel serverLevel)
+        if (!(this.level() instanceof ServerLevel serverLevel) || this.isBroken()
+                || !isCurrentSimonBoss(serverLevel)
                 || !isScanAreaLoaded(serverLevel, this.blockPosition(), PILLAR_SCAN_RADIUS)) {
             return;
         }
+        suspendSimonRound();
+        if (!allPillarsOff()) {
+            return;
+        }
         List<BlockPos> pillars = scanAllPillars();
+        if (pillars == null) {
+            this.pillarRescanCooldown = Math.max(this.pillarRescanCooldown, 40);
+            return;
+        }
         if (pillars.size() < 2) {
-
-            this.simonPhase = SimonPhase.IDLE;
+            this.pillarCleanupPending = false;
             this.pillarRescanCooldown = 600;
             return;
         }
         BlockPos center = this.blockPosition();
-
         pillars.sort(java.util.Comparator.comparingDouble(
                 p -> Math.atan2(p.getZ() - center.getZ(), p.getX() - center.getX())));
         this.orderedPillars.clear();
         this.orderedPillars.addAll(pillars);
         int n = Math.min(REQUIRED_PILLARS, this.orderedPillars.size());
         this.simonSequence = shuffledIndices(n);
-        allPillarsOff();
-        broadcastNearby(Component.translatable("message.unknown_echoes.colossus.simon_listen"));
+        if (!allPillarsOff()) {
+            return;
+        }
         beginDemo();
+        broadcastSimon(serverLevel, SimonPhase.DEMO,
+                Component.translatable("message.unknown_echoes.colossus.simon_listen"));
     }
 
     private void beginDemo() {
         this.simonPhase = SimonPhase.DEMO;
         this.simonDemoStep = 0;
         this.simonDemoTimer = 0;
+        this.simonInputProgress = 0;
+        this.pillarCleanupPending = false;
     }
 
     private void tickSimonDemo() {
-        if (this.simonSequence.length == 0 || this.orderedPillars.isEmpty()) {
-            this.simonPhase = SimonPhase.IDLE;
+        if (!(this.level() instanceof ServerLevel serverLevel) || !isCurrentSimonBoss(serverLevel)
+                || this.simonSequence.length == 0 || this.orderedPillars.isEmpty()) {
+            suspendSimonRound();
             return;
         }
         if (this.simonDemoStep >= this.simonSequence.length) {
-            allPillarsOff();
+            this.pillarCleanupPending = true;
+            if (!allPillarsOff()) {
+                return;
+            }
+            this.pillarCleanupPending = false;
             this.simonPhase = SimonPhase.INPUT;
             this.simonInputProgress = 0;
-            broadcastNearby(Component.translatable("message.unknown_echoes.colossus.simon_repeat"));
+            broadcastSimon(serverLevel, SimonPhase.INPUT,
+                    Component.translatable("message.unknown_echoes.colossus.simon_repeat"));
             return;
         }
         BlockPos pillar = this.orderedPillars.get(this.simonSequence[this.simonDemoStep]);
         if (this.simonDemoTimer == 0) {
-            // 演示每一步抬臂指一次，否则玩家只看到柱子在亮。
+            if (!setPillarLit(pillar, true)) {
+                suspendSimonRound();
+                return;
+            }
             this.triggerAnim("state_controller", "command");
-            setPillarLit(pillar, true);
-            this.level().playSound(null, pillar, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS,
+            if (!isCurrentDemo(serverLevel, pillar)) {
+                suspendSimonRound();
+                return;
+            }
+            serverLevel.playSound(null, pillar, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS,
                     1.2F, 0.8F + 0.12F * this.simonDemoStep);
-        } else if (this.simonDemoTimer == SIMON_LIT_TICKS) {
-            setPillarLit(pillar, false);
+        } else if (this.simonDemoTimer == SIMON_LIT_TICKS && !setPillarLit(pillar, false)) {
+            suspendSimonRound();
+            return;
         }
         if (this.simonDemoTimer < SIMON_LIT_TICKS) {
+            if (!isCurrentDemo(serverLevel, pillar)) {
+                suspendSimonRound();
+                return;
+            }
             playSimonPillarHint(pillar, this.simonDemoTimer);
+            if (!isCurrentDemo(serverLevel, pillar)) {
+                suspendSimonRound();
+                return;
+            }
         }
         if (++this.simonDemoTimer >= SIMON_STEP_TICKS) {
             this.simonDemoTimer = 0;
@@ -374,25 +451,40 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
         }
         Vec3 top = Vec3.atCenterOf(pillar).add(0.0D, SIMON_HINT_TOP_OFFSET, 0.0D);
         Vec3 core = this.position().add(0.0D, this.getBbHeight() * 0.62D, 0.0D);
+        if (!isCurrentDemo(serverLevel, pillar)) {
+            return;
+        }
         serverLevel.sendParticles(BossParticleTheme.COLOSSUS.spark(),
                 top.x, top.y, top.z, 4, 0.18D, 0.10D, 0.18D, 0.02D);
+        if (!isCurrentDemo(serverLevel, pillar)) {
+            return;
+        }
         serverLevel.sendParticles(BossParticleTheme.COLOSSUS.spark(),
                 top.x, top.y + 0.12D, top.z, 2, 0.12D, 0.08D, 0.12D, 0.01D);
         if (timer % 2 == 0) {
-            drawSimonHintBeam(serverLevel, top, core);
+            drawSimonHintBeam(serverLevel, pillar, top, core);
+            if (!isCurrentDemo(serverLevel, pillar)) {
+                return;
+            }
             double radius = 0.52D + 0.05D * Math.sin((this.tickCount + timer) * 0.45D);
             BossFx.ring(serverLevel, top, radius, 14, 0.02D, BossParticleTheme.COLOSSUS.ember());
         }
     }
 
-    private void drawSimonHintBeam(ServerLevel serverLevel, Vec3 from, Vec3 to) {
+    private void drawSimonHintBeam(ServerLevel serverLevel, BlockPos pillar, Vec3 from, Vec3 to) {
         Vec3 delta = to.subtract(from);
         int steps = Math.max(8, (int) (delta.length() * 1.4D));
         for (int i = 0; i <= steps; i++) {
             Vec3 point = from.add(delta.scale(i / (double) steps));
+            if (!isCurrentDemo(serverLevel, pillar)) {
+                return;
+            }
             serverLevel.sendParticles(BossParticleTheme.COLOSSUS.spark(),
                     point.x, point.y, point.z, 1, 0.025D, 0.025D, 0.025D, 0.0D);
             if (i % 4 == 0) {
+                if (!isCurrentDemo(serverLevel, pillar)) {
+                    return;
+                }
                 serverLevel.sendParticles(BossParticleTheme.COLOSSUS.spark(),
                         point.x, point.y, point.z, 1, 0.015D, 0.015D, 0.015D, 0.0D);
             }
@@ -400,28 +492,60 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
     }
 
     private void enterBrokenState() {
+        if (!(this.level() instanceof ServerLevel ritualLevel) || !isCurrentSimonBoss(ritualLevel)
+                || this.isBroken() || this.simonPhase != SimonPhase.INPUT
+                || this.simonInputProgress != this.simonSequence.length) {
+            return;
+        }
         this.activePillars.clear();
         this.activePillars.addAll(this.orderedPillars);
-        this.setBroken(true);
-        this.triggerAnim("state_controller", "break_core");
         this.brokenTicksRemaining = ServerConfig.BOSS_BROKEN_DURATION_TICKS.get();
         this.brokenWindowHealthFloor = BossPhaseGate.nextFloor(this.getHealth(), this.getMaxHealth(),
                 0.70F, 0.35F);
         this.simonPhase = SimonPhase.IDLE;
-        List<ServerPlayer> ritualParticipants = List.of();
-
-        if (this.level() instanceof ServerLevel ritualLevel) {
-            double ritualRadius = ServerConfig.BOSS_REWARD_RADIUS.get();
-            ritualParticipants = nearbyPlayers(ritualLevel, ritualRadius);
-            for (ServerPlayer participant : ritualParticipants) {
-                BossNbtData.addParticipant(this.participants, participant.getUUID());
-                cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.grantRitual(
-                        participant, cn.kurt6.unknown_echoes.ability.EchoAbilityType.WIND_ECHO);
+        this.pillarCleanupPending = false;
+        this.setBroken(true);
+        if (!isCurrentBrokenState(ritualLevel)) {
+            return;
+        }
+        double ritualRadius = ServerConfig.BOSS_REWARD_RADIUS.get();
+        List<ServerPlayer> ritualParticipants = nearbyPlayers(ritualLevel, ritualRadius);
+        for (ServerPlayer participant : ritualParticipants) {
+            if (!isCurrentBrokenState(ritualLevel)) {
+                return;
+            }
+            if (!isCurrentRitualPlayer(ritualLevel, participant)) {
+                continue;
+            }
+            BossNbtData.addParticipant(this.participants, participant.getUUID());
+            cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.grantRitual(
+                    participant, cn.kurt6.unknown_echoes.ability.EchoAbilityType.WIND_ECHO);
+        }
+        if (!isCurrentBrokenState(ritualLevel)) {
+            return;
+        }
+        playBrokenEffects(ritualLevel);
+        Component brokenMessage = Component.translatable("message.unknown_echoes.boss.broken");
+        for (ServerPlayer participant : ritualParticipants) {
+            if (!isCurrentBrokenState(ritualLevel)) {
+                return;
+            }
+            if (isCurrentRitualPlayer(ritualLevel, participant)) {
+                participant.sendSystemMessage(brokenMessage);
             }
         }
-        this.level().playSound(null, this.blockPosition(),
+    }
+
+    private void playBrokenEffects(ServerLevel ritualLevel) {
+        BossLifecycleFx.phase(ritualLevel, this.position(), this.getBbWidth(), this.getBbHeight(), BossParticleTheme.COLOSSUS.body());
+        this.triggerAnim("state_controller", "break_core");
+        if (!isCurrentBrokenState(ritualLevel)) {
+            return;
+        }
+        ritualLevel.playSound(null, this.blockPosition(),
                 SoundEvents.WITHER_BREAK_BLOCK, SoundSource.HOSTILE, 2.0F, 0.6F);
-        if (this.level() instanceof ServerLevel serverLevel) {
+        if (isCurrentBrokenState(ritualLevel)) {
+            ServerLevel serverLevel = ritualLevel;
             net.minecraft.world.phys.Vec3 core = this.position().add(0, this.getBbHeight() * 0.65, 0);
 
             for (BlockPos pillar : this.orderedPillars) {
@@ -430,27 +554,120 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
                 int steps = Math.max(6, (int) (delta.length() * 1.2));
                 for (int i = 0; i <= steps; i++) {
                     net.minecraft.world.phys.Vec3 p = top.add(delta.scale(i / (double) steps));
+                    if (!isCurrentBrokenState(serverLevel)) {
+                        return;
+                    }
                     serverLevel.sendParticles(BossParticleTheme.COLOSSUS.spark(), p.x, p.y, p.z, 1, 0.05, 0.05, 0.05, 0.0);
                 }
             }
 
+            if (!isCurrentBrokenState(serverLevel)) {
+                return;
+            }
             serverLevel.sendParticles(ParticleTypes.FLASH, core.x, core.y, core.z, 1, 0, 0, 0, 0);
             for (int ring = 1; ring <= 3; ring++) {
                 double r = ring * 1.4;
                 for (int i = 0; i < 12 + ring * 4; i++) {
                     double angle = Math.PI * 2 * i / (12 + ring * 4);
+                    if (!isCurrentBrokenState(serverLevel)) {
+                        return;
+                    }
                     serverLevel.sendParticles(BossParticleTheme.COLOSSUS.spark(),
                             core.x + Math.cos(angle) * r, core.y, core.z + Math.sin(angle) * r,
                             1, 0.1, 0.2, 0.1, 0.05);
+                    if (!isCurrentBrokenState(serverLevel)) {
+                        return;
+                    }
                     serverLevel.sendParticles(BossParticleTheme.COLOSSUS.spark(),
                             core.x + Math.cos(angle) * r, core.y - 0.5, core.z + Math.sin(angle) * r,
                             1, 0.1, 0.2, 0.1, 0.08);
                 }
             }
         }
-        Component brokenMessage = Component.translatable("message.unknown_echoes.boss.broken");
-        for (ServerPlayer participant : ritualParticipants) {
-            participant.sendSystemMessage(brokenMessage);
+    }
+
+    private void suspendSimonRound() {
+        this.simonPhase = SimonPhase.IDLE;
+        this.simonInputProgress = 0;
+        this.pillarCleanupPending = true;
+    }
+
+    private boolean isCurrentSimonBoss(ServerLevel level) {
+        return this.level() == level && this.isAlive() && !this.dead && !this.isRemoved()
+                && level.getChunkSource().getChunkNow(this.blockPosition().getX() >> 4,
+                        this.blockPosition().getZ() >> 4) != null
+                && level.getEntity(this.getUUID()) == this;
+    }
+
+    private boolean isCurrentPillarInput(ServerLevel level, BlockPos pos, ServerPlayer player) {
+        BlockState state = getReadableBlockState(level, pos);
+        return isCurrentSimonBoss(level) && player.level() == level && player.isAlive()
+                && !player.isSpectator() && !player.isRemoved() && !player.hasDisconnected()
+                && player.canInteractWithBlock(pos, 1.0D)
+                && state != null && state.is(ModBlocks.MEMORY_PILLAR.get())
+                && this.getBoundingBox().intersects(new AABB(pos).inflate(MemoryPillarBlock.BOSS_SEARCH_RADIUS));
+    }
+
+    private boolean isCurrentSimonInput(ServerLevel level) {
+        if (!isCurrentSimonBoss(level) || this.isBroken() || this.simonPhase != SimonPhase.INPUT
+                || this.simonSequence.length == 0) {
+            return false;
+        }
+        for (int step = 0; step < this.simonSequence.length; step++) {
+            int index = this.simonSequence[step];
+            if (index < 0 || index >= this.orderedPillars.size()) {
+                return false;
+            }
+            BlockPos pillar = this.orderedPillars.get(index);
+            BlockState state = getReadableBlockState(level, pillar);
+            if (state == null || !state.is(ModBlocks.MEMORY_PILLAR.get())
+                    || (step < this.simonInputProgress && !state.getValue(MemoryPillarBlock.ACTIVATED))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isCurrentDemo(ServerLevel level, BlockPos pillar) {
+        return isCurrentSimonBoss(level) && !this.isBroken() && this.simonPhase == SimonPhase.DEMO
+                && isPillarLit(level, pillar);
+    }
+
+    @Nullable
+    private static BlockState getReadableBlockState(ServerLevel level, BlockPos pos) {
+        if (level.isOutsideBuildHeight(pos)) {
+            return Blocks.VOID_AIR.defaultBlockState();
+        }
+        LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk == null ? null : chunk.getBlockState(pos);
+    }
+
+    private static boolean isPillarLit(ServerLevel level, BlockPos pos) {
+        BlockState state = getReadableBlockState(level, pos);
+        return state != null && state.is(ModBlocks.MEMORY_PILLAR.get())
+                && state.getValue(MemoryPillarBlock.ACTIVATED);
+    }
+
+    private boolean isCurrentBrokenState(ServerLevel level) {
+        return isCurrentSimonBoss(level) && this.isBroken() && this.brokenTicksRemaining > 0;
+    }
+
+    private boolean isCurrentRitualPlayer(ServerLevel level, ServerPlayer player) {
+        double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.distanceToSqr(this) <= radius * radius;
+    }
+
+    private void broadcastSimon(ServerLevel level, SimonPhase phase, Component message) {
+        double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
+        for (ServerPlayer player : nearbyPlayers(level, radius)) {
+            if (!isCurrentSimonBoss(level) || this.isBroken() || this.simonPhase != phase) {
+                return;
+            }
+            if (isCurrentRitualPlayer(level, player)) {
+                player.sendSystemMessage(message);
+            }
         }
     }
 
@@ -471,13 +688,37 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
         return false;
     }
 
+    @Nullable
     private List<BlockPos> scanAllPillars() {
+        if (!(this.level() instanceof ServerLevel serverLevel) || !isCurrentSimonBoss(serverLevel)) {
+            return null;
+        }
         List<BlockPos> result = new ArrayList<>();
         BlockPos center = this.blockPosition();
+        int minChunkX = (center.getX() - PILLAR_SCAN_RADIUS) >> 4;
+        int minChunkZ = (center.getZ() - PILLAR_SCAN_RADIUS) >> 4;
+        int maxChunkX = (center.getX() + PILLAR_SCAN_RADIUS) >> 4;
+        int maxChunkZ = (center.getZ() + PILLAR_SCAN_RADIUS) >> 4;
+        LevelChunk[][] chunks = new LevelChunk[maxChunkX - minChunkX + 1][maxChunkZ - minChunkZ + 1];
+        for (int x = minChunkX; x <= maxChunkX; x++) {
+            for (int z = minChunkZ; z <= maxChunkZ; z++) {
+                LevelChunk chunk = serverLevel.getChunkSource().getChunkNow(x, z);
+                if (chunk == null) {
+                    return null;
+                }
+                chunks[x - minChunkX][z - minChunkZ] = chunk;
+            }
+        }
+        int minY = Math.max(center.getY() - PILLAR_SCAN_HEIGHT, serverLevel.getMinBuildHeight());
+        int maxY = Math.min(center.getY() + PILLAR_SCAN_HEIGHT, serverLevel.getMaxBuildHeight() - 1);
+        if (minY > maxY) {
+            return result;
+        }
         for (BlockPos pos : BlockPos.betweenClosed(
-                center.offset(-PILLAR_SCAN_RADIUS, -PILLAR_SCAN_HEIGHT, -PILLAR_SCAN_RADIUS),
-                center.offset(PILLAR_SCAN_RADIUS, PILLAR_SCAN_HEIGHT, PILLAR_SCAN_RADIUS))) {
-            if (this.level().getBlockState(pos).is(ModBlocks.MEMORY_PILLAR.get())) {
+                new BlockPos(center.getX() - PILLAR_SCAN_RADIUS, minY, center.getZ() - PILLAR_SCAN_RADIUS),
+                new BlockPos(center.getX() + PILLAR_SCAN_RADIUS, maxY, center.getZ() + PILLAR_SCAN_RADIUS))) {
+            LevelChunk chunk = chunks[(pos.getX() >> 4) - minChunkX][(pos.getZ() >> 4) - minChunkZ];
+            if (chunk.getBlockState(pos).is(ModBlocks.MEMORY_PILLAR.get())) {
                 result.add(pos.immutable());
             }
         }
@@ -485,21 +726,41 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
     }
 
     private static boolean isScanAreaLoaded(ServerLevel level, BlockPos center, int radius) {
-        return LoadedAreaCheck.horizontalRadiusLoaded(level, center, radius);
-    }
-
-    private void setPillarLit(BlockPos pos, boolean lit) {
-        BlockState state = this.level().getBlockState(pos);
-        if (state.is(ModBlocks.MEMORY_PILLAR.get())
-                && state.getValue(MemoryPillarBlock.ACTIVATED) != lit) {
-            this.level().setBlock(pos, state.setValue(MemoryPillarBlock.ACTIVATED, lit), 3);
+        for (int x = (center.getX() - radius) >> 4; x <= (center.getX() + radius) >> 4; x++) {
+            for (int z = (center.getZ() - radius) >> 4; z <= (center.getZ() + radius) >> 4; z++) {
+                if (level.getChunkSource().getChunkNow(x, z) == null) {
+                    return false;
+                }
+            }
         }
+        return true;
     }
 
-    private void allPillarsOff() {
+    private boolean setPillarLit(BlockPos pos, boolean lit) {
+        if (!(this.level() instanceof ServerLevel serverLevel)
+                || !isCurrentSimonBoss(serverLevel)) {
+            return false;
+        }
+        BlockState state = getReadableBlockState(serverLevel, pos);
+        if (state == null) {
+            return false;
+        }
+        if (!state.is(ModBlocks.MEMORY_PILLAR.get())) {
+            return !lit;
+        }
+        BlockState desired = state.setValue(MemoryPillarBlock.ACTIVATED, lit);
+        return (state == desired || serverLevel.setBlock(pos, desired, 3))
+                && isCurrentSimonBoss(serverLevel)
+                && getReadableBlockState(serverLevel, pos) == desired;
+    }
+
+    private boolean allPillarsOff() {
         for (BlockPos pillar : this.orderedPillars) {
-            setPillarLit(pillar, false);
+            if (!setPillarLit(pillar, false)) {
+                return false;
+            }
         }
+        return this.level() instanceof ServerLevel serverLevel && isCurrentSimonBoss(serverLevel);
     }
 
     /** 0..size-1 的乱序(Fisher-Yates);演示会公开顺序,故用实体随机即可。 */
@@ -517,33 +778,54 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
         return arr;
     }
 
-    private void resetPillars() {
+    private boolean resetPillars() {
         for (BlockPos pos : this.activePillars) {
-            BlockState state = this.level().getBlockState(pos);
-            if (state.is(ModBlocks.MEMORY_PILLAR.get())) {
-                this.level().setBlock(pos, state.setValue(MemoryPillarBlock.ACTIVATED, Boolean.FALSE), 3);
+            if (!setPillarLit(pos, false)) {
+                return false;
             }
         }
-        this.activePillars.clear();
+        return true;
     }
 
     private void cleanupArenaState(ServerLevel serverLevel) {
+        if (this.cleaningArena) {
+            return;
+        }
+        if (this.arenaCleanupLevel == null) {
+            this.arenaCleanupLevel = serverLevel;
+        }
+        if (this.arenaCleanupLevel != serverLevel) {
+            return;
+        }
         Set<BlockPos> pillars = new HashSet<>(this.orderedPillars);
         pillars.addAll(this.activePillars);
-        for (BlockPos pos : pillars) {
-            BlockState state = serverLevel.getBlockState(pos);
-            if (state.is(ModBlocks.MEMORY_PILLAR.get())
-                    && state.getValue(MemoryPillarBlock.ACTIVATED)) {
-                serverLevel.setBlock(pos,
-                        state.setValue(MemoryPillarBlock.ACTIVATED, Boolean.FALSE), 3);
-            }
-        }
-        this.activePillars.clear();
-        this.orderedPillars.clear();
+        boolean wasHandlingSimon = this.handlingSimon;
+        this.cleaningArena = true;
+        this.handlingSimon = true;
         this.simonSequence = new int[0];
         this.simonPhase = SimonPhase.IDLE;
         this.simonInputProgress = 0;
         this.pillarCleanupPending = false;
+        try {
+            for (BlockPos pos : pillars) {
+                BlockState state = getReadableBlockState(serverLevel, pos);
+                if (state == null) {
+                    continue;
+                }
+                if (state.is(ModBlocks.MEMORY_PILLAR.get()) && state.getValue(MemoryPillarBlock.ACTIVATED)) {
+                    BlockState cleared = state.setValue(MemoryPillarBlock.ACTIVATED, Boolean.FALSE);
+                    if (!serverLevel.setBlock(pos, cleared, 3)
+                            || getReadableBlockState(serverLevel, pos) != cleared) {
+                        continue;
+                    }
+                }
+                this.activePillars.remove(pos);
+                this.orderedPillars.remove(pos);
+            }
+        } finally {
+            this.handlingSimon = wasHandlingSimon;
+            this.cleaningArena = false;
+        }
     }
 
     private void broadcastNearby(Component message) {
@@ -611,7 +893,7 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
             this.stompCooldown = 160 * cooldownScale / 100;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "stomp");
-            this.playSound(ModSounds.COLOSSUS_ATTACK.get(), 1.5F, 1.0F);
+            this.playSound(ModSounds.FORGOTTEN_COLOSSUS_ATTACK_STOMP_WARN.get(), 1.5F, 1.0F);
         } else if (this.slamCooldown <= 0 && distSq <= 7.0 * 7.0 && this.hasLineOfSight(target)) {
 
             this.slamDirection = target.position().subtract(this.position())
@@ -621,7 +903,7 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
             this.getNavigation().stop();
             this.getLookControl().setLookAt(target, 30.0F, 30.0F);
             this.triggerAnim("attack_controller", "slam");
-            this.playSound(ModSounds.COLOSSUS_ATTACK.get(), 1.5F, 1.0F);
+            this.playSound(ModSounds.FORGOTTEN_COLOSSUS_ATTACK_SLAM_WARN.get(), 1.5F, 1.0F);
         } else if (enraged && this.beamCooldown <= 0 && distSq <= 18.0 * 18.0
                 && distSq > 6.0 * 6.0 && this.hasLineOfSight(target)) {
 
@@ -631,7 +913,7 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
             this.beamCooldown = 280 * cooldownScale / 100;
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "beam");
-            this.playSound(SoundEvents.BEACON_POWER_SELECT, 1.6F, 0.5F);
+            this.playSound(ModSounds.FORGOTTEN_COLOSSUS_ATTACK_BEAM_WARN.get(), 1.6F, 1.0F);
         } else if (this.rockRainCooldown <= 0 && distSq <= 20.0 * 20.0 && distSq > 5.0 * 5.0) {
 
             this.lockRockRainTargets(target);
@@ -651,15 +933,21 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
     /** 记忆碎石雨:在目标周围锁定 4 个地面落点(吸附地表,玩家跳跃不会把落点锁到空中)。 */
     private void lockRockRainTargets(net.minecraft.world.entity.LivingEntity target) {
         this.rockRainTargets.clear();
+        if (!(this.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
         for (int i = 0; i < 4; i++) {
             double angle = this.random.nextDouble() * Math.PI * 2;
             double dist = this.random.nextDouble() * 4.0;
-            BlockPos ground = this.level().getHeightmapPos(
+            BlockPos column = BlockPos.containing(target.getX() + Math.cos(angle) * dist,
+                    target.getY(), target.getZ() + Math.sin(angle) * dist);
+            LevelChunk chunk = serverLevel.getChunkSource().getChunkNow(column.getX() >> 4, column.getZ() >> 4);
+            if (chunk == null) {
+                continue;
+            }
+            BlockPos ground = new BlockPos(column.getX(), chunk.getHeight(
                     net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING,
-                    BlockPos.containing(
-                            target.getX() + Math.cos(angle) * dist,
-                            target.getY(),
-                            target.getZ() + Math.sin(angle) * dist));
+                    column.getX() & 15, column.getZ() & 15) + 1, column.getZ());
             this.rockRainTargets.add(ground);
         }
     }
@@ -712,7 +1000,7 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
                     pos.getX() + 0.5, pos.getY() + 0.3, pos.getZ() + 0.5, 1, 0, 0, 0, 0);
         }
         serverLevel.playSound(null, this.blockPosition(),
-                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 1.4F, 0.6F);
+                ModSounds.FORGOTTEN_COLOSSUS_ATTACK_ROCKS_LAND.get(), SoundSource.HOSTILE, 1.4F, 1.0F);
         if (!this.rockRainTargets.isEmpty()) {
             double centerX = this.rockRainTargets.stream().mapToDouble(pos -> pos.getX() + 0.5D).average().orElse(this.getX());
             double centerY = this.rockRainTargets.stream().mapToDouble(pos -> pos.getY() + 0.3D).average().orElse(this.getY());
@@ -746,18 +1034,7 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
         }
         net.minecraft.world.phys.Vec3 from = this.beamOrigin();
 
-        double reach = 18.0;
-        for (double d = 1.0; d <= 18.0; d += 0.5) {
-            BlockPos pos = BlockPos.containing(from.add(this.beamDirection.scale(d)));
-            if (!serverLevel.hasChunkAt(pos)) {
-                reach = Math.max(0.0D, d - 0.5D);
-                break;
-            }
-            if (this.level().getBlockState(pos).is(ModBlocks.MEMORY_PILLAR.get())) {
-                reach = d;
-                break;
-            }
-        }
+        double reach = findBeamReach(serverLevel, from, this.beamDirection);
         float damage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.2F;
         for (net.minecraft.world.entity.LivingEntity victim : serverLevel.getEntitiesOfClass(
                 net.minecraft.world.entity.LivingEntity.class,
@@ -786,7 +1063,35 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
         BossFx.impactBurst(serverLevel, end, BossParticleTheme.COLOSSUS.spark());
         BossFx.cinematicImpact(serverLevel, end, 30.0D, 0.5F, 7, 0x6DD5C5);
         serverLevel.playSound(null, this.blockPosition(),
-                SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 1.2F, 0.8F);
+                ModSounds.FORGOTTEN_COLOSSUS_ATTACK_BEAM_RELEASE.get(), SoundSource.HOSTILE, 1.2F, 1.0F);
+    }
+
+    private static double findBeamReach(ServerLevel level, Vec3 from, Vec3 direction) {
+        LevelChunk chunk = null;
+        int chunkX = Integer.MIN_VALUE;
+        int chunkZ = Integer.MIN_VALUE;
+        BlockPos previous = null;
+        for (double d = 1.0; d <= 18.0; d += 0.5) {
+            BlockPos pos = BlockPos.containing(from.add(direction.scale(d)));
+            if (pos.equals(previous)) {
+                continue;
+            }
+            int nextChunkX = pos.getX() >> 4;
+            int nextChunkZ = pos.getZ() >> 4;
+            if (nextChunkX != chunkX || nextChunkZ != chunkZ) {
+                chunk = level.getChunkSource().getChunkNow(nextChunkX, nextChunkZ);
+                if (chunk == null) {
+                    return Math.max(0.0D, d - 0.5D);
+                }
+                chunkX = nextChunkX;
+                chunkZ = nextChunkZ;
+            }
+            if (chunk.getBlockState(pos).is(ModBlocks.MEMORY_PILLAR.get())) {
+                return d;
+            }
+            previous = pos;
+        }
+        return 18.0D;
     }
 
     private void updateDynamicScaling() {
@@ -907,7 +1212,7 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
             }
         }
         serverLevel.playSound(null, this.blockPosition(),
-                SoundEvents.WITHER_BREAK_BLOCK, SoundSource.HOSTILE, 1.6F, 0.7F);
+                ModSounds.FORGOTTEN_COLOSSUS_ATTACK_SLAM_HIT.get(), SoundSource.HOSTILE, 1.6F, 1.0F);
 
         for (int d = 1; d <= 5; d++) {
             serverLevel.sendParticles(BossParticleTheme.COLOSSUS.spark(),
@@ -915,18 +1220,25 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
                     4, 0.6, 0.1, 0.6, 0.02);
         }
         BossFx.sweepArc(serverLevel, this.position().add(0, 0.4, 0), facing, 6.5, BossParticleTheme.COLOSSUS.spark());
-        BossFx.impactBurst(serverLevel, this.position().add(facing.scale(3.0)).add(0, 0.4, 0), BossParticleTheme.COLOSSUS.spark());
+        BossFx.terrainImpact(serverLevel, this.position().add(facing.scale(3.0)).add(0, 0.4, 0), BossParticleTheme.COLOSSUS.spark());
         BossFx.cinematicImpact(serverLevel, this.position().add(facing.scale(3.0)),
                 34.0D, 0.8F, 10, 0xD0A05B);
     }
 
     @Override
     public void aiStep() {
+        if (this.handlingDeath || this.dead || !this.isAlive()) {
+            return;
+        }
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel
-                && this.tickRechallengeBinding(serverLevel)) {
+                && this.tickRechallengeBinding(serverLevel,
+                        () -> !this.handlingDeath && !this.dead)) {
             return;
         }
         super.aiStep();
+        if (this.handlingDeath || this.dead || !this.isAlive()) {
+            return;
+        }
         if (this.level().isClientSide) {
             return;
         }
@@ -984,12 +1296,7 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
                         3, this.getBbWidth() * 0.5, this.getBbHeight() * 0.35, this.getBbWidth() * 0.5, 0.06);
             }
         }
-        if (this.isBroken()) {
-            this.brokenTicksRemaining--;
-            if (this.brokenTicksRemaining <= 0 && this.isAlive()) {
-                restoreMemoryGuard();
-            }
-        }
+        this.tickBrokenState();
         List<ServerPlayer> arenaPlayers = List.of();
 
         if (this.tickCount % 20 == 0 && this.level() instanceof ServerLevel serverLevel) {
@@ -1062,30 +1369,83 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
         return this.isBroken() ? this.brokenWindowHealthFloor : 0.0F;
     }
 
-    private void restoreMemoryGuard() {
-        if (this.level() instanceof ServerLevel serverLevel
-                && (!arePillarChunksLoaded(serverLevel, this.activePillars)
-                || !arePillarChunksLoaded(serverLevel, this.orderedPillars))) {
-
-            this.brokenTicksRemaining = 1;
+    private void tickBrokenState() {
+        if (!(this.level() instanceof ServerLevel serverLevel) || this.handlingSimon
+                || !isCurrentSimonBoss(serverLevel) || !this.isBroken()) {
             return;
         }
-        this.setBroken(false);
-        this.triggerAnim("state_controller", "restore");
-        this.brokenTicksRemaining = 0;
-        this.brokenWindowHealthFloor = 0.0F;
-        this.resetPillars();
-        this.simonPhase = SimonPhase.IDLE;
-        this.simonInputProgress = 0;
-        allPillarsOff();
-        this.level().playSound(null, this.blockPosition(),
-                SoundEvents.BEACON_DEACTIVATE, SoundSource.HOSTILE, 2.0F, 0.6F);
-        broadcastNearby(Component.translatable("message.unknown_echoes.boss.guard_restored"));
+        this.brokenTicksRemaining--;
+        if (this.brokenTicksRemaining <= 0) {
+            restoreMemoryGuard();
+        }
+    }
+
+    private void restoreMemoryGuard() {
+        if (!(this.level() instanceof ServerLevel serverLevel) || !this.isBroken()
+                || !isCurrentSimonBoss(serverLevel)) {
+            return;
+        }
+        // 保留正数重试计时；入场/恢复回调触发的血线请求留到下一 tick。
+        this.brokenTicksRemaining = 1;
+        if (this.handlingSimon) {
+            return;
+        }
+        this.handlingSimon = true;
+        try {
+            if (!arePillarChunksLoaded(serverLevel, this.activePillars)
+                    || !arePillarChunksLoaded(serverLevel, this.orderedPillars)
+                    || !resetPillars() || !allPillarsOff()
+                    || !arePillarsOff(serverLevel, this.activePillars)
+                    || !arePillarsOff(serverLevel, this.orderedPillars)) {
+                return;
+            }
+            this.activePillars.clear();
+            this.simonPhase = SimonPhase.IDLE;
+            this.simonInputProgress = 0;
+            this.pillarCleanupPending = false;
+            this.brokenTicksRemaining = 0;
+            this.brokenWindowHealthFloor = 0.0F;
+            this.setBroken(false);
+            if (!isMemoryGuardRestored(serverLevel)) {
+                return;
+            }
+            this.triggerAnim("state_controller", "restore");
+            if (!isMemoryGuardRestored(serverLevel)) {
+                return;
+            }
+            serverLevel.playSound(null, this.blockPosition(),
+                    SoundEvents.BEACON_DEACTIVATE, SoundSource.HOSTILE, 2.0F, 0.6F);
+            if (isMemoryGuardRestored(serverLevel)) {
+                broadcastSimon(serverLevel, SimonPhase.IDLE,
+                        Component.translatable("message.unknown_echoes.boss.guard_restored"));
+            }
+        } finally {
+            this.handlingSimon = false;
+        }
+    }
+
+    private boolean isMemoryGuardRestored(ServerLevel level) {
+        return isCurrentSimonBoss(level) && !this.isBroken() && this.brokenTicksRemaining == 0
+                && this.brokenWindowHealthFloor == 0.0F && this.simonPhase == SimonPhase.IDLE;
+    }
+
+    private boolean arePillarsOff(ServerLevel level, List<BlockPos> positions) {
+        for (BlockPos pos : positions) {
+            BlockState state = getReadableBlockState(level, pos);
+            if (state == null) {
+                return false;
+            }
+            if (state.is(ModBlocks.MEMORY_PILLAR.get()) && state.getValue(MemoryPillarBlock.ACTIVATED)) {
+                return false;
+            }
+        }
+        return isCurrentSimonBoss(level);
     }
 
     private static boolean arePillarChunksLoaded(ServerLevel level, List<BlockPos> positions) {
         for (BlockPos pos : positions) {
-            if (!level.hasChunkAt(pos)) {
+            if (!level.isOutsideBuildHeight(pos)
+                    && level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4) == null) {
                 return false;
             }
         }
@@ -1103,64 +1463,154 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
     }
 
     @Override
+    public boolean isSettlingDeath() {
+        return this.handlingDeath && this.dead;
+    }
+
+    @Override
     public void die(DamageSource source) {
-        boolean wasDead = this.dead;
-        super.die(source);
-        if (wasDead || !this.dead) {
+        if (this.handlingDeath || this.dead) {
             return;
         }
-        this.triggerAnim("state_controller", "collapse");
-        if (this.level() instanceof ServerLevel serverLevel) {
-            this.cleanupArenaState(serverLevel);
-
-            BlockState deepslate = net.minecraft.world.level.block.Blocks.DEEPSLATE.defaultBlockState();
-            for (int layer = 0; layer < 4; layer++) {
-                double y = this.getY() + this.getBbHeight() * (0.9 - layer * 0.25);
-                for (int i = 0; i < 12; i++) {
-                    double angle = Math.PI * 2 * i / 12 + layer * 0.4;
-                    serverLevel.sendParticles(
-                            new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, deepslate),
-                            this.getX() + Math.cos(angle) * 1.4, y,
-                            this.getZ() + Math.sin(angle) * 1.4, 6, 0.3, 0.2, 0.3, 0.08);
+        boolean wasHandlingSimon = this.handlingSimon;
+        this.handlingDeath = true;
+        this.handlingSimon = true;
+        try {
+            if (!(this.level() instanceof ServerLevel serverLevel)) {
+                super.die(source);
+                return;
+            }
+            Vec3 deathPos = this.position();
+            BlockPos deathAltar = this.rechallengeAltar();
+            UUID deathUuid = this.getUUID();
+            Set<UUID> deathParticipants = Set.copyOf(this.participants);
+            try {
+                super.die(source);
+            } finally {
+                // 原版在掉落/演出通知前提交 dead；后续通知异常不能吞掉本模组结算。
+                if (this.dead) {
+                    settleColossusDeath(serverLevel, deathPos, deathAltar, deathUuid, deathParticipants);
                 }
             }
-            serverLevel.sendParticles(BossParticleTheme.COLOSSUS.body(),
-                    this.getX(), this.getY() + this.getBbHeight() * 0.6, this.getZ(),
-                    30, 1.0, 1.5, 1.0, 0.1);
+        } finally {
+            this.handlingSimon = wasHandlingSimon;
+            this.handlingDeath = false;
+        }
+    }
 
-            double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
+    private void settleColossusDeath(ServerLevel serverLevel, Vec3 deathPos, BlockPos deathAltar,
+                                    UUID deathUuid, Set<UUID> deathParticipants) {
+        try {
             boolean hasEligibleParticipant = false;
-            for (ServerPlayer player : nearbyPlayers(serverLevel, radius)) {
-                if (this.participants.contains(player.getUUID())) {
+            for (ServerPlayer player : nearbyDeathPlayers(serverLevel, deathPos)) {
+                if (deathParticipants.contains(player.getUUID())
+                        && isDeathParticipant(serverLevel, deathPos, player)) {
                     boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player,
                             EchoPermission.FORGOTTEN_COLOSSUS_ID);
                     hasEligibleParticipant = true;
-                    if (firstKill && !EchoAbilityManager.markBossDefeated(
-                            player, EchoPermission.FORGOTTEN_COLOSSUS_ID)) {
-                        player.sendSystemMessage(Component.translatable(
-                                "message.unknown_echoes.progress_record.full"));
+                    if (firstKill) {
+                        runDeathStep("personal progress", () -> {
+                            if (!EchoAbilityManager.markBossDefeated(player, EchoPermission.FORGOTTEN_COLOSSUS_ID)
+                                    && isDeathParticipant(serverLevel, deathPos, player)) {
+                                player.sendSystemMessage(Component.translatable(
+                                        "message.unknown_echoes.progress_record.full"));
+                            }
+                        });
                     }
                 }
             }
             if (hasEligibleParticipant) {
-                BossMaterialRewards.drop(this, new ItemStack(ModItems.COLOSSUS_MEMORY_CORE.get()));
-                BossMaterialRewards.drop(this, new ItemStack(ModItems.MEMORY_STONE_SLAB.get(),
-                        2 + this.random.nextInt(3)));
-                BossMaterialRewards.drop(this, new ItemStack(ModItems.ECHO_SHARD.get(),
-                        8 + this.random.nextInt(9)));
-                BossMaterialRewards.drop(this, new ItemStack(ModItems.ECHO_CORE.get(),
-                        1 + this.random.nextInt(2)));
+                runDeathStep("memory core", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.COLOSSUS_MEMORY_CORE.get())));
+                runDeathStep("memory slabs", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.MEMORY_STONE_SLAB.get(),
+                                2 + this.random.nextInt(3))));
+                runDeathStep("echo shards", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.ECHO_SHARD.get(),
+                                8 + this.random.nextInt(9))));
+                runDeathStep("echo cores", () -> BossMaterialRewards.drop(serverLevel,
+                        deathPos.x, deathPos.y + 0.5D, deathPos.z, new ItemStack(ModItems.ECHO_CORE.get(),
+                                1 + this.random.nextInt(2))));
             }
-            this.finishRechallenge(serverLevel);
+        } finally {
+            if (deathAltar != null) {
+                runDeathStep("arena completion", () -> cn.kurt6.unknown_echoes.world.MainBossRechallengeData.onBossDefeated(
+                        serverLevel, deathAltar, this.rechallengeKind(), deathUuid));
+            }
         }
+        runDeathStep("pillar cleanup", () -> { this.cleanupArenaState(serverLevel); });
+        runDeathStep("collapse", () -> {
+            if (isCurrentDeathPresentation(serverLevel, deathPos)) {
+                this.triggerAnim("state_controller", "collapse");
+                playDeathEffects(serverLevel, deathPos);
+            }
+        });
+    }
+
+    private List<ServerPlayer> nearbyDeathPlayers(ServerLevel level, Vec3 deathPos) {
+        double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
+        return level.getEntitiesOfClass(ServerPlayer.class, new AABB(deathPos, deathPos).inflate(radius),
+                player -> isDeathParticipant(level, deathPos, player));
+    }
+
+    private boolean isDeathParticipant(ServerLevel level, Vec3 deathPos, ServerPlayer player) {
+        double radius = ServerConfig.BOSS_REWARD_RADIUS.get();
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.position().distanceToSqr(deathPos) <= radius * radius;
+    }
+
+    private void runDeathStep(String step, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException failure) {
+            UnknownEchoes.LOGGER.error("Colossus death {} failed for {}", step, this.getUUID(), failure);
+        }
+    }
+
+    private boolean isCurrentDeathPresentation(ServerLevel level, Vec3 deathPos) {
+        return this.dead && !this.isRemoved() && this.level() == level
+                && level.getEntity(this.getUUID()) == this
+                && this.position().distanceToSqr(deathPos) < 0.0001D;
+    }
+
+    private void playDeathEffects(ServerLevel serverLevel, Vec3 deathPos) {
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) return;
+        BossLifecycleFx.death(serverLevel, deathPos, this.getBbWidth(), this.getBbHeight(),
+                BossParticleTheme.COLOSSUS.body());
+        BlockState deepslate = net.minecraft.world.level.block.Blocks.DEEPSLATE.defaultBlockState();
+        for (int layer = 0; layer < 4; layer++) {
+            double y = deathPos.y + this.getBbHeight() * (0.9 - layer * 0.25);
+            for (int i = 0; i < 12; i++) {
+                double angle = Math.PI * 2 * i / 12 + layer * 0.4;
+                if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+                    return;
+                }
+                serverLevel.sendParticles(
+                        new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, deepslate),
+                        deathPos.x + Math.cos(angle) * 1.4, y,
+                        deathPos.z + Math.sin(angle) * 1.4, 6, 0.3, 0.2, 0.3, 0.08);
+            }
+        }
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) {
+            return;
+        }
+        serverLevel.sendParticles(BossParticleTheme.COLOSSUS.body(),
+                deathPos.x, deathPos.y + this.getBbHeight() * 0.6, deathPos.z,
+                30, 1.0, 1.5, 1.0, 0.1);
+
     }
 
     @Override
     public void remove(Entity.RemovalReason reason) {
-        if (reason.shouldDestroy() && this.level() instanceof ServerLevel serverLevel) {
-            this.cleanupArenaState(serverLevel);
+        try {
+            if (reason.shouldDestroy() && this.level() instanceof ServerLevel currentLevel) {
+                ServerLevel serverLevel = this.arenaCleanupLevel == null ? currentLevel : this.arenaCleanupLevel;
+                runDeathStep("removal cleanup", () -> { this.cleanupArenaState(serverLevel); });
+            }
+        } finally {
+            super.remove(reason);
         }
-        super.remove(reason);
     }
 
     @Override
@@ -1304,7 +1754,7 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
             this.playSound(ModSounds.COLOSSUS_ATTACK.get(), 1.2F, 1.0F);
             this.triggerAnim("attack_controller", "attack");
             if (this.level() instanceof ServerLevel serverLevel) {
-                BossFx.impactBurst(serverLevel,
+                BossFx.terrainImpact(serverLevel,
                         target.position().add(0, target.getBbHeight() * 0.5, 0), BossParticleTheme.COLOSSUS.spark());
             }
         }
@@ -1383,5 +1833,9 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
     @Override
     public int visualAttackDuration() {
         return this.entityData.get(DATA_VISUAL_ATTACK_DURATION);
+    }
+    @Override
+    public int musicStage() {
+        return this.getHealth() < this.getMaxHealth() * 0.3F ? 2 : this.isBroken() ? 1 : 0;
     }
 }

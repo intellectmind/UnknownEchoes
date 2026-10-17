@@ -47,8 +47,24 @@ public final class ComponentPreservingShapelessRecipe implements CraftingRecipe 
 
     @Override
     public boolean matches(CraftingInput input, Level level) {
+        return !findBase(input).isEmpty();
+    }
+
+    @Override
+    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+        ItemStack stack = findBase(input);
+        if (stack.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack upgraded = stack.transmuteCopy(this.result.getItem(), this.result.getCount());
+        upgraded.applyComponents(this.result.getComponentsPatch());
+        preserveDurabilityRatio(stack, upgraded);
+        return upgraded;
+    }
+
+    private ItemStack findBase(CraftingInput input) {
         if (input.ingredientCount() != this.allIngredients.size()) {
-            return false;
+            return ItemStack.EMPTY;
         }
         List<ItemStack> supplied = new ArrayList<>(input.ingredientCount());
         for (ItemStack stack : input.items()) {
@@ -56,17 +72,14 @@ public final class ComponentPreservingShapelessRecipe implements CraftingRecipe 
                 supplied.add(stack);
             }
         }
-        return RecipeMatcher.findMatches(supplied, this.allIngredients) != null;
-    }
-
-    @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
-        for (ItemStack stack : input.items()) {
-            if (this.base.test(stack)) {
-                ItemStack upgraded = stack.transmuteCopy(this.result.getItem(), this.result.getCount());
-                upgraded.applyComponents(this.result.getComponentsPatch());
-                preserveDurabilityRatio(stack, upgraded);
-                return upgraded;
+        int[] matching = RecipeMatcher.findMatches(supplied, this.allIngredients);
+        if (matching == null) {
+            return ItemStack.EMPTY;
+        }
+        // 返回值按输入索引记录材料索引；基底固定为第 0 个材料。
+        for (int i = 0; i < matching.length; i++) {
+            if (matching[i] == 0) {
+                return supplied.get(i);
             }
         }
         return ItemStack.EMPTY;

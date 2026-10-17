@@ -58,22 +58,46 @@ public class EchoArchiveTerminalBlock extends BaseEntityBlock {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(player instanceof ServerPlayer serverPlayer)) {
+        if (!(level instanceof ServerLevel serverLevel)
+                || !(player instanceof ServerPlayer serverPlayer)
+                || !serverLevel.hasChunkAt(pos)
+                || !(serverLevel.getBlockEntity(pos) instanceof EchoArchiveTerminalBlockEntity terminal)
+                || !isCurrentInteraction(serverLevel, pos, state, serverPlayer, terminal)
+                || !terminal.tryBeginAccess()) {
             return InteractionResult.CONSUME;
         }
-        if (level.getBlockEntity(pos) instanceof EchoArchiveTerminalBlockEntity terminal) {
+        try {
             terminal.recordAccess();
-        }
-        EchoCompletionManager.handleArchiveTerminalUse(serverPlayer);
-        if (!EchoCompletionManager.hasArchiveTerminalRecord(serverPlayer)) {
+            EchoCompletionManager.handleArchiveTerminalUse(serverPlayer,
+                    () -> isCurrentInteraction(serverLevel, pos, state, serverPlayer, terminal));
+            if (!isCurrentInteraction(serverLevel, pos, state, serverPlayer, terminal)
+                    || !EchoCompletionManager.hasArchiveTerminalRecord(serverPlayer)) {
+                return InteractionResult.CONSUME;
+            }
+            ModAdvancements.award(serverPlayer, ModAdvancements.GRAND_ARCHIVE);
+            if (!isCurrentInteraction(serverLevel, pos, state, serverPlayer, terminal)) {
+                return InteractionResult.CONSUME;
+            }
+            serverLevel.playSound(null, pos, SoundEvents.RESPAWN_ANCHOR_CHARGE,
+                    SoundSource.BLOCKS, 0.8F, 0.9F);
+            if (isCurrentInteraction(serverLevel, pos, state, serverPlayer, terminal)) {
+                serverLevel.sendParticles(ParticleTypes.END_ROD,
+                        pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
+                        24, 0.35, 0.45, 0.35, 0.03);
+            }
             return InteractionResult.CONSUME;
+        } finally {
+            terminal.endAccess();
         }
-        level.playSound(null, pos, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.BLOCKS, 0.8F, 0.9F);
-        if (level instanceof ServerLevel serverLevel) {
-            serverLevel.sendParticles(ParticleTypes.END_ROD,
-                    pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 24, 0.35, 0.45, 0.35, 0.03);
-        }
-        ModAdvancements.award(serverPlayer, ModAdvancements.GRAND_ARCHIVE);
-        return InteractionResult.CONSUME;
+    }
+
+    private static boolean isCurrentInteraction(ServerLevel level, BlockPos pos, BlockState state,
+                                                ServerPlayer player, EchoArchiveTerminalBlockEntity terminal) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && player.canInteractWithBlock(pos, 1.0D)
+                && level.hasChunkAt(pos) && state.getBlock() instanceof EchoArchiveTerminalBlock
+                && level.getBlockState(pos) == state && !terminal.isRemoved()
+                && terminal.getLevel() == level && terminal.getBlockState() == state
+                && level.getBlockEntity(pos) == terminal;
     }
 }

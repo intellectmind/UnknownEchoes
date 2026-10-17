@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:attuned_echo_gem"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.study_precision.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.study_precision.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:study_first",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

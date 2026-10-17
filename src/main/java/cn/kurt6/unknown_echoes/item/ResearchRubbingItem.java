@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.item;
 
+import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.research.EchoResearchManager;
 import cn.kurt6.unknown_echoes.registry.ModItems;
@@ -44,6 +45,9 @@ public class ResearchRubbingItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+        if (!stack.is(this)) {
+            return InteractionResultHolder.fail(stack);
+        }
         if (level.isClientSide) {
             return InteractionResultHolder.success(stack);
         }
@@ -61,7 +65,7 @@ public class ResearchRubbingItem extends Item {
                 int currentLevel = EchoResearchManager.getResearchLevel(serverPlayer, line);
                 if (currentLevel >= EchoResearchManager.MAX_RESEARCH_LEVEL) {
                     recycleSaturated(serverPlayer, stack);
-                    return InteractionResultHolder.consume(stack);
+                    return InteractionResultHolder.consume(player.getItemInHand(hand));
                 }
                 int nextLevel = currentLevel + 1;
                 MaterialCost missing = firstMissingCost(serverPlayer, line, nextLevel);
@@ -72,7 +76,7 @@ public class ResearchRubbingItem extends Item {
                     return InteractionResultHolder.consume(stack);
                 }
                 consumeCosts(serverPlayer, line, nextLevel);
-                EchoResearchManager.addResearchPoints(serverPlayer, line, 1);
+                EchoAbilityManager.getData(serverPlayer).addResearchPoints(line, 1);
                 int appliedPoints = 1;
 
                 for (int extra = 1; extra < this.points; extra++) {
@@ -86,7 +90,7 @@ public class ResearchRubbingItem extends Item {
                         break;
                     }
                     consumeCosts(serverPlayer, line, next);
-                    EchoResearchManager.addResearchPoints(serverPlayer, line, 1);
+                    EchoAbilityManager.getData(serverPlayer).addResearchPoints(line, 1);
                     appliedPoints++;
                 }
                 int preservedPoints = 0;
@@ -100,6 +104,7 @@ public class ResearchRubbingItem extends Item {
                         }
                     }
                 }
+                EchoResearchManager.completeResearchUpdate(serverPlayer);
                 level.playSound(null, player.blockPosition(),
                         SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.8F, 1.0F);
                 Component researchName = Component.translatable(
@@ -109,7 +114,8 @@ public class ResearchRubbingItem extends Item {
                         researchName, EchoResearchManager.getResearchLevel(serverPlayer, line)), true);
             }
         }
-        return InteractionResultHolder.consume(stack);
+        // 退还的剩余研究价值可能已占用原手持槽，按结算后的栈完成使用。
+        return InteractionResultHolder.consume(player.getItemInHand(hand));
     }
 
     @Override

@@ -13,7 +13,9 @@ import cn.kurt6.unknown_echoes.block.AquaticBiomePlantBlock;
 import cn.kurt6.unknown_echoes.block.deep.DeepBiomePlantBlock;
 import cn.kurt6.unknown_echoes.command.EchoCommands;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.config.MobConfigHandler;
 import cn.kurt6.unknown_echoes.entity.boss.BossMaterialRewards;
+import cn.kurt6.unknown_echoes.entity.boss.BossDeathSettlement;
 import cn.kurt6.unknown_echoes.entity.boss.DeepRechallengeBoundBoss;
 import cn.kurt6.unknown_echoes.entity.boss.AshScribe;
 import cn.kurt6.unknown_echoes.entity.boss.InvertedGatekeeper;
@@ -21,6 +23,7 @@ import cn.kurt6.unknown_echoes.entity.boss.MiniBossEntity;
 import cn.kurt6.unknown_echoes.entity.boss.RechallengeBoundBoss;
 import cn.kurt6.unknown_echoes.entity.boss.WorldEcho;
 import cn.kurt6.unknown_echoes.item.tool.DeepAxeItem;
+import cn.kurt6.unknown_echoes.item.NightVisionSupport;
 import cn.kurt6.unknown_echoes.item.tool.DeepHoeItem;
 import cn.kurt6.unknown_echoes.item.tool.DeepPickaxeItem;
 import cn.kurt6.unknown_echoes.item.tool.DeepShovelItem;
@@ -35,6 +38,7 @@ import cn.kurt6.unknown_echoes.item.weapon.TrueSightBladeItem;
 import cn.kurt6.unknown_echoes.item.weapon.WeaponEffectGuard;
 import cn.kurt6.unknown_echoes.item.weapon.WindSpearItem;
 import cn.kurt6.unknown_echoes.journal.JournalManager;
+import cn.kurt6.unknown_echoes.mixin.ItemDropAccessor;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
 import cn.kurt6.unknown_echoes.registry.ModItems;
@@ -112,11 +116,13 @@ public class CommonEvents {
     private static final ArrayDeque<PendingCropReplant> PENDING_CROP_REPLANTS = new ArrayDeque<>();
     /** 真视研究 3 的夜视轮询周期，与 onPlayerTickTrueSight 的 tick 取模保持一致。 */
     private static final int TRUE_SIGHT_POLL_INTERVAL_TICKS = 40;
+    private static final int TIDE_POLL_INTERVAL_TICKS = 20;
     private static final int TRUE_SIGHT_NIGHT_VISION_DURATION_TICKS =
             cn.kurt6.unknown_echoes.item.NightVisionSupport.sustainedDuration(
                     TRUE_SIGHT_POLL_INTERVAL_TICKS);
     /** 首次 Boss 补救只处理旧存档遗漏，不需要秒级响应；40 tick 足够且减半结构解析开销。 */
-    private static final int AQUATIC_BOSS_RECOVERY_INTERVAL_TICKS = 40;
+    private static final int AQUATIC_BOSS_RECOVERY_INTERVAL_TICKS =
+            MainBossRechallengeData.INITIAL_RECOVERY_INTERVAL_TICKS;
     private static final float TIDE_UNDERWATER_MINING_MULTIPLIER = 1.3F;
     private static final float TIDE_UNDERWATER_MINING_MULTIPLIER_RESEARCH2 = 1.5F;
     private static final float TIDE_WET_DAMAGE_BONUS_RESEARCH_2 = 0.08F;
@@ -144,27 +150,24 @@ public class CommonEvents {
 
     @SubscribeEvent
     public static void onEntityLeaveLevel(net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent event) {
-        if (event.getLevel() instanceof ServerLevel) {
-            ArtifactEffectManager.onEntityLeave(event.getEntity());
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
+            return;
         }
-        if (event.getEntity().level() instanceof ServerLevel serverLevel
-                && event.getEntity() instanceof RechallengeBoundBoss
-                && event.getEntity().getRemovalReason() != null
-                && event.getEntity().getRemovalReason().shouldDestroy()) {
+        ArtifactEffectManager.onEntityLeave(event.getEntity());
+        if (event.getEntity().getRemovalReason() == null
+                || !event.getEntity().getRemovalReason().shouldDestroy()
+                || event.getEntity() instanceof BossDeathSettlement settlement && settlement.isSettlingDeath()) {
+            return;
+        }
+        // 原版掉落、进度等回调可同步移除 Boss；已提交死亡的原场地由 die 的 finally 结算。
+        if (event.getEntity() instanceof RechallengeBoundBoss) {
             cn.kurt6.unknown_echoes.world.MainBossRechallengeData.onBossDestroyed(
                     serverLevel, event.getEntity());
         }
-        if (event.getEntity().level() instanceof ServerLevel serverLevel
-                && event.getEntity() instanceof DeepRechallengeBoundBoss boundBoss
-                && event.getEntity().getRemovalReason() != null
-                && event.getEntity().getRemovalReason().shouldDestroy()) {
+        if (event.getEntity() instanceof DeepRechallengeBoundBoss boundBoss) {
             boundBoss.clearDeepRechallengePresence(serverLevel);
         }
-        if (event.getEntity().level() instanceof ServerLevel serverLevel
-                && event.getEntity() instanceof MiniBossEntity boss
-                && boss.hasSpawnerBinding()
-                && event.getEntity().getRemovalReason() != null
-                && event.getEntity().getRemovalReason().shouldDestroy()) {
+        if (event.getEntity() instanceof MiniBossEntity boss && boss.hasSpawnerBinding()) {
             boss.clearSpawnerPresence(serverLevel);
         }
     }
@@ -206,7 +209,8 @@ public class CommonEvents {
         }
         boolean mainBoss = living instanceof RechallengeBoundBoss
                 || living instanceof DeepRechallengeBoundBoss;
-        if (!worldEcho && !miniBoss && !mainBoss) {
+        boolean ordinaryMob = MobConfigHandler.isOrdinaryMob(living);
+        if (!worldEcho && !miniBoss && !mainBoss && !ordinaryMob) {
             return;
         }
 
@@ -239,6 +243,16 @@ public class CommonEvents {
             followRangeMultiplier = (deepMiniBoss
                     ? ServerConfig.DEEP_MINIBOSS_FOLLOW_RANGE_MULTIPLIER.get()
                     : ServerConfig.MINIBOSS_FOLLOW_RANGE_MULTIPLIER.get());
+        } else if (ordinaryMob) {
+            boolean monster = MobConfigHandler.isMonster(living);
+            healthMultiplier = monster ? ServerConfig.MONSTER_HEALTH_MULTIPLIER.get()
+                    : ServerConfig.CREATURE_HEALTH_MULTIPLIER.get();
+            armorMultiplier = monster ? ServerConfig.MONSTER_ARMOR_MULTIPLIER.get()
+                    : ServerConfig.CREATURE_ARMOR_MULTIPLIER.get();
+            movementSpeedMultiplier = monster ? ServerConfig.MONSTER_MOVEMENT_SPEED_MULTIPLIER.get()
+                    : ServerConfig.CREATURE_MOVEMENT_SPEED_MULTIPLIER.get();
+            followRangeMultiplier = monster ? ServerConfig.MONSTER_FOLLOW_RANGE_MULTIPLIER.get()
+                    : ServerConfig.CREATURE_FOLLOW_RANGE_MULTIPLIER.get();
         } else {
             boolean deepBoss = living instanceof DeepRechallengeBoundBoss;
             healthMultiplier = deepBoss ? ServerConfig.DEEP_BOSS_HEALTH_MULTIPLIER.get()
@@ -286,7 +300,7 @@ public class CommonEvents {
         persistent.putBoolean(COMBAT_CONFIG_APPLIED_TAG, true);
     }
 
-    /** Boss 伤害统一在伤害事件入口缩放，覆盖属性攻击和技能里直接传入的固定伤害。 */
+    /** 在伤害事件入口缩放，覆盖属性攻击和技能里直接传入的固定伤害。 */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onBossIncomingDamage(LivingIncomingDamageEvent event) {
         if (!(event.getSource().getEntity() instanceof LivingEntity attacker)) {
@@ -305,6 +319,9 @@ public class CommonEvents {
             multiplier = attacker instanceof DeepRechallengeBoundBoss
                     ? ServerConfig.DEEP_BOSS_DAMAGE_MULTIPLIER.get()
                     : ServerConfig.BOSS_DAMAGE_MULTIPLIER.get();
+        } else if (MobConfigHandler.isOrdinaryMob(attacker)) {
+            multiplier = MobConfigHandler.isMonster(attacker) ? ServerConfig.MONSTER_DAMAGE_MULTIPLIER.get()
+                    : ServerConfig.CREATURE_DAMAGE_MULTIPLIER.get();
         } else {
             return;
         }
@@ -331,6 +348,7 @@ public class CommonEvents {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            ArtifactEffectManager.onPlayerLoggedIn(player);
             EchoAbilityManager.syncToClient(player);
             cn.kurt6.unknown_echoes.journal.JournalManager.retryAllPagesReward(player);
             ModAdvancements.checkJournalAdvancements(player);
@@ -361,13 +379,18 @@ public class CommonEvents {
         cn.kurt6.unknown_echoes.block.deep.DeepAltarScanLimiter.clear(event.getEntity().getUUID());
         LAST_ENERGY_REGEN_RATE.remove(event.getEntity().getUUID());
         if (event.getEntity() instanceof ServerPlayer player) {
-            ArtifactEffectManager.clearPlayer(player);
+            ArtifactEffectManager.onPlayerLoggedOut(player);
         }
     }
 
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
+        ArtifactEffectManager.saveTideEffectsBeforeStop(event.getServer());
         ArtifactEffectManager.restoreFrozenEntities(event.getServer());
+        PendingCropReplant task;
+        while ((task = PENDING_CROP_REPLANTS.pollFirst()) != null) {
+            refundCropReplantSeed(event.getServer(), task);
+        }
     }
 
     @SubscribeEvent
@@ -379,7 +402,7 @@ public class CommonEvents {
         cn.kurt6.unknown_echoes.entity.projectile.TideBoltEntity.clearAllMarkCooldowns();
         cn.kurt6.unknown_echoes.network.ModNetworking.clearAllRateLimits();
         cn.kurt6.unknown_echoes.item.NightVisionSupport.clearAllClaims();
-        cn.kurt6.unknown_echoes.trade.EchoTradeManager.clearAllUses();
+        cn.kurt6.unknown_echoes.trade.EchoTradeManager.clearAllSessions();
         cn.kurt6.unknown_echoes.block.deep.DeepAltarScanLimiter.clearAll();
         cn.kurt6.unknown_echoes.ecology.RealmFacilityCircuitManager.clearAll();
         LAST_ENERGY_REGEN_RATE.clear();
@@ -404,29 +427,20 @@ public class CommonEvents {
                 break;
             }
             ServerLevel level = event.getServer().getLevel(task.dimension());
-            if (level != null && level.getBlockState(task.pos()).isAir()
-                    && task.replanted().canSurvive(level, task.pos())) {
-                level.setBlock(task.pos(), task.replanted(),
-                        net.minecraft.world.level.block.Block.UPDATE_ALL);
+            if (level != null && level.hasChunkAt(task.pos()) && level.getBlockState(task.pos()).isAir()
+                    && task.replanted().canSurvive(level, task.pos())
+                    && level.setBlock(task.pos(), task.replanted(),
+                            net.minecraft.world.level.block.Block.UPDATE_ALL)) {
                 continue;
             }
-            refundCropReplantSeed(event, task, level);
+            refundCropReplantSeed(event.getServer(), task);
         }
     }
 
-    private static void refundCropReplantSeed(ServerTickEvent.Post event, PendingCropReplant task,
-                                               ServerLevel level) {
-        if (task.refund().isEmpty()) {
-            return;
-        }
-        ServerPlayer player = event.getServer().getPlayerList().getPlayer(task.playerId());
-        if (player != null) {
-            give(player, task.refund().copy());
-        } else if (level != null) {
-            level.addFreshEntity(new ItemEntity(level,
-                    task.pos().getX() + 0.5D, task.pos().getY() + 0.5D,
-                    task.pos().getZ() + 0.5D, task.refund().copy()));
-        }
+    private static void refundCropReplantSeed(net.minecraft.server.MinecraftServer server,
+                                               PendingCropReplant task) {
+        cn.kurt6.unknown_echoes.world.CropReplantRefundData.refund(
+                server, task.playerId(), task.refund());
     }
 
     /** 数据包重载后只做一次全量配方书补缺；玩家登录已有同步入口负责同一检查。 */
@@ -456,9 +470,10 @@ public class CommonEvents {
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            cn.kurt6.unknown_echoes.trade.EchoTradeManager.clearSessionView(player.getUUID());
             cn.kurt6.unknown_echoes.ability.WindGlideTracker.clear(player.getUUID());
             cn.kurt6.unknown_echoes.ability.DeepEchoAbilityHandler.clear(player.getUUID());
-            ArtifactEffectManager.clearPlayer(player);
+            ArtifactEffectManager.onPlayerRespawn(player, event.isEndConquered());
             restorePendingArtifactCredentials(player, true);
             ArtifactManager.refreshCredentialOwnerNames(player);
             EchoAbilityManager.syncToClient(player);
@@ -486,10 +501,11 @@ public class CommonEvents {
     @SubscribeEvent
     public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            cn.kurt6.unknown_echoes.trade.EchoTradeManager.clearSessionView(player.getUUID());
             cn.kurt6.unknown_echoes.ability.WindGlideTracker.clear(player.getUUID());
             cn.kurt6.unknown_echoes.ability.DeepEchoAbilityHandler.clear(player.getUUID());
             cn.kurt6.unknown_echoes.entity.projectile.TideBoltEntity.clearMarkCooldown(player.getUUID());
-            ArtifactEffectManager.clearPlayer(player);
+            ArtifactEffectManager.onPlayerChangedDimension(player);
 
             EchoAbilityManager.syncToClient(player);
             cn.kurt6.unknown_echoes.journal.JournalManager.syncJournal(player);
@@ -596,7 +612,7 @@ public class CommonEvents {
     /** 潮汐回响体验层:基础只保留水下呼吸;加速/视野从潮汐研究 1 开始。 */
     @SubscribeEvent
     public static void onPlayerTickTide(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.tickCount % 20 != 0) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player.tickCount % TIDE_POLL_INTERVAL_TICKS != 0) {
             return;
         }
         boolean hasTide = EchoAbilityManager.hasAbility(player, EchoAbilityType.TIDE_ECHO);
@@ -617,6 +633,7 @@ public class CommonEvents {
             }
         }
         if (!hasTide || !inWater) {
+            NightVisionSupport.release(player, NightVisionSupport.Source.TIDE);
             syncEnergyRateIfChanged(player);
             return;
         }
@@ -624,7 +641,10 @@ public class CommonEvents {
         if (tideResearch >= 1) {
             addEffectIfMissing(player, MobEffects.DOLPHINS_GRACE, 60);
 
-            refreshNightVision(player, 260);
+            NightVisionSupport.sustain(player, NightVisionSupport.Source.TIDE, 260,
+                    TIDE_POLL_INTERVAL_TICKS, true, player.server.overworld().getGameTime());
+        } else {
+            NightVisionSupport.release(player, NightVisionSupport.Source.TIDE);
         }
         syncEnergyRateIfChanged(player);
     }
@@ -632,8 +652,12 @@ public class CommonEvents {
     /** 真视研究 2/3:日常感知强化,逐步抵抗失明/黑暗并在暗处保持低调夜视。 */
     @SubscribeEvent
     public static void onPlayerTickTrueSight(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.tickCount % 40 != 0
-                || !EchoAbilityManager.hasAbility(player, EchoAbilityType.TRUE_SIGHT_ECHO)) {
+        if (!(event.getEntity() instanceof ServerPlayer player)
+                || player.tickCount % TRUE_SIGHT_POLL_INTERVAL_TICKS != 0) {
+            return;
+        }
+        if (!EchoAbilityManager.hasAbility(player, EchoAbilityType.TRUE_SIGHT_ECHO)) {
+            NightVisionSupport.release(player, NightVisionSupport.Source.TRUE_SIGHT);
             return;
         }
         int research = JournalManager.getResearchLevel(player, EchoAbilityType.TRUE_SIGHT_ECHO);
@@ -650,6 +674,8 @@ public class CommonEvents {
                 cn.kurt6.unknown_echoes.item.NightVisionSupport.release(player,
                         cn.kurt6.unknown_echoes.item.NightVisionSupport.Source.TRUE_SIGHT);
             }
+        } else {
+            NightVisionSupport.release(player, NightVisionSupport.Source.TRUE_SIGHT);
         }
     }
 
@@ -693,8 +719,7 @@ public class CommonEvents {
     }
 
     private static void refreshNightVision(ServerPlayer player, int duration) {
-        cn.kurt6.unknown_echoes.item.NightVisionSupport.sustain(player,
-                cn.kurt6.unknown_echoes.item.NightVisionSupport.Source.TRUE_SIGHT,
+        NightVisionSupport.sustain(player, NightVisionSupport.Source.TRUE_SIGHT,
                 duration, TRUE_SIGHT_POLL_INTERVAL_TICKS, true,
                 player.server.overworld().getGameTime());
     }
@@ -771,9 +796,12 @@ public class CommonEvents {
         if (target == player || target.isAlliedTo(player)) {
             return;
         }
-        applyEchoBowHitEffects(event, player);
-        applyHeldWeaponHitEffects(event, player);
-        ArtifactEffectManager.onDamageApplied(event);
+        try {
+            applyEchoBowHitEffects(event, player);
+            applyHeldWeaponHitEffects(event, player);
+        } finally {
+            ArtifactEffectManager.onDamageApplied(event);
+        }
     }
 
     private static boolean didDamageLand(LivingDamageEvent.Post event) {
@@ -1069,19 +1097,20 @@ public class CommonEvents {
     }
 
     /** 原始方块完成耐久和掉落判定后触发范围采掘，避免邻块先耗尽工具导致原始掉落丢失。 */
-    private static void applyAreaMining(ServerPlayer player, BlockPos origin,
+    private static void applyAreaMining(ServerPlayer player, ServerLevel level, BlockPos origin,
                                         net.minecraft.world.level.block.state.BlockState originState) {
-        if (!isAreaToolSkillActive(player) || AREA_MINING_PLAYERS.contains(player.getUUID())) {
+        if (player.serverLevel() != level || !isAreaToolSkillActive(player)
+                || AREA_MINING_PLAYERS.contains(player.getUUID())) {
             return;
         }
         ItemStack tool = player.getMainHandItem();
         List<BlockPos> targets;
         if (tool.getItem() instanceof EchoPickaxeItem
                 && originState.is(ModBlocks.RESOURCE_BLOCKS_TAG)) {
-            targets = connectedBlocks(player.serverLevel(), origin, originState, 3);
+            targets = connectedBlocks(level, origin, originState, 3);
         } else if (tool.getItem() instanceof EchoHatchetItem
                 && originState.is(BlockTags.LOGS)) {
-            targets = connectedBlocks(player.serverLevel(), origin, originState, 7);
+            targets = connectedBlocks(level, origin, originState, 7);
         } else if (tool.getItem() instanceof EchoShovelItem
                 && isEchoLooseBlock(originState)) {
             targets = miningPlane(player, origin, originState, tool);
@@ -1091,9 +1120,9 @@ public class CommonEvents {
             targets = miningPlane(player, origin, originState, tool);
         } else if (tool.getItem() instanceof EchoShearsItem
                 && (originState.is(BlockTags.LEAVES) || isShearableEchoFlora(originState))) {
-            targets = connectedBlocks(player.serverLevel(), origin, originState, 11);
+            targets = connectedBlocks(level, origin, originState, 11);
         } else if (tool.getItem() instanceof DeepAxeItem && originState.is(BlockTags.LOGS)) {
-            targets = connectedBlocks(player.serverLevel(), origin, originState, 15);
+            targets = connectedBlocks(level, origin, originState, 15);
         } else if (tool.getItem() instanceof DeepHoeItem
                 && (isMatureCrop(originState) || isEffectiveMiningTarget(tool, originState))) {
             targets = miningPlane(player, origin, originState, tool);
@@ -1112,7 +1141,9 @@ public class CommonEvents {
         AREA_MINING_PLAYERS.add(player.getUUID());
         try {
             for (BlockPos target : targets) {
-                if (player.getMainHandItem().getItem() != tool.getItem()) {
+                // 耗尽的旧栈也会返回空气；绑定本批工具与世界，不能让空手或替换物继续挖掘。
+                if (tool.isEmpty() || player.getMainHandItem() != tool
+                        || player.serverLevel() != level) {
                     break;
                 }
                 player.gameMode.destroyBlock(target);
@@ -1209,23 +1240,28 @@ public class CommonEvents {
         }
         if (event.getLevel().getGameRules().getBoolean(GameRules.RULE_DOBLOCKDROPS)) {
             applyEchoToolBreakReward(player, event);
-            autoReplantMatureCrop(event, player);
         }
-        applyAreaMining(player, event.getPos(), event.getState());
 
+        autoSmeltDrops(event);
+    }
+
+    private static void autoSmeltDrops(BlockDropsEvent event) {
         if (!(event.getTool().getItem() instanceof EchoPickaxeItem
                 || event.getTool().getItem() instanceof DeepPickaxeItem
                 || event.getTool().getItem() instanceof LandmarkPickaxeItem)) {
             return;
         }
         var enchantments = event.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
-        if (event.getTool().getEnchantments().getLevel(
+        if (event.getTool().getEnchantmentLevel(
                 enchantments.getOrThrow(Enchantments.SILK_TOUCH)) > 0) {
             return;
         }
         List<ItemEntity> extraDrops = new ArrayList<>();
         for (ItemEntity drop : event.getDrops()) {
             ItemStack input = drop.getItem();
+            if (input.isEmpty()) {
+                continue;
+            }
             SingleRecipeInput recipeInput = new SingleRecipeInput(input.copyWithCount(1));
             event.getLevel().getRecipeManager()
                     .getRecipeFor(RecipeType.SMELTING, recipeInput, event.getLevel())
@@ -1235,20 +1271,47 @@ public class CommonEvents {
                         if (output.isEmpty() || output.getItem() == input.getItem()) {
                             return;
                         }
-                        int total = output.getCount() * input.getCount();
-                        output.setCount(Math.min(total, output.getMaxStackSize()));
+                        long total = (long) output.getCount() * input.getCount();
+                        if (total > Integer.MAX_VALUE) {
+                            return;
+                        }
+                        output.setCount((int) Math.min(total, output.getMaxStackSize()));
                         drop.setItem(output);
-                        total -= output.getCount();
-                        while (total > 0) {
+                        int remaining = (int) total - output.getCount();
+                        while (remaining > 0) {
                             ItemStack remainder = output.copyWithCount(
-                                    Math.min(total, output.getMaxStackSize()));
-                            extraDrops.add(new ItemEntity(event.getLevel(),
-                                    drop.getX(), drop.getY(), drop.getZ(), remainder));
-                            total -= remainder.getCount();
+                                    Math.min(remaining, output.getMaxStackSize()));
+                            extraDrops.add(copySmeltedDrop(drop, remainder));
+                            remaining -= remainder.getCount();
                         }
                     });
         }
         event.getDrops().addAll(extraDrops);
+    }
+
+    /** 拆出的同批熔炼产物沿用原掉落的拾取限制和生命周期。 */
+    private static ItemEntity copySmeltedDrop(ItemEntity original, ItemStack stack) {
+        ItemEntity copy = original.copy();
+        copy.setItem(stack);
+        copy.setDeltaMovement(original.getDeltaMovement());
+        copy.setTarget(original.getTarget());
+        ItemDropAccessor source = (ItemDropAccessor) original;
+        ItemDropAccessor target = (ItemDropAccessor) copy;
+        copy.setPickUpDelay(source.unknownEchoes$getPickupDelay());
+        target.unknownEchoes$setThrower(source.unknownEchoes$getThrower());
+        target.unknownEchoes$setHealth(source.unknownEchoes$getHealth());
+        return copy;
+    }
+
+    /** 由掉落结算钩子在事件总线返回后调用，此时取消状态和掉落列表才已确定。 */
+    public static void onBlockDropsResolved(BlockDropsEvent event) {
+        if (event.isCanceled() || !(event.getBreaker() instanceof ServerPlayer player)
+                || !event.getLevel().getGameRules().getBoolean(GameRules.RULE_DOBLOCKDROPS)
+                || event.getDrops().stream().noneMatch(drop -> !drop.getItem().isEmpty())) {
+            return;
+        }
+        autoReplantMatureCrop(event, player);
+        applyAreaMining(player, event.getLevel(), event.getPos(), event.getState());
     }
 
     /** 范围收割会用本次掉落或玩家库存中的一份种子补种，避免凭空复制种子。 */
@@ -1261,7 +1324,7 @@ public class CommonEvents {
             return;
         }
 
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = event.getLevel();
         BlockPos pos = event.getPos();
         var replanted = crop.getStateForAge(0);
         if (!replanted.canSurvive(level, pos)) {
@@ -1274,16 +1337,16 @@ public class CommonEvents {
         }
         ItemStack refund = ItemStack.EMPTY;
         if (!player.getAbilities().instabuild) {
-            if (!consumeReplantSeed(event, player, seed)) {
+            refund = consumeReplantSeed(event, player, seed);
+            if (refund.isEmpty()) {
                 return;
             }
-            refund = seed.copyWithCount(1);
         }
         PENDING_CROP_REPLANTS.addLast(new PendingCropReplant(
                 level.dimension(), pos.immutable(), replanted, player.getUUID(), refund));
     }
 
-    private static boolean consumeReplantSeed(BlockDropsEvent event, ServerPlayer player,
+    private static ItemStack consumeReplantSeed(BlockDropsEvent event, ServerPlayer player,
                                                ItemStack seed) {
         Iterator<ItemEntity> drops = event.getDrops().iterator();
         while (drops.hasNext()) {
@@ -1291,25 +1354,27 @@ public class CommonEvents {
             if (!stack.is(seed.getItem())) {
                 continue;
             }
-            stack.shrink(1);
+            ItemStack consumed = stack.split(1);
             if (stack.isEmpty()) {
                 drops.remove();
             }
-            return true;
+            return consumed;
         }
         for (ItemStack stack : player.getInventory().items) {
             if (stack.is(seed.getItem())) {
-                stack.shrink(1);
-                return true;
+                ItemStack consumed = stack.split(1);
+                player.getInventory().setChanged();
+                return consumed;
             }
         }
         for (ItemStack stack : player.getInventory().offhand) {
             if (stack.is(seed.getItem())) {
-                stack.shrink(1);
-                return true;
+                ItemStack consumed = stack.split(1);
+                player.getInventory().setChanged();
+                return consumed;
             }
         }
-        return false;
+        return ItemStack.EMPTY;
     }
 
     private record PendingCropReplant(
@@ -1328,18 +1393,6 @@ public class CommonEvents {
         }
 
         event.damageRodBy(Math.max(1, event.getRodDamage() - 1));
-        if (level.random.nextFloat() < 0.50F) {
-            ItemStack reward = level.random.nextBoolean()
-                    ? new ItemStack(ModItems.TIDE_SALT.get(), 2)
-                    : new ItemStack(ModItems.PEARL_CLAM.get());
-            give(player, reward);
-        }
-        if (level.random.nextFloat() < 0.35F) {
-            ItemStack aquaticFood = level.random.nextBoolean()
-                    ? new ItemStack(ModItems.ECHO_CUTTLEFISH_STRIP.get())
-                    : new ItemStack(ModItems.PEARLBACK_FILLET.get());
-            give(player, aquaticFood);
-        }
     }
 
     private static boolean isReelingWithEchoFishingRod(ServerPlayer player) {
@@ -1375,19 +1428,30 @@ public class CommonEvents {
         ServerLevel level = player.serverLevel();
         var state = event.getState();
         ItemStack tool = event.getTool();
+        if (event.isCanceled() || event.getDrops().stream().noneMatch(drop -> !drop.getItem().isEmpty())) {
+            return;
+        }
         if (isEchoLogAxe(tool) && isEchoLog(state)
                 && level.random.nextFloat() < 0.20F) {
             consumeRecoveredBlockDrop(event);
-            give(player, new ItemStack(ModItems.SILENT_RESIN.get()));
+            addToolByproduct(event, new ItemStack(ModItems.SILENT_RESIN.get()));
         } else if (isEchoLooseShovel(tool) && isEchoLooseBlock(state)
                 && level.random.nextFloat() < 0.20F) {
             consumeRecoveredBlockDrop(event);
-            give(player, new ItemStack(ModItems.ECHO_DUST.get()));
+            addToolByproduct(event, new ItemStack(ModItems.ECHO_DUST.get()));
         } else if (isEchoEcologyHoe(tool) && isEchoPlant(state)
                 && level.random.nextFloat() < 0.25F) {
             consumeRecoveredBlockDrop(event);
-            give(player, plantByproduct(state));
+            addToolByproduct(event, plantByproduct(state));
         }
+    }
+
+    private static void addToolByproduct(BlockDropsEvent event, ItemStack reward) {
+        BlockPos pos = event.getPos();
+        ItemEntity drop = new ItemEntity(event.getLevel(),
+                pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, reward);
+        drop.setDefaultPickUpDelay();
+        event.getDrops().add(drop);
     }
 
     private static boolean isEchoEcologyHoe(ItemStack tool) {

@@ -19,12 +19,11 @@ import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 淹没记录室：镜湖水下的小型结构。 */
-public class SubmergedRecordRoomStructure extends SinglePieceStructure {
+public class SubmergedRecordRoomStructure extends TerrainAnchoredStructure {
     public static final MapCodec<SubmergedRecordRoomStructure> CODEC = simpleCodec(SubmergedRecordRoomStructure::new);
 
     private static final int SIZE = 27;
@@ -39,12 +38,8 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
         Piece piece = new Piece(context.random(),
                 context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ());
         BoundingBox footprint = piece.getBoundingBox();
-        if (!LakeBedPlacement.hasSubmergedFootprint(context,
-                footprint.minX(), footprint.minZ(), SIZE, 6, 4)) {
-            return java.util.Optional.empty();
-        }
-        int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(
-                context, footprint.minX(), footprint.minZ(), SIZE, SIZE);
+        int floorY = LakeBedPlacement.findOceanFloor(context,
+                footprint.minX(), footprint.minZ(), SIZE, SIZE, 6, 4);
         if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
             return java.util.Optional.empty();
         }
@@ -191,8 +186,19 @@ public class SubmergedRecordRoomStructure extends SinglePieceStructure {
                         2, 5, mirror, ModBlocks.PRISM_DUST_CLUSTER.get().defaultBlockState());
             }
 
+            // 记录棱脊：四面水下墙体各留一根不同高度的记录柱，避免中庭和穹顶同形。
+            for (int[] rib : new int[][]{{c - 9, c - 2, 9}, {c + 9, c + 1, 11},
+                    {c - 2, c - 9, 8}, {c + 1, c + 9, 10}}) {
+                for (int y = 8; y <= rib[2]; y++) {
+                    this.placeBlock(level, y % 2 == 0 ? mirrorStone : mirror,
+                            rib[0], y, rib[1], box);
+                }
+                this.placeBlock(level, runeBricks, rib[0], rib[2] + 1, rib[1], box);
+            }
+
             placeSubmergedStructureSpawner(level, random, box, 5, 1, 5,
                     ModEntities.WATER_SHADOW.get(), mirrorStone, cracked);
+            dressStructure(level, box, "submerged_record_room");
         }
     }
 }

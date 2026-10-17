@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.ability;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.item.InventoryPayment;
 import cn.kurt6.unknown_echoes.registry.ModDataComponents;
 import cn.kurt6.unknown_echoes.registry.ModItems;
@@ -45,7 +46,13 @@ public class ResonanceTokenManager {
         String[] records = new String[completionKeys.length + 1];
         records[0] = ritualKey(ability);
         System.arraycopy(completionKeys, 0, records, 1, completionKeys.length);
-        if (!EchoAbilityManager.activateMechanisms(player, records)) {
+        boolean[] tokenResult = new boolean[2];
+        if (!EchoAbilityManager.activateMechanisms(player, () -> {
+            if (!EchoAbilityManager.hasAbility(player, ability) && !hasValidToken(player, ability)) {
+                tokenResult[0] = true;
+                tokenResult[1] = issueToken(player, ability);
+            }
+        }, records)) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.progress_record.full"), true);
             return false;
@@ -53,16 +60,12 @@ public class ResonanceTokenManager {
         if (firstTime || completionKeys.length > 0) {
             EchoAbilityManager.syncToClient(player);
         }
-        if (EchoAbilityManager.hasAbility(player, ability)) {
-            return true;
-        }
-        if (firstTime || !hasValidToken(player, ability)) {
-            if (issueToken(player, ability)) {
+        if (tokenResult[0]) {
+            if (tokenResult[1]) {
                 player.sendSystemMessage(Component.translatable(
                         "message.unknown_echoes.token.granted",
                         Component.translatable("item.unknown_echoes." + tokenId(ability))));
-                player.level().playSound(null, player.blockPosition(),
-                        SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.4F);
+                player.playNotifySound(ModSounds.FEEDBACK_TOKEN_GRANTED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
             } else {
                 player.displayClientMessage(
                         Component.translatable(tokenIssueFailureKey(player, ability)), true);
@@ -85,8 +88,7 @@ public class ResonanceTokenManager {
         player.sendSystemMessage(Component.translatable(
                 "message.unknown_echoes.token.reissued",
                 Component.translatable("item.unknown_echoes." + tokenId(ability))));
-        player.level().playSound(null, player.blockPosition(),
-                SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.9F, 1.3F);
+        player.playNotifySound(ModSounds.FEEDBACK_TOKEN_GRANTED.get(), SoundSource.PLAYERS, 0.9F, 1.0F);
         return true;
     }
 

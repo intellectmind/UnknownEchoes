@@ -4,6 +4,7 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.config.ClientConfig;
 import cn.kurt6.unknown_echoes.network.BossImpactPayload;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -17,6 +18,7 @@ import net.neoforged.neoforge.client.event.ViewportEvent;
 /** 距离衰减的 Boss 镜头冲击与边缘脉冲，不修改玩家实际朝向。 */
 @EventBusSubscriber(modid = UnknownEchoes.MODID, value = Dist.CLIENT)
 public final class ClientBossImpactEffects {
+    private static ClientLevel activeLevel;
     private static int remainingTicks;
     private static int totalTicks;
     private static float strength;
@@ -28,8 +30,7 @@ public final class ClientBossImpactEffects {
 
     public static void trigger(BossImpactPayload payload) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null || !ClientConfig.ENABLE_BOSS_PARTICLES.get()
-                || payload.radius() <= 0.0F) {
+        if (!current(minecraft) || payload.radius() <= 0.0F) {
             return;
         }
 
@@ -63,8 +64,10 @@ public final class ClientBossImpactEffects {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null) {
+        if (activeLevel != null && minecraft.level != activeLevel) {
             clear();
+        }
+        if (remainingTicks <= 0 || !current(minecraft)) {
             return;
         }
         if (!minecraft.isPaused() && remainingTicks > 0 && --remainingTicks == 0) {
@@ -74,8 +77,8 @@ public final class ClientBossImpactEffects {
 
     @SubscribeEvent
     public static void onCameraAngles(ViewportEvent.ComputeCameraAngles event) {
-        if (remainingTicks <= 0 || totalTicks <= 0 || !ClientConfig.ENABLE_BOSS_PARTICLES.get()
-                || Minecraft.getInstance().isPaused()) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (remainingTicks <= 0 || !current(minecraft) || totalTicks <= 0 || minecraft.isPaused()) {
             return;
         }
 
@@ -92,7 +95,7 @@ public final class ClientBossImpactEffects {
     @SubscribeEvent
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (remainingTicks <= 0 || totalTicks <= 0 || !ClientConfig.ENABLE_BOSS_PARTICLES.get()
+        if (remainingTicks <= 0 || !current(minecraft) || totalTicks <= 0
                 || minecraft.options.hideGui || minecraft.isPaused()) {
             return;
         }
@@ -126,7 +129,22 @@ public final class ClientBossImpactEffects {
         clear();
     }
 
+    private static boolean current(Minecraft minecraft) {
+        if (minecraft.level != activeLevel) {
+            clear();
+            activeLevel = minecraft.level;
+        }
+        if (minecraft.level == null || minecraft.player == null
+                || !ClientConfig.ENABLE_BOSS_PARTICLES.get()
+                || ClientConfig.BOSS_PARTICLE_DENSITY.get() <= 0.0D) {
+            clear();
+            return false;
+        }
+        return true;
+    }
+
     private static void clear() {
+        activeLevel = null;
         remainingTicks = 0;
         totalTicks = 0;
         strength = 0.0F;

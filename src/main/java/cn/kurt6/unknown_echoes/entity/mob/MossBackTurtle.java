@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.AnimalHarvest;
+
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
@@ -141,18 +143,31 @@ public class MossBackTurtle extends Animal implements GeoEntity {
     /** 剪刀采集噤声苔:冷却就绪时无伤掉落噤声苔×1;冷却中只给含蓄提示。 */
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        Level interactionLevel = this.level();
+        if (!interactionLevel.isClientSide && !AnimalHarvest.canInteract(interactionLevel, this, player)) {
+            return InteractionResult.CONSUME;
+        }
         ItemStack stack = player.getItemInHand(hand);
         if ((stack.is(Items.SHEARS) || stack.is(ModItems.ECHO_SHEARS.get())) && !this.isBaby()) {
             if (!this.level().isClientSide) {
                 if (this.shearCooldown <= 0) {
                     boolean echoShears = stack.is(ModItems.ECHO_SHEARS.get());
                     this.shearCooldown = ServerConfig.MOSS_TURTLE_SHEAR_COOLDOWN.get();
+                    stack.hurtAndBreak(1, player, getSlotForHand(hand));
+                    if (!AnimalHarvest.canHarvest(interactionLevel, this, player)) {
+                        return InteractionResult.CONSUME;
+                    }
                     this.playSound(SoundEvents.SHEEP_SHEAR, 1.0F, 1.0F);
+                    if (!AnimalHarvest.canHarvest(interactionLevel, this, player)) {
+                        return InteractionResult.CONSUME;
+                    }
                     this.spawnAtLocation(ModItems.SILENCE_MOSS.get());
+                    if (!AnimalHarvest.canHarvest(interactionLevel, this, player)) {
+                        return InteractionResult.CONSUME;
+                    }
                     if (echoShears) {
                         this.spawnAtLocation(ModItems.SILENCE_MOSS.get());
                     }
-                    stack.hurtAndBreak(1, player, getSlotForHand(hand));
                 } else {
                     player.displayClientMessage(Component.translatable(
                             "message.unknown_echoes.moss_back_turtle.not_ready"), true);

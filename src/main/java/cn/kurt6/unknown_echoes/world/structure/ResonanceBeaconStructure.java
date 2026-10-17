@@ -14,11 +14,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 
-public class ResonanceBeaconStructure extends SinglePieceStructure {
+public class ResonanceBeaconStructure extends TerrainAnchoredStructure {
     public static final MapCodec<ResonanceBeaconStructure> CODEC = simpleCodec(ResonanceBeaconStructure::new);
 
     private static final int WIDTH = 31;
@@ -105,11 +104,25 @@ public class ResonanceBeaconStructure extends SinglePieceStructure {
                 architecturalPillar(level, box, point[0], 3, point[1], 5, bricks);
                 this.placeBlock(level, lamp, point[0], 8, point[1], box);
             }
-            scatterArchitecturalDebris(level, random, box, c, 1, c,
-                    11, 14, 22, cracked, mossy);
+            // 共鸣叉架：中央信标之外再给四条频率不同的立向支架，形成不对称高点。
+            for (int[] fork : new int[][]{{c - 5, c + 2, 8}, {c + 5, c + 1, 9},
+                    {c - 2, c - 5, 8}, {c + 3, c - 4, 7}}) {
+                architecturalPillar(level, box, fork[0], 5, fork[1], fork[2],
+                        fork[2] % 2 == 0 ? cracked : bricks);
+                this.placeBlock(level, rune, fork[0], 5 + fork[2], fork[1], box);
+                this.placeBlock(level, lamp, fork[0], 6 + fork[2], fork[1], box);
+            }
+            for (int offset = -3; offset <= 3; offset++) {
+                this.placeBlock(level, offset % 2 == 0 ? rune : bricks,
+                        c + offset, 10, c + 1, box);
+            }
+            scatterArchitecturalDebris(level, box, "resonance_beacon_structure", c, 1, c,
+                    cracked, mossy);
 
             placeStructureSpawner(level, random, box, c + 10, 2, c - 5,
                     ModEntities.ECHO_WANDERER.get(), bricks, rune);
+            anchorGroundColumns(level, box, 0, mossy);
+            dressStructure(level, box, "resonance_beacon_structure");
         }
     }
 }

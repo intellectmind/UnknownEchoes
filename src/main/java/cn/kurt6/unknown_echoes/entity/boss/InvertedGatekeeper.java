@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import cn.kurt6.unknown_echoes.fx.CombatFx;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.block.deep.GravityFieldCoreBlock;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
@@ -244,6 +245,8 @@ public class InvertedGatekeeper extends MiniBossEntity implements PhaseGatedBoss
         this.entityData.set(DATA_INVERTED, false);
         Vec3 anchor = Vec3.atCenterOf(this.arenaAnchor());
         this.teleportTo(anchor.x, anchor.y, anchor.z);
+        CombatFx.spatial(level, anchor.add(0, this.getBbHeight() * 0.5, 0), this.getBbWidth() * 0.7 + 0.3,
+                this.getBbHeight(), this.fxTheme().coreDust(1), true, 14);
         this.setDeltaMovement(0.0D, -0.65D, 0.0D);
         this.hurtMarked = true;
         this.broadcastHint(level, "message.unknown_echoes.inverted_gatekeeper.exposed");
@@ -282,8 +285,8 @@ public class InvertedGatekeeper extends MiniBossEntity implements PhaseGatedBoss
         this.entityData.set(DATA_INVERTED, true);
         this.throwCooldown = Math.min(this.throwCooldown, 35);
         this.pulseCooldown = Math.min(this.pulseCooldown, 65);
-        level.playSound(null, this.blockPosition(), SoundEvents.BEACON_ACTIVATE,
-                SoundSource.HOSTILE, 1.6F, 0.45F);
+        level.playSound(null, this.blockPosition(), ModSounds.INVERTED_GATEKEEPER_ORBIT.get(),
+                SoundSource.HOSTILE, 1.6F, 1.0F);
         BossFx.chargeSpiral(level, this.position().add(0.0D, 1.2D, 0.0D),
                 this.tickCount, ParticleTypes.REVERSE_PORTAL);
     }
@@ -359,8 +362,12 @@ public class InvertedGatekeeper extends MiniBossEntity implements PhaseGatedBoss
         this.attackTarget = target;
         this.getNavigation().stop();
         this.triggerAnim("attack_controller", animation);
-        level.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
-                SoundSource.HOSTILE, 1.6F, mode == AttackMode.PULSE ? 0.45F : 0.7F);
+        switch (mode) {
+            case SLAM -> this.playSound(ModSounds.INVERTED_GATEKEEPER_ATTACK_SLAM_WARN.get(), 1.6F, 1.0F);
+            case THROW -> this.playSound(ModSounds.INVERTED_GATEKEEPER_ATTACK_THROW_WARN.get(), 1.6F, 1.0F);
+            case PULSE -> this.playSound(ModSounds.INVERTED_GATEKEEPER_ATTACK_PULSE_WARN.get(), 1.6F, 1.0F);
+            default -> { }
+        }
     }
 
     private void tickAttack(ServerLevel level) {
@@ -411,8 +418,8 @@ public class InvertedGatekeeper extends MiniBossEntity implements PhaseGatedBoss
         BossFx.comet(level, this.attackTarget, 10.0D, 1.0D, ParticleTypes.REVERSE_PORTAL);
         BossFx.pillar(level, this.attackTarget, 7.0D, ParticleTypes.ELECTRIC_SPARK);
         BossFx.cinematicImpact(level, this.attackTarget, 22.0D, 0.3F, 4, 0xA98BFF);
-        level.playSound(null, BlockPos.containing(this.attackTarget), SoundEvents.WARDEN_SONIC_BOOM,
-                SoundSource.HOSTILE, 1.5F, 0.8F);
+        level.playSound(null, BlockPos.containing(this.attackTarget), ModSounds.INVERTED_GATEKEEPER_ATTACK_THROW_RELEASE.get(),
+                SoundSource.HOSTILE, 1.5F, 1.0F);
     }
 
     private void resolvePulse(ServerLevel level) {
@@ -425,8 +432,8 @@ public class InvertedGatekeeper extends MiniBossEntity implements PhaseGatedBoss
         }
         BossFx.areaBurst(level, center, ParticleTypes.ELECTRIC_SPARK);
         BossFx.cinematicImpact(level, center, 30.0D, 0.64F, 8, 0x9F75FF);
-        level.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),
-                SoundSource.HOSTILE, 1.8F, 0.75F);
+        level.playSound(null, this.blockPosition(), ModSounds.INVERTED_GATEKEEPER_ATTACK_PULSE_RELEASE.get(),
+                SoundSource.HOSTILE, 1.8F, 1.0F);
     }
 
     private void damageArea(ServerLevel level, Vec3 center, double horizontalRadius,
@@ -455,6 +462,9 @@ public class InvertedGatekeeper extends MiniBossEntity implements PhaseGatedBoss
         boolean hit = super.doHurtTarget(target);
         if (hit) {
             this.triggerAnim("attack_controller", "attack");
+            if (!this.level().isClientSide) {
+                this.playSound(ModSounds.INVERTED_GATEKEEPER_ATTACK_MELEE.get(), 1.1F, 1.0F);
+            }
             if (this.level() instanceof ServerLevel level) {
                 BossFx.sweepArc(level, this.position().add(0.0D, 1.2D, 0.0D),
                         this.getLookAngle(), 3.5D, ParticleTypes.ELECTRIC_SPARK);
@@ -529,5 +539,9 @@ public class InvertedGatekeeper extends MiniBossEntity implements PhaseGatedBoss
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
+    }
+    @Override
+    public int musicStage() {
+        return this.exposedTicks > 0 ? 2 : this.inversionTriggered ? 1 : 0;
     }
 }

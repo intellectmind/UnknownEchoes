@@ -5,11 +5,11 @@ import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -90,7 +90,7 @@ public class WindCurrentPlatformBlock extends BaseEntityBlock {
             return InteractionResult.CONSUME;
         }
         if (!EchoPermission.canUseWindMechanism(serverPlayer)) {
-            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.6F);
+            level.playSound(null, pos, ModSounds.BLOCK_WIND_PLATFORM_LOCKED.get(), SoundSource.BLOCKS, 0.55F, 1.0F);
             serverPlayer.displayClientMessage(
                     Component.translatable("message.unknown_echoes.wind_platform.locked"), true);
             EchoAbilityManager.recordFailure(serverPlayer, EchoAbilityType.WIND_ECHO, "platform_locked");
@@ -101,8 +101,8 @@ public class WindCurrentPlatformBlock extends BaseEntityBlock {
             platform.activate(ServerConfig.WIND_PLATFORM_ACTIVE_TICKS.get());
             if (!state.getValue(ACTIVE)) {
                 level.setBlock(pos, state.setValue(ACTIVE, Boolean.TRUE), 3);
+                level.playSound(null, pos, ModSounds.BLOCK_WIND_PLATFORM_ACTIVATE.get(), SoundSource.BLOCKS, 0.8F, 1.0F);
             }
-            level.playSound(null, pos, SoundEvents.BREEZE_IDLE_AIR, SoundSource.BLOCKS, 1.2F, 0.9F);
         }
         return InteractionResult.CONSUME;
     }

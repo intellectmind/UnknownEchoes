@@ -48,11 +48,13 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
@@ -228,6 +230,20 @@ public class ClientModEvents {
                 ModItems.WORLD_ECHO_WINGS.get());
     }
 
+    /** Boss 与 Mini Boss 刷怪蛋是手绘贴图:NeoForge 在 HIGHEST 给全部 DeferredSpawnEggItem 注册双色染色,这里在 LOWEST 覆盖为不染色。 */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onRegisterItemColors(RegisterColorHandlersEvent.Item event) {
+        event.register((stack, layer) -> -1,
+                ModItems.FORGOTTEN_COLOSSUS_SPAWN_EGG.get(), ModItems.ABYSS_WATCHER_SPAWN_EGG.get(),
+                ModItems.MIRROR_GUARDIAN_SPAWN_EGG.get(), ModItems.VOID_PROPHET_SPAWN_EGG.get(),
+                ModItems.RIFT_WARDEN_SPAWN_EGG.get(), ModItems.WORLD_ECHO_SPAWN_EGG.get(),
+                ModItems.STORM_WEAVER_SPAWN_EGG.get(), ModItems.TIDE_LANTERN_KEEPER_SPAWN_EGG.get(),
+                ModItems.MIRROR_DUST_BUTLER_SPAWN_EGG.get(), ModItems.SILENT_PRIEST_SPAWN_EGG.get(),
+                ModItems.CRYSTAL_SONGKEEPER_SPAWN_EGG.get(), ModItems.BROKEN_BELL_KEEPER_SPAWN_EGG.get(),
+                ModItems.DREAM_BLOOM_KEEPER_SPAWN_EGG.get(), ModItems.LOST_RECORDER_CHIEF_SPAWN_EGG.get(),
+                ModItems.INVERTED_GATEKEEPER_SPAWN_EGG.get(), ModItems.ASH_SCRIBE_SPAWN_EGG.get());
+    }
+
     /** 潮汐弩拉弦/装填模型谓词( 视觉重做):自定义弩不继承原版 crossbow 的 ItemProperties。 */
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
@@ -278,6 +294,60 @@ public class ClientModEvents {
 
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(ModEntities.MOSSBACK_HEDGEHOG.get(),
+                context -> new DeepEcologyRenderer<>(context, "mossback_hedgehog", 0.325F));
+        event.registerEntityRenderer(ModEntities.EMBERCLAW_SCORPION.get(),
+                context -> new DeepEcologyRenderer<>(context, "emberclaw_scorpion", 0.450F));
+        event.registerEntityRenderer(ModEntities.LANTERN_SEAHORSE.get(),
+                context -> new DeepEcologyRenderer<>(context, "lantern_seahorse", 0.225F));
+        event.registerEntityRenderer(ModEntities.REEFJAW_SHARK.get(),
+                context -> new DeepEcologyRenderer<>(context, "reefjaw_shark", 0.650F));
+        event.registerEntityRenderer(ModEntities.SLATEHORN_BOAR.get(),
+                context -> new DeepEcologyRenderer<>(context, "slatehorn_boar", 0.475F));
+        event.registerEntityRenderer(ModEntities.HOLLOW_REED_SERPENT.get(),
+                context -> new DeepEcologyRenderer<>(context, "hollow_reed_serpent", 0.375F));
+        event.registerEntityRenderer(ModEntities.RIFTFANG_EEL.get(),
+                context -> new DeepEcologyRenderer<>(context, "riftfang_eel", 0.400F));
+        event.registerEntityRenderer(ModEntities.NEEDLEFIN_LIONFISH.get(),
+                context -> new DeepEcologyRenderer<>(context, "needlefin_lionfish", 0.475F));
+        event.registerEntityRenderer(ModEntities.MOSSPLATE_HOUND.get(),
+                context -> new DeepEcologyRenderer<>(context, "mossplate_hound", 0.4F));
+        event.registerEntityRenderer(ModEntities.CAIRN_SHELL_BRUTE.get(),
+                context -> new DeepEcologyRenderer<>(context, "cairn_shell_brute", 0.45F));
+        event.registerEntityRenderer(ModEntities.SPORE_CROWNED_WRETCH.get(),
+                context -> new DeepEcologyRenderer<>(context, "spore_crowned_wretch", 0.225F));
+        event.registerEntityRenderer(ModEntities.SPORE_PELLET.get(), net.minecraft.client.renderer.entity.ThrownItemRenderer::new);
+        event.registerEntityRenderer(ModEntities.REED_MASK_RAIDER.get(),
+                context -> new DeepEcologyRenderer<>(context, "reed_mask_raider", 0.4F));
+        event.registerEntityRenderer(ModEntities.BROKEN_BELL_AXEMAN.get(),
+                context -> new DeepEcologyRenderer<>(context, "broken_bell_axeman", 0.4F));
+        event.registerEntityRenderer(ModEntities.RIFT_PAGE_STALKER.get(),
+                context -> new DeepEcologyRenderer<>(context, "rift_page_stalker", 0.4F));
+        event.registerEntityRenderer(ModEntities.MOSSFANG_TOAD.get(),
+                context -> new DeepEcologyRenderer<>(context, "mossfang_toad", 0.475F));
+        event.registerEntityRenderer(ModEntities.AMBERBACK_BEETLE.get(),
+                context -> new DeepEcologyRenderer<>(context, "amberback_beetle", 0.450F));
+        event.registerEntityRenderer(ModEntities.LANTERNJAW_ANGLER.get(),
+                context -> new DeepEcologyRenderer<>(context, "lanternjaw_angler", 0.475F));
+        event.registerEntityRenderer(ModEntities.SAWTOOTH_PRAWN.get(),
+                context -> new DeepEcologyRenderer<>(context, "sawtooth_prawn", 0.550F));
+        event.registerEntityRenderer(ModEntities.SAILTAIL_MINNOW.get(),
+                cn.kurt6.unknown_echoes.client.render.SailtailMinnowRenderer::new);
+        event.registerEntityRenderer(ModEntities.MOSS_SAIL_SNAIL.get(),
+                cn.kurt6.unknown_echoes.client.render.MossSailSnailRenderer::new);
+        event.registerEntityRenderer(ModEntities.CRYSTAL_SPINE_URCHIN.get(),
+                cn.kurt6.unknown_echoes.client.render.CrystalSpineUrchinRenderer::new);
+        event.registerEntityRenderer(ModEntities.ASH_SAIL_SERPENT.get(),
+                cn.kurt6.unknown_echoes.client.render.AshSailSerpentRenderer::new);
+        event.registerEntityRenderer(ModEntities.PETALWING_BUTTERFLY.get(),
+                cn.kurt6.unknown_echoes.client.render.PetalwingButterflyRenderer::new);
+        event.registerEntityRenderer(ModEntities.MOSSLIGHT_FIREFLY.get(),
+                cn.kurt6.unknown_echoes.client.render.MosslightFireflyRenderer::new);
+        event.registerEntityRenderer(ModEntities.BELL_NEEDLE_WASP.get(),
+                cn.kurt6.unknown_echoes.client.render.BellNeedleWaspRenderer::new);
+        event.registerEntityRenderer(ModEntities.SHARDWING_SKATE.get(),
+                cn.kurt6.unknown_echoes.client.render.ShardwingSkateRenderer::new);
+
         event.registerBlockEntityRenderer(ModBlockEntities.ENDING_RECORD_TABLE.get(),
                 EndingRecordTableRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.WORLD_RESONANCE_ALTAR.get(),
@@ -307,7 +377,7 @@ public class ClientModEvents {
         event.registerEntityRenderer(ModEntities.MIRROR_TAIL_FISH.get(),
                 cn.kurt6.unknown_echoes.client.render.MirrorTailFishRenderer::new);
         event.registerEntityRenderer(ModEntities.ECHO_CUTTLEFISH.get(),
-                context -> new DeepEcologyRenderer<>(context, "echo_cuttlefish", 0.28F, -0.1188D));
+                context -> new DeepEcologyRenderer<>(context, "echo_cuttlefish", 0.28F, -0.0523D));
         event.registerEntityRenderer(ModEntities.PEARLBACK_RAY.get(),
                 context -> new DeepEcologyRenderer<>(context, "pearlback_ray", 0.45F, -0.1938D));
         event.registerEntityRenderer(ModEntities.MOSS_BACK_TURTLE.get(),
@@ -326,6 +396,14 @@ public class ClientModEvents {
                 cn.kurt6.unknown_echoes.client.render.LostRecorderRenderer::new);
         event.registerEntityRenderer(ModEntities.WIND_SAC_MOTH.get(),
                 cn.kurt6.unknown_echoes.client.render.WindSacMothRenderer::new);
+        event.registerEntityRenderer(ModEntities.WIND_DRIFT_JELLY.get(),
+                cn.kurt6.unknown_echoes.client.render.WindDriftJellyRenderer::new);
+        event.registerEntityRenderer(ModEntities.REEDWING_DRAGONFLY.get(),
+                cn.kurt6.unknown_echoes.client.render.ReedwingDragonflyRenderer::new);
+        event.registerEntityRenderer(ModEntities.GALE_SHRIKE.get(),
+                cn.kurt6.unknown_echoes.client.render.GaleShrikeRenderer::new);
+        event.registerEntityRenderer(ModEntities.ASH_LANTERN_BAT.get(),
+                cn.kurt6.unknown_echoes.client.render.AshLanternBatRenderer::new);
         event.registerEntityRenderer(ModEntities.WIND_ERODED_SENTINEL.get(),
                 cn.kurt6.unknown_echoes.client.render.WindErodedSentinelRenderer::new);
         event.registerEntityRenderer(ModEntities.ECHO_REMNANT.get(),
@@ -349,7 +427,7 @@ public class ClientModEvents {
         event.registerEntityRenderer(ModEntities.VOID_WANDERER.get(),
                 cn.kurt6.unknown_echoes.client.render.VoidWandererRenderer::new);
         event.registerEntityRenderer(ModEntities.RIFT_GLIDER.get(),
-                context -> new DeepEcologyRenderer<>(context, "rift_glider", 0.72F, -0.32D));
+                context -> new DeepEcologyRenderer<>(context, "rift_glider", 0.72F, -0.4688D));
         event.registerEntityRenderer(ModEntities.ASHBACK_GRAZER.get(),
                 context -> new DeepEcologyRenderer<>(context, "ashback_grazer", 0.7F));
         event.registerEntityRenderer(ModEntities.HUSHLIGHT_JELLY.get(),

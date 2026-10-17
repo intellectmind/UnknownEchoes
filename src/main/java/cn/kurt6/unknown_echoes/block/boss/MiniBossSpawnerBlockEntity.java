@@ -70,6 +70,11 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
     /** 未满足门槛时的含蓄提示 lang 键。 */
     private String lockedHintKey = null;
     private int lockedHintCooldown = 0;
+    /** 当前同步生成检查的保护，覆盖机制恢复与实体回调，不写入存档。 */
+    private boolean spawning;
+    /** 恢复也可由死亡通知触发，不能只依赖生成 tick 的重入保护。 */
+    private boolean recoveringBosses;
+    private boolean checkingBinding;
 
     public MiniBossSpawnerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MINIBOSS_SPAWNER.get(), pos, state);
@@ -163,31 +168,84 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
     }
 
     public static BindingState bindingState(ServerLevel level, BlockPos pos, MiniBossEntity boss) {
-        if (!level.hasChunkAt(pos)) {
+        if (!isBindingCandidate(level, pos, boss)) {
+            return BindingState.INTERRUPTED;
+        }
+        var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        if (chunk == null) {
             return BindingState.UNAVAILABLE;
         }
-        if (!(level.getBlockState(pos).getBlock() instanceof MiniBossSpawnerBlock)) {
+        if (!(chunk.getBlockState(pos).getBlock() instanceof MiniBossSpawnerBlock)) {
             return BindingState.INVALID;
         }
-        if (!(level.getBlockEntity(pos) instanceof MiniBossSpawnerBlockEntity spawner)) {
+        if (!(chunk.getBlockEntity(pos) instanceof MiniBossSpawnerBlockEntity spawner)) {
 
             return BindingState.UNAVAILABLE;
         }
-        return spawner.matchesConfiguredType(boss) && spawner.onBossAdded(boss.getUUID())
-                ? BindingState.VALID : BindingState.INVALID;
+        if (!spawner.isCurrentSpawner(level) || spawner.checkingBinding || spawner.recoveringBosses || spawner.spawning) {
+            return BindingState.INTERRUPTED;
+        }
+        if (!spawner.matchesConfiguredType(boss)) {
+            return BindingState.INVALID;
+        }
+        spawner.checkingBinding = true;
+        try {
+            UUID previousOwner = spawner.bossUuid;
+            boolean previousDefeated = spawner.defeatedOnce;
+            boolean previousRecovery = spawner.missingBossRecoveryPending;
+            long previousReopenAt = spawner.reopenAt;
+            boolean newClaim = previousOwner == null && spawner.canAdoptUnownedBoss();
+            try {
+                boolean registered = spawner.onBossAdded(boss.getUUID());
+                if (!spawner.isCurrentSpawner(level) || !isBindingCandidate(level, pos, boss)
+                        || !spawner.matchesConfiguredType(boss)
+                        || !java.util.Objects.equals(spawner.bossUuid, registered ? boss.getUUID() : previousOwner)
+                        || spawner.defeatedOnce != previousDefeated
+                        || spawner.missingBossRecoveryPending != (registered && previousOwner == null ? false : previousRecovery)
+                        || spawner.reopenAt != previousReopenAt) {
+                    return BindingState.INTERRUPTED;
+                }
+                return registered ? BindingState.VALID : BindingState.INVALID;
+            } finally {
+                if (newClaim && boss.getUUID().equals(spawner.bossUuid) && spawner.isCurrentSpawner(level)
+                        && spawner.shouldReleaseBindingClaim(level, pos, boss)) {
+                    spawner.onBossDestroyed(boss.getUUID());
+                }
+            }
+        } finally {
+            spawner.checkingBinding = false;
+        }
+    }
+
+    private static boolean isBindingCandidate(ServerLevel level, BlockPos pos, MiniBossEntity boss) {
+        return boss.level() == level && boss.isAlive() && !boss.isRemoved()
+                && level.getEntity(boss.getUUID()) == boss && !boss.isSettlingDeath()
+                && pos.equals(boss.spawnerPos());
+    }
+
+    private boolean shouldReleaseBindingClaim(ServerLevel level, BlockPos pos, MiniBossEntity boss) {
+        if (boss.isSettlingDeath() || boss.isRemoved()
+                && (boss.getRemovalReason() == null || !boss.getRemovalReason().shouldDestroy())) {
+            return false;
+        }
+        Entity indexed = level.getEntity(boss.getUUID());
+        return boss.level() != level || !pos.equals(boss.spawnerPos()) || !boss.isAlive()
+                || indexed != null && indexed != boss || !this.matchesConfiguredType(boss);
     }
 
     /** 实体销毁事件可能早于刷怪器方块实体加载；在方块仍存在时按需恢复清理状态。 */
     public static void onBossDestroyed(ServerLevel level, BlockPos pos, UUID bossUuid) {
-        if (!level.hasChunkAt(pos)) {
+        var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        if (chunk == null) {
             MiniBossSpawnerCleanupData.queueDestroyed(level, pos, bossUuid);
             return;
         }
-        if (!(level.getBlockState(pos).getBlock() instanceof MiniBossSpawnerBlock)) {
+        if (!(chunk.getBlockState(pos).getBlock() instanceof MiniBossSpawnerBlock)) {
             return;
         }
-        if (level.getBlockEntity(pos) instanceof MiniBossSpawnerBlockEntity spawner) {
-            spawner.onBossDestroyed(bossUuid);
+        if (chunk.getBlockEntity(pos) instanceof MiniBossSpawnerBlockEntity spawner) {
+            MiniBossSpawnerCleanupData.queueDestroyed(level, pos, bossUuid);
+            MiniBossSpawnerCleanupData.apply(level, pos, spawner);
         } else {
 
             MiniBossSpawnerCleanupData.queueDestroyed(level, pos, bossUuid);
@@ -196,15 +254,17 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
 
     /** 死亡结算可能早于刷怪器方块实体恢复；按需恢复后启动正常重开计时。 */
     public static void onBossDefeated(ServerLevel level, BlockPos pos, UUID bossUuid) {
-        if (!level.hasChunkAt(pos)) {
+        var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        if (chunk == null) {
             MiniBossSpawnerCleanupData.queueDefeated(level, pos, bossUuid);
             return;
         }
-        if (!(level.getBlockState(pos).getBlock() instanceof MiniBossSpawnerBlock)) {
+        if (!(chunk.getBlockState(pos).getBlock() instanceof MiniBossSpawnerBlock)) {
             return;
         }
-        if (level.getBlockEntity(pos) instanceof MiniBossSpawnerBlockEntity spawner) {
-            spawner.onBossDefeated(bossUuid);
+        if (chunk.getBlockEntity(pos) instanceof MiniBossSpawnerBlockEntity spawner) {
+            MiniBossSpawnerCleanupData.queueDefeated(level, pos, bossUuid);
+            MiniBossSpawnerCleanupData.apply(level, pos, spawner);
         } else {
             MiniBossSpawnerCleanupData.queueDefeated(level, pos, bossUuid);
         }
@@ -216,6 +276,7 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
     }
 
     public enum BindingState {
+        INTERRUPTED,
         UNAVAILABLE,
         INVALID,
         VALID
@@ -233,46 +294,60 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
             return;
         }
 
-        if (spawner.bossUuid != null) {
+        if (spawner.spawning || !spawner.isCurrentSpawner(serverLevel)) {
             return;
         }
+        spawner.spawning = true;
+        try {
+            if (spawner.bossUuid != null) {
+                return;
+            }
 
-        if (spawner.defeatedOnce || spawner.missingBossRecoveryPending) {
-            if (spawner.defeatedOnce && !spawner.missingBossRecoveryPending
-                    && !ServerConfig.MINIBOSS_ARENA_REOPEN.get()) {
-                return;
-            }
-            if (spawner.reopenAt < 0) {
-                spawner.reopenAt = safeDeadline(now,
+            if (spawner.defeatedOnce || spawner.missingBossRecoveryPending) {
+                if (spawner.defeatedOnce && !spawner.missingBossRecoveryPending
+                        && !ServerConfig.MINIBOSS_ARENA_REOPEN.get()) {
+                    return;
+                }
+                if (spawner.reopenAt < 0) {
+                    spawner.reopenAt = safeDeadline(now,
+                            ServerConfig.MINIBOSS_ARENA_REOPEN_TICKS.get());
+                    spawner.setChanged();
+                    return;
+                }
+                long maximum = safeDeadline(now,
                         ServerConfig.MINIBOSS_ARENA_REOPEN_TICKS.get());
-                spawner.setChanged();
+                if (spawner.reopenAt > maximum) {
+                    spawner.reopenAt = maximum;
+                    spawner.setChanged();
+                }
+                if (now < spawner.reopenAt) {
+                    return;
+                }
+            }
+            if (spawner.requiredAbility == null) {
+                if (nearbyPlayers(serverLevel, pos).isEmpty()) {
+                    return;
+                }
+            } else if (!spawner.checkChallengeGate(serverLevel, pos)) {
                 return;
             }
-            long maximum = safeDeadline(now,
-                    ServerConfig.MINIBOSS_ARENA_REOPEN_TICKS.get());
-            if (spawner.reopenAt > maximum) {
-                spawner.reopenAt = maximum;
-                spawner.setChanged();
-            }
-            if (now < spawner.reopenAt) {
+            if (!spawner.areResetChunksLoaded(serverLevel)) {
                 return;
             }
-        }
-        if (spawner.requiredAbility == null) {
-            if (nearbyPlayers(serverLevel, pos).isEmpty()) {
+            if (spawner.recoverLoadedBoss(serverLevel)) {
                 return;
             }
-        } else if (!spawner.checkChallengeGate(serverLevel, pos)) {
-            return;
+            if (!spawner.isCurrentSpawner(serverLevel) || spawner.bossUuid != null) {
+                return;
+            }
+            spawner.restoreResetBlocks(serverLevel);
+            if (!spawner.isCurrentSpawner(serverLevel) || spawner.bossUuid != null) {
+                return;
+            }
+            spawner.spawnBoss(serverLevel);
+        } finally {
+            spawner.spawning = false;
         }
-        if (!spawner.areResetChunksLoaded(serverLevel)) {
-            return;
-        }
-        if (spawner.recoverLoadedBoss(serverLevel)) {
-            return;
-        }
-        spawner.restoreResetBlocks(serverLevel);
-        spawner.spawnBoss(serverLevel);
     }
 
     /**
@@ -280,30 +355,59 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
      * 生成前按精确绑定补扫一次，避免实体先加载时错过 onBossAdded，随后同一场地再生成一只。
      */
     private boolean recoverLoadedBoss(ServerLevel level) {
-        List<MiniBossEntity> candidates = level.getEntitiesOfClass(
-                MiniBossEntity.class, new AABB(this.worldPosition).inflate(BOSS_RECOVERY_RANGE),
-                boss -> boss.isAlive() && !boss.isRemoved()
-                        && this.worldPosition.equals(boss.spawnerPos())
-                        && this.entityTypeId.equals(
-                                BuiltInRegistries.ENTITY_TYPE.getKey(boss.getType())));
-        if (candidates.isEmpty()) {
-            return false;
+        if (this.recoveringBosses) {
+            return true;
         }
-        if (!this.canAdoptUnownedBoss()) {
+        if (!this.isCurrentSpawner(level) || this.bossUuid != null) {
+            return this.bossUuid != null;
+        }
+        this.recoveringBosses = true;
+        try {
+            UUID expectedOwner = this.bossUuid;
+            AABB bounds = new AABB(this.worldPosition).inflate(BOSS_RECOVERY_RANGE);
+            List<MiniBossEntity> candidates = level.getEntitiesOfClass(
+                    MiniBossEntity.class, bounds, boss -> this.isRecoveryCandidate(level, bounds, boss));
             for (MiniBossEntity candidate : candidates) {
-                candidate.discard();
+                if (!this.isCurrentSpawner(level)
+                        || !java.util.Objects.equals(this.bossUuid, expectedOwner)) {
+                    return true;
+                }
+                if (!this.isRecoveryCandidate(level, bounds, candidate)) {
+                    continue;
+                }
+                if (expectedOwner == null && this.canAdoptUnownedBoss()) {
+                    UUID claimedUuid = candidate.getUUID();
+                    this.bossUuid = claimedUuid;
+                    expectedOwner = claimedUuid;
+                    this.missingBossRecoveryPending = false;
+                    this.reopenAt = -1L;
+                    try {
+                        this.setChanged();
+                    } finally {
+                        // 邻块回调可能移走实体；只补偿仍属于本次认领的 UUID。
+                        if (this.isCurrentSpawner(level) && claimedUuid.equals(this.bossUuid)
+                                && !this.isRecoveryCandidate(level, bounds, candidate)) {
+                            this.onBossDestroyed(claimedUuid);
+                        }
+                    }
+                    if (!this.isCurrentSpawner(level) || !claimedUuid.equals(this.bossUuid)) {
+                        return true;
+                    }
+                } else if (!candidate.getUUID().equals(expectedOwner)) {
+                    candidate.discard();
+                }
             }
-            return false;
+            return this.bossUuid != null;
+        } finally {
+            this.recoveringBosses = false;
         }
-        MiniBossEntity owner = candidates.getFirst();
-        this.bossUuid = owner.getUUID();
-        this.missingBossRecoveryPending = false;
-        this.reopenAt = -1L;
-        this.setChanged();
-        for (int i = 1; i < candidates.size(); i++) {
-            candidates.get(i).discard();
-        }
-        return true;
+    }
+
+    private boolean isRecoveryCandidate(ServerLevel level, AABB bounds, MiniBossEntity boss) {
+        return boss.level() == level && boss.isAlive() && !boss.isRemoved()
+                && level.getEntity(boss.getUUID()) == boss
+                && bounds.intersects(boss.getBoundingBox())
+                && this.worldPosition.equals(boss.spawnerPos()) && this.matchesConfiguredType(boss);
     }
 
     private boolean canAdoptUnownedBoss() {
@@ -377,6 +481,9 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
             return;
         }
         for (BlockPos pos : this.resetPositions) {
+            if (!this.isCurrentSpawner(level) || !level.hasChunkAt(pos)) {
+                return;
+            }
             if (level.getBlockState(pos).isAir()) {
                 level.setBlock(pos, block.defaultBlockState(), 3);
             }
@@ -393,49 +500,90 @@ public class MiniBossSpawnerBlockEntity extends BlockEntity {
             return;
         }
         Entity entity = type.create(level);
-        if (!(entity instanceof MiniBossEntity miniBoss)) {
-            UnknownEchoes.LOGGER.error("Mini boss spawner at {} references non-mini-boss entity {}",
+        if (entity == null) {
+            UnknownEchoes.LOGGER.error("Mini boss spawner at {} could not create entity {}",
                     this.worldPosition, this.entityTypeId);
             this.entityTypeId = null;
             this.setChanged();
             return;
         }
-        BlockPos spawnPos = findSpawnPosition(level, miniBoss);
-        if (spawnPos == null) {
-            entity.discard();
-            return;
-        }
-        entity.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5,
-                level.random.nextFloat() * 360.0F, 0.0F);
-        miniBoss.bindSpawner(this.worldPosition);
-        miniBoss.setPersistenceRequired();
-        miniBoss.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos),
-                MobSpawnType.STRUCTURE, null);
-        if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, entity)) {
-            entity.discard();
-            return;
-        }
         UUID spawnedBossUuid = entity.getUUID();
-        this.bossUuid = spawnedBossUuid;
-        this.setChanged();
-        if (!level.addFreshEntity(entity)) {
-            entity.discard();
-            if (spawnedBossUuid.equals(this.bossUuid)) {
-                this.bossUuid = null;
+        boolean reserved = false;
+        boolean spawned = false;
+        try {
+            if (!(entity instanceof MiniBossEntity miniBoss)) {
+                UnknownEchoes.LOGGER.error("Mini boss spawner at {} references non-mini-boss entity {}",
+                        this.worldPosition, this.entityTypeId);
+                this.entityTypeId = null;
                 this.setChanged();
+                return;
             }
-            UnknownEchoes.LOGGER.warn("Mini boss spawner at {} failed to add entity {}",
-                    this.worldPosition, this.entityTypeId);
-            return;
+            BlockPos spawnPos = findSpawnPosition(level, miniBoss);
+            if (spawnPos == null) {
+                return;
+            }
+            entity.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5,
+                    level.random.nextFloat() * 360.0F, 0.0F);
+            miniBoss.bindSpawner(this.worldPosition);
+            miniBoss.setPersistenceRequired();
+            miniBoss.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos),
+                    MobSpawnType.STRUCTURE, null);
+            if (!this.isCurrentSpawner(level) || this.bossUuid != null
+                    || !this.matchesConfiguredType(miniBoss)
+                    || !EntitySpawnSafety.isLoadedAndCollisionFree(level, entity)) {
+                return;
+            }
+            this.bossUuid = spawnedBossUuid;
+            reserved = true;
+            this.setChanged();
+            if (!level.addFreshEntity(entity)) {
+                UnknownEchoes.LOGGER.warn("Mini boss spawner at {} failed to add entity {}",
+                        this.worldPosition, this.entityTypeId);
+                return;
+            }
+            if (!this.isCurrentSpawn(level, miniBoss)) {
+                return;
+            }
+            this.missingBossRecoveryPending = false;
+            this.reopenAt = -1L;
+            spawned = true;
+            this.setChanged();
+            if (!this.isCurrentSpawn(level, miniBoss)) {
+                return;
+            }
+            miniBoss.playSummonEffects(level);
+            level.playSound(null, spawnPos, SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 1.2F, 0.7F);
+        } finally {
+            if (!spawned) {
+                try {
+                    if (reserved) {
+                        if (spawnedBossUuid.equals(this.bossUuid)) {
+                            this.bossUuid = null;
+                            this.setChanged();
+                        }
+                    }
+                } finally {
+                    // 先释放本次预留，避免移除回调把失败生成写成异常消失冷却。
+                    entity.discard();
+                }
+            }
         }
-        this.missingBossRecoveryPending = false;
-        this.reopenAt = -1L;
-        this.setChanged();
+    }
 
-        level.sendParticles(ParticleTypes.CLOUD,
-                spawnPos.getX() + 0.5, spawnPos.getY() + 1.0, spawnPos.getZ() + 0.5,
-                30, 0.8, 1.2, 0.8, 0.05);
-        level.playSound(null, spawnPos, SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 1.2F, 0.7F);
+    private boolean isCurrentSpawner(ServerLevel level) {
+        if (this.isRemoved() || this.level != level) {
+            return false;
+        }
+        var chunk = level.getChunkSource().getChunkNow(this.worldPosition.getX() >> 4, this.worldPosition.getZ() >> 4);
+        return chunk != null && chunk.getBlockEntity(this.worldPosition) == this
+                && chunk.getBlockState(this.worldPosition).getBlock() instanceof MiniBossSpawnerBlock;
+    }
+
+    private boolean isCurrentSpawn(ServerLevel level, MiniBossEntity boss) {
+        return this.isCurrentSpawner(level) && boss.isAlive()
+                && level.getEntity(boss.getUUID()) == boss
+                && boss.getUUID().equals(this.bossUuid) && this.matchesConfiguredType(boss)
+                && this.worldPosition.equals(boss.spawnerPos());
     }
 
     /** 按中心、四向与上下偏移重试落点。水下 Boss 还要确认整根水柱,否则会出生在空气里。 */

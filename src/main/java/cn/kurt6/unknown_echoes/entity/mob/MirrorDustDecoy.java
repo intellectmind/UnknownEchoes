@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.EcologyMeleePresentation;
 import cn.kurt6.unknown_echoes.entity.ai.AlertPackGoal;
 import cn.kurt6.unknown_echoes.entity.ai.FlankTargetGoal;
 import net.minecraft.core.particles.ParticleTypes;
@@ -7,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -43,9 +45,13 @@ public class MirrorDustDecoy extends Monster implements GeoEntity {
     private static final RawAnimation ATTACK_ANIM =
             RawAnimation.begin().then("animation.mirror_dust_decoy.attack", Animation.LoopType.PLAY_ONCE);
     private static final RawAnimation SHATTER_ANIM =
-            RawAnimation.begin().then("animation.mirror_dust_decoy.shatter", Animation.LoopType.PLAY_ONCE);
+            RawAnimation.begin().then("animation.mirror_dust_decoy.shatter", Animation.LoopType.HOLD_ON_LAST_FRAME);
+    private static final int SHATTER_FADE_START_TICKS = 4;
+    private static final int SHATTER_FADE_END_TICKS = 19;
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
+    private final EcologyMeleePresentation<MirrorDustDecoy> meleePresentation =
+            new EcologyMeleePresentation<>(this, 16);
 
     public MirrorDustDecoy(EntityType<? extends Monster> type, Level level) {
         super(type, level);
@@ -79,7 +85,7 @@ public class MirrorDustDecoy extends Monster implements GeoEntity {
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide && this.tickCount % 16 == 0) {
+        if (!this.level().isClientSide && this.isAlive() && this.tickCount % 16 == 0) {
             ((ServerLevel) this.level()).sendParticles(ParticleTypes.WITCH,
                     this.getX(), this.getY() + 0.9D, this.getZ(),
                     1, 0.18D, 0.24D, 0.18D, 0.0D);
@@ -88,17 +94,29 @@ public class MirrorDustDecoy extends Monster implements GeoEntity {
 
     @Override
     public boolean doHurtTarget(Entity target) {
+        if (!(target instanceof LivingEntity living) || !this.meleePresentation.canAttack(living)) {
+            return false;
+        }
+        LivingEntity navigationTarget = this.getTarget();
         boolean hit = super.doHurtTarget(target);
-        if (hit && !this.level().isClientSide) {
-            if (target instanceof LivingEntity living) {
-                living.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 35, 0), this);
-            }
+        if (!hit || this.getTarget() != navigationTarget || !this.meleePresentation.canAttack(living)) {
+            return hit;
+        }
+        living.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 35, 0), this);
+        if (this.getTarget() == navigationTarget && this.meleePresentation.canAttack(living)
+                && this.meleePresentation.begin(living)) {
             ((ServerLevel) this.level()).sendParticles(ParticleTypes.POOF,
                     target.getX(), target.getY() + 0.8D, target.getZ(),
                     6, 0.25D, 0.28D, 0.25D, 0.02D);
-            this.triggerAnim("attack_controller", "attack");
+            this.playSound(ModSounds.MIRROR_DUST_DECOY_STRIKE.get(), 0.7F, 1.0F);
         }
         return hit;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        this.meleePresentation.tick();
     }
 
     @Override
@@ -109,6 +127,7 @@ public class MirrorDustDecoy extends Monster implements GeoEntity {
             return;
         }
         if (!this.level().isClientSide) {
+            this.meleePresentation.tick();
             this.triggerAnim("shatter_controller", "shatter");
             ((ServerLevel) this.level()).sendParticles(ParticleTypes.WHITE_ASH,
                     this.getX(), this.getY() + 0.7D, this.getZ(),
@@ -133,10 +152,22 @@ public class MirrorDustDecoy extends Monster implements GeoEntity {
         return ModSounds.MIRROR_DUST_DECOY_DEATH.get();
     }
 
+    /** 碎裂先保持可见，再于原版第 20 tick 移除前淡尽；本体和发光层共用。 */
+    public float shatterVisibility(float partialTick) {
+        if (this.deathTime <= 0) {
+            return 1.0F;
+        }
+        float progress = Mth.clamp((this.deathTime + Mth.clamp(partialTick, 0.0F, 1.0F)
+                - SHATTER_FADE_START_TICKS) / (SHATTER_FADE_END_TICKS - SHATTER_FADE_START_TICKS),
+                0.0F, 1.0F);
+        return 1.0F - progress * progress * (3.0F - 2.0F * progress);
+    }
+
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "movement", 5, state ->
-                state.setAndContinue(state.isMoving() ? WALK_ANIM : IDLE_ANIM)));
+                this.isAlive() ? state.setAndContinue(state.isMoving() ? WALK_ANIM : IDLE_ANIM)
+                        : PlayState.STOP));
         controllers.add(new AnimationController<>(this, "attack_controller", 0, state -> PlayState.STOP)
                 .triggerableAnim("attack", ATTACK_ANIM));
         controllers.add(new AnimationController<>(this, "shatter_controller", 0, state -> PlayState.STOP)

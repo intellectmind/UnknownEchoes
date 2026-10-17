@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.model.DefaultedEntityGeoModel;
+import cn.kurt6.unknown_echoes.client.model.LimitedHeadGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 /** 世界回响体基础渲染：独立骨架 + 发光层（核心/晶体/符文自发光），战斗粒子区分最终形态。 */
@@ -31,7 +31,7 @@ public class WorldEchoRenderer extends GeoEntityRenderer<WorldEcho> {
     private static final float HOVER_FADE_TICKS = 6.0F;
 
     public WorldEchoRenderer(EntityRendererProvider.Context context) {
-        super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("world_echo"), true));
+        super(context, new LimitedHeadGeoModel<>(UnknownEchoes.id("world_echo"), "head", 12.0F, -3.0F, 4.0F));
         this.withScale(MODEL_SCALE);
         this.shadowRadius = 4.64F;
         addRenderLayer(new EchoGlowLayer<>(this,

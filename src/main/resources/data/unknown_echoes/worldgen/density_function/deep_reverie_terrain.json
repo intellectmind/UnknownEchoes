@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:squeeze",
+  "argument": {
+    "type": "minecraft:mul",
+    "argument1": 0.64,
+    "argument2": {
+      "type": "minecraft:interpolated",
+      "argument": "unknown_echoes:deep_reverie_terrain_base"
+    }
+  }
+}

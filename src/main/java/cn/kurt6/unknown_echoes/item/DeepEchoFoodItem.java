@@ -56,46 +56,48 @@ public final class DeepEchoFoodItem extends Item {
 
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof Player player && !canBenefit(player)) {
-            return stack;
-        }
-        ItemStack result = super.finishUsingItem(stack, level, entity);
-        if (level.isClientSide) {
-            return result;
-        }
+        return ConsumableCompletion.finish(this, stack, entity, () -> {
+            if (entity instanceof Player player && !canBenefit(player)) {
+                return stack;
+            }
+            ItemStack result = super.finishUsingItem(stack, level, entity);
+            if (level.isClientSide) {
+                return result;
+            }
 
-        switch (kind) {
-            case ARCHIVE_SPORE_ROLL -> entity.addEffect(new MobEffectInstance(
-                    MobEffects.DIG_SPEED, 1200, 1, true, false, true));
-            case WEIGHTLESS_BLOOM_TEA -> {
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.SLOW_FALLING, 2400, 0, true, false, true));
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.JUMP, 900, 1, true, false, true));
-                entity.fallDistance = 0.0F;
+            switch (kind) {
+                case ARCHIVE_SPORE_ROLL -> entity.addEffect(new MobEffectInstance(
+                        MobEffects.DIG_SPEED, 1200, 1, true, false, true));
+                case WEIGHTLESS_BLOOM_TEA -> {
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.SLOW_FALLING, 2400, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.JUMP, 900, 1, true, false, true));
+                    entity.fallDistance = 0.0F;
+                }
+                case VOIDCAP_STEW -> {
+                    entity.removeEffect(MobEffects.DARKNESS);
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.NIGHT_VISION, 3600, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.DAMAGE_RESISTANCE, 400, 0, true, false, true));
+                }
+                case FOLDED_SPORE_CRISP -> entity.addEffect(new MobEffectInstance(
+                        MobEffects.MOVEMENT_SPEED, 900, 1, true, false, true));
+                case GRAVITY_BELL_JELLY -> {
+                    entity.fallDistance = 0.0F;
+                    FoodEffectSupport.applyAbsorption(entity, 900, 1, 8.0F);
+                }
+                case HUSH_THORN_CANDY -> {
+                    entity.removeEffect(MobEffects.GLOWING);
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.INVISIBILITY, 600, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.MOVEMENT_SPEED, 600, 1, true, false, true));
+                }
             }
-            case VOIDCAP_STEW -> {
-                entity.removeEffect(MobEffects.DARKNESS);
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.NIGHT_VISION, 3600, 0, true, false, true));
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.DAMAGE_RESISTANCE, 400, 0, true, false, true));
-            }
-            case FOLDED_SPORE_CRISP -> entity.addEffect(new MobEffectInstance(
-                    MobEffects.MOVEMENT_SPEED, 900, 1, true, false, true));
-            case GRAVITY_BELL_JELLY -> {
-                entity.fallDistance = 0.0F;
-                FoodEffectSupport.applyAbsorption(entity, 900, 1, 8.0F);
-            }
-            case HUSH_THORN_CANDY -> {
-                entity.removeEffect(MobEffects.GLOWING);
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.INVISIBILITY, 600, 0, true, false, true));
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.MOVEMENT_SPEED, 600, 1, true, false, true));
-            }
-        }
-        return addContainerRemainder(result, entity);
+            return addContainerRemainder(result, entity);
+        });
     }
 
     private boolean canBenefit(Player player) {

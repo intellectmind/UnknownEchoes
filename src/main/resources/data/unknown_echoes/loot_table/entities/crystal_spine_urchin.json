@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:entity",
+  "random_sequence": "unknown_echoes:entities/crystal_spine_urchin",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:echo_dust"
+        }
+      ],
+      "functions": [
+        {
+          "function": "minecraft:set_count",
+          "count": {
+            "type": "minecraft:uniform",
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.block.truesight;
 
+import cn.kurt6.unknown_echoes.block.RewardAltarBlock;
+import cn.kurt6.unknown_echoes.ability.ResonanceTokenManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
@@ -74,6 +76,11 @@ public class TrueSightAltarBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
+        // 右键事件缓存的状态可能已因换块或传送失效。
+        if (!RewardAltarBlock.isCurrentInteraction(state, level, pos, serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
+
         if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO)) {
             MainBossRechallengeData.trySummon(serverPlayer, pos,
                     MainBossRechallengeData.BossKind.MIRROR_GUARDIAN);
@@ -107,18 +114,19 @@ public class TrueSightAltarBlock extends Block {
         if (mechanismDone) {
 
             if (!realSigils.isEmpty()) {
-                if (!cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.hasValidToken(
+                if (!ResonanceTokenManager.consumeToken(
                         serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO)) {
                     level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.7F);
                     serverPlayer.displayClientMessage(
                             Component.translatable("message.unknown_echoes.altar.token_waiting"), true);
                     return InteractionResult.CONSUME;
                 }
-                cn.kurt6.unknown_echoes.ability.ResonanceTokenManager.consumeToken(
-                        serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO);
-                cn.kurt6.unknown_echoes.block.RewardAltarBlock.playAbsorbCeremony(level, pos);
             }
-            EchoAbilityManager.unlockAbility(serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO);
+            // 先写入能力，再进入吸收音效的外部回调，避免已扣信物却未获得能力。
+            if (EchoAbilityManager.unlockAbility(serverPlayer, EchoAbilityType.TRUE_SIGHT_ECHO)
+                    && !realSigils.isEmpty() && RewardAltarBlock.isCurrentInteraction(state, level, pos, serverPlayer)) {
+                RewardAltarBlock.playAbsorbCeremony(level, pos);
+            }
             return InteractionResult.CONSUME;
         }
 

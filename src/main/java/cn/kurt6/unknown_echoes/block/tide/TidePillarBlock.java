@@ -3,12 +3,13 @@ package cn.kurt6.unknown_echoes.block.tide;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.world.LoadedAreaCheck;
+import cn.kurt6.unknown_echoes.fx.ExplorationFx;
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -16,6 +17,7 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -89,10 +91,9 @@ public class TidePillarBlock extends Block {
         if (!recorded) {
             return InteractionResult.CONSUME;
         }
-        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 1.2F, 0.7F);
+        level.playSound(null, pos, ModSounds.BLOCK_TIDE_PILLAR_ACTIVATE.get(), SoundSource.BLOCKS, 0.85F, 1.0F);
         if (level instanceof ServerLevel serverLevel) {
-            serverLevel.sendParticles(ParticleTypes.BUBBLE_POP,
-                    pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 16, 0.3, 0.4, 0.3, 0.05);
+            MechanismFx.emit(serverLevel, ExplorationFx.tidePillar(Vec3.atBottomCenterOf(pos)));
         }
 
         return InteractionResult.CONSUME;

@@ -22,6 +22,7 @@ public class RetreatWhenLowGoal extends Goal {
     private static final int ESCAPE_VERTICAL = 6;
     /** 一次脱离的最长持续 tick:超时交还给近战 Goal。 */
     private static final int MAX_DURATION_TICKS = 70;
+    private static final int SEARCH_RETRY_TICKS = 30;
 
     private final PathfinderMob mob;
     private final float healthFraction;
@@ -29,6 +30,7 @@ public class RetreatWhenLowGoal extends Goal {
     private final BooleanSupplier movementLocked;
 
     private boolean spent;
+    private int nextSearchTick;
     private int runTicks;
     private Vec3 escapeTarget;
 
@@ -52,6 +54,9 @@ public class RetreatWhenLowGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (this.mob.tickCount < this.nextSearchTick) {
+            return false;
+        }
         if (this.spent || this.movementLocked.getAsBoolean()
                 || this.mob.getHealth() > this.mob.getMaxHealth() * this.healthFraction) {
             return false;
@@ -60,6 +65,8 @@ public class RetreatWhenLowGoal extends Goal {
         if (target == null || !target.isAlive()) {
             return false;
         }
+        // 搜索失败也退避；一次脱离机会只在导航成功启动后消耗。
+        this.nextSearchTick = this.mob.tickCount + SEARCH_RETRY_TICKS;
         this.escapeTarget = this.findEscapeTarget(target);
         return this.escapeTarget != null;
     }
@@ -72,10 +79,16 @@ public class RetreatWhenLowGoal extends Goal {
 
     @Override
     public void start() {
+        if (this.escapeTarget == null) {
+            return;
+        }
+        if (!this.mob.getNavigation().moveTo(this.escapeTarget.x, this.escapeTarget.y, this.escapeTarget.z,
+                this.speedModifier)) {
+            this.stop();
+            return;
+        }
         this.spent = true;
         this.runTicks = MAX_DURATION_TICKS;
-        this.mob.getNavigation().moveTo(this.escapeTarget.x, this.escapeTarget.y, this.escapeTarget.z,
-                this.speedModifier);
     }
 
     @Override
@@ -98,10 +111,11 @@ public class RetreatWhenLowGoal extends Goal {
                     : away.normalize().scale(ESCAPE_RADIUS);
             Vec3 airTarget = AirRandomPos.getPosTowards(this.mob, ESCAPE_RADIUS, ESCAPE_VERTICAL, 0,
                     this.mob.position().add(heading), Math.PI * 0.5D);
-            if (airTarget != null) {
+            if (EscapePosition.isNotCloser(this.mob.position(), from.position(), airTarget)) {
                 return airTarget;
             }
         }
-        return DefaultRandomPos.getPosAway(this.mob, ESCAPE_RADIUS, ESCAPE_VERTICAL, from.position());
+        Vec3 target = DefaultRandomPos.getPosAway(this.mob, ESCAPE_RADIUS, ESCAPE_VERTICAL, from.position());
+        return EscapePosition.isNotCloser(this.mob.position(), from.position(), target) ? target : null;
     }
 }

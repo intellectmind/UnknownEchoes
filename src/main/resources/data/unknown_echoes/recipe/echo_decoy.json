@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:decoy_shard"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    },
+    {
+      "item": "unknown_echoes:echo_fiber"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:echo_decoy",
+    "count": 2
+  }
+}

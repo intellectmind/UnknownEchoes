@@ -1,0 +1,25 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "canopy",
+    "rock": {
+      "Name": "unknown_echoes:tidewood_log",
+      "Properties": {
+        "axis": "y"
+      }
+    },
+    "accent": {
+      "Name": "unknown_echoes:tidewood_leaves",
+      "Properties": {
+        "persistent": "true",
+        "distance": "7",
+        "waterlogged": "false"
+      }
+    },
+    "height": 15,
+    "radius": 7,
+    "submerged": false,
+    "drape": 5,
+    "waterline": false
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "spires",
+    "rock": {
+      "Name": "unknown_echoes:abyssal_stone"
+    },
+    "accent": {
+      "Name": "minecraft:sea_lantern"
+    },
+    "height": 24,
+    "radius": 8,
+    "submerged": false,
+    "drape": 0,
+    "waterline": true
+  }
+}

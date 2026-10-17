@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:campfire_cooking",
+  "category": "food",
+  "ingredient": {
+    "item": "unknown_echoes:reedwing_dragonfly_meat"
+  },
+  "result": {
+    "id": "unknown_echoes:cooked_reedwing_dragonfly_meat",
+    "count": 1
+  },
+  "experience": 0.1,
+  "cookingtime": 600
+}

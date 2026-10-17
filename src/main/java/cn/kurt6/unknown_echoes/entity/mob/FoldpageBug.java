@@ -24,6 +24,8 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -48,6 +50,7 @@ public class FoldpageBug extends PathfinderMob implements GeoEntity {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private int guideTicks;
     private BlockPos guideTarget;
+    private int guideRevision;
 
     public FoldpageBug(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -69,7 +72,7 @@ public class FoldpageBug extends PathfinderMob implements GeoEntity {
         if (this.level().isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(this.level() instanceof ServerLevel serverLevel) || player.isSpectator()) {
+        if (!(this.level() instanceof ServerLevel serverLevel) || !this.canStartGuide(serverLevel, player)) {
             return InteractionResult.CONSUME;
         }
         if (this.guideTicks > 0) {
@@ -79,9 +82,18 @@ public class FoldpageBug extends PathfinderMob implements GeoEntity {
         }
         this.guideTarget = findNearestRouteTarget(serverLevel);
         this.guideTicks = GUIDE_TICKS;
+        int revision = ++this.guideRevision;
+        BlockPos targetAtStart = this.guideTarget;
         this.triggerAnim("reaction_controller", "react");
         serverLevel.playSound(null, this.blockPosition(), ModSounds.FOLDPAGE_BUG_GUIDE.get(),
                 SoundSource.NEUTRAL, 0.7F, 1.0F);
+        if (this.guideRevision != revision || this.guideTarget != targetAtStart || this.guideTicks <= 0) {
+            return InteractionResult.CONSUME;
+        }
+        if (!this.canStartGuide(serverLevel, player)) {
+            this.clearGuideTarget();
+            return InteractionResult.CONSUME;
+        }
         if (this.guideTarget == null) {
             player.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.foldpage_bug.no_route"), true);
@@ -91,9 +103,15 @@ public class FoldpageBug extends PathfinderMob implements GeoEntity {
         return InteractionResult.CONSUME;
     }
 
+    private boolean canStartGuide(ServerLevel level, Player player) {
+        return this.level() == level && this.isAlive() && !this.isNoAi()
+                && player.level() == level && player.isAlive() && !player.isSpectator()
+                && player.canInteractWithEntity(this, 1.0D);
+    }
+
     /**
      * 躲避排在 PanicGoal 之后、游荡之前:被打到的反应优先,但要在敌怪贴上来之前就走开。
-     * 引导任务(guideTicks)靠 aiStep 每 20 tick 重发 moveTo,躲避结束后会自己接回来。
+     * 引导任务每 20 tick 维护导航,避让受惊与逃跑 Goal,结束后再接回。
      */
     @Override
     protected void registerGoals() {
@@ -120,27 +138,70 @@ public class FoldpageBug extends PathfinderMob implements GeoEntity {
     @Override
     public void aiStep() {
         super.aiStep();
-        if (this.level().isClientSide || this.guideTicks <= 0) {
+        if (this.level().isClientSide) {
+            return;
+        }
+        Level guideLevel = this.level();
+        int revisionAtStart = this.guideRevision;
+        if (!this.isAlive() || this.isNoAi()) {
+            if (this.guideTicks > 0) {
+                --this.guideTicks;
+            }
+            this.clearGuideTarget();
+            return;
+        }
+        if (this.guideTicks <= 0) {
             return;
         }
         if (--this.guideTicks <= 0) {
-            this.guideTarget = null;
+            this.clearGuideTarget();
             return;
         }
         if (this.guideTarget == null) {
             return;
         }
-        if (!this.level().isLoaded(this.guideTarget)
-                || !isGuideTarget(this.level(), this.guideTarget)) {
-            this.guideTarget = null;
+        if (!isGuideTarget(this.level(), this.guideTarget)) {
+            this.clearGuideTarget();
             return;
         }
-        if (this.tickCount % 20 == 0) {
-            this.getNavigation().moveTo(this.guideTarget.getX() + 0.5D,
-                    this.guideTarget.getY(), this.guideTarget.getZ() + 0.5D, 0.9D);
+        if (this.tickCount % 20 == 0 && !this.isEscaping()) {
+            var navigation = this.getNavigation();
+            if (navigation.isInProgress() && this.guideTarget.equals(navigation.getTargetPos())) {
+                navigation.setSpeedModifier(0.9D);
+            } else {
+                navigation.moveTo(this.guideTarget.getX() + 0.5D,
+                        this.guideTarget.getY(), this.guideTarget.getZ() + 0.5D, 0.9D);
+            }
+        }
+        if (this.guideRevision != revisionAtStart) {
+            return;
+        }
+        if (this.level() != guideLevel || !this.isAlive() || this.isNoAi()) {
+            this.clearGuideTarget();
+            return;
         }
         if (this.tickCount % 10 == 0) {
-            renderGuidePath((ServerLevel) this.level());
+            renderGuidePath((ServerLevel) guideLevel);
+        }
+    }
+
+    private boolean isEscaping() {
+        for (var goal : this.goalSelector.getAvailableGoals()) {
+            if (goal.isRunning()
+                    && (goal.getGoal() instanceof PanicGoal || goal.getGoal() instanceof FleeThreatGoal)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void clearGuideTarget() {
+        if (this.guideTarget != null) {
+            var navigation = this.getNavigation();
+            if (this.guideTarget.equals(navigation.getTargetPos())) {
+                navigation.stop();
+            }
+            this.guideTarget = null;
         }
     }
 
@@ -148,18 +209,34 @@ public class FoldpageBug extends PathfinderMob implements GeoEntity {
         BlockPos origin = this.blockPosition();
         BlockPos nearest = null;
         double nearestDistance = Double.MAX_VALUE;
+        int minChunkX = (origin.getX() - GUIDE_RADIUS) >> 4;
+        int minChunkZ = (origin.getZ() - GUIDE_RADIUS) >> 4;
+        int chunksX = ((origin.getX() + GUIDE_RADIUS) >> 4) - minChunkX + 1;
+        int chunksZ = ((origin.getZ() + GUIDE_RADIUS) >> 4) - minChunkZ + 1;
+        boolean[] checkedChunks = new boolean[chunksX * chunksZ];
+        LevelChunk[] loadedChunks = new LevelChunk[checkedChunks.length];
         for (int dx = -GUIDE_RADIUS; dx <= GUIDE_RADIUS; dx++) {
             for (int dy = -8; dy <= 8; dy++) {
+                if (level.isOutsideBuildHeight(origin.getY() + dy)) {
+                    continue;
+                }
                 for (int dz = -GUIDE_RADIUS; dz <= GUIDE_RADIUS; dz++) {
-                    BlockPos candidate = origin.offset(dx, dy, dz);
-                    if (!level.isLoaded(candidate) || !isGuideTarget(level, candidate)) {
+                    double distance = (double) dx * dx + (double) dy * dy + (double) dz * dz;
+                    if (distance >= nearestDistance) {
                         continue;
                     }
-                    double distance = candidate.distSqr(origin);
-                    if (distance < nearestDistance) {
-                        nearestDistance = distance;
-                        nearest = candidate.immutable();
+                    BlockPos candidate = origin.offset(dx, dy, dz);
+                    int index = ((candidate.getX() >> 4) - minChunkX) * chunksZ
+                            + (candidate.getZ() >> 4) - minChunkZ;
+                    if (!checkedChunks[index]) {
+                        loadedChunks[index] = level.getChunkSource().getChunkNow(candidate.getX() >> 4, candidate.getZ() >> 4);
+                        checkedChunks[index] = true;
                     }
+                    if (loadedChunks[index] == null || !isGuideTarget(loadedChunks[index].getBlockState(candidate))) {
+                        continue;
+                    }
+                    nearestDistance = distance;
+                    nearest = candidate;
                 }
             }
         }
@@ -167,14 +244,26 @@ public class FoldpageBug extends PathfinderMob implements GeoEntity {
     }
 
     private static boolean isGuideTarget(Level level, BlockPos pos) {
-        var state = level.getBlockState(pos);
+        if (!(level instanceof ServerLevel source) || source.isOutsideBuildHeight(pos)) {
+            return false;
+        }
+        LevelChunk chunk = source.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk != null && isGuideTarget(chunk.getBlockState(pos));
+    }
+
+    private static boolean isGuideTarget(BlockState state) {
         return state.is(ModBlocks.DEEP_ROUTE_NODE.get())
                 || state.is(ModBlocks.DEEP_CALIBRATION_NODE.get())
                 || state.is(ModBlocks.GRAVITY_FOLD_DOOR.get());
     }
 
     private void renderGuidePath(ServerLevel level) {
-        if (this.guideTarget == null) {
+        if (this.level() != level || !this.isAlive() || this.isNoAi() || this.guideTicks <= 0
+                || this.guideTarget == null) {
+            return;
+        }
+        if (!isGuideTarget(level, this.guideTarget)) {
+            this.clearGuideTarget();
             return;
         }
         Vec3 start = this.position().add(0.0D, 0.35D, 0.0D);

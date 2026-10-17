@@ -12,6 +12,7 @@ import cn.kurt6.unknown_echoes.journal.AncientPageCatalog;
 import cn.kurt6.unknown_echoes.journal.ArchiveTrialProgress;
 import cn.kurt6.unknown_echoes.journal.EchoCompletionManager;
 import cn.kurt6.unknown_echoes.journal.JournalManager;
+import cn.kurt6.unknown_echoes.particle.ParticleRules;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.research.EchoResearchManager;
 import cn.kurt6.unknown_echoes.world.DeepEchoesBiomeCatalog;
@@ -21,6 +22,7 @@ import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 import java.util.Set;
@@ -215,6 +217,12 @@ public class ModAdvancements {
     }
 
     public static void checkJournalAdvancements(ServerPlayer player) {
+        AdvancementHolder root = player.server.getAdvancements().get(UnknownEchoes.id("root"));
+        if (root != null && player.getAdvancements().getOrStartProgress(root).isDone()) {
+            award(player, "exploration_root");
+            award(player, "equipment_root");
+        }
+        checkInventoryMilestones(player);
         var journal = JournalManager.getData(player);
         int pageCount = AncientPageCatalog.countReleasePages(journal.getPages());
         if (pageCount >= 1) {
@@ -331,6 +339,30 @@ public class ModAdvancements {
         if (puzzles >= PUZZLE_MILESTONE) {
             award(player, PUZZLE_ADEPT);
         }
+        for (String id : AdvancementMilestones.activities(mechanisms)) {
+            award(player, id);
+        }
+    }
+
+    public static void checkJourneyAdvancements(ServerPlayer player, List<Integer> values) {
+        if (player.isSpectator()) return;
+        for (String id : AdvancementMilestones.journeys(values)) {
+            award(player, id);
+        }
+    }
+
+    public static void checkParticleAdvancements(ServerPlayer player, ItemStack stack) {
+        if (player.isSpectator() || !ParticleRules.eligible(stack)) return;
+        var data = ParticleRules.data(stack);
+        for (String id : AdvancementMilestones.particles(data.tier(), data.counts())) {
+            award(player, id);
+        }
+    }
+
+    public static void checkInventoryMilestones(ServerPlayer player) {
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            checkParticleAdvancements(player, player.getInventory().getItem(slot));
+        }
     }
 
     public static void checkIndexAdvancements(ServerPlayer player) {
@@ -395,6 +427,9 @@ public class ModAdvancements {
         long foundWonders = WORLD_WONDERS.stream().filter(discovered::contains).count();
         if (foundWonders >= 5) {
             award(player, "all_wonders");
+        }
+        if (foundWonders == WORLD_WONDERS.size()) {
+            award(player, "all_seven_wonders");
         }
     }
 

@@ -3,23 +3,29 @@
   "temperature": 0.75,
   "downfall": 0.65,
   "effects": {
-    "fog_color": 15780078,
-    "sky_color": 11834344,
-    "water_color": 8486880,
-    "water_fog_color": 4140908,
-    "grass_color": 9355626,
-    "foliage_color": 8304997,
+    "fog_color": 15128811,
+    "sky_color": 12497371,
+    "water_color": 9415120,
+    "water_fog_color": 5401723,
+    "grass_color": 10599832,
+    "foliage_color": 10599832,
     "ambient_particle": {
       "options": {
-        "type": "minecraft:falling_spore_blossom"
+        "type": "minecraft:cherry_leaves"
       },
-      "probability": 0.009
+      "probability": 0.0007
     },
     "mood_sound": {
       "sound": "minecraft:ambient.cave",
-      "tick_delay": 10000,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 1.5
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.flower_forest",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
     }
   },
   "carvers": {
@@ -38,7 +44,9 @@
       "unknown_echoes:echo_amber_ore_disk"
     ],
     [],
-    [],
+    [
+      "unknown_echoes:dreaming_meadow_landform"
+    ],
     [
       "minecraft:patch_grass_plain",
       "unknown_echoes:dream_flower_patch",
@@ -77,6 +85,12 @@
         "type": "unknown_echoes:dreaming_deer",
         "weight": 20,
         "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:petalwing_butterfly",
+        "weight": 18,
+        "minCount": 2,
         "maxCount": 3
       }
     ],

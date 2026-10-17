@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.item;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.core.Holder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -26,7 +27,6 @@ import java.util.List;
 
 /** 第一维度商人/战利品用轻量消耗品。只提供短时探索支援,不写关键进度。 */
 public class EchoUtilityConsumableItem extends Item {
-
     public enum Kind {
         ECHO_BANDAGE,
         WIND_CHIME_BOTTLE,
@@ -81,26 +81,30 @@ public class EchoUtilityConsumableItem extends Item {
 
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof Player player && !canBenefit(player)) {
-            return stack;
-        }
-        if (!usesFoodChannel()) {
-            return finishNonFoodUse(stack, level, entity);
-        }
-        ItemStack result = super.finishUsingItem(stack, level, entity);
-        if (level.isClientSide) {
+        return ConsumableCompletion.finish(this, stack, entity, () -> {
+            if (entity instanceof Player player && !canBenefit(player)) {
+                return stack;
+            }
+            ItemStack result;
+            if (!usesFoodChannel()) {
+                result = finishNonFoodUse(stack, level, entity);
+            } else {
+                result = super.finishUsingItem(stack, level, entity);
+                if (!level.isClientSide) {
+                    applyEffect(entity);
+                    result = addContainerRemainder(result, entity);
+                }
+            }
             return result;
-        }
-        applyEffect(entity);
-        return addContainerRemainder(result, entity);
+        });
     }
 
     /** 无 food 组件时 super.finishUsingItem 原样返回:既不扣数量也不出声,两者都要自己补。 */
     private ItemStack finishNonFoodUse(ItemStack stack, Level level, LivingEntity entity) {
-        playFinishSound(level, entity);
         if (!(entity instanceof Player player) || !player.getAbilities().instabuild) {
             stack.shrink(1);
         }
+        playFinishSound(level, entity);
         if (!level.isClientSide) {
             applyEffect(entity);
         }
@@ -132,26 +136,21 @@ public class EchoUtilityConsumableItem extends Item {
     }
 
     private void playFinishSound(Level level, LivingEntity entity) {
-        SoundEvent sound;
-        float pitch;
         switch (kind) {
-            case REVEALING_POWDER -> {
-                sound = SoundEvents.BRUSH_SAND;
-                pitch = 1.25F;
-            }
-            case MEMORY_ECHO_STONE -> {
-                sound = SoundEvents.AMETHYST_BLOCK_CHIME;
-                pitch = 0.9F;
-            }
-            default -> {
-                sound = SoundEvents.WOOL_PLACE;
-                pitch = 1.1F;
-            }
+            case REVEALING_POWDER -> playFinishSound(level, entity,
+                    ModSounds.ITEM_REVEALING_POWDER_USE.get(), 0.9F, 1.0F);
+            case MEMORY_ECHO_STONE -> playFinishSound(level, entity,
+                    ModSounds.ITEM_MEMORY_ECHO_STONE_USE.get(), 0.9F, 1.0F);
+            default -> playFinishSound(level, entity,
+                    ModSounds.ITEM_ECHO_BANDAGE_USE.get(), 0.9F, 1.0F);
         }
+    }
 
+    private static void playFinishSound(Level level, LivingEntity entity, SoundEvent sound,
+                                        float volume, float pitch) {
         level.playSound(entity instanceof Player player ? player : null,
                 entity.getX(), entity.getY(), entity.getZ(),
-                sound, SoundSource.PLAYERS, 0.9F, pitch);
+                sound, SoundSource.PLAYERS, volume, pitch);
     }
 
     private void applyEffect(LivingEntity entity) {
@@ -187,11 +186,12 @@ public class EchoUtilityConsumableItem extends Item {
     }
 
     private static List<LivingEntity> revealTargets(Player player) {
+        double range = 24.0D;
         return player.level().getEntitiesOfClass(
                 LivingEntity.class,
-                player.getBoundingBox().inflate(24.0D),
+                player.getBoundingBox().inflate(range),
                 target -> target != player && target.isAlive()
-                        && target.distanceToSqr(player) <= 24.0D * 24.0D);
+                        && target.distanceToSqr(player) <= range * range);
     }
 
     private static void revealNearby(ServerPlayer player) {

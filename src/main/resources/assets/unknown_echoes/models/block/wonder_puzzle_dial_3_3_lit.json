@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "side": "unknown_echoes:block/wonder_puzzle_side",
+    "end": "unknown_echoes:block/wonder_puzzle_dial_3_3_lit"
+  }
+}

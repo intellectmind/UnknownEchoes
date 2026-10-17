@@ -27,6 +27,7 @@ public class ClientJournalCache {
     private static int totalMobs;
     private static int totalBosses;
     private static int knownPages;
+    private static ExplorationClue destination;
 
     public static void update(JournalSyncPayload payload) {
         STRUCTURES.clear();
@@ -47,6 +48,8 @@ public class ClientJournalCache {
                 CLUES.add(clue);
             }
         }
+        ExplorationClue selected = ExplorationClue.decode(payload.destination());
+        destination = selected == null ? null : CLUES.stream().filter(selected::sameSite).findFirst().orElse(null);
         List<Integer> totals = payload.totals();
         totalStructures = totals.size() > 0 ? totals.get(0) : 0;
         totalBiomes = totals.size() > 1 ? totals.get(1) : 0;
@@ -79,6 +82,10 @@ public class ClientJournalCache {
         return CLUES_VIEW;
     }
 
+    public static ExplorationClue destination() {
+        return destination;
+    }
+
     public static int totalStructures() {
         return totalStructures;
     }
@@ -106,6 +113,7 @@ public class ClientJournalCache {
         BOSSES.clear();
         PAGES.clear();
         CLUES.clear();
+        destination = null;
         totalStructures = totalBiomes = totalMobs = totalBosses = knownPages = 0;
     }
 }

@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:void_particle_crystal"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.particle_specialist.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.particle_specialist.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:particle_full",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

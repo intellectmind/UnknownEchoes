@@ -87,6 +87,19 @@ public class CrystalNoiseWisp extends Monster implements GeoEntity {
     @Override
     public void aiStep() {
         super.aiStep();
+        if (!this.isAlive() || this.isNoAi()) {
+            this.attackWindupTicks = 0;
+            this.pendingTargetId = -1;
+            return;
+        }
+        if (!this.level().isClientSide && this.attackWindupTicks > 0) {
+            LivingEntity target = this.getTarget();
+            if (target == null || target.getId() != this.pendingTargetId || !target.isAlive()
+                    || target.level() != this.level() || !this.canAttack(target)) {
+                this.attackWindupTicks = 0;
+                this.pendingTargetId = -1;
+            }
+        }
         Vec3 movement = this.getDeltaMovement();
         double drift = Math.sin((this.tickCount + this.getId()) * 0.11D) * 0.018D;
         this.setDeltaMovement(movement.x, drift, movement.z);
@@ -111,7 +124,9 @@ public class CrystalNoiseWisp extends Monster implements GeoEntity {
 
     @Override
     public boolean doHurtTarget(Entity target) {
-        if (this.level().isClientSide || !target.isAlive()
+        if (this.level().isClientSide || !this.isAlive() || this.isNoAi()
+                || !(target instanceof LivingEntity living) || !living.isAlive()
+                || living.level() != this.level() || this.getTarget() != living || !this.canAttack(living)
                 || this.attackWindupTicks > 0 || this.attackRecoveryTicks > 0) {
             return false;
         }

@@ -1,0 +1,25 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "canopy",
+    "rock": {
+      "Name": "unknown_echoes:echo_log",
+      "Properties": {
+        "axis": "y"
+      }
+    },
+    "accent": {
+      "Name": "unknown_echoes:echo_leaves",
+      "Properties": {
+        "persistent": "true",
+        "distance": "7",
+        "waterlogged": "false"
+      }
+    },
+    "height": 23,
+    "radius": 8,
+    "submerged": false,
+    "drape": 2,
+    "waterline": false
+  }
+}

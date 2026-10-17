@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:artifact_rift_anchor",
+  "parent": "unknown_echoes:first_artifact",
   "display": {
     "icon": {
       "id": "unknown_echoes:echo_realm_core"

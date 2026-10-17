@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.trade;
 
 import cn.kurt6.unknown_echoes.item.InventoryPayment;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.entity.mob.LostTraveler;
 import cn.kurt6.unknown_echoes.network.TradeListPayload;
@@ -36,12 +37,7 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
 
     private static final Gson GSON = new Gson();
     public static final ResourceLocation LOST_TRAVELER_TABLE = UnknownEchoes.id("lost_traveler");
-    /** 交易有效距离(服务端校验购买请求)。 */
-    public static final double TRADE_RANGE = 6.0D;
-
     private static final Map<ResourceLocation, List<EchoTrade>> TABLES = new HashMap<>();
-    /** 旅者实例 → (交易序号 → 已成交次数)。内存记账,随旅者离开/重启作废。 */
-    private static final Map<UUID, Map<Integer, Integer>> USES = new HashMap<>();
     /** 玩家 → 上次下发列表的表内索引快照:点击按打开时看到的列表解析,阶段变化/重载不会错位买错行。 */
     private static final Map<UUID, TradeSession> SESSION_VIEW = new HashMap<>();
 
@@ -58,7 +54,6 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
     protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager resourceManager,
                          ProfilerFiller profiler) {
         TABLES.clear();
-        USES.clear();
         SESSION_VIEW.clear();
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             try {
@@ -107,33 +102,43 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
     }
 
     public static void openTrades(ServerPlayer player, LostTraveler traveler) {
+        if (!canTradeWith(player, traveler)) {
+            clearSessionView(player.getUUID());
+            if (!ServerConfig.TRADES_ENABLED.get()) {
+                player.displayClientMessage(Component.translatable("message.unknown_echoes.trade.disabled"), true);
+            }
+            return;
+        }
         List<IndexedTrade> visible = getVisibleTradeEntries(player);
         List<String> lines = new ArrayList<>();
         List<Integer> view = new ArrayList<>();
-        Map<Integer, Integer> used = USES.getOrDefault(traveler.getUUID(), Map.of());
+        TravelerTradeStock stock = traveler.getTradeStock();
         for (int i = 0; i < visible.size(); i++) {
             IndexedTrade indexed = visible.get(i);
             EchoTrade trade = indexed.trade();
             int usesLeft = trade.maxUses() < 0 ? -1
-                    : Math.max(0, trade.maxUses() - used.getOrDefault(indexed.tableIndex(), 0));
+                    : Math.max(0, trade.maxUses() - stock.getUses(trade));
             lines.add(trade.encodeForClient(usesLeft));
             view.add(indexed.tableIndex());
         }
-        SESSION_VIEW.put(player.getUUID(), new TradeSession(traveler.getUUID(), List.copyOf(view)));
-        PacketDistributor.sendToPlayer(player, new TradeListPayload(traveler.getId(), lines));
+        UUID sessionId = UUID.randomUUID();
+        SESSION_VIEW.put(player.getUUID(), new TradeSession(traveler.getUUID(), sessionId, List.copyOf(view)));
+        PacketDistributor.sendToPlayer(player, new TradeListPayload(traveler.getId(), sessionId, lines));
     }
 
-    public static void handleTradeRequest(ServerPlayer player, int entityId, int index) {
+    public static void handleTradeRequest(ServerPlayer player, int entityId, UUID sessionId, int index) {
         if (!(player.level().getEntity(entityId) instanceof LostTraveler traveler)
-                || !traveler.isAlive()
-                || player.distanceToSqr(traveler) > TRADE_RANGE * TRADE_RANGE) {
+                || !canTradeWith(player, traveler)) {
+            clearSessionView(player.getUUID());
             player.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.trade.too_far"), true);
+                    Component.translatable(ServerConfig.TRADES_ENABLED.get()
+                            ? "message.unknown_echoes.trade.too_far" : "message.unknown_echoes.trade.disabled"), true);
             return;
         }
         TradeSession session = SESSION_VIEW.get(player.getUUID());
         List<EchoTrade> all = TABLES.getOrDefault(LOST_TRAVELER_TABLE, List.of());
         if (session == null || !session.travelerId().equals(traveler.getUUID())
+                || !session.sessionId().equals(sessionId)
                 || index < 0 || index >= session.view().size()) {
             return;
         }
@@ -144,13 +149,15 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
         EchoTrade trade = all.get(tableIndex);
 
         if (!trade.isVisibleTo(player, getStage(player))) {
+            openTrades(player, traveler);
             return;
         }
-        Map<Integer, Integer> used = USES.computeIfAbsent(traveler.getUUID(), k -> new HashMap<>());
-        if (trade.maxUses() >= 0 && used.getOrDefault(tableIndex, 0) >= trade.maxUses()) {
+        TravelerTradeStock stock = traveler.getTradeStock();
+        if (trade.maxUses() >= 0 && stock.getUses(trade) >= trade.maxUses()) {
             player.displayClientMessage(
                     Component.translatable("message.unknown_echoes.trade.sold_out"), true);
             playNo(player, traveler);
+            openTrades(player, traveler);
             return;
         }
         if (!canAfford(player, trade)) {
@@ -168,32 +175,36 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
         }
         List<ItemStack> originalMain = copySlots(player.getInventory().items);
         List<ItemStack> originalOffhand = copySlots(player.getInventory().offhand);
+        boolean paid = true;
         for (EchoTrade.Cost cost : trade.costs()) {
-            consumeItem(player, trade.getCostItemHolder(cost), cost.count());
+            if (consumeItem(player, trade.getCostItemHolder(cost), cost.count()) != cost.count()) {
+                paid = false;
+                break;
+            }
         }
-        if (!player.getInventory().add(result)) {
+        if (!paid || !player.getInventory().add(result) || !result.isEmpty()) {
             restoreSlots(player.getInventory().items, originalMain);
             restoreSlots(player.getInventory().offhand, originalOffhand);
             player.getInventory().setChanged();
             player.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.trade.need_space"), true);
+                    Component.translatable(paid ? "message.unknown_echoes.trade.need_space"
+                            : "message.unknown_echoes.trade.cant_afford"), true);
             playNo(player, traveler);
             return;
         }
-        used.merge(tableIndex, 1, Integer::sum);
+        stock.recordUse(trade);
         traveler.level().playSound(null, traveler.blockPosition(),
                 SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.9F, 1.0F);
 
         openTrades(player, traveler);
     }
 
-    public static void clearUses(UUID travelerId) {
-        USES.remove(travelerId);
+    public static void clearTravelerSessions(UUID travelerId) {
+        SESSION_VIEW.values().removeIf(session -> session.travelerId().equals(travelerId));
     }
 
-    /** 服务器停止时清理旅者实例库存,避免跨世界保留旧实体 UUID。 */
-    public static void clearAllUses() {
-        USES.clear();
+    /** 服务器停止时清理会话；成交记录由各旅者实体保存。 */
+    public static void clearAllSessions() {
         SESSION_VIEW.clear();
     }
 
@@ -204,7 +215,15 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
     private record IndexedTrade(int tableIndex, EchoTrade trade) {
     }
 
-    private record TradeSession(UUID travelerId, List<Integer> view) {
+    private record TradeSession(UUID travelerId, UUID sessionId, List<Integer> view) {
+    }
+
+    private static boolean canTradeWith(ServerPlayer player, LostTraveler traveler) {
+        double range = ServerConfig.TRADE_RANGE.get();
+        return ServerConfig.TRADES_ENABLED.get()
+                && player.isAlive() && !player.isRemoved() && !player.isSpectator() && !player.hasDisconnected()
+                && traveler.isAlive() && !traveler.isRemoved() && player.level() == traveler.level()
+                && player.distanceToSqr(traveler) <= range * range;
     }
 
     private static void playNo(ServerPlayer player, LostTraveler traveler) {
@@ -301,8 +320,8 @@ public class EchoTradeManager extends SimpleJsonResourceReloadListener {
     }
 
 
-    private static void consumeItem(ServerPlayer player, Item item, int amount) {
-        InventoryPayment.consume(player, item, amount);
+    private static int consumeItem(ServerPlayer player, Item item, int amount) {
+        return InventoryPayment.consume(player, item, amount);
     }
 
 }

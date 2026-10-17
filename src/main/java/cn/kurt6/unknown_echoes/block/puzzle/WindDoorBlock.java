@@ -6,6 +6,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -28,8 +29,9 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 /** 风门:能力权限系统的核心验证方块。 */
@@ -46,6 +48,8 @@ public class WindDoorBlock extends Block {
 
     /** 联动开关的最大方块数,防止异常超大区域 */
     private static final int MAX_CONNECTED = 64;
+    private static final ThreadLocal<Map<ServerLevel, Set<BlockPos>>> TOGGLING =
+            ThreadLocal.withInitial(java.util.IdentityHashMap::new);
 
     private static final VoxelShape CLOSED_NS = Block.box(0, 0, 6, 16, 16, 10);
     private static final VoxelShape CLOSED_EW = Block.box(6, 0, 0, 10, 16, 16);
@@ -170,45 +174,116 @@ public class WindDoorBlock extends Block {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (EchoPermission.canOpenWindDoor(player)) {
-            boolean open = !state.getValue(OPEN);
-            toggleConnected(level, pos, open);
-            if (player instanceof ServerPlayer serverPlayer) {
-                ArchiveTrialProgress.recordWind(serverPlayer, level, pos);
-            }
-            level.playSound(null, pos, open ? SoundEvents.BREEZE_IDLE_AIR : SoundEvents.BREEZE_LAND,
-                    SoundSource.BLOCKS, 1.0F, 1.0F);
+        if (!(level instanceof ServerLevel serverLevel)
+                || !(player instanceof ServerPlayer serverPlayer)
+                || !isCurrentInteraction(serverLevel, pos, state, serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
+        if (EchoPermission.canOpenWindDoor(serverPlayer)) {
+            toggleConnected(serverLevel, pos, state, serverPlayer);
         } else {
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 0.6F);
-            player.displayClientMessage(Component.translatable("message.unknown_echoes.wind_door.locked"), true);
+            serverPlayer.displayClientMessage(Component.translatable("message.unknown_echoes.wind_door.locked"), true);
         }
         return InteractionResult.CONSUME;
     }
 
-    /** 洪泛遍历相邻风门,整片一起开/关。 */
-    private void toggleConnected(Level level, BlockPos origin, boolean open) {
-        Set<BlockPos> visited = new HashSet<>();
-        Deque<BlockPos> queue = new ArrayDeque<>();
-        queue.add(origin);
-        visited.add(origin);
-        while (!queue.isEmpty()) {
-            BlockPos pos = queue.poll();
-            BlockState state = level.getBlockState(pos);
-            if (!state.is(this)) {
+    private boolean isCurrentInteraction(ServerLevel level, BlockPos pos, BlockState state,
+                                         ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.canInteractWithBlock(pos, 1.0D) && isCurrentDoor(level, pos, state);
+    }
+
+    private boolean isCurrentDoor(ServerLevel level, BlockPos pos, BlockState state) {
+        return level.hasChunkAt(pos) && state.is(this) && level.getBlockState(pos) == state;
+    }
+
+    /** 保存本次联动的原现场，写入失败或回调改变现场时停止剩余操作。 */
+    private void toggleConnected(ServerLevel level, BlockPos origin, BlockState original,
+                                 ServerPlayer player) {
+        boolean open = !original.getValue(OPEN);
+        ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+        Map<BlockPos, BlockState> found = new LinkedHashMap<>();
+        queue.add(origin.immutable());
+        while (!queue.isEmpty() && found.size() < MAX_CONNECTED) {
+            BlockPos current = queue.removeFirst();
+            if (found.containsKey(current) || !level.hasChunkAt(current)) {
                 continue;
             }
-            if (state.getValue(OPEN) != open) {
-                level.setBlock(pos, state.setValue(OPEN, open), 3);
+            BlockState door = level.getBlockState(current);
+            if (!door.is(this)) {
+                continue;
             }
+            found.put(current, door);
             for (Direction direction : Direction.values()) {
-                BlockPos next = pos.relative(direction);
-                if (visited.size() < MAX_CONNECTED && !visited.contains(next)
-                        && level.hasChunk(next.getX() >> 4, next.getZ() >> 4)
-                        && level.getBlockState(next).is(this)) {
-                    visited.add(next);
-                    queue.add(next);
+                BlockPos next = current.relative(direction);
+                if (level.hasChunkAt(next)) {
+                    queue.addLast(next.immutable());
                 }
             }
         }
+        if (found.isEmpty()) {
+            return;
+        }
+        Map<ServerLevel, Set<BlockPos>> active = TOGGLING.get();
+        Set<BlockPos> reserved = active.computeIfAbsent(level, ignored -> new HashSet<>());
+        if (found.keySet().stream().anyMatch(reserved::contains)) {
+            return;
+        }
+        reserved.addAll(found.keySet());
+        try {
+            BlockState expectedOrigin = original;
+            for (var entry : found.entrySet()) {
+                if (!isCurrentInteraction(level, origin, expectedOrigin, player)
+                        || !EchoPermission.canOpenWindDoor(player)) {
+                    return;
+                }
+                BlockPos doorPos = entry.getKey();
+                BlockState door = entry.getValue();
+                if (!isCurrentDoor(level, doorPos, door)) {
+                    return;
+                }
+                BlockState target = door.setValue(OPEN, open);
+                boolean applied = door == target || level.setBlock(doorPos, target, 3);
+                if (!applied || !isCurrentDoor(level, doorPos, target)) {
+                    return;
+                }
+                if (doorPos.equals(origin)) {
+                    expectedOrigin = target;
+                }
+            }
+            // 后面的写入也可能改变前面的门，整组确认后才登记个人试炼。
+            if (!isCompletedBatch(level, origin, expectedOrigin, player, found, open)) {
+                return;
+            }
+            ArchiveTrialProgress.recordWind(player, level, origin);
+            if (isCompletedBatch(level, origin, expectedOrigin, player, found, open)) {
+                level.playSound(null, origin, open ? SoundEvents.BREEZE_IDLE_AIR : SoundEvents.BREEZE_LAND,
+                        SoundSource.BLOCKS, 1.0F, 1.0F);
+            }
+        } finally {
+            reserved.removeAll(found.keySet());
+            if (reserved.isEmpty()) {
+                active.remove(level);
+            }
+            if (active.isEmpty()) {
+                TOGGLING.remove();
+            }
+        }
+    }
+
+    private boolean isCompletedBatch(ServerLevel level, BlockPos origin, BlockState expectedOrigin,
+                                      ServerPlayer player, Map<BlockPos, BlockState> found, boolean open) {
+        if (!isCurrentInteraction(level, origin, expectedOrigin, player)
+                || !EchoPermission.canOpenWindDoor(player)) {
+            return false;
+        }
+        for (var entry : found.entrySet()) {
+            if (!isCurrentDoor(level, entry.getKey(), entry.getValue().setValue(OPEN, open))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

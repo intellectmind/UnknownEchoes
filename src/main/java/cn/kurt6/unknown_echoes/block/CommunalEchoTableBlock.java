@@ -80,8 +80,13 @@ public final class CommunalEchoTableBlock extends Block {
                                               BlockHitResult hitResult) {
         Mode requested = modeFor(stack);
         if (requested == Mode.IDLE) {
+            // 主手无对应材料时留给副手，不能让提示或默认交互提前结束本次右键。
+            if (hand == InteractionHand.MAIN_HAND
+                    && modeFor(player.getOffhandItem()) != Mode.IDLE) {
+                return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+            }
             if (!level.isClientSide) {
-                showHint(player, state);
+                showHint(player, state, level, pos);
             }
             return ItemInteractionResult.SUCCESS;
         }
@@ -94,15 +99,14 @@ public final class CommunalEchoTableBlock extends Block {
             return ItemInteractionResult.CONSUME;
         }
         if (state.getValue(MODE) != Mode.IDLE) {
-            showHint(serverPlayer, state);
+            showHint(serverPlayer, state, level, pos);
             return ItemInteractionResult.CONSUME;
         }
 
-        if (!serverPlayer.getAbilities().instabuild) {
-            stack.shrink(1);
+        if (!FacilityActivation.activate(serverLevel, pos, state,
+                state.setValue(MODE, requested), serverPlayer, stack, ACTIVE_TICKS)) {
+            return ItemInteractionResult.CONSUME;
         }
-        serverLevel.setBlock(pos, state.setValue(MODE, requested), Block.UPDATE_ALL);
-        serverLevel.scheduleTick(pos, this, ACTIVE_TICKS);
         applySupport(serverLevel, pos, requested);
         RealmCommunalFeastManager.FeastResult feastResult =
                 RealmCommunalFeastManager.shareFeast(serverLevel, pos, requested);
@@ -120,7 +124,7 @@ public final class CommunalEchoTableBlock extends Block {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        showHint(player, state);
+        showHint(player, state, level, pos);
         return InteractionResult.CONSUME;
     }
 
@@ -168,31 +172,38 @@ public final class CommunalEchoTableBlock extends Block {
 
     private static int applySupport(ServerLevel level, BlockPos pos, Mode mode) {
         List<ServerPlayer> players = level.getEntitiesOfClass(ServerPlayer.class,
-                new AABB(pos).inflate(EFFECT_RADIUS), player -> !player.isSpectator()
-                        && player.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D,
-                        pos.getZ() + 0.5D) <= EFFECT_RADIUS * EFFECT_RADIUS);
+                new AABB(pos).inflate(EFFECT_RADIUS),
+                player -> FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player));
+        int supported = 0;
         for (ServerPlayer player : players) {
+            if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
             switch (mode) {
                 case FAR_BELL -> {
                     addEffect(player, MobEffects.MOVEMENT_SPEED, EFFECT_TICKS);
+                    if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
                     addEffect(player, MobEffects.DIG_SPEED, EFFECT_TICKS / 2);
                 }
                 case CANOPY -> {
                     player.removeEffect(MobEffects.BLINDNESS);
+                    if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
                     addEffect(player, MobEffects.NIGHT_VISION, EFFECT_TICKS);
+                    if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
                     addEffect(player, MobEffects.REGENERATION, 160, 1);
                 }
                 case INTERLAYER -> {
                     player.removeEffect(MobEffects.DARKNESS);
+                    if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
                     player.fallDistance = 0.0F;
                     FoodEffectSupport.applyAbsorption(player, 900, 1, 8.0F);
+                    if (!FacilitySupport.isEligible(level, pos, EFFECT_RADIUS, player)) continue;
                     addEffect(player, MobEffects.DAMAGE_RESISTANCE, 400);
                 }
                 case IDLE -> {
                 }
             }
+            supported++;
         }
-        return players.size();
+        return supported;
     }
 
     private static void addEffect(ServerPlayer player,
@@ -239,7 +250,11 @@ public final class CommunalEchoTableBlock extends Block {
         };
     }
 
-    private static void showHint(Player player, BlockState state) {
+    private static void showHint(Player player, BlockState state, Level level, BlockPos pos) {
+        if (player.level() != level || !player.isAlive() || player.isSpectator()
+                || !player.canInteractWithBlock(pos, 1.0D) || level.getBlockState(pos) != state) {
+            return;
+        }
         Mode mode = state.getValue(MODE);
         player.displayClientMessage(Component.translatable(mode == Mode.IDLE
                 ? "message.unknown_echoes.communal_echo_table.hint"

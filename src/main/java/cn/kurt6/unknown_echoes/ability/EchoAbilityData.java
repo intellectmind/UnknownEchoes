@@ -200,6 +200,25 @@ public class EchoAbilityData {
         return true;
     }
 
+    // 预留键等量换入完成记录，避免挑战期间其他进度填满附件后无法记录通关。
+    public boolean completeReservedMechanisms(Map<String, String> replacements) {
+        if (replacements == null || replacements.isEmpty()) return false;
+        for (var entry : replacements.entrySet()) {
+            String source = entry.getKey();
+            String target = entry.getValue();
+            if (source == null || source.isBlank() || source.length() > MAX_MECHANISM_LENGTH
+                    || target == null || target.isBlank() || target.length() > MAX_MECHANISM_LENGTH
+                    || (!activatedMechanisms.contains(target) && !activatedMechanisms.contains(source))) return false;
+        }
+        Set<String> result = new HashSet<>(activatedMechanisms);
+        result.removeAll(replacements.keySet());
+        result.addAll(replacements.values());
+        if (result.size() > MAX_MECHANISM_ENTRIES) return false;
+        activatedMechanisms.clear();
+        activatedMechanisms.addAll(result);
+        return true;
+    }
+
     /** 信标激活与维度权限必须同时成立，可附带同一流程的完成记录。 */
     public boolean activateBeaconRoute(String beaconId, String dimensionId,
                                        Collection<String> mechanisms) {

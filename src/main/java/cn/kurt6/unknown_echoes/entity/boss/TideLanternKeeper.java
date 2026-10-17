@@ -113,6 +113,7 @@ public class TideLanternKeeper extends MiniBossEntity {
 
     private static final double TAIL_RANGE = 2.8D;
     private static final int SHADE_CAP = 2;
+    private boolean fadingShades = false;
     private static final double SHADE_OWNER_SEARCH_RADIUS =
             TideWaterShade.OWNER_TETHER_RANGE + 2.0D;
 
@@ -492,6 +493,7 @@ public class TideLanternKeeper extends MiniBossEntity {
             this.dashTelegraphTicks = DASH_TELEGRAPH_TICKS;
             this.dashCooldown = 200;
             this.dashHitVictims.clear();
+            this.playSound(ModSounds.TIDE_LANTERN_KEEPER_ATTACK_DASH_WARN.get(), 1.2F, 1.0F);
             this.getNavigation().stop();
             this.triggerAnim("attack_controller", "attack");
         }
@@ -733,6 +735,7 @@ public class TideLanternKeeper extends MiniBossEntity {
         boolean hit = super.doHurtTarget(target);
         if (hit && !this.level().isClientSide) {
             this.triggerAnim("attack_controller", "attack");
+            this.playSound(ModSounds.TIDE_LANTERN_KEEPER_ATTACK_MELEE.get(), 1.1F, 1.0F);
             if (this.level() instanceof ServerLevel serverLevel) {
                 BossFx.impactBurst(serverLevel,
                         target.position().add(0, target.getBbHeight() * 0.5, 0), ParticleTypes.GLOW);
@@ -742,37 +745,46 @@ public class TideLanternKeeper extends MiniBossEntity {
     }
 
     @Override
-    public void die(DamageSource source) {
-        boolean wasDead = this.dead;
-        super.die(source);
-        if (wasDead || !this.dead) {
-            return;
-        }
-        if (this.level() instanceof ServerLevel serverLevel) {
-
-            this.fadeOwnedShades(serverLevel);
-            serverLevel.sendParticles(ParticleTypes.GLOW,
-                    this.getX(), this.getEyeY(), this.getZ(), 40, 1.2, 1.0, 1.2, 0.05);
-            serverLevel.sendParticles(
-                    BossFx.waterBubbleOr(serverLevel, this.position(), ParticleTypes.SPLASH),
-                    this.getX(), this.getY(), this.getZ(), 30, 1.0, 1.2, 1.0, 0.04);
+    protected void onDeathCommitted(ServerLevel serverLevel, Vec3 deathPos) {
+        this.fadeOwnedShades(serverLevel);
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) return;
+        serverLevel.sendParticles(ParticleTypes.GLOW,
+                this.getX(), this.getEyeY(), this.getZ(), 40, 1.2, 1.0, 1.2, 0.05);
+        if (isCurrentDeathPresentation(serverLevel, deathPos)) {
+            serverLevel.sendParticles(BossFx.waterBubbleOr(serverLevel, deathPos, ParticleTypes.SPLASH),
+                    deathPos.x, deathPos.y, deathPos.z, 30, 1.0, 1.2, 1.0, 0.04);
         }
     }
 
     private void fadeOwnedShades(ServerLevel serverLevel) {
-        for (TideWaterShade shade : serverLevel.getEntitiesOfClass(TideWaterShade.class,
-                this.getBoundingBox().inflate(SHADE_OWNER_SEARCH_RADIUS),
-                shade -> shade.isOwnedBy(this))) {
-            shade.beginFade();
+        if (this.fadingShades) return;
+        this.fadingShades = true;
+        try {
+            AABB bounds = this.deathCleanupBounds().inflate(SHADE_OWNER_SEARCH_RADIUS);
+            for (TideWaterShade shade : serverLevel.getEntitiesOfClass(TideWaterShade.class,
+                    bounds, shade -> shade.isOwnedBy(this))) {
+                runDeathStep("shade fade", () -> {
+                    if (shade.level() == serverLevel && shade.isAlive() && !shade.isRemoved()
+                            && shade.isOwnedBy(this) && shade.getBoundingBox().intersects(bounds)) {
+                        shade.beginFade();
+                    }
+                });
+            }
+        } finally {
+            this.fadingShades = false;
         }
     }
 
     @Override
     public void remove(Entity.RemovalReason reason) {
-        if (reason.shouldDestroy() && this.level() instanceof ServerLevel serverLevel) {
-            this.fadeOwnedShades(serverLevel);
+        try {
+            ServerLevel cleanupLevel = this.deathCleanupLevel();
+            if (reason.shouldDestroy() && cleanupLevel != null) {
+                runDeathStep("shade fade on removal", () -> this.fadeOwnedShades(cleanupLevel));
+            }
+        } finally {
+            super.remove(reason);
         }
-        super.remove(reason);
     }
 
     @Override
@@ -835,5 +847,9 @@ public class TideLanternKeeper extends MiniBossEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
+    }
+    @Override
+    public int musicStage() {
+        return this.isStaggered() ? 1 : this.isSurgePhase() ? 2 : 0;
     }
 }

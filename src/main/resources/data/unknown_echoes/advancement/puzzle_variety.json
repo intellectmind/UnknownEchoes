@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:wonder_puzzle_core"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.puzzle_variety.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.puzzle_variety.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:first_puzzle",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

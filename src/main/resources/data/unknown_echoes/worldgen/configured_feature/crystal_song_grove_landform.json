@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "crystal_fan",
+    "rock": {
+      "Name": "unknown_echoes:songstone"
+    },
+    "accent": {
+      "Name": "minecraft:amethyst_block"
+    },
+    "height": 21,
+    "radius": 8,
+    "submerged": false,
+    "drape": 0,
+    "waterline": false
+  }
+}

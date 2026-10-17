@@ -1,5 +1,8 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.entity.AnimalHarvest;
+
 import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
 import cn.kurt6.unknown_echoes.registry.ModItems;
@@ -44,7 +47,6 @@ public class DreamingDeer extends Animal implements GeoEntity {
             RawAnimation.begin().thenLoop("animation.dreaming_deer.idle");
     private static final RawAnimation WALK_ANIM =
             RawAnimation.begin().thenLoop("animation.dreaming_deer.walk");
-    private static final int NECTAR_COOLDOWN_TICKS = 2400;
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private int nectarCooldown;
@@ -84,13 +86,23 @@ public class DreamingDeer extends Animal implements GeoEntity {
 
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        Level interactionLevel = this.level();
+        if (!interactionLevel.isClientSide && !AnimalHarvest.canInteract(interactionLevel, this, player)) {
+            return InteractionResult.CONSUME;
+        }
         ItemStack stack = player.getItemInHand(hand);
         if (stack.is(ModItems.DREAM_FLOWER.get()) && !this.isBaby()) {
             if (!this.level().isClientSide) {
                 if (this.nectarCooldown <= 0) {
                     stack.consume(1, player);
-                    this.nectarCooldown = NECTAR_COOLDOWN_TICKS;
+                    this.nectarCooldown = ServerConfig.DREAMING_DEER_NECTAR_COOLDOWN_TICKS.get();
+                    if (!AnimalHarvest.canHarvest(interactionLevel, this, player)) {
+                        return InteractionResult.CONSUME;
+                    }
                     this.playSound(SoundEvents.HONEY_BLOCK_PLACE, 0.8F, 1.2F);
+                    if (!AnimalHarvest.canHarvest(interactionLevel, this, player)) {
+                        return InteractionResult.CONSUME;
+                    }
                     this.spawnAtLocation(ModItems.DREAM_NECTAR.get());
                 } else {
                     player.displayClientMessage(Component.translatable(
@@ -111,7 +123,8 @@ public class DreamingDeer extends Animal implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.nectarCooldown = Math.max(0, Math.min(tag.getInt("NectarCooldown"), NECTAR_COOLDOWN_TICKS));
+        this.nectarCooldown = Math.max(0, Math.min(tag.getInt("NectarCooldown"),
+                ServerConfig.DREAMING_DEER_NECTAR_COOLDOWN_TICKS.get()));
     }
 
     @Override

@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:armor_silent_watch",
+  "parent": "unknown_echoes:echo_traveler_armor",
   "display": {
     "icon": {
       "id": "unknown_echoes:echo_armor_plate"

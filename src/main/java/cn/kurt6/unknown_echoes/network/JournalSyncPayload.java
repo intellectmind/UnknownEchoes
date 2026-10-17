@@ -1,6 +1,7 @@
 package cn.kurt6.unknown_echoes.network;
 
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.journal.ExplorationJournalData;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -12,7 +13,7 @@ import java.util.List;
 public record JournalSyncPayload(List<String> structures, List<String> biomes,
                                  List<String> mobs, List<String> bosses,
                                  List<Integer> pages, List<String> clues,
-                                 List<Integer> totals)
+                                 List<Integer> totals, String destination)
         implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<JournalSyncPayload> TYPE =
@@ -23,7 +24,10 @@ public record JournalSyncPayload(List<String> structures, List<String> biomes,
     private static final StreamCodec<ByteBuf, List<Integer>> PAGE_LIST_CODEC =
             ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(256));
     private static final StreamCodec<ByteBuf, List<String>> CLUE_LIST_CODEC =
-            ByteBufCodecs.stringUtf8(512).apply(ByteBufCodecs.list(64));
+            ByteBufCodecs.stringUtf8(ExplorationJournalData.MAX_CLUE_LENGTH)
+                    .apply(ByteBufCodecs.list(ExplorationJournalData.MAX_CLUES));
+    private static final StreamCodec<ByteBuf, String> DESTINATION_CODEC =
+            ByteBufCodecs.stringUtf8(ExplorationJournalData.MAX_CLUE_LENGTH);
     private static final StreamCodec<ByteBuf, List<Integer>> TOTAL_LIST_CODEC =
             ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(8));
 
@@ -35,7 +39,7 @@ public record JournalSyncPayload(List<String> structures, List<String> biomes,
                             ID_LIST_CODEC.decode(buffer), ID_LIST_CODEC.decode(buffer),
                             ID_LIST_CODEC.decode(buffer), ID_LIST_CODEC.decode(buffer),
                             PAGE_LIST_CODEC.decode(buffer), CLUE_LIST_CODEC.decode(buffer),
-                            TOTAL_LIST_CODEC.decode(buffer));
+                            TOTAL_LIST_CODEC.decode(buffer), DESTINATION_CODEC.decode(buffer));
                 }
 
                 @Override
@@ -47,6 +51,7 @@ public record JournalSyncPayload(List<String> structures, List<String> biomes,
                     PAGE_LIST_CODEC.encode(buffer, payload.pages());
                     CLUE_LIST_CODEC.encode(buffer, payload.clues());
                     TOTAL_LIST_CODEC.encode(buffer, payload.totals());
+                    DESTINATION_CODEC.encode(buffer, payload.destination());
                 }
             };
 

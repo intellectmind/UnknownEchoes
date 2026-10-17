@@ -25,12 +25,11 @@ import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 潮汐灯塔礁：镜湖深水区的环形礁盘与半倒塌灯塔废墟。 */
-public class TideLighthouseReefStructure extends SinglePieceStructure {
+public class TideLighthouseReefStructure extends TerrainAnchoredStructure {
     public static final MapCodec<TideLighthouseReefStructure> CODEC =
             simpleCodec(TideLighthouseReefStructure::new);
 
@@ -46,12 +45,8 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
         Piece piece = new Piece(context.random(),
                 context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ());
         BoundingBox footprint = piece.getBoundingBox();
-        if (!LakeBedPlacement.hasSubmergedFootprint(context,
-                footprint.minX(), footprint.minZ(), SIZE, 11, 6)) {
-            return java.util.Optional.empty();
-        }
-        int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(
-                context, footprint.minX(), footprint.minZ(), SIZE, SIZE);
+        int floorY = LakeBedPlacement.findOceanFloor(context,
+                footprint.minX(), footprint.minZ(), SIZE, SIZE, 11, 6);
         if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
             return java.util.Optional.empty();
         }
@@ -202,6 +197,16 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
             buildStairCornice(level, box, c, 15, c, Footprint.square(3), reefStairs, reefSlab, true);
             buildParapet(level, box, c, 16, c, Footprint.square(4), 3, ModBlocks.REEF_LIMESTONE_BRICK_WALL.get().defaultBlockState(), runeBricks);
 
+            // 潮汐环冠：灯塔腰部向四方伸出不等高的礁脊，区别于普通圆柱灯塔。
+            architecturalRing(level, box, c, 13, c, 7, deepslate);
+            for (int[] fin : new int[][]{{-7, 0, 9}, {7, 0, 11}, {0, -7, 8}, {0, 7, 10}}) {
+                for (int y = 7; y <= fin[2]; y++) {
+                    this.placeBlock(level, y % 2 == 0 ? bricks : deepslate,
+                            c + fin[0], y, c + fin[1], box);
+                }
+                this.placeBlock(level, lantern, c + fin[0], fin[2] + 1, c + fin[1], box);
+            }
+
             int[][] buoyOffsets = {{8, 0}, {-4, 7}, {-4, -7}};
             for (int[] offset : buoyOffsets) {
                 int bx = c + offset[0];
@@ -213,6 +218,7 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
                 this.placeBlock(level, buoy, bx, 5, bz, box);
             }
 
+            this.placeBlock(level, deepslate, c - 8, 1, c, box);
             this.placeBlock(level, seat, c - 8, 2, c, box);
             this.placeBlock(level, bricks, c + 3, 1, c + 3, box);
             this.placeBlock(level, bricks, c + 3, 2, c + 3, box);
@@ -265,6 +271,7 @@ public class TideLighthouseReefStructure extends SinglePieceStructure {
                         UnknownEchoes.id("abyss_watcher"),
                         "message.unknown_echoes.tide_lighthouse.locked");
             }
+            dressStructure(level, box, "tide_lighthouse_reef");
         }
     }
 }

@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:entity",
+  "random_sequence": "unknown_echoes:entities/petalwing_butterfly",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:echo_fiber"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:random_chance",
+          "chance": 0.5
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "unknown_echoes:petalwing_butterfly_meat"
+        }
+      ]
+    }
+  ]
+}

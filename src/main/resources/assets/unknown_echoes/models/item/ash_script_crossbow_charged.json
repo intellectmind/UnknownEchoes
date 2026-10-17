@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:item/crossbow",
+  "parent": "unknown_echoes:item/ash_script_crossbow",
   "textures": {
     "layer0": "unknown_echoes:item/ash_script_crossbow_charged"
   }

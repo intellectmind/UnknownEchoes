@@ -18,6 +18,8 @@ public class WaterShadowRenderer extends GeoEntityRenderer<WaterShadow> {
     public WaterShadowRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("water_shadow"), true));
         this.shadowRadius = 0.3F;
+        addRenderLayer(new EchoGlowLayer<>(this,
+                UnknownEchoes.id("textures/entity/water_shadow_glowing.png")));
     }
 
     @Override

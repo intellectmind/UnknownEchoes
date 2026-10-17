@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.ability;
 
+import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import cn.kurt6.unknown_echoes.journal.JournalManager;
 import cn.kurt6.unknown_echoes.journal.EchoCompletionManager;
@@ -66,7 +67,6 @@ public class EchoAbilityManager {
             return true;
         }
         if (getData(player).markBossDefeated(bossId.toString())) {
-            syncToClient(player);
             onBossFirstRecorded(player, bossId);
         }
         return hasDefeatedBoss(player, bossId);
@@ -83,21 +83,39 @@ public class EchoAbilityManager {
         if (!data.markBossDefeatedWithMechanisms(bossId.toString(), Arrays.asList(mechanismKeys))) {
             return false;
         }
-        if (changed) {
-            syncToClient(player);
-        }
         if (bossChanged) {
             onBossFirstRecorded(player, bossId);
+        } else if (changed) {
+            notifyBossProgress(player, bossId, "sync", () -> syncToClient(player));
         }
         return true;
     }
 
     private static void onBossFirstRecorded(ServerPlayer player, ResourceLocation bossId) {
-        ModAdvancements.awardBossDefeat(player, bossId.getPath());
-        ModAdvancements.checkGuardianAdvancements(player);
+        boolean grantsResearch = bossId.equals(UnknownEchoes.id("storm_weaver"));
+        // 同步也会检查成就；首杀研究点必须在任何通知前与击败记录一起提交。
+        if (grantsResearch) {
+            getData(player).addResearchPoints(EchoResearchLine.WIND, 1);
+        }
+        notifyBossProgress(player, bossId, "sync", () -> syncToClient(player));
+        if (grantsResearch) {
+            notifyBossProgress(player, bossId, "research",
+                    () -> ModAdvancements.checkResearchAdvancements(player));
+        }
+        notifyBossProgress(player, bossId, "boss",
+                () -> ModAdvancements.awardBossDefeat(player, bossId.getPath()));
+        notifyBossProgress(player, bossId, "guardians",
+                () -> ModAdvancements.checkGuardianAdvancements(player));
+    }
 
-        if (bossId.getPath().equals("storm_weaver")) {
-            addResearchPoints(player, EchoAbilityType.WIND_ECHO, 1);
+    private static void notifyBossProgress(ServerPlayer player, ResourceLocation bossId,
+                                           String notification, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException failure) {
+            // 通知失败不能截断其他参与者、公共掉落和场地收尾；致命 Error 仍向外传播。
+            UnknownEchoes.LOGGER.error("Boss progress notification {} failed for player {} and boss {}",
+                    notification, player.getUUID(), bossId, failure);
         }
     }
 
@@ -129,15 +147,41 @@ public class EchoAbilityManager {
     }
 
     public static boolean activateMechanisms(ServerPlayer player, String... mechanismKeys) {
+        return activateMechanisms(player, () -> { }, mechanismKeys);
+    }
+
+    /** 调用方先排除已结算记录；记录成功后执行不派发外部事件的提交，再检查成就。 */
+    public static boolean activateMechanisms(ServerPlayer player, Runnable afterRecord, String... mechanismKeys) {
         if (!getData(player).activateMechanisms(Arrays.asList(mechanismKeys))) {
             return false;
         }
+        afterRecord.run();
+        ModAdvancements.checkMechanismAdvancements(player);
+        return true;
+    }
+
+    public static boolean completeReservedMechanisms(ServerPlayer player, java.util.Map<String, String> replacements) {
+        return completeReservedMechanisms(player, () -> { }, replacements);
+    }
+
+    /** 替换成功后先提交不派发外部事件的会话状态，再检查成就。 */
+    public static boolean completeReservedMechanisms(ServerPlayer player, Runnable afterRecord,
+                                                     java.util.Map<String, String> replacements) {
+        if (!getData(player).completeReservedMechanisms(replacements)) return false;
+        afterRecord.run();
         ModAdvancements.checkMechanismAdvancements(player);
         return true;
     }
 
     public static boolean activateBeaconRoute(ServerPlayer player, ResourceLocation beaconId,
                                               ResourceLocation dimensionId, String... mechanismKeys) {
+        return activateBeaconRoute(player, beaconId, dimensionId, () -> { }, mechanismKeys);
+    }
+
+    /** 调用方先排除已激活记录；成功后提交不派发外部事件的费用，再同步进度。 */
+    public static boolean activateBeaconRoute(ServerPlayer player, ResourceLocation beaconId,
+                                              ResourceLocation dimensionId, Runnable afterRecord,
+                                              String... mechanismKeys) {
         EchoAbilityData data = getData(player);
         boolean changed = !hasActivatedBeacon(player, beaconId)
                 || !hasUnlockedDimension(player, dimensionId);
@@ -148,6 +192,7 @@ public class EchoAbilityManager {
                 Arrays.asList(mechanismKeys))) {
             return false;
         }
+        afterRecord.run();
         if (changed) {
             syncToClient(player);
         }
@@ -179,6 +224,7 @@ public class EchoAbilityManager {
 
     public static void revokeAbility(ServerPlayer player, EchoAbilityType ability) {
         if (getData(player).getUnlockedAbilities().remove(ability.getId())) {
+            DeepEchoAbilityHandler.onAbilityRevoked(player, ability);
             syncToClient(player);
         }
     }
@@ -232,5 +278,8 @@ public class EchoAbilityManager {
         ModAdvancements.checkMainlineAdvancements(player);
 
         RecipeUnlocks.checkAndUnlock(player);
+        cn.kurt6.unknown_echoes.journal.JourneyManager.sync(player);
+        cn.kurt6.unknown_echoes.study.WorkshopStudyManager.syncCollection(player);
+        cn.kurt6.unknown_echoes.block.puzzle.EchoChaseManager.syncCollection(player);
     }
 }

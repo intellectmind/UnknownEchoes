@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "spires",
+    "rock": {
+      "Name": "unknown_echoes:reef_limestone"
+    },
+    "accent": {
+      "Name": "minecraft:sea_lantern"
+    },
+    "height": 18,
+    "radius": 7,
+    "submerged": true,
+    "drape": 0,
+    "waterline": true
+  }
+}

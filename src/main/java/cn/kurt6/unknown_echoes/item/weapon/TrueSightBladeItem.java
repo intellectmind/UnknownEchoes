@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.entity.boss.AbyssWatcher;
 import cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
@@ -10,7 +11,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -47,6 +47,11 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
     }
 
     @Override
+    public boolean isFoil(ItemStack stack) {
+        return cn.kurt6.unknown_echoes.particle.ParticleRules.data(stack).total() == 50 || super.isFoil(stack);
+    }
+
+    @Override
     public boolean isValidRepairItem(ItemStack stack, ItemStack repairCandidate) {
         return repairCandidate.is(ModItems.ILLUSION_PRISM.get())
                 || repairCandidate.is(ModItems.BROKEN_REFLECTION.get())
@@ -79,8 +84,8 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
         player.setDeltaMovement(direction.x * 1.15D,
                 Math.max(0.05D, direction.y * 0.6D + 0.05D), direction.z * 1.15D);
         player.hurtMarked = true;
-        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.PLAYERS, 0.9F, 1.45F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_TRUE_SIGHT_BLADE_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 2);
         return true;
     }
@@ -100,8 +105,8 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
             target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 160, 0, true, false, true));
         }
         WeaponFx.groundRing(level, player, WeaponFxTheme.TRUE_SIGHT_BLADE, 10.0D);
-        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE,
-                SoundSource.PLAYERS, 1.0F, 1.7F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_TRUE_SIGHT_BLADE_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
     }
@@ -148,7 +153,7 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
                 real.addEffect(new MobEffectInstance(MobEffects.GLOWING, glowTicks, 0, false, false, false));
                 spawnRevealTrail(level, player, real);
                 level.playSound(null, player.blockPosition(),
-                        SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0F, 1.6F);
+                        ModSounds.WEAPON_TRUE_SIGHT_BLADE_SECONDARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
             }
         }
     }
@@ -192,8 +197,13 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
                         target.getY() + target.getBbHeight() * 0.6,
                         target.getZ() + Math.sin(angle) * 0.7, 1, 0.0, 0.0, 0.0, 0.0);
             }
-            level.playSound(null, target.blockPosition(),
-                    SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8F, 1.0F + count * 0.3F);
+            if (count == 1) {
+                level.playSound(null, target.blockPosition(),
+                    ModSounds.WEAPON_TRUE_SIGHT_BLADE_MARK_ONE.get(), SoundSource.PLAYERS, 0.8F, 1.0F);
+            } else {
+                level.playSound(null, target.blockPosition(),
+                    ModSounds.WEAPON_TRUE_SIGHT_BLADE_MARK_TWO.get(), SoundSource.PLAYERS, 0.8F, 1.0F);
+            }
             return;
         }
 
@@ -202,7 +212,7 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
         target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 40, 0, false, false, false));
         WeaponFx.heavyHitMark(level, target, WeaponFxTheme.TRUE_SIGHT_BLADE);
         level.playSound(null, target.blockPosition(),
-                SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.1F, 1.5F);
+                ModSounds.WEAPON_TRUE_SIGHT_BLADE_SHATTER.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private int nextMirrorMarkCount(CompoundTag data, String suffix, long now) {

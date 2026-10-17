@@ -19,16 +19,16 @@ import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 倒影回廊:镜湖"倒影入口"的落地实现(正典:镜面档案的阅览亭)。 */
-public class ReflectionVaultStructure extends SinglePieceStructure {
+public class ReflectionVaultStructure extends TerrainAnchoredStructure {
     public static final MapCodec<ReflectionVaultStructure> CODEC = simpleCodec(ReflectionVaultStructure::new);
 
     private static final int SIZE = 23;
     private static final int HEIGHT = 40;
+    private static final int BASEMENT_DEPTH = 7;
 
     public ReflectionVaultStructure(StructureSettings settings) {
         super(Piece::new, SIZE, SIZE, settings);
@@ -39,12 +39,8 @@ public class ReflectionVaultStructure extends SinglePieceStructure {
         Piece piece = new Piece(context.random(),
                 context.chunkPos().getMinBlockX(), context.chunkPos().getMinBlockZ());
         BoundingBox footprint = piece.getBoundingBox();
-        if (!LakeBedPlacement.hasSubmergedFootprint(context,
-                footprint.minX(), footprint.minZ(), SIZE, 7, 5)) {
-            return java.util.Optional.empty();
-        }
-        int floorY = LakeBedPieceHelper.averageOceanFloorByBaseHeight(
-                context, footprint.minX(), footprint.minZ(), SIZE, SIZE);
+        int floorY = LakeBedPlacement.findOceanFloor(context,
+                footprint.minX(), footprint.minZ(), SIZE, SIZE, 7, 5);
         if (!LakeBedPieceHelper.isSafeLakeFloor(floorY)) {
             return java.util.Optional.empty();
         }
@@ -65,14 +61,35 @@ public class ReflectionVaultStructure extends SinglePieceStructure {
         private boolean rejected = false;
 
         public Piece(RandomSource random, int x, int z) {
-            super(ModStructures.REFLECTION_VAULT_PIECE.get(), x, 64, z, SIZE, HEIGHT, SIZE,
+            super(ModStructures.REFLECTION_VAULT_PIECE.get(), x, 64 - BASEMENT_DEPTH, z,
+                    SIZE, HEIGHT + BASEMENT_DEPTH, SIZE,
                     Direction.Plane.HORIZONTAL.getRandomDirection(random));
         }
 
         public Piece(CompoundTag tag) {
-            super(ModStructures.REFLECTION_VAULT_PIECE.get(), tag);
+            super(ModStructures.REFLECTION_VAULT_PIECE.get(), includeBasementBounds(tag));
             this.lakeFloorY = tag.contains("LakeFloorY") ? tag.getInt("LakeFloorY") : -1;
             this.rejected = tag.getBoolean("Rejected");
+        }
+
+        private static CompoundTag includeBasementBounds(CompoundTag tag) {
+            if (tag.getInt("Height") != HEIGHT) {
+                return tag;
+            }
+            CompoundTag expanded = tag.copy();
+            int[] bounds = expanded.getIntArray("BB");
+            if (bounds.length == 6) {
+                bounds[1] -= BASEMENT_DEPTH;
+                expanded.putIntArray("BB", bounds);
+                expanded.putInt("Height", HEIGHT + BASEMENT_DEPTH);
+            }
+            return expanded;
+        }
+
+        // 地下足印向下扩展，局部零层仍是湖床下方一格。
+        @Override
+        protected int getWorldY(int localY) {
+            return super.getWorldY(localY + BASEMENT_DEPTH);
         }
 
         @Override
@@ -87,7 +104,7 @@ public class ReflectionVaultStructure extends SinglePieceStructure {
                 return;
             }
             this.lakeFloorY = floorY;
-            this.boundingBox.move(0, floorY - this.boundingBox.minY() - 1, 0);
+            this.boundingBox.move(0, floorY - this.boundingBox.minY() - 1 - BASEMENT_DEPTH, 0);
         }
 
         private boolean adjustToLakeFloor(WorldGenLevel level, BoundingBox chunkBox, ChunkGenerator generator) {
@@ -111,7 +128,7 @@ public class ReflectionVaultStructure extends SinglePieceStructure {
                 return false;
             }
 
-            this.boundingBox.move(0, this.lakeFloorY - this.boundingBox.minY() - 1, 0);
+            this.boundingBox.move(0, this.lakeFloorY - this.boundingBox.minY() - 1 - BASEMENT_DEPTH, 0);
             return true;
         }
 
@@ -179,6 +196,7 @@ public class ReflectionVaultStructure extends SinglePieceStructure {
 
             for (int x = c - 3; x <= c + 3; x++) {
                 for (int z = c - 3; z <= c + 3; z++) {
+                    this.placeBlock(level, anchored, x, -7, z, box);
                     this.placeBlock(level, anchored, x, -6, z, box);
                     boolean shaft = x == c && z == c + 2;
                     if (!shaft) {
@@ -192,10 +210,12 @@ public class ReflectionVaultStructure extends SinglePieceStructure {
             }
 
             this.placeBlock(level, water, c, -1, c + 2, box);
-            this.placeBlock(level, ModBlocks.TIDE_SENSOR_DOOR.get().defaultBlockState(), c, 0, c + 2, box);
 
             this.placeBlock(level, mirror, c, -5, c, box);
-            buildAccessibleChest(level, random, box, c, -4, c, ModLootTables.REFLECTION_INNER_VAULT);
+            // 内室战利品不能推进上层残柱的装饰随机流。
+            RandomSource vaultRandom = RandomSource.create(this.boundingBox.minX() * 341873128712L
+                    ^ this.boundingBox.minZ() * 132897987541L);
+            buildAccessibleChest(level, vaultRandom, box, c, -4, c, ModLootTables.REFLECTION_INNER_VAULT);
             this.placeBlock(level, ModBlocks.TIDE_RUNE.get().defaultBlockState(), c - 2, -5, c - 2, box);
             this.placeBlock(level, ModBlocks.TIDE_RUNE.get().defaultBlockState(), c + 2, -5, c - 2, box);
             this.placeBlock(level, runeBricks, c - 2, -2, c + 2, box);
@@ -246,11 +266,25 @@ public class ReflectionVaultStructure extends SinglePieceStructure {
             buildStairCornice(level, box, c, 11, c, Footprint.square(7), ModBlocks.MIRROR_DUST_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.MIRROR_DUST_BRICK_SLAB.get().defaultBlockState(), true);
             buildSpireFinial(level, box, c, 12, c, 3, 5,
                     mirror, cracked, ModBlocks.REEF_LANTERN_GLASS.get().defaultBlockState());
+            // 倒影冠层：水下穹顶上方的三根错位镜柱，形成从水面可见的反射尖峰。
+            architecturalRing(level, box, c, 19, c, 7, cracked);
+            for (int[] shard : new int[][]{{c - 5, c - 2, 24}, {c + 5, c + 1, 27}, {c, c + 5, 22}}) {
+                for (int y = 18; y <= shard[2]; y++) {
+                    this.placeBlock(level, y % 2 == 0 ? mirrorStone : mirror,
+                            shard[0], y, shard[1], box);
+                }
+                this.placeBlock(level, runeBricks, shard[0], shard[2] + 1, shard[1], box);
+            }
             buildAccessibleChest(level, random, box, c + 7, 2, c - 4,
                     ModLootTables.MIRROR_LAKE_CACHE);
 
             placeSubmergedStructureSpawner(level, random, box, c - 7, 1, c + 5,
                     ModEntities.WATER_SHADOW.get(), mirrorStone, cracked);
+            this.placeBlock(level, ModBlocks.TIDE_SENSOR_DOOR.get().defaultBlockState(), c, 0, c + 2, box);
+            dressStructure(level, box, "reflection_vault");
+            // 竖井侧口须低于潮汐符文；上层宝箱的承台不能封住通往感应门的潜游通道。
+            this.placeBlock(level, water, c, 1, c + 1, box);
+            this.placeBlock(level, water, c, 1, c + 2, box);
         }
     }
 }

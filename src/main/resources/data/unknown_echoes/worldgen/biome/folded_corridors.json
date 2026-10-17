@@ -3,31 +3,65 @@
   "temperature": 0.35,
   "downfall": 0.0,
   "effects": {
-    "fog_color": 3164515,
-    "sky_color": 2372418,
-    "water_color": 3439028,
-    "water_fog_color": 1455162,
-    "grass_color": 5009734,
-    "foliage_color": 4354888,
+    "fog_color": 8690605,
+    "sky_color": 3951723,
+    "water_color": 6328224,
+    "water_fog_color": 2571862,
+    "grass_color": 7969173,
+    "foliage_color": 7969173,
     "ambient_particle": {
-      "options": { "type": "minecraft:end_rod" },
-      "probability": 0.004
+      "options": {
+        "type": "minecraft:end_rod"
+      },
+      "probability": 0.0006
     },
     "mood_sound": {
       "sound": "minecraft:ambient.cave",
-      "tick_delay": 9000,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.deep_dark",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": "minecraft:ambient.soul_sand_valley.additions",
+      "tick_chance": 0.0003
     }
   },
   "carvers": {
-    "air": ["minecraft:cave", "minecraft:canyon"]
+    "air": [
+      "minecraft:cave",
+      "minecraft:canyon"
+    ]
   },
   "features": [
-    [], [], [], [], [], [],
-    ["unknown_echoes:folded_slate_disk", "unknown_echoes:resonant_folded_slate_disk", "unknown_echoes:echo_cliff_stone_disk", "unknown_echoes:wind_etched_stone_disk"],
-    [], [],
-    ["unknown_echoes:seam_grass_patch", "unknown_echoes:archive_fungus_patch", "unknown_echoes:resonant_mushroom_patch", "unknown_echoes:folded_sporebloom_patch", "unknown_echoes:crystal_song_cluster_disk"],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:folded_slate_disk",
+      "unknown_echoes:resonant_folded_slate_disk",
+      "unknown_echoes:echo_cliff_stone_disk",
+      "unknown_echoes:wind_etched_stone_disk"
+    ],
+    [],
+    [
+      "unknown_echoes:folded_corridors_landform"
+    ],
+    [
+      "unknown_echoes:seam_grass_patch",
+      "unknown_echoes:archive_fungus_patch",
+      "unknown_echoes:resonant_mushroom_patch",
+      "unknown_echoes:folded_sporebloom_patch",
+      "unknown_echoes:crystal_song_cluster_disk"
+    ],
     []
   ],
   "spawners": {
@@ -41,6 +75,12 @@
       {
         "type": "unknown_echoes:folded_mantis",
         "weight": 18,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:rift_page_stalker",
+        "weight": 3,
         "minCount": 1,
         "maxCount": 2
       }
@@ -59,8 +99,12 @@
         "maxCount": 3
       }
     ],
-    "ambient": [], "axolotls": [],
-    "underground_water_creature": [], "water_creature": [], "water_ambient": [], "misc": []
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
   },
   "spawn_costs": {}
 }

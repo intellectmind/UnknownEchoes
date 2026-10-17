@@ -15,12 +15,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 主世界空间裂隙：细小的悬空裂纹，与世界事件裂隙共用紫水晶和末地烛表现。 */
-public class SpatialRiftStructure extends SinglePieceStructure {
+public class SpatialRiftStructure extends TerrainAnchoredStructure {
     public static final MapCodec<SpatialRiftStructure> CODEC = simpleCodec(SpatialRiftStructure::new);
 
     private static final int WIDTH = 25;
@@ -108,13 +107,30 @@ public class SpatialRiftStructure extends SinglePieceStructure {
             architecturalRing(level, box, c, 19, c, 7, glow);
             architecturalRing(level, box, c, 27, c, 4, obsidian);
 
+            // 断裂悬桥：碎片沿不同高度错位，强调裂隙正在把建筑拉开。
+            for (int i = 0; i < 6; i++) {
+                int x = c - 10 + i * 3;
+                int z = c + 7 - (i % 2) * 2;
+                int y = 12 + i * 2;
+                this.placeBlock(level, i % 3 == 0 ? budding : calcite, x, y, z, box);
+                this.placeBlock(level, obsidian, x + 1, y, z, box);
+                if (i % 2 == 0) {
+                    this.placeBlock(level, rod, x, y + 1, z, box);
+                }
+            }
+            for (int i = 0; i < 4; i++) {
+                this.placeBlock(level, glow, c + 6, 15 + i * 3, c - 8 + i * 2, box);
+            }
+
             buildAccessibleChest(level, random, box, c + 7, 2, c + 6,
                     ModLootTables.SPATIAL_RIFT_CHEST);
-            scatterArchitecturalDebris(level, random, box, c, 2, c,
-                    5, 10, 24, calcite, amethyst);
+            scatterArchitecturalDebris(level, box, "spatial_rift", c, 2, c,
+                    calcite, amethyst);
 
             buildProjectionVaultNiche(level, random, box, c, 1, c - 6, Direction.NORTH,
-                    amethyst, ModLootTables.SPATIAL_RIFT_CHEST);
+                    amethyst, ModLootTables.PUZZLE_SPATIAL_RIFT_CHEST);
+            anchorGroundColumns(level, box, 0, calcite);
+            dressStructure(level, box, "spatial_rift");
         }
 
         @Override

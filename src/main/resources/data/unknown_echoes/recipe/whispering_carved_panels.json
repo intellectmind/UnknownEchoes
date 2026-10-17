@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "P",
+    "P"
+  ],
+  "key": {
+    "P": {
+      "item": "unknown_echoes:whispering_timber_frame"
+    }
+  },
+  "result": {
+    "id": "unknown_echoes:whispering_carved_panels",
+    "count": 2
+  }
+}

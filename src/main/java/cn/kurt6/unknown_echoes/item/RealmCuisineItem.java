@@ -46,37 +46,39 @@ public final class RealmCuisineItem extends Item {
 
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof Player player && !canBenefit(player)) {
-            return stack;
-        }
-        ItemStack result = super.finishUsingItem(stack, level, entity);
-        if (level.isClientSide) {
-            return result;
-        }
+        return ConsumableCompletion.finish(this, stack, entity, () -> {
+            if (entity instanceof Player player && !canBenefit(player)) {
+                return stack;
+            }
+            ItemStack result = super.finishUsingItem(stack, level, entity);
+            if (level.isClientSide) {
+                return result;
+            }
 
-        switch (kind) {
-            case FAR_BELL_TRAIL_LOAF -> {
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.MOVEMENT_SPEED, 1800, 0, true, false, true));
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.DIG_SPEED, 1200, 0, true, false, true));
+            switch (kind) {
+                case FAR_BELL_TRAIL_LOAF -> {
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.MOVEMENT_SPEED, 1800, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.DIG_SPEED, 1200, 0, true, false, true));
+                }
+                case PRISMATIC_CANOPY_TART -> {
+                    entity.removeEffect(MobEffects.BLINDNESS);
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.NIGHT_VISION, 3600, 0, true, false, true));
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.REGENERATION, 200, 1, true, false, true));
+                }
+                case INTERLAYER_PROVISION_PIE -> {
+                    entity.removeEffect(MobEffects.DARKNESS);
+                    entity.fallDistance = 0.0F;
+                    FoodEffectSupport.applyAbsorption(entity, 1800, 1, 8.0F);
+                    entity.addEffect(new MobEffectInstance(
+                            MobEffects.DAMAGE_RESISTANCE, 600, 0, true, false, true));
+                }
             }
-            case PRISMATIC_CANOPY_TART -> {
-                entity.removeEffect(MobEffects.BLINDNESS);
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.NIGHT_VISION, 3600, 0, true, false, true));
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.REGENERATION, 200, 1, true, false, true));
-            }
-            case INTERLAYER_PROVISION_PIE -> {
-                entity.removeEffect(MobEffects.DARKNESS);
-                entity.fallDistance = 0.0F;
-                FoodEffectSupport.applyAbsorption(entity, 1800, 1, 8.0F);
-                entity.addEffect(new MobEffectInstance(
-                        MobEffects.DAMAGE_RESISTANCE, 600, 0, true, false, true));
-            }
-        }
-        return result;
+            return result;
+        });
     }
 
     private boolean canBenefit(Player player) {

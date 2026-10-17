@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:fracture_surveyor"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.journey_deep_expedition.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.journey_deep_expedition.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:journey_first_steps",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

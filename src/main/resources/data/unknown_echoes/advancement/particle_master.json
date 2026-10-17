@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:particle_core"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.particle_master.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.particle_master.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:particle_capacity",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

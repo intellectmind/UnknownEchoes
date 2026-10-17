@@ -1,6 +1,5 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
-import cn.kurt6.unknown_echoes.registry.ModItems;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.damagesource.DamageSource;
@@ -8,7 +7,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.AbstractSchoolingFish;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -20,7 +18,7 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /** 珍珠背鳐:贴近镜湖水底滑翔的宽翼被动鱼类。 */
-public class PearlbackRay extends AbstractSchoolingFish implements GeoEntity {
+public class PearlbackRay extends EchoSchoolingFish implements GeoEntity {
     private static final RawAnimation SWIM_ANIM =
             RawAnimation.begin().thenLoop("animation.pearlback_ray.swim");
     private static final RawAnimation IDLE_ANIM =
@@ -30,7 +28,7 @@ public class PearlbackRay extends AbstractSchoolingFish implements GeoEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    public PearlbackRay(EntityType<? extends AbstractSchoolingFish> type, Level level) {
+    public PearlbackRay(EntityType<? extends EchoSchoolingFish> type, Level level) {
         super(type, level);
     }
 
@@ -43,11 +41,6 @@ public class PearlbackRay extends AbstractSchoolingFish implements GeoEntity {
     @Override
     public int getMaxSchoolSize() {
         return 3;
-    }
-
-    @Override
-    public ItemStack getBucketItemStack() {
-        return new ItemStack(ModItems.PEARLBACK_RAY_BUCKET.get());
     }
 
     @Override

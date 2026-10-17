@@ -14,6 +14,7 @@ final class MiniBossRewardTable {
     }
 
     static void grantStormWeaver(MiniBossEntity boss, boolean firstKill) {
+        if (!firstKill) drop(boss, new ItemStack(ModItems.THUNDER_PARTICLE_CRYSTAL.get(), randomBetween(boss, 1, 2)));
         grant(boss, firstKill, new Spec(
                 ModItems.STORM_SPINDLE, 1, 23, ModItems.WIND_ENHANCE_CORE,
                 ModItems.CRYSTAL_FEATHER, ModItems.WINDWOVEN_THREAD, ModItems.WIND_ENHANCE_CORE));
@@ -30,6 +31,7 @@ final class MiniBossRewardTable {
     }
 
     static void grantTideLanternKeeper(MiniBossEntity boss, boolean firstKill) {
+        if (!firstKill) drop(boss, new ItemStack(ModItems.FROST_PARTICLE_CRYSTAL.get(), randomBetween(boss, 1, 2)));
         grant(boss, firstKill, new Spec(
                 ModItems.BROKEN_LANTERN_LENS, 1, 43, ModItems.TIDE_UPGRADE_CORE,
                 ModItems.TIDE_PEARL, ModItems.MIRROR_TIDE_ALLOY_PLATE, ModItems.TIDE_UPGRADE_CORE));
@@ -48,6 +50,7 @@ final class MiniBossRewardTable {
     }
 
     static void grantMirrorDustButler(MiniBossEntity boss, boolean firstKill) {
+        if (!firstKill) drop(boss, new ItemStack(ModItems.SHADOW_PARTICLE_CRYSTAL.get(), randomBetween(boss, 1, 2)));
         grant(boss, firstKill, new Spec(
                 ModItems.MIRROR_STAFF_CORE, 1, 56, ModItems.TRUE_SIGHT_UPGRADE_CORE,
                 ModItems.POLISHED_MIRROR_DUST, ModItems.DECOY_SHARD, ModItems.TRUE_SIGHT_UPGRADE_CORE));
@@ -65,6 +68,7 @@ final class MiniBossRewardTable {
     }
 
     static void grantSilentPriest(MiniBossEntity boss, boolean firstKill) {
+        if (!firstKill) drop(boss, new ItemStack(ModItems.HOLY_PARTICLE_CRYSTAL.get(), randomBetween(boss, 1, 2)));
         grant(boss, firstKill, new Spec(
                 ModItems.SILENT_CANDLE_WICK, 1, 70, ModItems.ATTUNED_ECHO_GEM,
                 ModItems.SILENT_RESIN, ModItems.MOSS_SHELL_PLATE, null));
@@ -99,6 +103,7 @@ final class MiniBossRewardTable {
     }
 
     static void grantDreamBloomKeeper(MiniBossEntity boss, boolean firstKill) {
+        if (!firstKill) drop(boss, new ItemStack(ModItems.VENOM_PARTICLE_CRYSTAL.get(), randomBetween(boss, 1, 2)));
         grant(boss, firstKill, new Spec(
                 ModItems.DREAM_MIST_VINE, 2, 86, ModItems.ATTUNED_ECHO_GEM,
                 ModItems.DREAM_NECTAR, ModItems.ECHO_AMBER, null));
@@ -116,6 +121,7 @@ final class MiniBossRewardTable {
     }
 
     static void grantInvertedGatekeeper(MiniBossEntity boss, boolean firstKill) {
+        if (!firstKill) drop(boss, new ItemStack(ModItems.EARTH_PARTICLE_CRYSTAL.get(), randomBetween(boss, 1, 2)));
         if (firstKill) {
             drop(boss, new ItemStack(ModItems.SPACE_ANCHOR_SHARD.get(), 2));
             drop(boss, new ItemStack(ModItems.INVERTED_BOW_LIMB.get(), 2));
@@ -130,6 +136,7 @@ final class MiniBossRewardTable {
     }
 
     static void grantAshScribe(MiniBossEntity boss, boolean firstKill) {
+        if (!firstKill) drop(boss, new ItemStack(ModItems.FIRE_PARTICLE_CRYSTAL.get(), randomBetween(boss, 1, 2)));
         if (firstKill) {
             drop(boss, new ItemStack(ModItems.LAST_RECORD_FRAGMENT.get()));
             drop(boss, new ItemStack(ModItems.ASH_SCRIPT_MECHANISM.get(), 2));
@@ -188,7 +195,7 @@ final class MiniBossRewardTable {
     }
 
     private static void drop(MiniBossEntity boss, ItemStack stack) {
-        BossMaterialRewards.drop(boss, stack);
+        boss.dropSettlementItem(stack);
     }
 
     private static ItemStack ancientPage(int pageId) {

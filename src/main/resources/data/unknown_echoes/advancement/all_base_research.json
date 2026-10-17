@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:research_true_sight",
+  "parent": "unknown_echoes:first_research",
   "display": {
     "icon": {
       "id": "unknown_echoes:echo_lens"
@@ -12,7 +12,7 @@
     },
     "frame": "goal",
     "show_toast": true,
-    "announce_to_chat": true,
+    "announce_to_chat": false,
     "hidden": false
   },
   "criteria": {

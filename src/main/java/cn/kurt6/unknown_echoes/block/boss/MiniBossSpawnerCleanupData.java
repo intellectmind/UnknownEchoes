@@ -23,6 +23,8 @@ final class MiniBossSpawnerCleanupData extends SavedData {
 
     private final Map<Long, Set<UUID>> defeated = new HashMap<>();
     private final Map<Long, Set<UUID>> destroyed = new HashMap<>();
+    /** 同一坐标回放期间，新通知只入队，避免回调递归消费尚未确认的记录。 */
+    private final Set<Long> applying = new HashSet<>();
 
     static void queueDefeated(ServerLevel level, BlockPos spawnerPos, UUID bossUuid) {
         MiniBossSpawnerCleanupData data = get(level);
@@ -43,20 +45,42 @@ final class MiniBossSpawnerCleanupData extends SavedData {
     static void apply(ServerLevel level, BlockPos spawnerPos, MiniBossSpawnerBlockEntity spawner) {
         MiniBossSpawnerCleanupData data = get(level);
         long key = spawnerPos.asLong();
-        Set<UUID> defeatedBosses = data.defeated.remove(key);
-        Set<UUID> destroyedBosses = data.destroyed.remove(key);
-        if (defeatedBosses != null) {
-            for (UUID bossUuid : defeatedBosses) {
+        if (!data.applying.add(key)) {
+            return;
+        }
+        try {
+            // 击败必须先于销毁；保留记录直到回调返回，异常后仍可存档并重放。
+            for (UUID bossUuid : Set.copyOf(data.defeated.getOrDefault(key, Set.of()))) {
+                var chunk = level.getChunkSource().getChunkNow(spawnerPos.getX() >> 4, spawnerPos.getZ() >> 4);
+                if (chunk == null || chunk.getBlockEntity(spawnerPos) != spawner) {
+                    return;
+                }
                 spawner.onBossDefeated(bossUuid);
+                data.complete(data.defeated, key, bossUuid);
             }
-        }
-        if (destroyedBosses != null) {
-            for (UUID bossUuid : destroyedBosses) {
+            for (UUID bossUuid : Set.copyOf(data.destroyed.getOrDefault(key, Set.of()))) {
+                var chunk = level.getChunkSource().getChunkNow(spawnerPos.getX() >> 4, spawnerPos.getZ() >> 4);
+                if (chunk == null || chunk.getBlockEntity(spawnerPos) != spawner) {
+                    return;
+                }
+                if (data.defeated.getOrDefault(key, Set.of()).contains(bossUuid)) {
+                    continue;
+                }
                 spawner.onBossDestroyed(bossUuid);
+                data.complete(data.destroyed, key, bossUuid);
             }
+        } finally {
+            data.applying.remove(key);
         }
-        if (defeatedBosses != null || destroyedBosses != null) {
-            data.setDirty();
+    }
+
+    private void complete(Map<Long, Set<UUID>> pending, long key, UUID bossUuid) {
+        Set<UUID> bosses = pending.get(key);
+        if (bosses != null && bosses.remove(bossUuid)) {
+            if (bosses.isEmpty()) {
+                pending.remove(key);
+            }
+            setDirty();
         }
     }
 

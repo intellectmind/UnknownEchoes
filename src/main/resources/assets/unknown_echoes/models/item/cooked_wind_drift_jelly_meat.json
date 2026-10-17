@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "unknown_echoes:item/cooked_wind_drift_jelly_meat"
+  }
+}

@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.model.DefaultedEntityGeoModel;
+import cn.kurt6.unknown_echoes.client.model.LimitedHeadGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public class ForgottenColossusRenderer extends GeoEntityRenderer<ForgottenColossus> {
@@ -17,7 +17,7 @@ public class ForgottenColossusRenderer extends GeoEntityRenderer<ForgottenColoss
     private static final double MODEL_Y_OFFSET = 2.0D * MODEL_SCALE / 16.0D + 0.02D;
 
     public ForgottenColossusRenderer(EntityRendererProvider.Context context) {
-        super(context, new DefaultedEntityGeoModel<>(UnknownEchoes.id("forgotten_colossus"), true));
+        super(context, new LimitedHeadGeoModel<>(UnknownEchoes.id("forgotten_colossus"), "head", 8.0F, -2.0F, 4.0F));
         this.shadowRadius = 2.0F;
 
         this.withScale(MODEL_SCALE);

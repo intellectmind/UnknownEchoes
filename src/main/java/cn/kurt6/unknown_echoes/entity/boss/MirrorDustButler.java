@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import cn.kurt6.unknown_echoes.fx.CombatFx;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
@@ -97,6 +98,7 @@ public class MirrorDustButler extends MiniBossEntity {
 
     /** true = 假像(生命表现 1:任何玩家伤害直接击碎)。 */
     private boolean isImage = false;
+    private boolean cleaningImages = false;
     private UUID ownerUuid = null;
     private final List<UUID> imageUuids = new ArrayList<>();
 
@@ -311,6 +313,8 @@ public class MirrorDustButler extends MiniBossEntity {
             }
             serverLevel.sendParticles(this.fxTheme().glint(),
                     body.getX(), body.getY() + 1.0, body.getZ(), 10, 0.3, 0.6, 0.3, 0.02);
+            CombatFx.teleport(serverLevel, body.position(), destination, body.getBbWidth() * 0.65 + 0.3,
+                    body.getBbHeight(), this.fxTheme().coreDust(1));
             body.teleportTo(destination.x, destination.y, destination.z);
             body.getNavigation().stop();
             serverLevel.sendParticles(this.fxTheme().glint(),
@@ -417,6 +421,9 @@ public class MirrorDustButler extends MiniBossEntity {
 
     @Override
     public void aiStep() {
+        if (this.shouldStopBossAi()) {
+            return;
+        }
         if (!this.level().isClientSide && this.isImage
                 && this.level() instanceof ServerLevel serverLevel
                 && !BossNbtData.isHorizontalAreaLoaded(
@@ -509,6 +516,8 @@ public class MirrorDustButler extends MiniBossEntity {
         this.boltTelegraphTicks = BOLT_TELEGRAPH_TICKS;
         this.boltCooldown = 130;
         this.getNavigation().stop();
+        serverLevel.playSound(null, this.arenaAnchor(), ModSounds.MIRROR_DUST_BUTLER_ATTACK_VOLLEY_WARN.get(),
+                SoundSource.HOSTILE, 1.1F, 1.0F);
         this.triggerAnim("attack_controller", "volley");
         for (MirrorDustButler image : this.aliveImages(serverLevel)) {
             image.triggerAnim("attack_controller", "volley");
@@ -616,7 +625,6 @@ public class MirrorDustButler extends MiniBossEntity {
         this.veilCooldown = 320;
         this.veilTicks = VEIL_DURATION_TICKS;
         this.triggerAnim("attack_controller", "veil");
-        this.playSound(ModSounds.MIRROR_DUST_BUTLER_VEIL.get(), 0.8F, 1.0F);
         serverLevel.playSound(null, this.blockPosition(),
                 ModSounds.MIRROR_DUST_BUTLER_VEIL.get(), SoundSource.HOSTILE, 1.4F, 1.0F);
         double veilRadius = ARENA_RADIUS + 4.0D;
@@ -658,6 +666,7 @@ public class MirrorDustButler extends MiniBossEntity {
         this.orbVel = target.getEyePosition().subtract(this.orbPos).normalize().scale(0.35);
         this.orbTicks = 70;
         this.triggerAnim("attack_controller", "orb");
+        this.playSound(ModSounds.MIRROR_DUST_BUTLER_ATTACK_ORB_RELEASE.get(), 1.1F, 1.0F);
     }
 
     private void tickOrb(ServerLevel serverLevel) {
@@ -692,6 +701,8 @@ public class MirrorDustButler extends MiniBossEntity {
             BossFx.cinematicImpact(serverLevel,
                     victim.position().add(0.0D, victim.getBbHeight() * 0.5D, 0.0D),
                     18.0D, 0.22F, 4, 0xC4F2FF);
+            serverLevel.playSound(null, blockPos, ModSounds.MIRROR_DUST_BUTLER_ATTACK_ORB_HIT.get(),
+                    SoundSource.HOSTILE, 1.0F, 1.0F);
             this.orbTicks = 0;
             break;
         }
@@ -710,45 +721,62 @@ public class MirrorDustButler extends MiniBossEntity {
     }
 
     @Override
-    public void die(DamageSource source) {
+    protected boolean discardOnDeath() {
+        return this.isImage;
+    }
 
-        if (this.isImage) {
-            this.discard();
-            return;
-        }
-        boolean wasDead = this.dead;
-        super.die(source);
-        if (wasDead || !this.dead) {
-            return;
-        }
-        if (this.level() instanceof ServerLevel serverLevel) {
-
-            this.discardImages(serverLevel, true);
-            serverLevel.sendParticles(ParticleTypes.END_ROD,
-                    this.getX(), this.getY() + 1.2, this.getZ(), 30, 1.0, 1.0, 1.0, 0.06);
+    @Override
+    protected void onDeathCommitted(ServerLevel serverLevel, Vec3 deathPos) {
+        this.discardImages(serverLevel, true);
+        if (!isCurrentDeathPresentation(serverLevel, deathPos)) return;
+        serverLevel.sendParticles(ParticleTypes.END_ROD,
+                deathPos.x, deathPos.y + 1.2, deathPos.z, 30, 1.0, 1.0, 1.0, 0.06);
+        if (isCurrentDeathPresentation(serverLevel, deathPos)) {
             serverLevel.playSound(null, this.blockPosition(),
                     ModSounds.MIRROR_DUST_BUTLER_DEATH.get(), SoundSource.HOSTILE, 1.6F, 1.0F);
         }
     }
 
     private void discardImages(ServerLevel serverLevel, boolean playFx) {
-        for (MirrorDustButler image : this.aliveImages(serverLevel)) {
-            if (playFx) {
-                serverLevel.sendParticles(ParticleTypes.ASH,
-                        image.getX(), image.getY() + 1.0, image.getZ(), 24, 0.5, 0.8, 0.5, 0.06);
+        if (this.cleaningImages) return;
+        this.cleaningImages = true;
+        try {
+            for (UUID id : List.copyOf(this.imageUuids)) {
+                runDeathStep("image cleanup", () -> {
+                    var entity = serverLevel.getEntity(id);
+                    if (entity == null) return;
+                    if (!(entity instanceof MirrorDustButler image) || image.level() != serverLevel
+                            || !image.isImage || !this.getUUID().equals(image.ownerUuid)) {
+                        this.imageUuids.remove(id);
+                        return;
+                    }
+                    Vec3 imagePos = image.position();
+                    try {
+                        image.discard();
+                    } finally {
+                        if (image.isRemoved()) this.imageUuids.remove(id);
+                    }
+                    if (playFx && image.isRemoved()) {
+                        serverLevel.sendParticles(ParticleTypes.ASH,
+                                imagePos.x, imagePos.y + 1.0, imagePos.z, 24, 0.5, 0.8, 0.5, 0.06);
+                    }
+                });
             }
-            image.discard();
+        } finally {
+            this.cleaningImages = false;
         }
-        this.imageUuids.clear();
     }
 
     @Override
     public void remove(Entity.RemovalReason reason) {
-        if (!this.isImage && reason.shouldDestroy()
-                && this.level() instanceof ServerLevel serverLevel) {
-            this.discardImages(serverLevel, false);
+        try {
+            ServerLevel cleanupLevel = this.deathCleanupLevel();
+            if ((!this.isImage || this.hasCommittedDeath()) && reason.shouldDestroy() && cleanupLevel != null) {
+                runDeathStep("image cleanup on removal", () -> this.discardImages(cleanupLevel, false));
+            }
+        } finally {
+            super.remove(reason);
         }
-        super.remove(reason);
     }
 
     @Override
@@ -816,5 +844,13 @@ public class MirrorDustButler extends MiniBossEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
+    }
+    @Override
+    public int musicStage() {
+        if (this.isImage && this.level() instanceof ServerLevel level && this.ownerUuid != null
+                && level.getEntity(this.ownerUuid) instanceof MirrorDustButler owner && !owner.isImage) {
+            return owner.musicStage();
+        }
+        return this.exposedTicks > 0 ? 1 : this.getHealth() < this.getMaxHealth() * 0.4F ? 2 : 0;
     }
 }

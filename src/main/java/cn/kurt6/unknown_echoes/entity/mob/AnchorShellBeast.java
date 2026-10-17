@@ -32,6 +32,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -58,6 +60,7 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
     private int pulseCooldown;
     private int resonanceCooldown;
     private boolean nearAnchor;
+    private BlockPos cachedAnchor;
 
     public AnchorShellBeast(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -114,7 +117,7 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
         if (this.level().isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(this.level() instanceof ServerLevel serverLevel) || player.isSpectator()) {
+        if (!(this.level() instanceof ServerLevel serverLevel) || !this.canResonate(serverLevel, player)) {
             return InteractionResult.CONSUME;
         }
         this.nearAnchor = this.scanForAnchor();
@@ -132,32 +135,105 @@ public class AnchorShellBeast extends PathfinderMob implements GeoEntity {
             stack.shrink(1);
         }
         this.resonanceCooldown = RESONANCE_COOLDOWN_TICKS;
+        Vec3 pulseCenter = this.position();
+        AABB pulseBounds = this.getBoundingBox().inflate(6.0D);
         this.triggerAnim("pulse_controller", "pulse");
         serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                this.getX(), this.getY() + 0.55D, this.getZ(),
+                pulseCenter.x, pulseCenter.y + 0.55D, pulseCenter.z,
                 48, 1.4D, 0.45D, 1.4D, 0.08D);
-        serverLevel.playSound(null, this.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
+        serverLevel.playSound(null, BlockPos.containing(pulseCenter), SoundEvents.RESPAWN_ANCHOR_CHARGE,
                 SoundSource.NEUTRAL, 1.0F, 0.9F);
+        if (!this.canResonate(serverLevel, player)) {
+            return InteractionResult.CONSUME;
+        }
         for (Player nearby : serverLevel.getEntitiesOfClass(Player.class,
-                this.getBoundingBox().inflate(6.0D),
-                target -> target.isAlive() && !target.isSpectator()
-                        && target.distanceToSqr(this) <= 6.0D * 6.0D)) {
+                pulseBounds, target -> canReceiveResonance(serverLevel, pulseCenter, target))) {
+            if (!this.canResonate(serverLevel, player)) {
+                return InteractionResult.CONSUME;
+            }
+            if (!canReceiveResonance(serverLevel, pulseCenter, nearby)) {
+                continue;
+            }
             nearby.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING,
                     120, 0, true, false, true));
+            if (!this.canResonate(serverLevel, player)) {
+                return InteractionResult.CONSUME;
+            }
+            if (!canReceiveResonance(serverLevel, pulseCenter, nearby)) {
+                continue;
+            }
             nearby.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE,
                     60, 0, true, false, true));
         }
         return InteractionResult.CONSUME;
     }
 
+    private boolean canResonate(ServerLevel level, Player player) {
+        return this.level() == level && this.isAlive() && player.level() == level
+                && player.isAlive() && !player.isSpectator()
+                && player.canInteractWithEntity(this, 1.0D);
+    }
+
+    private boolean canReceiveResonance(ServerLevel level, Vec3 center, Player target) {
+        return target.level() == level && target.isAlive() && !target.isSpectator()
+                && target.distanceToSqr(center) <= 6.0D * 6.0D;
+    }
+
     private boolean scanForAnchor() {
+        if (!(this.level() instanceof ServerLevel source)) {
+            this.cachedAnchor = null;
+            return false;
+        }
         BlockPos center = this.blockPosition();
-        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-5, -2, -5), center.offset(5, 2, 5))) {
-            if (!this.level().hasChunkAt(pos)) {
+        int minChunkX = (center.getX() - 5) >> 4;
+        int minChunkZ = (center.getZ() - 5) >> 4;
+        int cachedIndex = -1;
+        LevelChunk cachedChunk = null;
+        if (this.cachedAnchor != null
+                && Math.abs(this.cachedAnchor.getX() - center.getX()) <= 5
+                && Math.abs(this.cachedAnchor.getY() - center.getY()) <= 2
+                && Math.abs(this.cachedAnchor.getZ() - center.getZ()) <= 5
+                && !source.isOutsideBuildHeight(this.cachedAnchor)) {
+            int chunkX = this.cachedAnchor.getX() >> 4;
+            int chunkZ = this.cachedAnchor.getZ() >> 4;
+            cachedIndex = (chunkX - minChunkX) + 2 * (chunkZ - minChunkZ);
+            cachedChunk = source.getChunkSource().getChunkNow(chunkX, chunkZ);
+            if (cachedChunk != null) {
+                BlockState state = cachedChunk.getBlockState(this.cachedAnchor);
+                if (state.is(ModBlocks.SPACE_ANCHOR.get()) || state.is(ModBlocks.VOID_STABILIZER.get())) {
+                    return true;
+                }
+            }
+        }
+        this.cachedAnchor = null;
+        int minY = Math.max(center.getY() - 2, source.getMinBuildHeight());
+        int maxY = Math.min(center.getY() + 2, source.getMaxBuildHeight() - 1);
+        if (minY > maxY) {
+            return false;
+        }
+        LevelChunk[] chunks = new LevelChunk[4];
+        int checkedChunks = 0;
+        if (cachedIndex >= 0) {
+            chunks[cachedIndex] = cachedChunk;
+            checkedChunks |= 1 << cachedIndex;
+        }
+        for (BlockPos pos : BlockPos.betweenClosed(
+                new BlockPos(center.getX() - 5, minY, center.getZ() - 5),
+                new BlockPos(center.getX() + 5, maxY, center.getZ() + 5))) {
+            // 11×11 格的水平范围最多跨四个区块，同次查询只检查各区块一次。
+            int index = ((pos.getX() >> 4) - minChunkX) + 2 * ((pos.getZ() >> 4) - minChunkZ);
+            int bit = 1 << index;
+            if ((checkedChunks & bit) == 0) {
+                checkedChunks |= bit;
+                chunks[index] = source.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+            }
+            LevelChunk chunk = chunks[index];
+            if (chunk == null) {
                 continue;
             }
-            BlockState state = this.level().getBlockState(pos);
+            BlockState state = chunk.getBlockState(pos);
             if (state.is(ModBlocks.SPACE_ANCHOR.get()) || state.is(ModBlocks.VOID_STABILIZER.get())) {
+                this.cachedAnchor = pos.immutable();
                 return true;
             }
         }

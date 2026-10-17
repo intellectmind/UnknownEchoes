@@ -57,7 +57,7 @@ public final class LakeBedPieceHelper {
                         level, randomState));
     }
 
-    private static int sampledOceanFloorAverage(int minX, int minZ, int width, int depth,
+    static int sampledOceanFloorAverage(int minX, int minZ, int width, int depth,
                                                  java.util.function.IntBinaryOperator heightSampler) {
         int xSamples = Math.min(FLOOR_SAMPLE_GRID, Math.max(0, width));
         int zSamples = Math.min(FLOOR_SAMPLE_GRID, Math.max(0, depth));
@@ -110,6 +110,6 @@ public final class LakeBedPieceHelper {
         }
         int floorY = generator.getBaseHeight(x, z, Heightmap.Types.OCEAN_FLOOR_WG,
                 level, randomState);
-        return seaLevel - floorY >= requiredDepth;
+        return Math.min(seaLevel, surfaceY) - floorY >= requiredDepth;
     }
 }

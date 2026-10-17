@@ -20,6 +20,13 @@
         {
           "type": "minecraft:block_predicate_filter",
           "predicate": {
+            "type": "minecraft:matching_fluids",
+            "fluids": ["minecraft:empty"]
+          }
+        },
+        {
+          "type": "minecraft:block_predicate_filter",
+          "predicate": {
             "type": "minecraft:replaceable"
           }
         },

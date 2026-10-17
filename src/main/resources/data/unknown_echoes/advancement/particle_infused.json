@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:fire_particle_crystal"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.particle_infused.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.particle_infused.desc"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:particle_attuned",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

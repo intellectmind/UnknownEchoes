@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "unknown_echoes:glow_fruit"
+    },
+    {
+      "item": "unknown_echoes:resonant_mushroom"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    },
+    {
+      "item": "unknown_echoes:echo_dust"
+    }
+  ],
+  "result": {
+    "id": "unknown_echoes:seeker_spore",
+    "count": 2
+  }
+}

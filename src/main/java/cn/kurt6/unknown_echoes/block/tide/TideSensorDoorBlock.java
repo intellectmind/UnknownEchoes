@@ -1,12 +1,13 @@
 package cn.kurt6.unknown_echoes.block.tide;
 
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -181,7 +182,10 @@ public class TideSensorDoorBlock extends BaseEntityBlock {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(player instanceof ServerPlayer serverPlayer)) {
+        if (!(level instanceof ServerLevel serverLevel) || !(player instanceof ServerPlayer serverPlayer)
+                || !serverLevel.hasChunkAt(pos)
+                || !(serverLevel.getBlockEntity(pos) instanceof TideSensorDoorBlockEntity door)
+                || !isCurrentInteraction(serverLevel, pos, state, serverPlayer, door)) {
             return InteractionResult.CONSUME;
         }
         if (state.getValue(OPEN)) {
@@ -190,13 +194,24 @@ public class TideSensorDoorBlock extends BaseEntityBlock {
         if (cn.kurt6.unknown_echoes.ability.EchoPermission.canUseTideMechanism(serverPlayer)) {
             TideSensorDoorBlockEntity.openGroup(level, pos, serverPlayer);
         } else {
-            level.playSound(null, pos, SoundEvents.BUBBLE_COLUMN_WHIRLPOOL_AMBIENT,
-                    SoundSource.BLOCKS, 0.8F, 0.6F);
+            level.playSound(null, pos, ModSounds.BLOCK_TIDE_DOOR_LOCKED.get(),
+                    SoundSource.BLOCKS, 0.55F, 1.0F);
+            if (!isCurrentInteraction(serverLevel, pos, state, serverPlayer, door)) {
+                return InteractionResult.CONSUME;
+            }
             serverPlayer.displayClientMessage(
                     Component.translatable("message.unknown_echoes.tide_door.locked"), true);
-            cn.kurt6.unknown_echoes.ability.EchoAbilityManager.recordFailure(serverPlayer,
-                    cn.kurt6.unknown_echoes.ability.EchoAbilityType.TIDE_ECHO, "door_locked");
+            if (isCurrentInteraction(serverLevel, pos, state, serverPlayer, door)) {
+                cn.kurt6.unknown_echoes.ability.EchoAbilityManager.recordFailure(serverPlayer,
+                        cn.kurt6.unknown_echoes.ability.EchoAbilityType.TIDE_ECHO, "door_locked");
+            }
         }
         return InteractionResult.CONSUME;
+    }
+
+    private static boolean isCurrentInteraction(ServerLevel level, BlockPos pos, BlockState state,
+                                                 ServerPlayer player, TideSensorDoorBlockEntity door) {
+        return TideSensorDoorBlockEntity.isCurrentPlayer(level, player)
+                && player.canInteractWithBlock(pos, 1.0D) && door.isCurrentState(level, state);
     }
 }

@@ -3,31 +3,65 @@
   "temperature": 0.0,
   "downfall": 0.0,
   "effects": {
-    "fog_color": 1578283,
-    "sky_color": 723481,
-    "water_color": 1780032,
-    "water_fog_color": 593180,
-    "grass_color": 2966589,
-    "foliage_color": 2176559,
+    "fog_color": 9534883,
+    "sky_color": 5324129,
+    "water_color": 7955341,
+    "water_fog_color": 3092558,
+    "grass_color": 9208217,
+    "foliage_color": 9208217,
     "ambient_particle": {
-      "options": { "type": "minecraft:white_smoke" },
-      "probability": 0.015
+      "options": {
+        "type": "minecraft:portal"
+      },
+      "probability": 0.0012
     },
     "mood_sound": {
       "sound": "minecraft:ambient.cave",
-      "tick_delay": 10500,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.deep_dark",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": "minecraft:ambient.basalt_deltas.additions",
+      "tick_chance": 0.0002
     }
   },
   "carvers": {
-    "air": ["minecraft:cave", "minecraft:cave_extra_underground", "minecraft:canyon"]
+    "air": [
+      "minecraft:cave",
+      "minecraft:cave_extra_underground",
+      "minecraft:canyon"
+    ]
   },
   "features": [
-    [], [], [], [], [], [],
-    ["unknown_echoes:abyssal_stone_disk", "unknown_echoes:mute_crystal_disk", "unknown_echoes:muffle_moss_disk", "unknown_echoes:broken_bell_ore_disk"],
-    [], [],
-    ["unknown_echoes:hush_grass_patch", "unknown_echoes:voidcap_patch", "unknown_echoes:hush_thorn_patch", "unknown_echoes:glow_fern_patch"],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:abyssal_stone_disk",
+      "unknown_echoes:mute_crystal_disk",
+      "unknown_echoes:muffle_moss_disk",
+      "unknown_echoes:broken_bell_ore_disk"
+    ],
+    [],
+    [
+      "unknown_echoes:voidscar_hollows_landform"
+    ],
+    [
+      "unknown_echoes:hush_grass_patch",
+      "unknown_echoes:voidcap_patch",
+      "unknown_echoes:hush_thorn_patch",
+      "unknown_echoes:glow_fern_patch"
+    ],
     []
   ],
   "spawners": {
@@ -58,8 +92,13 @@
         "minCount": 1,
         "maxCount": 3
       }
-    ], "ambient": [], "axolotls": [],
-    "underground_water_creature": [], "water_creature": [], "water_ambient": [], "misc": []
+    ],
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
   },
   "spawn_costs": {}
 }

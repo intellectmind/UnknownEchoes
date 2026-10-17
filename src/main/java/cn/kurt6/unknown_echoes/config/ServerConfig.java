@@ -346,6 +346,18 @@ public class ServerConfig {
             .comment("Master switch for all ambient world events across the overworld, Echo Realm, and Deep Echoes")
             .define("world_events_enabled", true);
 
+    public static final ModConfigSpec.BooleanValue REALM_DISASTERS_ENABLED = BUILDER
+            .comment("Allow Rift Storm and Strata Rupture in the two echo dimensions")
+            .define("realm_disasters_enabled", true);
+
+    public static final ModConfigSpec.BooleanValue DISASTER_BLOCK_DAMAGE = BUILDER
+            .comment("Disasters may break exposed blocks in disaster_breakable; also requires mobGriefing. No drops, at most 24 blocks per event")
+            .define("disaster_block_damage", true);
+
+    public static final ModConfigSpec.DoubleValue DISASTER_DAMAGE = BUILDER
+            .comment("Damage per telegraphed disaster strike in health points; 0 disables damage")
+            .defineInRange("disaster_damage", 4.0D, 0.0D, 12.0D);
+
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> DISABLED_WORLD_EVENTS = BUILDER
             .comment("World event ids disabled on this server (e.g. [\"echo_fog\"])")
             .defineListAllowEmpty("disabled_world_events", java.util.List.of(),
@@ -476,6 +488,224 @@ public class ServerConfig {
     public static final ModConfigSpec.DoubleValue TIDE_BOLT_WET_DAMAGE_MULTIPLIER = BUILDER
             .comment("Direct Tide Bolt damage multiplier against targets standing in water")
             .defineInRange("tide_bolt_wet_damage_multiplier", 1.25D, 0.0D, 4.0D);
+
+    public static final ModConfigSpec.DoubleValue MONSTER_SPAWN_CHANCE = BUILDER
+            .comment("Acceptance chance for natural and chunk-generation spawns of ordinary Unknown Echoes monsters; 0 disables, 1 preserves data-pack density.",
+                    "Excludes bosses, spawn eggs, spawners, commands and structure spawns.")
+            .defineInRange("monster_spawn_chance", 1.0D, 0.0D, 1.0D);
+
+    public static final ModConfigSpec.DoubleValue CREATURE_SPAWN_CHANCE = BUILDER
+            .comment("Acceptance chance for natural and chunk-generation spawns of Unknown Echoes non-monster mobs, including animals, aquatic and ambient mobs.",
+                    "0 disables these natural spawns; 1 preserves data-pack density.")
+            .defineInRange("creature_spawn_chance", 1.0D, 0.0D, 1.0D);
+
+    public static final ModConfigSpec.DoubleValue MONSTER_HEALTH_MULTIPLIER = BUILDER
+            .comment("Maximum health multiplier for ordinary Unknown Echoes monsters.",
+                    "Applied once on first world join; already configured entities keep their saved attributes. Bosses are excluded.")
+            .defineInRange("monster_health_multiplier", 1.0D, 0.1D, 10.0D);
+
+    public static final ModConfigSpec.DoubleValue MONSTER_DAMAGE_MULTIPLIER = BUILDER
+            .comment("Melee and attributed ability damage multiplier for ordinary Unknown Echoes monsters.",
+                    "Applied at damage time; excludes bosses and vanilla or other-mod mobs.")
+            .defineInRange("monster_damage_multiplier", 1.0D, 0.0D, 10.0D);
+
+    public static final ModConfigSpec.DoubleValue MONSTER_ARMOR_MULTIPLIER = BUILDER
+            .comment("Armor and armor toughness multiplier for ordinary Unknown Echoes monsters.",
+                    "Applied once on first world join; already configured entities keep their saved attributes. Bosses are excluded.")
+            .defineInRange("monster_armor_multiplier", 1.0D, 0.0D, 10.0D);
+
+    public static final ModConfigSpec.DoubleValue MONSTER_MOVEMENT_SPEED_MULTIPLIER = BUILDER
+            .comment("Movement and flying speed multiplier for ordinary Unknown Echoes monsters.",
+                    "Applied once on first world join; already configured entities keep their saved attributes. Bosses are excluded.")
+            .defineInRange("monster_movement_speed_multiplier", 1.0D, 0.0D, 4.0D);
+
+    public static final ModConfigSpec.DoubleValue MONSTER_FOLLOW_RANGE_MULTIPLIER = BUILDER
+            .comment("Target acquisition range multiplier for ordinary Unknown Echoes monsters.",
+                    "Applied once on first world join; already configured entities keep their saved attributes. Bosses are excluded.")
+            .defineInRange("monster_follow_range_multiplier", 1.0D, 0.0D, 4.0D);
+
+    public static final ModConfigSpec.DoubleValue CREATURE_HEALTH_MULTIPLIER = BUILDER
+            .comment("Maximum health multiplier for Unknown Echoes non-monster mobs.",
+                    "Applied once on first world join; already configured entities keep their saved attributes. Bosses are excluded.")
+            .defineInRange("creature_health_multiplier", 1.0D, 0.1D, 10.0D);
+
+    public static final ModConfigSpec.DoubleValue CREATURE_DAMAGE_MULTIPLIER = BUILDER
+            .comment("Melee and attributed ability damage multiplier for Unknown Echoes non-monster mobs.",
+                    "Applied at damage time; excludes bosses and vanilla or other-mod mobs.")
+            .defineInRange("creature_damage_multiplier", 1.0D, 0.0D, 10.0D);
+
+    public static final ModConfigSpec.DoubleValue CREATURE_ARMOR_MULTIPLIER = BUILDER
+            .comment("Armor and armor toughness multiplier for Unknown Echoes non-monster mobs.",
+                    "Applied once on first world join; already configured entities keep their saved attributes. Bosses are excluded.")
+            .defineInRange("creature_armor_multiplier", 1.0D, 0.0D, 10.0D);
+
+    public static final ModConfigSpec.DoubleValue CREATURE_MOVEMENT_SPEED_MULTIPLIER = BUILDER
+            .comment("Movement and flying speed multiplier for Unknown Echoes non-monster mobs.",
+                    "Applied once on first world join; already configured entities keep their saved attributes. Bosses are excluded.")
+            .defineInRange("creature_movement_speed_multiplier", 1.0D, 0.0D, 4.0D);
+
+    public static final ModConfigSpec.DoubleValue CREATURE_FOLLOW_RANGE_MULTIPLIER = BUILDER
+            .comment("Target acquisition range multiplier for Unknown Echoes non-monster mobs.",
+                    "Applied once on first world join; already configured entities keep their saved attributes. Bosses are excluded.")
+            .defineInRange("creature_follow_range_multiplier", 1.0D, 0.0D, 4.0D);
+
+    public static final ModConfigSpec.DoubleValue MOB_EXPERIENCE_MULTIPLIER = BUILDER
+            .comment("Death experience multiplier for ordinary Unknown Echoes mobs; rounds to the nearest integer, and 0 disables experience drops.",
+                    "Boss experience and vanilla or other-mod mobs are unaffected.")
+            .defineInRange("mob_experience_multiplier", 1.0D, 0.0D, 10.0D);
+
+    public static final ModConfigSpec.BooleanValue TRADES_ENABLED = BUILDER
+            .comment("Enable Lost Traveler trading; disabling also rejects purchase requests from already open trade screens.",
+                    "Does not remove travelers or reset their stock.")
+            .define("trades_enabled", true);
+
+    public static final ModConfigSpec.DoubleValue TRADE_RANGE = BUILDER
+            .comment("Maximum Lost Traveler trading distance in blocks, shared by server validation and the client trade screen.",
+                    "Synchronized to clients; does not increase the interaction reach used to open the screen.")
+            .defineInRange("trade_range", 6.0D, 1.0D, 16.0D);
+
+    public static final ModConfigSpec.BooleanValue DISASTER_EMPOWER_MONSTERS = BUILDER
+            .comment("Allow disasters to refresh Speed, Strength and Glowing on nearby ordinary hostile mobs.",
+                    "Disabling stops refreshes; existing effects expire naturally within 60 ticks.")
+            .define("disaster_empower_monsters", true);
+
+    public static final ModConfigSpec.IntValue DISASTER_MAX_BROKEN_BLOCKS = BUILDER
+            .comment("Maximum blocks destroyed per disaster event; 0 disables terrain destruction.",
+                    "Still requires disaster_block_damage, mobGriefing and all terrain protection checks.")
+            .defineInRange("disaster_max_broken_blocks", 24, 0, 24);
+
+    public static final ModConfigSpec.IntValue DISASTER_BLOCKS_PER_IMPACT = BUILDER
+            .comment("Maximum blocks destroyed per disaster impact; 0 disables terrain destruction.",
+                    "Also limited by the remaining per-event destruction budget.")
+            .defineInRange("disaster_blocks_per_impact", 3, 0, 3);
+
+    public static final ModConfigSpec.IntValue DREAMING_DEER_NECTAR_COOLDOWN_TICKS = BUILDER
+            .comment("Ticks between Dreaming Deer nectar harvests; 20 ticks = 1 second.",
+                    "Used for the next harvest; saved cooldowns are capped at this value when the entity loads.")
+            .defineInRange("dreaming_deer_nectar_cooldown_ticks", 2400, 200, 72000);
+
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> DISABLED_NATURAL_SPAWNS = BUILDER
+            .comment("Full entity IDs of ordinary Unknown Echoes mobs excluded from natural and chunk-generation spawns, e.g. [\"unknown_echoes:echo_wanderer\"].",
+                    "Existing mobs, bosses, spawn eggs, spawners, commands, breeding and structure spawns are unaffected.")
+            .defineListAllowEmpty("disabled_natural_spawns", java.util.List.of(),
+                    () -> "unknown_echoes:echo_wanderer", o -> o instanceof String id
+                            && id.startsWith("unknown_echoes:")
+                            && net.minecraft.resources.ResourceLocation.tryParse(id) != null);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_ECHO_FOG = BUILDER
+            .comment("Relative natural-trigger weight for echo_fog, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_echo_fog", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_MIRROR_ANOMALY = BUILDER
+            .comment("Relative natural-trigger weight for mirror_anomaly, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_mirror_anomaly", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_STORM_OMEN = BUILDER
+            .comment("Relative natural-trigger weight for storm_omen, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_storm_omen", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_LOST_CARAVAN = BUILDER
+            .comment("Relative natural-trigger weight for lost_caravan, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_lost_caravan", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_METEOR_AFTERGLOW = BUILDER
+            .comment("Relative natural-trigger weight for meteor_afterglow, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_meteor_afterglow", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_ECHO_STORM = BUILDER
+            .comment("Relative natural-trigger weight for echo_storm, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_echo_storm", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_STRATA_AFTERSHOCK = BUILDER
+            .comment("Relative natural-trigger weight for strata_aftershock, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_strata_aftershock", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_RIFT_STORM = BUILDER
+            .comment("Relative natural-trigger weight for rift_storm, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_rift_storm", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_STRATA_RUPTURE = BUILDER
+            .comment("Relative natural-trigger weight for strata_rupture, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_strata_rupture", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_FAR_BELL_PROCESSION = BUILDER
+            .comment("Relative natural-trigger weight for far_bell_procession, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_far_bell_procession", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_MEMORY_FIREFLY_TIDE = BUILDER
+            .comment("Relative natural-trigger weight for memory_firefly_tide, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_memory_firefly_tide", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_GRAVITY_TIDE = BUILDER
+            .comment("Relative natural-trigger weight for gravity_tide, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_gravity_tide", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_ARCHIVE_DRIFT = BUILDER
+            .comment("Relative natural-trigger weight for archive_drift, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_archive_drift", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_SILENT_PULSE = BUILDER
+            .comment("Relative natural-trigger weight for silent_pulse, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_silent_pulse", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_FOLDED_PROCESSION = BUILDER
+            .comment("Relative natural-trigger weight for folded_procession, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_folded_procession", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_CRYSTAL_CHORUS = BUILDER
+            .comment("Relative natural-trigger weight for crystal_chorus, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_crystal_chorus", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_RIFT_AFTERIMAGE = BUILDER
+            .comment("Relative natural-trigger weight for rift_afterimage, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_rift_afterimage", 1, 0, 1000);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_WEIGHT_INTERLAYER_RESPITE = BUILDER
+            .comment("Relative natural-trigger weight for interlayer_respite, among candidates allowed by dimension, biome and event settings.",
+                    "0 excludes this event from new natural rolls; active events and manual triggers are unaffected.")
+            .defineInRange("world_event_weight_interlayer_respite", 1, 0, 1000);
+
+    public static final ModConfigSpec.DoubleValue OVERWORLD_WORLD_EVENT_CHANCE_MULTIPLIER = BUILDER
+            .comment("Natural world-event trigger probability multiplier for the Overworld; multiplies world_event_chance, with the result clamped to 0-1.",
+                    "0 stops new natural events; active events and manual triggers are unaffected.")
+            .defineInRange("overworld_world_event_chance_multiplier", 1.0D, 0.0D, 10.0D);
+
+    public static final ModConfigSpec.DoubleValue ECHO_REALM_WORLD_EVENT_CHANCE_MULTIPLIER = BUILDER
+            .comment("Natural world-event trigger probability multiplier for the Echo Realm; multiplies world_event_chance, with the result clamped to 0-1.",
+                    "0 stops new natural events; active events and manual triggers are unaffected.")
+            .defineInRange("echo_realm_world_event_chance_multiplier", 1.0D, 0.0D, 10.0D);
+
+    public static final ModConfigSpec.DoubleValue DEEP_ECHOES_WORLD_EVENT_CHANCE_MULTIPLIER = BUILDER
+            .comment("Natural world-event trigger probability multiplier for Deep Echoes; multiplies world_event_chance, with the result clamped to 0-1.",
+                    "0 stops new natural events; active events and manual triggers are unaffected.")
+            .defineInRange("deep_echoes_world_event_chance_multiplier", 1.0D, 0.0D, 10.0D);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_MIN_PLAYER_DISTANCE = BUILDER
+            .comment("Minimum horizontal radius in blocks from the player to a natural event candidate, before rounding to block coordinates.",
+                    "The two distance bounds are sorted if reversed; loaded-chunk and safe-position checks still apply.")
+            .defineInRange("world_event_min_player_distance", 40, 8, 128);
+
+    public static final ModConfigSpec.IntValue WORLD_EVENT_MAX_PLAYER_DISTANCE = BUILDER
+            .comment("Maximum horizontal radius in blocks from the player to a natural event candidate, before rounding to block coordinates.",
+                    "The two distance bounds are sorted if reversed; loaded-chunk and safe-position checks still apply.")
+            .defineInRange("world_event_max_player_distance", 60, 8, 128);
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 

@@ -28,7 +28,12 @@ public final class BossMaterialRewards {
         BossRewardDropData.dropOrQueue(level, boss.getX(), boss.getY() + 0.5D, boss.getZ(), stack);
     }
 
-    /** 旧版本的个人待领取记录升级后改为登录时脚下掉落，避免记录永久滞留。 */
+    /** 死亡回调可能传送或移除 Boss；已提交物品仍交付到原死亡现场。 */
+    public static void drop(ServerLevel level, double x, double y, double z, ItemStack stack) {
+        BossRewardDropData.dropOrQueue(level, x, y, z, stack);
+    }
+
+    /** 将旧版个人待领记录转交世界队列，在登录位置按重试节拍生成。 */
     public static void loadPendingPersonalRewards(ServerPlayer player) {
         Set<String> mechanisms = EchoAbilityManager.getData(player).getActivatedMechanisms();
         Iterator<String> iterator = mechanisms.iterator();
@@ -38,11 +43,11 @@ public final class BossMaterialRewards {
                 continue;
             }
             PendingReward reward = parseLegacyReward(key);
-            iterator.remove();
             if (reward != null) {
-                BossRewardDropData.dropOrQueue(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
+                BossRewardDropData.queueForRetry(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
                         new ItemStack(reward.item(), reward.count()));
             }
+            iterator.remove();
         }
     }
 

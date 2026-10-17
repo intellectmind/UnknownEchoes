@@ -26,18 +26,74 @@ public class ModNetworking {
 
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("2");
+        PayloadRegistrar registrar = event.registrar("9");
+
+        registrar.playToClient(RealmDisasterPayload.TYPE, RealmDisasterPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() ->
+                        cn.kurt6.unknown_echoes.client.ClientRealmDisasterEffects.accept(payload)));
+
+        registrar.playToClient(ChaseCollectionPayload.TYPE, ChaseCollectionPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    cn.kurt6.unknown_echoes.client.ClientChaseCache.update(payload.earnedMask(), payload.claimedMask());
+                    cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.onJournalSync();
+                }));
+
+        registrar.playToClient(StudySyncPayload.TYPE, StudySyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() ->
+                        cn.kurt6.unknown_echoes.client.gui.WorkshopStudyScreen.accept(payload)));
+        registrar.playToClient(StudyCollectionPayload.TYPE, StudyCollectionPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    cn.kurt6.unknown_echoes.client.ClientStudyCache.update(payload.earnedMask(), payload.claimedMask());
+                    cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.onJournalSync();
+                }));
+        registrar.playToServer(StudyActionPayload.TYPE, StudyActionPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        cn.kurt6.unknown_echoes.study.WorkshopStudyManager.action(player, payload);
+                    }
+                }));
 
         registrar.playToClient(SyncAbilityPayload.TYPE, SyncAbilityPayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() -> ClientAbilityCache.update(payload)));
+                (payload, context) -> context.enqueueWork(() -> {
+                    ClientAbilityCache.update(payload);
+                    cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.onJournalSync();
+                }));
 
         registrar.playToClient(AbilityCooldownSyncPayload.TYPE, AbilityCooldownSyncPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() ->
                         cn.kurt6.unknown_echoes.client.ClientAbilityCooldownCache.update(payload)));
 
+        registrar.playToClient(BossMusicPayload.TYPE, BossMusicPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() ->
+                        cn.kurt6.unknown_echoes.client.ClientBossMusic.accept(payload)));
+
         registrar.playToClient(BossImpactPayload.TYPE, BossImpactPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() ->
                         cn.kurt6.unknown_echoes.client.ClientBossImpactEffects.trigger(payload)));
+
+        registrar.playToClient(CombatFxPayload.TYPE, CombatFxPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() ->
+                        cn.kurt6.unknown_echoes.client.ClientCombatFx.accept(payload)));
+
+        registrar.playToClient(JourneySyncPayload.TYPE, JourneySyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    cn.kurt6.unknown_echoes.client.ClientJourneyCache.update(payload);
+                    cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen.onJournalSync();
+                }));
+
+        registrar.playToServer(JourneyClaimPayload.TYPE, JourneyClaimPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player && allowUiAction(player)) {
+                        cn.kurt6.unknown_echoes.journal.JourneyManager.claim(player, payload.chapterIndex());
+                    }
+                }));
+
+        registrar.playToServer(JournalDestinationPayload.TYPE, JournalDestinationPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player && allowUiAction(player)) {
+                        cn.kurt6.unknown_echoes.journal.JournalManager.selectDestination(player, payload.destination());
+                    }
+                }));
 
         registrar.playToClient(JournalSyncPayload.TYPE, JournalSyncPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
@@ -54,7 +110,7 @@ public class ModNetworking {
         registrar.playToClient(OpenArtifactStationPayload.TYPE, OpenArtifactStationPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() ->
                         cn.kurt6.unknown_echoes.client.gui.overview.EchoOverviewScreen
-                                .openArtifactStation(payload.stationMode(), payload.pos())));
+                                .openArtifactStation(payload.stationMode(), payload.pos(), payload.dimension())));
 
         registrar.playToServer(ArtifactActionPayload.TYPE, ArtifactActionPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
@@ -71,7 +127,7 @@ public class ModNetworking {
                 (payload, context) -> context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player && allowUiAction(player)) {
                         cn.kurt6.unknown_echoes.trade.EchoTradeManager.handleTradeRequest(
-                                player, payload.entityId(), payload.tradeIndex());
+                                player, payload.entityId(), payload.sessionId(), payload.tradeIndex());
                     }
                 }));
 
@@ -329,7 +385,7 @@ public class ModNetworking {
                 ? cn.kurt6.unknown_echoes.artifact.ArtifactStationBlock.Mode.RECORD
                 : cn.kurt6.unknown_echoes.artifact.ArtifactStationBlock.Mode.TUNING;
         if (!cn.kurt6.unknown_echoes.artifact.ArtifactStationBlock.validateStation(
-                player, payload.stationPos(), stationMode)) {
+                player, payload.dimension(), payload.stationPos(), stationMode)) {
 
             player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
                     "message.unknown_echoes.artifact.no_station"), true);

@@ -1,12 +1,11 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
@@ -43,6 +42,11 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
     }
 
     @Override
+    public boolean isFoil(ItemStack stack) {
+        return cn.kurt6.unknown_echoes.particle.ParticleRules.data(stack).total() == 50 || super.isFoil(stack);
+    }
+
+    @Override
     public boolean isValidRepairItem(ItemStack stack, ItemStack repairCandidate) {
         return repairCandidate.is(ModItems.WINDWOVEN_THREAD.get())
                 || repairCandidate.is(ModItems.COLOSSUS_MEMORY_CORE.get())
@@ -67,7 +71,8 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
                 && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
             this.activateSkill(serverLevel, serverPlayer, stack, hand);
         }
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        // 技能耐久或损坏回调可能更换手持物，按当前栈完成原版使用收尾。
+        return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide());
     }
 
     @Override
@@ -85,7 +90,7 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
         player.setDeltaMovement(dash);
         player.hurtMarked = true;
         level.playSound(null, player.blockPosition(),
-                SoundEvents.TRIDENT_RIPTIDE_2.value(), SoundSource.PLAYERS, 1.0F, 1.3F);
+                ModSounds.WEAPON_WIND_SPEAR_PRIMARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 2);
         return true;
     }
@@ -102,7 +107,6 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
                 "ue_weapon_skill_wind_spear_secondary_until", SECONDARY_COOLDOWN_TICKS, 0)) {
             return false;
         }
-        int affected = 0;
         for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 6.0D, 8)) {
             if (!WeaponSkillSupport.hurt(player, target, 11.0F)) {
                 continue;
@@ -116,15 +120,14 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
                     target.hurtMarked = true;
                 }
             }
-            affected++;
         }
         player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                 net.minecraft.world.effect.MobEffects.SLOW_FALLING, 160, 0, true, false, true));
         WeaponFx.groundRing(level, player, WeaponFxTheme.WIND_SPEAR, 6.0D);
-        level.sendParticles(ParticleTypes.GUST, player.getX(), player.getY() + 0.6D, player.getZ(),
-                Math.max(4, affected), 2.2D, 0.6D, 2.2D, 0.02D);
-        level.playSound(null, player.blockPosition(), SoundEvents.TRIDENT_RIPTIDE_3.value(),
-                SoundSource.PLAYERS, 1.1F, 1.0F);
+        WeaponFx.releaseBurst(level, player.position().add(0.0D, 0.2D, 0.0D),
+                WeaponFxTheme.WIND_SPEAR, 1.0D);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_WIND_SPEAR_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
     }
@@ -170,8 +173,6 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
                 victim.hurtMarked = true;
             }
             WeaponFx.hitMark(level, victim, WeaponFxTheme.WIND_SPEAR);
-            level.sendParticles(ParticleTypes.GUST,
-                    victim.getX(), victim.getY() + 0.3, victim.getZ(), 1, 0, 0, 0, 0);
         }
     }
 }

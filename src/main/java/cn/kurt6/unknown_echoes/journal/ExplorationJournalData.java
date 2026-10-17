@@ -2,7 +2,9 @@ package cn.kurt6.unknown_echoes.journal;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -10,12 +12,12 @@ import java.util.List;
 import java.util.Set;
 
 public class ExplorationJournalData {
-    public static final int CURRENT_DATA_VERSION = 2;
+    public static final int CURRENT_DATA_VERSION = 3;
     public static final int MAX_CLUES = 64;
     private static final int MAX_DISCOVERIES = 1024;
     private static final int MAX_PAGES = 256;
     private static final int MAX_ID_LENGTH = 256;
-    private static final int MAX_CLUE_LENGTH = 512;
+    public static final int MAX_CLUE_LENGTH = 512;
     private static final Codec<String> ID_CODEC = Codec.sizeLimitedString(MAX_ID_LENGTH);
 
     public static final Codec<ExplorationJournalData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -29,7 +31,9 @@ public class ExplorationJournalData {
             Codec.INT.listOf(0, MAX_PAGES).optionalFieldOf("pages", List.of())
                     .forGetter(d -> List.copyOf(d.pages)),
             Codec.sizeLimitedString(MAX_CLUE_LENGTH).listOf(0, MAX_PAGES).optionalFieldOf("clues", List.of())
-                    .forGetter(d -> List.copyOf(d.clues))
+                    .forGetter(d -> List.copyOf(d.clues)),
+            Codec.sizeLimitedString(MAX_CLUE_LENGTH).optionalFieldOf("destination", "")
+                    .forGetter(ExplorationJournalData::getEncodedDestination)
     ).apply(instance, ExplorationJournalData::new));
 
     private int dataVersion;
@@ -39,13 +43,15 @@ public class ExplorationJournalData {
     private final Set<Integer> pages = new HashSet<>();
     /** 探索线索编码数据；缺失数据按无线索处理。 */
     private final List<String> clues = new ArrayList<>();
+    private String destination = "";
 
     public ExplorationJournalData() {
         this.dataVersion = CURRENT_DATA_VERSION;
     }
 
     public ExplorationJournalData(int dataVersion, List<String> structures, List<String> mobs,
-                                  List<String> biomes, List<Integer> pages, List<String> clues) {
+                                  List<String> biomes, List<Integer> pages, List<String> clues,
+                                  String destination) {
         this.dataVersion = CURRENT_DATA_VERSION;
         copyResourceIds(structures, this.structures);
         copyResourceIds(mobs, this.mobs);
@@ -55,14 +61,14 @@ public class ExplorationJournalData {
                 this.pages.add(page);
             }
         }
-        int start = Math.max(0, clues.size() - MAX_CLUES);
-        for (int i = start; i < clues.size(); i++) {
-            String line = clues.get(i);
-            ExplorationClue clue = ExplorationClue.decode(line);
-            if (clue != null && ResourceLocation.tryParse(clue.structureId()) != null
-                    && ResourceLocation.tryParse(clue.dimension()) != null) {
+        for (String line : clues) {
+            if (canStoreClue(line)) {
                 this.clues.add(line);
             }
+        }
+        setDestination(destination);
+        while (this.clues.size() > MAX_CLUES) {
+            evictOldClue();
         }
     }
 
@@ -124,6 +130,113 @@ public class ExplorationJournalData {
         ExplorationClue clue = ExplorationClue.decode(encodedClue);
         return clue != null && ResourceLocation.tryParse(clue.structureId()) != null
                 && ResourceLocation.tryParse(clue.dimension()) != null;
+    }
+
+    public ExplorationClue getDestination() {
+        ExplorationClue selected = ExplorationClue.decode(destination);
+        if (selected != null) {
+            for (String line : clues) {
+                ExplorationClue clue = ExplorationClue.decode(line);
+                if (selected.sameSite(clue)) {
+                    return clue;
+                }
+            }
+        }
+        return null;
+    }
+
+    public String getEncodedDestination() {
+        ExplorationClue clue = getDestination();
+        return clue == null ? "" : clue.encode();
+    }
+
+    // 只能选择个人日志中的现有地点，空字符串用于取消。
+    public boolean setDestination(String encodedClue) {
+        if ("".equals(encodedClue)) {
+            boolean changed = !destination.isEmpty();
+            destination = "";
+            return changed;
+        }
+        if (!canStoreClue(encodedClue)) {
+            return false;
+        }
+        ExplorationClue requested = ExplorationClue.decode(encodedClue);
+        for (String line : clues) {
+            ExplorationClue clue = ExplorationClue.decode(line);
+            if (requested.sameSite(clue)) {
+                boolean changed = !clue.sameSite(getDestination());
+                destination = clue.encode();
+                return changed;
+            }
+        }
+        return false;
+    }
+
+    // 大遗迹按实际范围合并旧入口记录；保留选中地点的身份与坐标。
+    public boolean visitStructure(String structureId, String dimension,
+                                  BlockPos anchor, BoundingBox bounds) {
+        ExplorationClue incoming = new ExplorationClue(structureId, dimension, anchor, true);
+        if (!canStoreClue(incoming.encode())) return false;
+        List<Integer> matches = new ArrayList<>();
+        ExplorationClue retained = null;
+        ExplorationClue selected = getDestination();
+        for (int i = 0; i < clues.size(); i++) {
+            ExplorationClue clue = ExplorationClue.decode(clues.get(i));
+            if (clue != null && clue.structureId().equals(structureId) && clue.dimension().equals(dimension)
+                    && ((bounds != null && bounds.isInside(clue.pos())) || clue.pos().distSqr(anchor) <= 96 * 96)) {
+                matches.add(i);
+                if (retained == null || clue.sameSite(selected)) retained = clue;
+            }
+        }
+        if (retained == null) return addClue(incoming);
+        boolean changed = !retained.visited() || matches.size() > 1;
+        clues.set(matches.getFirst(), retained.asVisited().encode());
+        for (int i = matches.size() - 1; i > 0; i--) clues.remove((int) matches.get(i));
+        return changed;
+    }
+
+    // 同结构 96 格内合并；容量满时保留新线索和选中的目的地。
+    public boolean addClue(ExplorationClue clue) {
+        String encoded = clue == null ? null : clue.encode();
+        if (!canStoreClue(encoded)) {
+            return false;
+        }
+        for (int i = 0; i < clues.size(); i++) {
+            ExplorationClue existing = ExplorationClue.decode(clues.get(i));
+            if (existing != null && existing.structureId().equals(clue.structureId())
+                    && existing.dimension().equals(clue.dimension())
+                    && existing.pos().distSqr(clue.pos()) <= 96 * 96) {
+                if (clue.visited() && !existing.visited()) {
+                    clues.set(i, existing.asVisited().encode());
+                    return true;
+                }
+                return false;
+            }
+        }
+        while (clues.size() >= MAX_CLUES) {
+            evictOldClue();
+        }
+        clues.add(encoded);
+        return true;
+    }
+
+    private void evictOldClue() {
+        ExplorationClue selected = getDestination();
+        int fallback = -1;
+        for (int i = 0; i < clues.size(); i++) {
+            ExplorationClue clue = ExplorationClue.decode(clues.get(i));
+            if (selected != null && selected.sameSite(clue)) {
+                continue;
+            }
+            if (clue == null || clue.visited()) {
+                clues.remove(i);
+                return;
+            }
+            if (fallback < 0) {
+                fallback = i;
+            }
+        }
+        clues.remove(fallback >= 0 ? fallback : 0);
     }
 
     private static boolean addResourceId(Set<String> target, String id, int maxEntries) {

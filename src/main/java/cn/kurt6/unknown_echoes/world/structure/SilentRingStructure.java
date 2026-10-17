@@ -19,12 +19,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 /** 无声环:失语沼泽环境谜题(低 UI 依赖观察谜题)。 */
-public class SilentRingStructure extends SinglePieceStructure {
+public class SilentRingStructure extends TerrainAnchoredStructure {
     public static final MapCodec<SilentRingStructure> CODEC = simpleCodec(SilentRingStructure::new);
 
     private static final int SIZE = 29;
@@ -58,6 +57,7 @@ public class SilentRingStructure extends SinglePieceStructure {
                 return;
             }
 
+            clearStructureSpace(level, box, 0);
             BlockState mossy = ModBlocks.ROOTBOUND_MUDSTONE.get().defaultBlockState();
             BlockState bricks = ModBlocks.SILENT_MUDSTONE_BRICKS.get().defaultBlockState();
             BlockState chiseled = ModBlocks.BOGLIGHT_STONE.get().defaultBlockState();
@@ -90,7 +90,7 @@ public class SilentRingStructure extends SinglePieceStructure {
             int[] orders = shuffled(puzzleRandom, 6);
             int[][] runeSpots = {
                     {cx, cz - 8}, {cx + 7, cz - 4}, {cx + 7, cz + 4},
-                    {cx, cz + 8}, {cx - 7, cz + 4}, {cx - 7, cz - 4}
+                    {cx, cz + 5}, {cx - 7, cz + 4}, {cx - 7, cz - 4}
             };
             for (int i = 0; i < runeSpots.length; i++) {
                 int rx = runeSpots[i][0];
@@ -143,7 +143,12 @@ public class SilentRingStructure extends SinglePieceStructure {
                     }
                 }
             }
-            buildAccessibleChest(level, random, box, cx, 1, cz + 8, ModLootTables.SILENT_RING_CHEST);
+            for (int x = cx - 1; x <= cx + 1; x++) {
+                for (int y = 1; y <= 3; y++) {
+                    this.placeBlock(level, Blocks.AIR.defaultBlockState(), x, y, vaultMinZ - 1, box);
+                }
+            }
+            buildAccessibleChest(level, random, box, cx, 1, cz + 8, ModLootTables.SILENT_RING_CHEST, Direction.NORTH);
             buildCompactTrueSightVaultNiche(level, random, box, cx + 10, 1, cz + 7, Direction.WEST);
 
             architecturalRing(level, box, cx, 1, cz, 12,
@@ -157,6 +162,13 @@ public class SilentRingStructure extends SinglePieceStructure {
 
             buildStairCornice(level, box, cx, 5, muralZ, Footprint.of(7, 0), ModBlocks.SILENT_MUDSTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.SILENT_MUDSTONE_BRICK_SLAB.get().defaultBlockState(), true);
 
+            // 提示记号位于符文顶面，石阶接到壁画挑檐的观察位置。
+            for (int step = 1; step <= 5; step++) {
+                for (int y = 1; y <= step; y++) {
+                    this.placeBlock(level, bricks, cx - 3, y, muralZ + 7 - step, box);
+                }
+            }
+
             for (int[] diagonal : new int[][]{{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}) {
                 int towerX = cx + diagonal[0] * 9;
                 int towerZ = cz + diagonal[1] * 9;
@@ -164,11 +176,22 @@ public class SilentRingStructure extends SinglePieceStructure {
                 buildSpireFinial(level, box, towerX, 8, towerZ, 1, 3,
                         ModBlocks.SILENT_MUDSTONE.get().defaultBlockState(), mossy, chiseled);
             }
+            // 环外石舌：四组错位短柱把谜题环的边界拉成沼泽中的独立节点。
+            for (int[] tongue : new int[][]{{cx - 12, cz - 3, 5}, {cx + 12, cz + 2, 4},
+                    {cx - 3, cz - 12, 6}, {cx + 2, cz + 12, 3}}) {
+                architecturalPillar(level, box, tongue[0], 1, tongue[1], tongue[2],
+                        tongue[2] % 2 == 0 ? mossy : bricks);
+                this.placeBlock(level, chiseled, tongue[0], 1 + tongue[2], tongue[1], box);
+                this.placeBlock(level, ModBlocks.ECHO_RUNE_BRICKS.get().defaultBlockState(),
+                        tongue[0], 2 + tongue[2], tongue[1], box);
+            }
             buildRuneCauseway(level, box, cx, 0, cz, Direction.SOUTH,
                     9, 13, 1, moss, mossy, chiseled);
 
             placeStructureSpawner(level, random, box, cx - 7, 1, cz + 6,
                     ModEntities.SILENT_WALKER.get(), mossy, chiseled);
+            anchorGroundColumns(level, box, 0, mossy);
+            dressStructure(level, box, "silent_ring");
         }
 
         private static int[] shuffled(RandomSource random, int size) {

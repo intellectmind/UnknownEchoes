@@ -1,0 +1,61 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:interlayer_provision_pie"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.realm_cuisine.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.realm_cuisine.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:field_supplies",
+  "criteria": {
+    "far_bell_trail_loaf": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": [
+            "unknown_echoes:far_bell_trail_loaf"
+          ]
+        }
+      }
+    },
+    "prismatic_canopy_tart": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": [
+            "unknown_echoes:prismatic_canopy_tart"
+          ]
+        }
+      }
+    },
+    "interlayer_provision_pie": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": [
+            "unknown_echoes:interlayer_provision_pie"
+          ]
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "far_bell_trail_loaf"
+    ],
+    [
+      "prismatic_canopy_tart"
+    ],
+    [
+      "interlayer_provision_pie"
+    ]
+  ]
+}

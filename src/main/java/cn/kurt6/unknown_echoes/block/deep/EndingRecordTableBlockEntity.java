@@ -1,21 +1,22 @@
 package cn.kurt6.unknown_echoes.block.deep;
 
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /** 结局记录台的世界共享演出状态；个人结局资格仍保存在玩家进度中。 */
 public class EndingRecordTableBlockEntity extends BlockEntity {
@@ -33,14 +34,8 @@ public class EndingRecordTableBlockEntity extends BlockEntity {
     public void beginRecording(ServerLevel level) {
         recordingStartedAt = level.getGameTime();
         setChangedAndSync();
-        level.playSound(null, worldPosition, SoundEvents.BOOK_PAGE_TURN,
-                SoundSource.BLOCKS, 1.2F, 0.72F);
-        level.playSound(null, worldPosition, SoundEvents.ENCHANTMENT_TABLE_USE,
-                SoundSource.BLOCKS, 1.0F, 1.15F);
-        level.sendParticles(ParticleTypes.ENCHANT,
-                worldPosition.getX() + 0.5D, worldPosition.getY() + 1.05D,
-                worldPosition.getZ() + 0.5D, 54,
-                0.75D, 0.35D, 0.75D, 0.08D);
+        level.playSound(null, worldPosition, ModSounds.BLOCK_ENDING_RECORD_WRITE.get(),
+                SoundSource.BLOCKS, 0.9F, 1.0F);
     }
 
     public boolean isRecording() {
@@ -95,21 +90,13 @@ public class EndingRecordTableBlockEntity extends BlockEntity {
         }
 
         if (age == WRITING_TICKS) {
-            serverLevel.playSound(null, pos, SoundEvents.VAULT_CLOSE_SHUTTER,
-                    SoundSource.BLOCKS, 1.35F, 0.82F);
-            serverLevel.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME,
-                    SoundSource.BLOCKS, 1.0F, 0.62F);
-            serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                    pos.getX() + 0.5D, pos.getY() + 1.3D, pos.getZ() + 0.5D,
-                    64, 0.85D, 0.7D, 0.85D, 0.08D);
+            serverLevel.playSound(null, pos, ModSounds.BLOCK_ENDING_RECORD_SEAL.get(),
+                    SoundSource.BLOCKS, 0.9F, 1.0F);
+            MechanismFx.archiveSeal(serverLevel, Vec3.atBottomCenterOf(pos), false);
         } else if (age == WRITING_TICKS + SEALING_TICKS) {
-            serverLevel.playSound(null, pos, SoundEvents.END_PORTAL_FRAME_FILL,
-                    SoundSource.BLOCKS, 1.5F, 0.72F);
-            serverLevel.playSound(null, pos, SoundEvents.BEACON_ACTIVATE,
-                    SoundSource.BLOCKS, 1.2F, 1.18F);
-            serverLevel.sendParticles(ParticleTypes.END_ROD,
-                    pos.getX() + 0.5D, pos.getY() + 1.65D, pos.getZ() + 0.5D,
-                    84, 1.05D, 1.0D, 1.05D, 0.1D);
+            serverLevel.playSound(null, pos, ModSounds.BLOCK_ENDING_RECORD_ARCHIVE.get(),
+                    SoundSource.BLOCKS, 0.9F, 1.0F);
+            MechanismFx.archiveSeal(serverLevel, Vec3.atBottomCenterOf(pos), true);
         }
 
         if ((age & 3) == 0) {
@@ -119,24 +106,8 @@ public class EndingRecordTableBlockEntity extends BlockEntity {
 
     private static void emitStageParticles(ServerLevel level, BlockPos pos,
                                            PerformanceStage stage, int age) {
-        double angle = age * 0.19D;
-        double radius = stage == PerformanceStage.ARCHIVED ? 1.05D : 0.72D;
-        double x = pos.getX() + 0.5D + Math.cos(angle) * radius;
-        double z = pos.getZ() + 0.5D + Math.sin(angle) * radius;
-        double y = pos.getY() + switch (stage) {
-            case WRITING -> 1.05D + (age % 24) * 0.025D;
-            case SEALING -> 1.2D + Math.sin(angle * 2.0D) * 0.22D;
-            case ARCHIVED -> 1.55D + Math.sin(angle) * 0.35D;
-            case IDLE -> 1.0D;
-        };
-        var particle = switch (stage) {
-            case WRITING -> ParticleTypes.ENCHANT;
-            case SEALING -> ParticleTypes.ELECTRIC_SPARK;
-            case ARCHIVED -> ParticleTypes.END_ROD;
-            case IDLE -> ParticleTypes.GLOW;
-        };
-        level.sendParticles(particle, x, y, z, stage == PerformanceStage.ARCHIVED ? 3 : 2,
-                0.06D, 0.08D, 0.06D, 0.015D);
+        MechanismFx.emit(level, MechanismFx.archiveFrame(
+                Vec3.atBottomCenterOf(pos), stage.ordinal(), age));
     }
 
     private void setChangedAndSync() {

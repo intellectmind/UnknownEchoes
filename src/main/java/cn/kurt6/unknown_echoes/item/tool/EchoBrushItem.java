@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.item.tool;
 
+import cn.kurt6.unknown_echoes.item.InventoryPayment;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.core.particles.ParticleTypes;
@@ -62,8 +63,8 @@ public class EchoBrushItem extends BrushItem {
         }
         player.getCooldowns().addCooldown(this, CLUE_COOLDOWN_TICKS);
         context.getItemInHand().hurtAndBreak(1, player, player.getSlotForHand(context.getHand()));
-        if (level.random.nextFloat() < 0.35F) {
-            consumeEchoDust(player);
+        // 耐久回调可能改变背包，发奖必须以本次实际扣料成功为准。
+        if (level.random.nextFloat() < 0.35F && consumeEchoDust(player)) {
             give(player, new ItemStack(ModItems.RECORD_TRACING_PAPER.get()));
         }
         var pos = context.getClickedPos();
@@ -75,28 +76,13 @@ public class EchoBrushItem extends BrushItem {
     }
 
     private static boolean hasEchoDust(ServerPlayer player) {
-        if (player.getAbilities().instabuild) {
-            return true;
-        }
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-            if (player.getInventory().getItem(slot).is(ModItems.ECHO_DUST.get())) {
-                return true;
-            }
-        }
-        return false;
+        return player.getAbilities().instabuild
+                || InventoryPayment.count(player, ModItems.ECHO_DUST.get()) > 0;
     }
 
-    private static void consumeEchoDust(ServerPlayer player) {
-        if (player.getAbilities().instabuild) {
-            return;
-        }
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-            ItemStack stack = player.getInventory().getItem(slot);
-            if (stack.is(ModItems.ECHO_DUST.get())) {
-                stack.shrink(1);
-                return;
-            }
-        }
+    private static boolean consumeEchoDust(ServerPlayer player) {
+        return player.getAbilities().instabuild
+                || InventoryPayment.consume(player, ModItems.ECHO_DUST.get(), 1) == 1;
     }
 
     private static void give(ServerPlayer player, ItemStack stack) {

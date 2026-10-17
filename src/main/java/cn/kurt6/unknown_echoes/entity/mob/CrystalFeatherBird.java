@@ -1,5 +1,7 @@
 package cn.kurt6.unknown_echoes.entity.mob;
 
+import cn.kurt6.unknown_echoes.entity.AnimalHarvest;
+
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.entity.ai.FleeThreatGoal;
 import cn.kurt6.unknown_echoes.registry.ModEntities;
@@ -112,19 +114,33 @@ public class CrystalFeatherBird extends Animal implements GeoEntity {
     /** 喂食荧光花:冷却就绪时无伤获得晶羽×1;冷却中给含蓄提示。 */
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        Level interactionLevel = this.level();
+        if (!interactionLevel.isClientSide && !AnimalHarvest.canInteract(interactionLevel, this, player)) {
+            return InteractionResult.CONSUME;
+        }
         ItemStack stack = player.getItemInHand(hand);
         if ((stack.is(ModItems.ECHO_FLOWER.get()) || stack.is(ModItems.ECHO_SHEARS.get())) && !this.isBaby()) {
             if (!this.level().isClientSide) {
                 if (this.feedCooldown <= 0) {
                     boolean echoShears = stack.is(ModItems.ECHO_SHEARS.get());
+                    // 先占用本只生物的冷却，耐久或损坏回调重入时不能再次采集。
+                    this.feedCooldown = ServerConfig.CRYSTAL_FEATHER_FEED_COOLDOWN.get();
                     if (echoShears) {
                         stack.hurtAndBreak(1, player, getSlotForHand(hand));
                     } else {
                         stack.consume(1, player);
                     }
-                    this.feedCooldown = ServerConfig.CRYSTAL_FEATHER_FEED_COOLDOWN.get();
-                    this.playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 0.8F, 1.6F);
+                    if (!AnimalHarvest.canHarvest(interactionLevel, this, player)) {
+                        return InteractionResult.CONSUME;
+                    }
+                    this.playSound(ModSounds.CRYSTAL_FEATHER_BIRD_SONG.get(), 0.8F, 1.0F);
+                    if (!AnimalHarvest.canHarvest(interactionLevel, this, player)) {
+                        return InteractionResult.CONSUME;
+                    }
                     this.spawnAtLocation(ModItems.CRYSTAL_FEATHER.get());
+                    if (!AnimalHarvest.canHarvest(interactionLevel, this, player)) {
+                        return InteractionResult.CONSUME;
+                    }
                     if (echoShears) {
                         this.spawnAtLocation(ModItems.CRYSTAL_FEATHER.get());
                     }

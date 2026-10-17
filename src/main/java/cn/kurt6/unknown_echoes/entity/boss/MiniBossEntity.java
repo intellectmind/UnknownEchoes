@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.entity.boss;
 
+import cn.kurt6.unknown_echoes.fx.BossLifecycleFx;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
 import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlock;
 import cn.kurt6.unknown_echoes.block.boss.MiniBossSpawnerBlockEntity;
@@ -39,7 +40,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-public abstract class MiniBossEntity extends Monster implements GeoEntity, BossDamageGuard {
+public abstract class MiniBossEntity extends Monster implements GeoEntity, BossDamageGuard, BossMusicSource, BossDeathSettlement {
     private static final String PENDING_REWARD_PREFIX = "pending_miniboss_reward|";
     private static final int MAX_PENDING_REWARD_COUNT = 4096;
     protected final ServerBossEvent bossEvent;
@@ -53,6 +54,13 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
     private int guardedHintCooldown = 0;
     private int outOfCombatTicks = 0;
     private boolean spawnerBindingPaused = false;
+    private boolean handlingSpawnerCleanup;
+    private boolean handlingDeath = false;
+    private DeathContext deathContext = null;
+
+    private record DeathContext(ServerLevel level, Vec3 position, AABB bounds, BlockPos spawnerPos,
+                                UUID bossUuid, ResourceLocation bossId, double radius, Set<UUID> participants) {}
+
 
     protected MiniBossEntity(EntityType<? extends Monster> type, Level level,
                              BossEvent.BossBarColor barColor) {
@@ -128,6 +136,9 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
 
     @Override
     public void aiStep() {
+        if (this.shouldStopBossAi()) {
+            return;
+        }
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
             this.spawnerBindingPaused = this.tickSpawnerBinding(serverLevel);
             if (this.spawnerBindingPaused) {
@@ -137,6 +148,9 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
             this.spawnerBindingPaused = false;
         }
         super.aiStep();
+        if (this.shouldStopBossAi()) {
+            return;
+        }
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -256,35 +270,139 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
     }
 
     @Override
+    public boolean isSettlingDeath() {
+        return this.handlingDeath && this.dead;
+    }
+
+    @Override
     public void die(DamageSource source) {
-        boolean wasDead = this.dead;
-        super.die(source);
-        if (wasDead || !this.dead || !(this.level() instanceof ServerLevel serverLevel)) {
+        if (this.handlingDeath || this.dead) {
             return;
         }
-        boolean hasEligibleParticipant = false;
-        boolean firstKillDrop = false;
-
-        for (ServerPlayer player : nearbySettlementPlayers(serverLevel)) {
-            if (this.participants.contains(player.getUUID())) {
-                boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player, minibossId());
-                hasEligibleParticipant = true;
-
-                // 记录写失败也要累计首杀,否则记录已满时整队会拿到复战包,丢掉首杀材料与残页。
-                firstKillDrop |= firstKill;
-                if (firstKill && !EchoAbilityManager.markBossDefeated(player, minibossId())) {
-                    player.sendSystemMessage(Component.translatable(
-                            "message.unknown_echoes.progress_record.full"));
+        this.handlingDeath = true;
+        try {
+            if (this.discardOnDeath()) {
+                this.discard();
+                return;
+            }
+            if (!(this.level() instanceof ServerLevel level)) {
+                super.die(source);
+                return;
+            }
+            DeathContext context = new DeathContext(level, this.position(), this.getBoundingBox(),
+                    this.spawnerPos, this.getUUID(), this.minibossId(), this.settlementRadius(),
+                    Set.copyOf(this.participants));
+            try {
+                super.die(source);
+            } finally {
+                if (this.dead) {
+                    this.deathContext = context;
+                    settleMiniBossDeath(context);
                 }
             }
+        } finally {
+            this.handlingDeath = false;
         }
-        if (hasEligibleParticipant) {
-            this.grantSettlement(firstKillDrop);
-        }
+    }
 
-        if (this.spawnerPos != null) {
-            MiniBossSpawnerBlockEntity.onBossDefeated(serverLevel, this.spawnerPos, this.getUUID());
+    private void settleMiniBossDeath(DeathContext context) {
+        try {
+            boolean hasEligibleParticipant = false;
+            boolean firstKillDrop = false;
+            for (ServerPlayer player : nearbyDeathPlayers(context)) {
+                if (context.participants().contains(player.getUUID())
+                        && isDeathParticipant(context, player)) {
+                    boolean firstKill = !EchoAbilityManager.hasDefeatedBoss(player, context.bossId());
+                    hasEligibleParticipant = true;
+                    firstKillDrop |= firstKill;
+                    if (firstKill) {
+                        runDeathStep("personal progress", () -> {
+                            if (!EchoAbilityManager.markBossDefeated(player, context.bossId())
+                                    && isDeathParticipant(context, player)) {
+                                player.sendSystemMessage(Component.translatable(
+                                        "message.unknown_echoes.progress_record.full"));
+                            }
+                        });
+                    }
+                }
+            }
+            if (hasEligibleParticipant) {
+                this.grantSettlement(firstKillDrop);
+            }
+        } finally {
+            if (context.spawnerPos() != null) {
+                runDeathStep("spawner settlement", () -> MiniBossSpawnerBlockEntity.onBossDefeated(
+                        context.level(), context.spawnerPos(), context.bossUuid()));
+            }
         }
+        runDeathStep("death effects", () -> {
+            if (isCurrentDeathPresentation(context.level(), context.position())) {
+                BossLifecycleFx.death(context.level(), context.position(), this.getBbWidth(), this.getBbHeight(),
+                        this.combatImpactColor());
+            }
+        });
+        runDeathStep("death cleanup", () -> onDeathCommitted(context.level(), context.position()));
+    }
+
+    public final void playSummonEffects(ServerLevel level) {
+        BossLifecycleFx.summon(level, this.position(), this.getBbWidth(), this.getBbHeight(), this.fxTheme().trace(1));
+    }
+
+    /** 子类特殊死亡收尾统一在一次已提交结算之后执行。 */
+    protected void onDeathCommitted(ServerLevel level, Vec3 deathPos) {
+    }
+
+    /** 无战利品的镜像直接移除，仍受共用死亡重入保护。 */
+    protected boolean discardOnDeath() {
+        return false;
+    }
+
+    final void dropSettlementItem(ItemStack stack) {
+        DeathContext context = this.deathContext;
+        if (context == null) {
+            BossMaterialRewards.drop(this, stack);
+            return;
+        }
+        runDeathStep("material", () -> BossMaterialRewards.drop(context.level(),
+                context.position().x, context.position().y + 0.5D, context.position().z, stack));
+    }
+
+    private List<ServerPlayer> nearbyDeathPlayers(DeathContext context) {
+        return context.level().getEntitiesOfClass(ServerPlayer.class,
+                context.bounds().inflate(context.radius()), player -> isDeathParticipant(context, player));
+    }
+
+    private boolean isDeathParticipant(DeathContext context, ServerPlayer player) {
+        return player.level() == context.level() && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.position().distanceToSqr(context.position()) <= context.radius() * context.radius();
+    }
+
+    protected final void runDeathStep(String step, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException failure) {
+            cn.kurt6.unknown_echoes.UnknownEchoes.LOGGER.error("Mini boss death {} failed for {}", step, this.getUUID(), failure);
+        }
+    }
+
+    protected final boolean isCurrentDeathPresentation(ServerLevel level, Vec3 deathPos) {
+        return this.dead && !this.isRemoved() && this.level() == level
+                && level.getEntity(this.getUUID()) == this
+                && this.position().distanceToSqr(deathPos) < 0.0001D;
+    }
+
+    protected final ServerLevel deathCleanupLevel() {
+        return this.deathContext != null ? this.deathContext.level()
+                : this.level() instanceof ServerLevel level ? level : null;
+    }
+
+    protected final AABB deathCleanupBounds() {
+        return this.deathContext != null ? this.deathContext.bounds() : this.getBoundingBox();
+    }
+
+    protected final boolean hasCommittedDeath() {
+        return this.deathContext != null;
     }
 
     @Override
@@ -297,33 +415,66 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
     }
 
     private boolean retrySpawnerRegistration(ServerLevel level) {
-        if (this.spawnerPos == null || !level.hasChunkAt(this.spawnerPos)) {
-            return true;
-        }
-        if (level.getBlockEntity(this.spawnerPos) instanceof MiniBossSpawnerBlockEntity spawner) {
-            return spawner.onBossAdded(this.getUUID());
-        }
-        return level.getBlockState(this.spawnerPos).getBlock() instanceof MiniBossSpawnerBlock;
+        return this.spawnerPos == null || MiniBossSpawnerBlockEntity.bindingState(level, this.spawnerPos, this)
+                != MiniBossSpawnerBlockEntity.BindingState.INVALID;
     }
 
     private boolean tickSpawnerBinding(ServerLevel level) {
-        if (this.spawnerPos == null) {
+        BlockPos boundSpawnerPos = this.spawnerPos;
+        if (boundSpawnerPos == null) {
             return false;
         }
         MiniBossSpawnerBlockEntity.BindingState state =
-                MiniBossSpawnerBlockEntity.bindingState(level, this.spawnerPos, this);
+                MiniBossSpawnerBlockEntity.bindingState(level, boundSpawnerPos, this);
+        if (state == MiniBossSpawnerBlockEntity.BindingState.INTERRUPTED) {
+            return true;
+        }
         if (state == MiniBossSpawnerBlockEntity.BindingState.UNAVAILABLE) {
-            this.setTarget(null);
-            this.getNavigation().stop();
-            this.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            BossBindingPause.pause(level, this, () -> !this.shouldStopBossAi(),
+                    () -> boundSpawnerPos.equals(this.spawnerPos)
+                            && MiniBossSpawnerBlockEntity.bindingState(level, boundSpawnerPos, this)
+                            == MiniBossSpawnerBlockEntity.BindingState.UNAVAILABLE);
             return true;
         }
         if (state == MiniBossSpawnerBlockEntity.BindingState.INVALID) {
-            this.clearSpawnerPresence(level);
-            this.discard();
+            this.discardInvalidSpawnerBinding(level, boundSpawnerPos);
             return true;
         }
         return false;
+    }
+
+    private boolean isCurrentSpawnerBindingSource(ServerLevel level, BlockPos boundSpawnerPos) {
+        return this.level() == level && !this.shouldStopBossAi() && !this.isRemoved()
+                && level.getEntity(this.getUUID()) == this && boundSpawnerPos.equals(this.spawnerPos);
+    }
+
+    private void discardInvalidSpawnerBinding(ServerLevel level, BlockPos boundSpawnerPos) {
+        if (this.handlingSpawnerCleanup) {
+            return;
+        }
+        this.handlingSpawnerCleanup = true;
+        try {
+            var chunk = level.getChunkSource().getChunkNow(boundSpawnerPos.getX() >> 4, boundSpawnerPos.getZ() >> 4);
+            if (!this.isCurrentSpawnerBindingSource(level, boundSpawnerPos) || chunk == null
+                    || MiniBossSpawnerBlockEntity.bindingState(level, boundSpawnerPos, this)
+                    != MiniBossSpawnerBlockEntity.BindingState.INVALID) {
+                return;
+            }
+            var state = chunk.getBlockState(boundSpawnerPos);
+            var spawner = chunk.getBlockEntity(boundSpawnerPos);
+            MiniBossSpawnerBlockEntity.onBossDestroyed(level, boundSpawnerPos, this.getUUID());
+            var currentChunk = level.getChunkSource().getChunkNow(boundSpawnerPos.getX() >> 4, boundSpawnerPos.getZ() >> 4);
+            if (!this.isCurrentSpawnerBindingSource(level, boundSpawnerPos) || currentChunk == null
+                    || currentChunk.getBlockState(boundSpawnerPos) != state
+                    || currentChunk.getBlockEntity(boundSpawnerPos) != spawner
+                    || MiniBossSpawnerBlockEntity.bindingState(level, boundSpawnerPos, this)
+                    != MiniBossSpawnerBlockEntity.BindingState.INVALID) {
+                return;
+            }
+            this.discard();
+        } finally {
+            this.handlingSpawnerCleanup = false;
+        }
     }
 
     private boolean isSpawnerCombatBlocked(ServerLevel level) {
@@ -332,8 +483,13 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
                 != MiniBossSpawnerBlockEntity.BindingState.VALID;
     }
 
+    /** Death callbacks and the remaining corpse lifetime must not run combat or binding cleanup. */
+    protected final boolean shouldStopBossAi() {
+        return this.handlingDeath || this.dead || !this.isAlive();
+    }
+
     protected final boolean isSpawnerBindingPaused() {
-        return this.spawnerBindingPaused;
+        return this.spawnerBindingPaused || this.shouldStopBossAi();
     }
 
     public void clearSpawnerPresence(ServerLevel level) {
@@ -367,7 +523,7 @@ public abstract class MiniBossEntity extends Monster implements GeoEntity, BossD
             if (reward.pageId() >= 0) {
                 stack.set(ModDataComponents.PAGE_ID.get(), reward.pageId());
             }
-            BossRewardDropData.dropOrQueue(player.serverLevel(),
+            BossRewardDropData.queueForRetry(player.serverLevel(),
                     player.getX(), player.getY(), player.getZ(), stack);
             iterator.remove();
         }

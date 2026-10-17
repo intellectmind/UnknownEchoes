@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.block.puzzle;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
@@ -41,13 +42,15 @@ public class FoldpagePairCoreBlockEntity extends BlockEntity {
     private int[] pairIds = new int[0];
     /** 当前已翻开等待配对的页下标;-1 = 无。会话内临时状态,不持久化。 */
     private int firstFlip = -1;
+    /** 写入通知和表现回调期间不接受同一核心的嵌套翻页或重新配置。 */
+    private boolean flipping;
 
     public FoldpagePairCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.FOLDPAGE_PAIR_CORE.get(), pos, state);
     }
 
     public void configure(List<BlockPos> tilePositions, long seed) {
-        if (!areValidTilePositions(tilePositions)) {
+        if (this.flipping || !areValidTilePositions(tilePositions)) {
             return;
         }
         this.tiles.clear();
@@ -73,20 +76,33 @@ public class FoldpagePairCoreBlockEntity extends BlockEntity {
     }
 
     public void flip(BlockPos tilePos, ServerPlayer player) {
+        if (this.flipping) return;
+        this.flipping = true;
+        try {
+            flipOnce(tilePos, player);
+        } finally {
+            this.flipping = false;
+        }
+    }
+
+    private void flipOnce(BlockPos tilePos, ServerPlayer player) {
         Level level = this.level;
-        if (level == null || level.isClientSide
-                || this.getBlockState().getValue(PuzzleCoreBlock.ACTIVE)) {
+        if (!isCurrentCore(level)) {
             return;
         }
         int index = this.tiles.indexOf(tilePos);
         if (index < 0 || index >= this.pairIds.length) {
             return;
         }
-        BlockState tileState = level.getBlockState(tilePos);
-        if (!tileState.is(ModBlocks.FOLDPAGE_TILE.get())) {
+        if (!canUseTile(level, tilePos)) {
             return;
         }
+        BlockState tileState = level.getBlockState(tilePos);
         if (tileState.getValue(FoldpageTileBlock.LIT)) {
+            if (allTilesLit(level)) {
+                solve(level);
+                return;
+            }
             if (player != null) {
                 player.displayClientMessage(
                         Component.translatable("message.unknown_echoes.foldpage.archived"), true);
@@ -94,7 +110,20 @@ public class FoldpagePairCoreBlockEntity extends BlockEntity {
             return;
         }
 
-        reveal(level, tilePos, this.pairIds[index]);
+        // 同源页已归位而本页未亮，表示配对写入曾在两页之间中断。
+        if (hasMatchedPartner(level, index)) {
+            this.firstFlip = -1;
+            if (!lightTile(level, tilePos)) return;
+            if (allTilesLit(level)) {
+                solve(level);
+            }
+            return;
+        }
+
+        if (!reveal(level, tilePos, this.pairIds[index])) {
+            this.firstFlip = -1;
+            return;
+        }
         if (this.firstFlip < 0 || this.firstFlip == index) {
             this.firstFlip = index;
             return;
@@ -114,17 +143,18 @@ public class FoldpagePairCoreBlockEntity extends BlockEntity {
             return;
         }
         if (this.pairIds[firstIndex] == this.pairIds[index]) {
-            lightTile(level, firstTilePos);
-            lightTile(level, tilePos);
-            level.playSound(null, tilePos, SoundEvents.AMETHYST_BLOCK_CHIME,
-                    SoundSource.BLOCKS, 1.2F, 1.4F);
+            if (!lightTile(level, firstTilePos)) return;
+            if (!lightTile(level, tilePos)) return;
+            if (!isTileLit(level, firstTilePos) || !isTileLit(level, tilePos)) return;
+            level.playSound(null, tilePos, ModSounds.BLOCK_FOLDPAGE_CORE_CONFIRM.get(),
+                    SoundSource.BLOCKS, 1.2F, 1.0F);
             if (allTilesLit(level)) {
                 solve(level);
             }
         } else {
-            level.playSound(null, tilePos, SoundEvents.AMETHYST_BLOCK_RESONATE,
-                    SoundSource.BLOCKS, 0.9F, 0.6F);
-            if (player != null) {
+            level.playSound(null, tilePos, ModSounds.BLOCK_FOLDPAGE_CORE_MISMATCH.get(),
+                    SoundSource.BLOCKS, 0.14F, 1.0F);
+            if (isCurrentCore(level) && player != null) {
                 player.displayClientMessage(
                         Component.translatable("message.unknown_echoes.foldpage.mismatch"), true);
             }
@@ -136,42 +166,81 @@ public class FoldpagePairCoreBlockEntity extends BlockEntity {
         if (level == null) {
             return 0;
         }
-        int lit = 0;
-        for (BlockPos tile : this.tiles) {
-            if (!level.hasChunkAt(tile)) {
-                continue;
-            }
-            BlockState state = level.getBlockState(tile);
-            if (state.is(ModBlocks.FOLDPAGE_TILE.get()) && state.getValue(FoldpageTileBlock.LIT)) {
-                lit++;
+        int matched = 0;
+        Set<Integer> litPairs = new HashSet<>();
+        for (int i = 0; i < this.pairIds.length; i++) {
+            if (isTileLit(level, this.tiles.get(i))) {
+                if (!litPairs.add(this.pairIds[i])) matched++;
             }
         }
-        return lit / 2;
+        return matched;
     }
 
     public int totalPairs() {
         return this.pairIds.length / 2;
     }
 
-    private void reveal(Level level, BlockPos tilePos, int pairId) {
+    private boolean hasMatchedPartner(Level level, int index) {
+        for (int i = 0; i < this.pairIds.length; i++) {
+            if (i == index || this.pairIds[i] != this.pairIds[index]) {
+                continue;
+            }
+            BlockPos partnerPos = this.tiles.get(i);
+            if (!level.hasChunkAt(partnerPos)) {
+                return false;
+            }
+            BlockState partner = level.getBlockState(partnerPos);
+            return partner.is(ModBlocks.FOLDPAGE_TILE.get()) && partner.getValue(FoldpageTileBlock.LIT);
+        }
+        return false;
+    }
+
+    private boolean reveal(Level level, BlockPos tilePos, int pairId) {
         Vector3f color = PAIR_COLORS[Math.floorMod(pairId, PAIR_COLORS.length)];
         if (level instanceof ServerLevel serverLevel) {
             serverLevel.sendParticles(new DustParticleOptions(color, 1.2F),
                     tilePos.getX() + 0.5D, tilePos.getY() + 1.1D, tilePos.getZ() + 0.5D,
                     16, 0.32D, 0.25D, 0.32D, 0.01D);
         }
+        if (!canUseTile(level, tilePos)) return false;
         level.playSound(null, tilePos, SoundEvents.BOOK_PAGE_TURN,
                 SoundSource.BLOCKS, 1.0F, 0.8F + 0.15F * pairId);
+        return canUseTile(level, tilePos) && !isTileLit(level, tilePos);
     }
 
-    private void lightTile(Level level, BlockPos tilePos) {
+    private boolean lightTile(Level level, BlockPos tilePos) {
+        if (!canUseTile(level, tilePos)) return false;
         BlockState state = level.getBlockState(tilePos);
-        if (state.is(ModBlocks.FOLDPAGE_TILE.get()) && !state.getValue(FoldpageTileBlock.LIT)) {
-            level.setBlock(tilePos, state.setValue(FoldpageTileBlock.LIT, Boolean.TRUE), 3);
+        if (!state.getValue(FoldpageTileBlock.LIT)
+                && !level.setBlock(tilePos, state.setValue(FoldpageTileBlock.LIT, Boolean.TRUE), 3)) {
+            return false;
         }
+        return isCurrentCore(level) && isTileLit(level, tilePos);
+    }
+
+    private boolean isCurrentCore(Level level) {
+        if (level == null || level != this.level || level.isClientSide || this.isRemoved()
+                || !level.hasChunkAt(this.worldPosition)
+                || level.getBlockEntity(this.worldPosition) != this) {
+            return false;
+        }
+        BlockState state = level.getBlockState(this.worldPosition);
+        return state.is(ModBlocks.FOLDPAGE_PAIR_CORE.get()) && !state.getValue(PuzzleCoreBlock.ACTIVE);
+    }
+
+    private boolean canUseTile(Level level, BlockPos tilePos) {
+        return isCurrentCore(level) && level.hasChunkAt(tilePos)
+                && level.getBlockState(tilePos).is(ModBlocks.FOLDPAGE_TILE.get());
+    }
+
+    private boolean isTileLit(Level level, BlockPos tilePos) {
+        if (!level.hasChunkAt(tilePos)) return false;
+        BlockState state = level.getBlockState(tilePos);
+        return state.is(ModBlocks.FOLDPAGE_TILE.get()) && state.getValue(FoldpageTileBlock.LIT);
     }
 
     private boolean allTilesLit(Level level) {
+        if (!isCurrentCore(level)) return false;
         for (BlockPos tile : this.tiles) {
             if (!level.hasChunkAt(tile)) {
                 return false;

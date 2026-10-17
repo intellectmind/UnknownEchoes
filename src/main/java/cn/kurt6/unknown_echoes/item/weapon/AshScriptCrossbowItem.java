@@ -1,12 +1,12 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -30,6 +30,11 @@ public final class AshScriptCrossbowItem extends CrossbowItem implements WeaponS
 
     public AshScriptCrossbowItem(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public boolean isFoil(ItemStack stack) {
+        return cn.kurt6.unknown_echoes.particle.ParticleRules.data(stack).total() == 50 || super.isFoil(stack);
     }
 
     @Override
@@ -65,8 +70,8 @@ public final class AshScriptCrossbowItem extends CrossbowItem implements WeaponS
         Vec3 look = player.getLookAngle().normalize();
         WeaponFx.pierceBeam(level, player, WeaponFxTheme.ASH_SCRIPT_CROSSBOW, eye, look,
                 WeaponFx.clippedBeamLength(level, player, eye, look, 26.0D));
-        level.playSound(null, player.blockPosition(), SoundEvents.BLAZE_SHOOT,
-                SoundSource.PLAYERS, 0.95F, 0.82F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ASH_SCRIPT_CROSSBOW_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.95F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 2);
         return true;
     }
@@ -97,9 +102,9 @@ public final class AshScriptCrossbowItem extends CrossbowItem implements WeaponS
         WeaponFx.groundRing(level, player, WeaponFxTheme.ASH_SCRIPT_CROSSBOW, 8.0D);
         level.sendParticles(ParticleTypes.SMALL_FLAME,
                 player.getX(), player.getY() + 0.6D, player.getZ(),
-                Math.max(8, hits * 3), 2.0D, 0.35D, 2.0D, 0.03D);
-        level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE,
-                SoundSource.PLAYERS, 1.0F, 0.68F);
+                Math.min(10, Math.max(4, hits)), 1.4D, 0.2D, 1.4D, 0.01D);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ASH_SCRIPT_CROSSBOW_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
     }
@@ -137,13 +142,26 @@ public final class AshScriptCrossbowItem extends CrossbowItem implements WeaponS
         tooltip.add(Component.translatable("tooltip.unknown_echoes.ash_script_crossbow.skill",
                         Component.keybind("key.unknown_echoes.weapon_skill"))
                 .withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.ash_script_crossbow.skill_effect")
+                .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.ash_script_crossbow.secondary",
                         Component.keybind("key.unknown_echoes.weapon_secondary_skill"))
                 .withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.ash_script_crossbow.secondary_effect")
+                .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.ash_script_crossbow.secondary_buff")
                 .withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.ash_script_crossbow.passive")
                 .withStyle(ChatFormatting.GRAY));
         super.appendHoverText(stack, context, tooltip, flag);
+    }
+
+    @Override
+    protected void shoot(net.minecraft.server.level.ServerLevel level, LivingEntity shooter,
+                         net.minecraft.world.InteractionHand hand, ItemStack weapon,
+                         java.util.List<ItemStack> projectiles, float velocity, float inaccuracy,
+                         boolean critical, LivingEntity target) {
+        cn.kurt6.unknown_echoes.particle.ParticleAttack.shoot(shooter, weapon,
+                () -> super.shoot(level, shooter, hand, weapon, projectiles, velocity, inaccuracy, critical, target));
     }
 }

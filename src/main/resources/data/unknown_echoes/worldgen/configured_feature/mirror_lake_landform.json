@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "arch",
+    "rock": {
+      "Name": "unknown_echoes:tide_smooth_stone"
+    },
+    "accent": {
+      "Name": "minecraft:calcite"
+    },
+    "height": 12,
+    "radius": 7,
+    "submerged": true,
+    "drape": 0,
+    "waterline": false
+  }
+}

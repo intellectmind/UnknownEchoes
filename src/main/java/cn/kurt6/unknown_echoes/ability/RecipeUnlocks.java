@@ -23,11 +23,39 @@ public final class RecipeUnlocks {
             (player, presentItems) -> hasAnyAbility(player);
 
     private static final List<Entry> ENTRIES = List.of(
+            new Entry("food_wind_drift_jelly", List.of(UnknownEchoes.id("cooked_wind_drift_jelly_meat_from_smelting"), UnknownEchoes.id("cooked_wind_drift_jelly_meat_from_smoking"), UnknownEchoes.id("cooked_wind_drift_jelly_meat_from_campfire_cooking")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.WIND_DRIFT_JELLY_MEAT.get())),
+            new Entry("food_reedwing_dragonfly", List.of(UnknownEchoes.id("cooked_reedwing_dragonfly_meat_from_smelting"), UnknownEchoes.id("cooked_reedwing_dragonfly_meat_from_smoking"), UnknownEchoes.id("cooked_reedwing_dragonfly_meat_from_campfire_cooking")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.REEDWING_DRAGONFLY_MEAT.get())),
+            new Entry("food_petalwing_butterfly", List.of(UnknownEchoes.id("cooked_petalwing_butterfly_meat_from_smelting"), UnknownEchoes.id("cooked_petalwing_butterfly_meat_from_smoking"), UnknownEchoes.id("cooked_petalwing_butterfly_meat_from_campfire_cooking")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.PETALWING_BUTTERFLY_MEAT.get())),
+            new Entry("food_mosslight_firefly", List.of(UnknownEchoes.id("cooked_mosslight_firefly_meat_from_smelting"), UnknownEchoes.id("cooked_mosslight_firefly_meat_from_smoking"), UnknownEchoes.id("cooked_mosslight_firefly_meat_from_campfire_cooking")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.MOSSLIGHT_FIREFLY_MEAT.get())),
+            new Entry("food_sailtail_minnow", List.of(UnknownEchoes.id("cooked_sailtail_minnow_meat_from_smelting"), UnknownEchoes.id("cooked_sailtail_minnow_meat_from_smoking"), UnknownEchoes.id("cooked_sailtail_minnow_meat_from_campfire_cooking")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.SAILTAIL_MINNOW_MEAT.get())),
+            new Entry("food_moss_sail_snail", List.of(UnknownEchoes.id("cooked_moss_sail_snail_meat_from_smelting"), UnknownEchoes.id("cooked_moss_sail_snail_meat_from_smoking"), UnknownEchoes.id("cooked_moss_sail_snail_meat_from_campfire_cooking")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.MOSS_SAIL_SNAIL_MEAT.get())),
+            new Entry("food_mossback_hedgehog", List.of(UnknownEchoes.id("cooked_mossback_hedgehog_meat_from_smelting"), UnknownEchoes.id("cooked_mossback_hedgehog_meat_from_smoking"), UnknownEchoes.id("cooked_mossback_hedgehog_meat_from_campfire_cooking")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.MOSSBACK_HEDGEHOG_MEAT.get())),
+            new Entry("food_lantern_seahorse", List.of(UnknownEchoes.id("cooked_lantern_seahorse_meat_from_smelting"), UnknownEchoes.id("cooked_lantern_seahorse_meat_from_smoking"), UnknownEchoes.id("cooked_lantern_seahorse_meat_from_campfire_cooking")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.LANTERN_SEAHORSE_MEAT.get())),
+            new Entry("decor_surfaces_folded_slate_bricks", List.of(UnknownEchoes.id("folded_slate_tiles_from_stonecutting"), UnknownEchoes.id("folded_slate_relief_from_stonecutting")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.FOLDED_SLATE_BRICKS.get())),
+            new Entry("decor_surfaces_whispering_timber_frame", List.of(UnknownEchoes.id("whispering_panelled_planks"), UnknownEchoes.id("whispering_carved_panels")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.WHISPERING_TIMBER_FRAME.get())),
+            new Entry("decor_surfaces_wind_etched_bricks", List.of(UnknownEchoes.id("wind_ashlar_from_stonecutting"), UnknownEchoes.id("wind_carved_frieze_from_stonecutting")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.WIND_ETCHED_BRICKS.get())),
+            new Entry("particle_enchanting", List.of(UnknownEchoes.id("particle_enchanting_table"), UnknownEchoes.id("purifying_vial")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.ECHO_DUST.get())),
             new Entry("echo_basics", List.of(
                     UnknownEchoes.id("echo_dust_from_shard"), UnknownEchoes.id("echo_metal_ingot"),
                     UnknownEchoes.id("echo_string"), UnknownEchoes.id("blank_echo_page"),
                     UnknownEchoes.id("echo_ink_page"), UnknownEchoes.id("blank_echo_page_salvage"),
                     UnknownEchoes.id("echo_ink_page_salvage"),
+                    UnknownEchoes.id("tarred_ship_planks"), UnknownEchoes.id("ship_deck_planks"),
+                    UnknownEchoes.id("ship_timber"), UnknownEchoes.id("riveted_bronze_casing"),
+                    UnknownEchoes.id("weathered_sailcloth"), UnknownEchoes.id("ivory_reef_ashlar"),
+                    UnknownEchoes.id("carved_bellstone"),
                     UnknownEchoes.id("echo_stone_bricks"), UnknownEchoes.id("echo_rune_bricks")),
                     (player, presentItems) -> hasInInventory(presentItems, ModItems.ECHO_SHARD.get())),
             new Entry("explorer_set", List.of(
@@ -180,6 +208,10 @@ public final class RecipeUnlocks {
             new Entry("true_sight_blade", List.of(UnknownEchoes.id("true_sight_blade")),
                     (player, presentItems) -> hasInInventory(presentItems, ModItems.TRUE_SIGHT_BLADE_BLUEPRINT.get())),
 
+            new Entry("field_tricks", List.of(
+                    UnknownEchoes.id("echo_decoy"), UnknownEchoes.id("chime_burst"),
+                    UnknownEchoes.id("seeker_spore")),
+                    (player, presentItems) -> hasInInventory(presentItems, ModItems.ECHO_DUST.get())),
             new Entry("listener_set", List.of(
                     UnknownEchoes.id("listener_helmet"), UnknownEchoes.id("listener_chestplate"),
                     UnknownEchoes.id("listener_leggings"), UnknownEchoes.id("listener_boots")),

@@ -13,6 +13,10 @@ public class ModAttachments {
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
             DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, UnknownEchoes.MODID);
 
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> DISASTER_BUILD_PROTECTION =
+            ATTACHMENT_TYPES.register("disaster_build_protection",
+                    () -> AttachmentType.builder(() -> false).serialize(com.mojang.serialization.Codec.BOOL).build());
+
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<EchoAbilityData>> ECHO_ABILITY_DATA =
             ATTACHMENT_TYPES.register("echo_ability_data",
                     () -> AttachmentType.builder(EchoAbilityData::new)

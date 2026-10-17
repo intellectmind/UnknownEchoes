@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:sequence_rune"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.first_puzzle.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.first_puzzle.desc"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:first_ruin",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

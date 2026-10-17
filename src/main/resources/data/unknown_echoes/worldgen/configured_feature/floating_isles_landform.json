@@ -1,0 +1,17 @@
+{
+  "type": "unknown_echoes:realm_landform",
+  "config": {
+    "shape": "floating",
+    "rock": {
+      "Name": "unknown_echoes:echo_strata"
+    },
+    "accent": {
+      "Name": "minecraft:calcite"
+    },
+    "height": 24,
+    "radius": 8,
+    "submerged": false,
+    "drape": 0,
+    "waterline": false
+  }
+}

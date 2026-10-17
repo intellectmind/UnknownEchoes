@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "cn.kurt6.unknown_echoes.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": ["ItemDropAccessor", "CropReplantDropMixin", "DimensionTimeMixin", "ParticleTeleportMixin", "LivingDamageAccessor", "DamageContainerScopeMixin", "ParticleLivingHealthMixin", "ParticlePlayerHealthMixin", "ParticleCraftingRepairMixin", "ParticleAnvilRepairMixin", "ParticleGrindstoneRepairMixin", "ParticleStatusRemovalMixin", "BossHealthAttributeMixin", "BossHealthInitializationMixin", "NightVisionCleanupMixin", "TimeFreezeSaveMixin", "TideEffectCleanupMixin", "TideEffectApplicationMixin"],
+  "client": ["ParticleItemRendererMixin"],
+  "injectors": {"defaultRequire": 1}
+}

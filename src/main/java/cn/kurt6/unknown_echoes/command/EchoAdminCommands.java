@@ -297,7 +297,7 @@ public class EchoAdminCommands {
 
         WorldResonanceAltarBlockEntity altar = WorldResonanceAltarBlock.getOrCreateAltar(
                 level, altarPos, level.getBlockState(altarPos));
-        if (!altar.beginAdminTestStarting(level, target.getUUID())) {
+        if (altar == null || !altar.beginAdminTestStarting(level, target.getUUID())) {
             source.sendFailure(Component.translatable(
                     "command.unknown_echoes.admin.world_echo.busy"));
             return 0;

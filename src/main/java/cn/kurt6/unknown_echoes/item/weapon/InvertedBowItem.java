@@ -1,12 +1,12 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -29,6 +29,11 @@ public final class InvertedBowItem extends BowItem implements WeaponSkill {
 
     public InvertedBowItem(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public boolean isFoil(ItemStack stack) {
+        return cn.kurt6.unknown_echoes.particle.ParticleRules.data(stack).total() == 50 || super.isFoil(stack);
     }
 
     @Override
@@ -62,8 +67,8 @@ public final class InvertedBowItem extends BowItem implements WeaponSkill {
         Vec3 look = player.getLookAngle().normalize();
         WeaponFx.pierceBeam(level, player, WeaponFxTheme.GRAVITY_INVERSION_BOW, eye, look,
                 WeaponFx.clippedBeamLength(level, player, eye, look, 24.0D));
-        level.playSound(null, player.blockPosition(), SoundEvents.ARROW_SHOOT,
-                SoundSource.PLAYERS, 1.0F, 0.58F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_GRAVITY_INVERSION_BOW_PRIMARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 1);
         return true;
     }
@@ -95,8 +100,8 @@ public final class InvertedBowItem extends BowItem implements WeaponSkill {
         }
         WeaponFx.groundRing(level, player, WeaponFxTheme.GRAVITY_INVERSION_BOW, 8.0D);
         level.playSound(null, player.blockPosition(),
-                SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(),
-                SoundSource.PLAYERS, 1.0F, 0.72F);
+                ModSounds.WEAPON_GRAVITY_INVERSION_BOW_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
     }
@@ -133,14 +138,27 @@ public final class InvertedBowItem extends BowItem implements WeaponSkill {
         tooltip.add(Component.translatable("tooltip.unknown_echoes.gravity_inversion_bow.skill",
                         Component.keybind("key.unknown_echoes.weapon_skill"))
                 .withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.gravity_inversion_bow.skill_effect")
+                .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.gravity_inversion_bow.secondary",
                         Component.keybind("key.unknown_echoes.weapon_secondary_skill"))
                 .withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.gravity_inversion_bow.secondary_effect")
+                .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable(
                         "tooltip.unknown_echoes.gravity_inversion_bow.secondary_buff")
                 .withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.gravity_inversion_bow.passive")
                 .withStyle(ChatFormatting.GRAY));
         super.appendHoverText(stack, context, tooltip, flag);
+    }
+
+    @Override
+    protected void shoot(net.minecraft.server.level.ServerLevel level, LivingEntity shooter,
+                         net.minecraft.world.InteractionHand hand, ItemStack weapon,
+                         java.util.List<ItemStack> projectiles, float velocity, float inaccuracy,
+                         boolean critical, LivingEntity target) {
+        cn.kurt6.unknown_echoes.particle.ParticleAttack.shoot(shooter, weapon,
+                () -> super.shoot(level, shooter, hand, weapon, projectiles, velocity, inaccuracy, critical, target));
     }
 }

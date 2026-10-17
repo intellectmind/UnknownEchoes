@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:world_echo_residue"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.chase_all.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.chase_all.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:chase_three",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

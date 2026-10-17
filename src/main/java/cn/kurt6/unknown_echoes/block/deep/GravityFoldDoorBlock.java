@@ -33,6 +33,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.ArrayDeque;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 /** 重力折叠门：重力回响可短时稳定整组门体，物理绕行不授予任何进度。 */
@@ -48,6 +51,8 @@ public class GravityFoldDoorBlock extends Block {
 
     private static final int OPEN_TICKS = 140;
     private static final int MAX_CONNECTED = 32;
+    private static final ThreadLocal<Map<ServerLevel, Set<BlockPos>>> OPENING =
+            ThreadLocal.withInitial(HashMap::new);
     private static final VoxelShape TOP_NS = Block.box(0, 13, 5, 16, 16, 11);
     private static final VoxelShape TOP_EW = Block.box(5, 13, 0, 11, 16, 16);
     private static final VoxelShape POST_W = Block.box(0, 0, 5, 3, 16, 11);
@@ -161,7 +166,9 @@ public class GravityFoldDoorBlock extends Block {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(player instanceof ServerPlayer serverPlayer) || serverPlayer.isSpectator()) {
+        if (!(level instanceof ServerLevel serverLevel)
+                || !(player instanceof ServerPlayer serverPlayer)
+                || !isCurrentInteraction(serverLevel, pos, state, serverPlayer)) {
             return InteractionResult.CONSUME;
         }
         if (!EchoPermission.canUseGravityMechanism(serverPlayer)) {
@@ -174,21 +181,37 @@ public class GravityFoldDoorBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        openConnected((ServerLevel) level, pos);
+        openConnected(serverLevel, pos, state, serverPlayer);
         return InteractionResult.CONSUME;
     }
 
-    private static void openConnected(ServerLevel level, BlockPos start) {
+    private static boolean isCurrentInteraction(ServerLevel level, BlockPos pos, BlockState state,
+                                                ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected()
+                && player.canInteractWithBlock(pos, 1.0D) && isCurrentDoor(level, pos, state);
+    }
+
+    private static boolean isCurrentDoor(ServerLevel level, BlockPos pos, BlockState state) {
+        return level.hasChunkAt(pos) && state.getBlock() instanceof GravityFoldDoorBlock
+                && level.getBlockState(pos) == state;
+    }
+
+    private static void openConnected(ServerLevel level, BlockPos start, BlockState original,
+                                      ServerPlayer player) {
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
-        Set<BlockPos> found = new HashSet<>();
+        Map<BlockPos, BlockState> found = new LinkedHashMap<>();
         queue.add(start.immutable());
         while (!queue.isEmpty() && found.size() < MAX_CONNECTED) {
             BlockPos current = queue.removeFirst();
-            if (found.contains(current)
-                    || !(level.getBlockState(current).getBlock() instanceof GravityFoldDoorBlock)) {
+            if (found.containsKey(current) || !level.hasChunkAt(current)) {
                 continue;
             }
-            found.add(current);
+            BlockState door = level.getBlockState(current);
+            if (!(door.getBlock() instanceof GravityFoldDoorBlock)) {
+                continue;
+            }
+            found.put(current, door);
             for (Direction direction : Direction.values()) {
                 BlockPos next = current.relative(direction);
                 if (level.hasChunkAt(next)) {
@@ -196,21 +219,75 @@ public class GravityFoldDoorBlock extends Block {
                 }
             }
         }
-        for (BlockPos doorPos : found) {
-            BlockState door = level.getBlockState(doorPos);
-            level.setBlock(doorPos, door.setValue(OPEN, Boolean.TRUE), 3);
-            level.scheduleTick(doorPos, door.getBlock(), OPEN_TICKS);
+        if (found.isEmpty()) {
+            return;
         }
-        level.playSound(null, start, SoundEvents.ENDERMAN_TELEPORT,
-                SoundSource.BLOCKS, 1.0F, 0.8F);
+        Map<ServerLevel, Set<BlockPos>> active = OPENING.get();
+        Set<BlockPos> reserved = active.computeIfAbsent(level, ignored -> new HashSet<>());
+        if (found.keySet().stream().anyMatch(reserved::contains)) {
+            return;
+        }
+        reserved.addAll(found.keySet());
+        try {
+            BlockState expectedStart = original;
+            for (var entry : found.entrySet()) {
+                if (!isCurrentInteraction(level, start, expectedStart, player)
+                        || !EchoPermission.canUseGravityMechanism(player)) {
+                    return;
+                }
+                BlockPos doorPos = entry.getKey();
+                BlockState door = entry.getValue();
+                if (!isCurrentDoor(level, doorPos, door)) {
+                    return;
+                }
+                BlockState opened = door.setValue(OPEN, Boolean.TRUE);
+                boolean applied;
+                try {
+                    applied = door == opened || level.setBlock(doorPos, opened, 3);
+                } finally {
+                    // 关闭任务属于已经打开的门，不能因玩家换世界或写入回调异常而遗漏。
+                    if (isCurrentDoor(level, doorPos, opened)) {
+                        level.scheduleTick(doorPos, opened.getBlock(), OPEN_TICKS);
+                    }
+                }
+                if (!applied || !isCurrentDoor(level, doorPos, opened)) {
+                    return;
+                }
+                if (doorPos.equals(start)) {
+                    expectedStart = opened;
+                }
+            }
+            if (isCurrentInteraction(level, start, expectedStart, player)
+                    && EchoPermission.canUseGravityMechanism(player)) {
+                level.playSound(null, start, SoundEvents.ENDERMAN_TELEPORT,
+                        SoundSource.BLOCKS, 1.0F, 0.8F);
+            }
+        } finally {
+            reserved.removeAll(found.keySet());
+            if (reserved.isEmpty()) {
+                active.remove(level);
+            }
+            if (active.isEmpty()) {
+                OPENING.remove();
+            }
+        }
     }
 
     @Override
     protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        if (state.getValue(OPEN)) {
-            level.setBlock(pos, state.setValue(OPEN, Boolean.FALSE), 3);
-            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE,
-                    SoundSource.BLOCKS, 0.45F, 0.65F);
+        if (!isCurrentDoor(level, pos, state) || !state.getValue(OPEN)) {
+            return;
+        }
+        BlockState closed = state.setValue(OPEN, Boolean.FALSE);
+        try {
+            if (level.setBlock(pos, closed, 3) && isCurrentDoor(level, pos, closed)) {
+                level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE,
+                        SoundSource.BLOCKS, 0.45F, 0.65F);
+            }
+        } finally {
+            if (isCurrentDoor(level, pos, state)) {
+                level.scheduleTick(pos, state.getBlock(), OPEN_TICKS);
+            }
         }
     }
 }

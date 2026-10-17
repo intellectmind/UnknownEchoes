@@ -14,11 +14,11 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 
 /**
@@ -26,7 +26,7 @@ import net.minecraft.world.level.levelgen.structure.StructureType;
  * 前厅八根顺序符文柱(点数乱序分布)、北墙高处六块提示柱(给出激活顺序)、
  * 嵌谜题核心的封印石隔墙,内室放宝箱。
  */
-public class RunePuzzleRoomStructure extends SinglePieceStructure {
+public class RunePuzzleRoomStructure extends TerrainAnchoredStructure {
     public static final MapCodec<RunePuzzleRoomStructure> CODEC = simpleCodec(RunePuzzleRoomStructure::new);
 
     private static final int WIDTH = 25;
@@ -163,6 +163,7 @@ public class RunePuzzleRoomStructure extends SinglePieceStructure {
             for (int i = 0; i < sequence.length; i++) {
                 BlockState hint = ModBlocks.SEQUENCE_RUNE.get().defaultBlockState()
                         .setValue(SequenceRuneBlock.ORDER, sequence[i])
+                        .setValue(SequenceRuneBlock.FACING, localFurnitureFacing(Direction.NORTH))
                         .setValue(SequenceRuneBlock.LIT, Boolean.TRUE);
                 this.placeBlock(level, hint, centerX - 3 + i, 7, barrierZ, box);
             }
@@ -186,11 +187,31 @@ public class RunePuzzleRoomStructure extends SinglePieceStructure {
                     3, 7, bricks, rune);
             buildRuneCauseway(level, box, centerX, 1, centerZ, Direction.NORTH,
                     8, 14, 2, bricks, ModBlocks.ECHO_MOSSY_STONE.get().defaultBlockState(), rune);
+            // 谜题壁冠：前厅上方用六枚错位符文组成独有的观察窗轮廓，不触碰谜题墙体。
+            for (int i = -3; i <= 3; i++) {
+                this.placeBlock(level, Math.abs(i) % 2 == 0 ? rune : bricks,
+                        centerX + i, roofY + 1, frontZ - 1, box);
+            }
+            this.placeBlock(level, ModBlocks.SKY_LAMP_GLASS.get().defaultBlockState(),
+                    centerX, roofY + 2, frontZ - 1, box);
+            this.placeBlock(level, cracked, centerX - 4, roofY, frontZ - 1, box);
+            this.placeBlock(level, cracked, centerX + 4, roofY, frontZ - 1, box);
             buildTrueSightVaultNiche(level, random, box,
                     centerX + 9, 2, centerZ + 8, Direction.WEST);
 
             placeStructureSpawner(level, random, box, centerX - 9, 2, centerZ - 9,
                     ModEntities.ECHO_REMNANT.get(), bricks, rune);
+            anchorGroundColumns(level, box, 0, bricks);
+            dressStructure(level, box, "rune_puzzle_room");
+            buildGroundEntry(level, box);
+        }
+
+        private void buildGroundEntry(WorldGenLevel level, BoundingBox box) {
+            BlockState stairs = ModBlocks.ECHO_STONE_BRICK_STAIRS.get().defaultBlockState()
+                    .setValue(StairBlock.FACING, Direction.NORTH);
+            for (int x = 11; x <= 13; x++) {
+                this.placeBlock(level, stairs, x, 0, 0, box);
+            }
         }
 
         private void placeRunePillar(WorldGenLevel level, BoundingBox box, int x, int z,

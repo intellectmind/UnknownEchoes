@@ -17,6 +17,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -29,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class RealmLivingTrailManager {
     public static final int TRAIL_DURATION_TICKS = 400;
     public static final int REPATH_INTERVAL_TICKS = 10;
+    private static final int REPATH_RETRY_TICKS = 40;
     public static final double ARRIVAL_DISTANCE_SQR = 6.25D;
 
     private static final double OBSERVER_NOTICE_RADIUS_SQR = 48.0D * 48.0D;
@@ -40,6 +42,7 @@ public final class RealmLivingTrailManager {
     private static final String TARGET_Z_KEY = "ue_living_trail_z";
     private static final String MODE_KEY = "ue_living_trail_mode";
     private static final String OBSERVER_KEY = "ue_living_trail_observer";
+    private static final String RETRY_AT_KEY = "ue_living_trail_retry_at";
 
     private RealmLivingTrailManager() {
     }
@@ -49,6 +52,7 @@ public final class RealmLivingTrailManager {
                                   RealmHabitatChimeBlock.Mode mode) {
         ACTIVE_TRAIL_MOBS.add(mob.getUUID());
         CompoundTag data = mob.getPersistentData();
+        data.remove(RETRY_AT_KEY);
         data.putLong(END_KEY, safeDeadline(level.getGameTime(), TRAIL_DURATION_TICKS));
         data.putInt(TARGET_X_KEY, target.getX());
         data.putInt(TARGET_Y_KEY, target.getY());
@@ -75,6 +79,13 @@ public final class RealmLivingTrailManager {
         }
         if (mob.getPersistentData().contains(END_KEY, Tag.TAG_LONG)) {
             ACTIVE_TRAIL_MOBS.add(mob.getUUID());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onEntityLeave(EntityLeaveLevelEvent event) {
+        if (event.getLevel() instanceof ServerLevel) {
+            ACTIVE_TRAIL_MOBS.remove(event.getEntity().getUUID());
         }
     }
 
@@ -107,6 +118,11 @@ public final class RealmLivingTrailManager {
             return;
         }
 
+        if (!mob.isAlive() || mob.isRemoved()) {
+            clearTrail(mob);
+            mob.getNavigation().stop();
+            return;
+        }
         long now = level.getGameTime();
         BlockPos target = new BlockPos(data.getInt(TARGET_X_KEY),
                 data.getInt(TARGET_Y_KEY), data.getInt(TARGET_Z_KEY));
@@ -118,34 +134,52 @@ public final class RealmLivingTrailManager {
             data.putLong(END_KEY, end);
         }
         if (now >= end) {
-            notifyObserver(level, mob, data,
-                    "message.unknown_echoes.realm_field_lens.trail_faded");
-            mob.getNavigation().stop();
+            UUID observerId = data.hasUUID(OBSERVER_KEY) ? data.getUUID(OBSERVER_KEY) : null;
             clearTrail(mob);
+            mob.getNavigation().stop();
+            notifyObserver(level, mob, observerId,
+                    "message.unknown_echoes.realm_field_lens.trail_faded");
             return;
         }
         if (mode == null || RealmHabitatChimeBlock.modeForDimension(level) != mode
                 || mob.getTarget() != null || mob.isLeashed()
                 || mob.isPassenger() || mob.isVehicle()) {
-            mob.getNavigation().stop();
             clearTrail(mob);
+            mob.getNavigation().stop();
             return;
         }
         if (!level.hasChunkAt(target)
                 || !RealmFieldLensItem.isForageTarget(level.getBlockState(target), mode)) {
-            mob.getNavigation().stop();
             clearTrail(mob);
+            mob.getNavigation().stop();
             return;
         }
         if (mob.distanceToSqr(Vec3.atCenterOf(target)) <= ARRIVAL_DISTANCE_SQR) {
+            // 先结束旧寻迹，声音回调开启的新寻迹不属于本次清理。
+            clearTrail(mob);
             mob.getNavigation().stop();
             presentArrival(level, mob, target, mode);
-            clearTrail(mob);
             return;
         }
-        mob.getNavigation().moveTo(target.getX() + 0.5D,
-                target.getY(), target.getZ() + 0.5D,
-                RealmFieldLensItem.trailSpeed(mode));
+        var navigation = mob.getNavigation();
+        if (navigation.isInProgress() && target.equals(navigation.getTargetPos())) {
+            // moveTo 会重置原生卡住检测计时；同目标路径只维护速度。
+            navigation.setSpeedModifier(RealmFieldLensItem.trailSpeed(mode));
+            data.remove(RETRY_AT_KEY);
+            return;
+        }
+        long retryAt = data.getLong(RETRY_AT_KEY);
+        if (data.contains(RETRY_AT_KEY, Tag.TAG_LONG) && retryAt > now
+                && retryAt <= safeDeadline(now, REPATH_RETRY_TICKS)) return;
+        data.remove(RETRY_AT_KEY);
+        if (!navigation.moveTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D,
+                RealmFieldLensItem.trailSpeed(mode))
+                && mob.level() == level && mob.isAlive() && !mob.isRemoved()
+                && ACTIVE_TRAIL_MOBS.contains(mob.getUUID()) && data.getLong(END_KEY) == end
+                && data.getInt(TARGET_X_KEY) == target.getX() && data.getInt(TARGET_Y_KEY) == target.getY()
+                && data.getInt(TARGET_Z_KEY) == target.getZ() && data.getInt(MODE_KEY) == mode.ordinal()) {
+            data.putLong(RETRY_AT_KEY, safeDeadline(now, REPATH_RETRY_TICKS));
+        }
     }
 
     private static RealmHabitatChimeBlock.Mode readMode(CompoundTag data) {
@@ -155,12 +189,12 @@ public final class RealmLivingTrailManager {
     }
 
     private static void notifyObserver(ServerLevel level, PathfinderMob mob,
-                                       CompoundTag data, String translationKey) {
-        if (!data.hasUUID(OBSERVER_KEY)) {
+                                       UUID observerId, String translationKey) {
+        if (observerId == null) {
             return;
         }
         ServerPlayer observer = level.getServer().getPlayerList()
-                .getPlayer(data.getUUID(OBSERVER_KEY));
+                .getPlayer(observerId);
         if (observer != null && observer.level() == level
                 && observer.distanceToSqr(mob) <= OBSERVER_NOTICE_RADIUS_SQR) {
             observer.displayClientMessage(Component.translatable(translationKey), true);
@@ -193,6 +227,7 @@ public final class RealmLivingTrailManager {
         data.remove(TARGET_Z_KEY);
         data.remove(MODE_KEY);
         data.remove(OBSERVER_KEY);
+        data.remove(RETRY_AT_KEY);
     }
 
     private static long safeDeadline(long now, long duration) {

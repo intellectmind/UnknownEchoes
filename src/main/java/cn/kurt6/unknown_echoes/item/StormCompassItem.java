@@ -1,13 +1,16 @@
 package cn.kurt6.unknown_echoes.item;
 
+import cn.kurt6.unknown_echoes.fx.PlayerSoundFeedback;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.artifact.ArtifactManager;
 import cn.kurt6.unknown_echoes.artifact.ArtifactEffectManager;
 import cn.kurt6.unknown_echoes.artifact.ArtifactType;
+import cn.kurt6.unknown_echoes.artifact.ArtifactUseGuard;
 import cn.kurt6.unknown_echoes.journal.ExplorationClue;
 import cn.kurt6.unknown_echoes.journal.JournalManager;
+import cn.kurt6.unknown_echoes.journal.JournalNavigation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -31,7 +34,10 @@ public class StormCompassItem extends Item implements ItemActiveSkill {
     @Override
     public boolean activateItemSkill(ServerLevel level, ServerPlayer player,
                                      ItemStack stack, InteractionHand hand) {
-        useOnServer(player, stack, hand, false);
+        if (!isCurrentInput(level, player, stack, hand)) {
+            return false;
+        }
+        useOnServer(level, player, stack, hand, false);
         return true;
     }
 
@@ -43,11 +49,16 @@ public class StormCompassItem extends Item implements ItemActiveSkill {
     @Override
     public boolean activateAlternateItemSkill(ServerLevel level, ServerPlayer player,
                                               ItemStack stack, InteractionHand hand) {
-        useOnServer(player, stack, hand, true);
-        return true;
+        if (!isCurrentInput(level, player, stack, hand)) {
+            return false;
+        }
+        return ArtifactUseGuard.run(player, ArtifactType.STORM_COMPASS, () -> {
+            useOnServer(level, player, stack, hand, true);
+            return true;
+        });
     }
 
-    private void useOnServer(ServerPlayer player, ItemStack stack, InteractionHand hand,
+    private void useOnServer(ServerLevel level, ServerPlayer player, ItemStack stack, InteractionHand hand,
                              boolean locateClue) {
         ArtifactType type = ArtifactType.STORM_COMPASS;
         if (!ArtifactManager.isEnabled(type)) {
@@ -57,8 +68,7 @@ public class StormCompassItem extends Item implements ItemActiveSkill {
         if (!ArtifactManager.validateCredential(player, type, stack)) {
 
             actionbar(player, "message.unknown_echoes.artifact.not_yours");
-            player.level().playSound(null, player.blockPosition(),
-                    SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 0.6F, 0.5F);
+            PlayerSoundFeedback.deny(player);
             return;
         }
         if (ArtifactManager.isOnCooldown(player, type)) {
@@ -70,35 +80,74 @@ public class StormCompassItem extends Item implements ItemActiveSkill {
             return;
         }
 
-        if (!ArtifactManager.spendEnergy(player,
-                ArtifactEffectManager.getEnergyCost(player, type))) {
+        String tuning = ArtifactManager.getData(player).getTuning(type);
+        JournalNavigation.Result navigation = JournalNavigation.resolve(JournalManager.getClues(player),
+                JournalManager.getData(player).getDestination(), player.level().dimension().location().toString(),
+                player.blockPosition(), tuning);
+        if (navigation.status() == JournalNavigation.Status.OTHER_DIMENSION) {
+            player.displayClientMessage(Component.translatable("message.unknown_echoes.storm_compass.other_dimension",
+                    JournalNavigation.structureName(navigation.clue()),
+                    JournalNavigation.dimensionName(navigation.clue().dimension())), true);
             return;
         }
-
-        String tuning = ArtifactManager.getData(player).getTuning(type);
-        ExplorationClue target = pickTarget(player, tuning);
+        if (navigation.status() == JournalNavigation.Status.NEARBY) {
+            player.displayClientMessage(Component.translatable("journal.unknown_echoes.clue.nearby",
+                    JournalNavigation.structureName(navigation.clue())), true);
+            return;
+        }
+        ExplorationClue target = navigation.clue();
         boolean windflow = ArtifactType.STORM_COMPASS.getHiddenWord().equals(tuning);
-        if (windflow && player.level() instanceof ServerLevel serverLevel) {
-            pointToWindflowPlatform(player, serverLevel);
+        BlockPos platform = windflow && player.level() instanceof ServerLevel serverLevel
+                ? findWindflowPlatform(player, serverLevel) : null;
+        if (target == null && platform == null) {
+            actionbar(player, "message.unknown_echoes.storm_compass.no_clue");
+            return;
         }
         boolean windflowAirborne = windflow && !player.onGround();
         if (windflowAirborne && !isAirborne(player)) {
             windflowAirborne = false;
         }
-        if (target == null) {
-            actionbar(player, "message.unknown_echoes.storm_compass.no_clue");
+        Vec3 origin = new Vec3(player.getX(), player.getEyeY() - 0.2D, player.getZ());
+        if (!windflowAirborne) {
+            ArtifactManager.reserveCooldown(player, type, target == null ? 3
+                    : ArtifactEffectManager.getCooldownSeconds(player, type));
+        }
+        if (!ArtifactManager.spendEnergy(player,
+                ArtifactEffectManager.getEnergyCost(player, type))) {
             if (!windflowAirborne) {
-                ArtifactManager.startCooldown(player, type, 3);
+                ArtifactManager.getData(player).clearCooldown(type);
             }
             return;
         }
-
-        pointTo(player, target);
-
-        if (!windflowAirborne) {
-            ArtifactManager.startCooldown(player, type,
-                    ArtifactEffectManager.getCooldownSeconds(player, type));
+        try {
+            if (!canContinue(level, player, stack, hand)) {
+                return;
+            }
+            if (platform != null) {
+                pointToWindflowPlatform(player, platform, origin);
+            }
+            if (target != null && canContinue(level, player, stack, hand)) {
+                pointTo(level, player, stack, hand, target, origin);
+            }
+        } finally {
+            // 永续核心能量未变化时支付不发包，仍需同步这次预留的冷却。
+            if (!windflowAirborne) {
+                ArtifactManager.syncToClient(player);
+            }
         }
+    }
+
+    private boolean isCurrentInput(ServerLevel level, ServerPlayer player,
+                                    ItemStack stack, InteractionHand hand) {
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && stack.is(this) && player.getItemInHand(hand) == stack;
+    }
+
+    private boolean canContinue(ServerLevel level, ServerPlayer player,
+                                ItemStack stack, InteractionHand hand) {
+        return isCurrentInput(level, player, stack, hand)
+                && ArtifactManager.isEnabled(ArtifactType.STORM_COMPASS)
+                && ArtifactManager.validateCredential(player, ArtifactType.STORM_COMPASS, stack);
     }
 
     private boolean isAirborne(ServerPlayer player) {
@@ -106,18 +155,21 @@ public class StormCompassItem extends Item implements ItemActiveSkill {
                 && !player.isPassenger();
     }
 
-    private void pointToWindflowPlatform(ServerPlayer player, ServerLevel level) {
+    private BlockPos findWindflowPlatform(ServerPlayer player, ServerLevel level) {
         BlockPos platform = cn.kurt6.unknown_echoes.block.wind.WindCurrentPlatformBlockEntity
                 .nearestPlatform(level, player.blockPosition());
         if (platform == null) {
-            return;
+            return null;
         }
         double pdx = platform.getX() + 0.5 - player.getX();
         double pdz = platform.getZ() + 0.5 - player.getZ();
+        return pdx * pdx + pdz * pdz > 4 * 4 ? platform : null;
+    }
+
+    private void pointToWindflowPlatform(ServerPlayer player, BlockPos platform, Vec3 origin) {
+        double pdx = platform.getX() + 0.5 - origin.x;
+        double pdz = platform.getZ() + 0.5 - origin.z;
         double pdist = Math.sqrt(pdx * pdx + pdz * pdz);
-        if (pdist <= 4) {
-            return;
-        }
         String distKey = pdist < 48 ? "near" : pdist < 160 ? "mid" : "far";
         player.displayClientMessage(Component.translatable(
                 "message.unknown_echoes.storm_compass.windflow",
@@ -127,64 +179,27 @@ public class StormCompassItem extends Item implements ItemActiveSkill {
                         + distKey)), false);
     }
 
-    /** 按调谐词条挑选目标线索:寻迹=未踏入优先;归途=已踏入(回访)优先;未调谐=最近。 */
-    private ExplorationClue pickTarget(ServerPlayer player, String tuning) {
-        String dim = player.level().dimension().location().toString();
-        BlockPos origin = player.blockPosition();
-        ExplorationClue preferred = null;
-        ExplorationClue fallback = null;
-        double preferredDist = Double.MAX_VALUE;
-        double fallbackDist = Double.MAX_VALUE;
-        boolean preferUnvisited = !"homeward".equals(tuning);
-        for (ExplorationClue clue : JournalManager.getClues(player)) {
-            if (!clue.dimension().equals(dim)) {
-                continue;
-            }
-            double dx = (double) clue.pos().getX() - origin.getX();
-            double dz = (double) clue.pos().getZ() - origin.getZ();
-            double horizontalDistSqr = dx * dx + dz * dz;
-            if (horizontalDistSqr < 24 * 24) {
-                continue;
-            }
-            double dist = clue.pos().distSqr(origin);
-            boolean isPreferred = clue.visited() != preferUnvisited;
-            if (isPreferred && dist < preferredDist) {
-                preferred = clue;
-                preferredDist = dist;
-            } else if (!isPreferred && dist < fallbackDist) {
-                fallback = clue;
-                fallbackDist = dist;
-            }
-        }
-        return preferred != null ? preferred : fallback;
-    }
-
     /** 指向演出:服务端粒子射线 + 含蓄方向文案(八方位 + 模糊距离,不给坐标)。 */
-    private void pointTo(ServerPlayer player, ExplorationClue target) {
-        double dx = target.pos().getX() + 0.5 - player.getX();
-        double dz = target.pos().getZ() + 0.5 - player.getZ();
+    private void pointTo(ServerLevel level, ServerPlayer player, ItemStack stack,
+                         InteractionHand hand, ExplorationClue target, Vec3 origin) {
+        double dx = target.pos().getX() + 0.5 - origin.x;
+        double dz = target.pos().getZ() + 0.5 - origin.z;
         double dist = Math.sqrt(dx * dx + dz * dz);
         double nx = dx / dist;
         double nz = dz / dist;
 
-        if (player.level() instanceof ServerLevel level) {
-            // 指针略微上扬:纯水平的束在第一人称里被准星压住,读不出指向哪边。
-            Vec3 origin = new Vec3(player.getX(), player.getEyeY() - 0.2D, player.getZ());
-            ArtifactEffectManager.spawnCompassPointer(level, origin,
-                    new Vec3(nx, 0.06D, nz), 10.0D);
+        ArtifactEffectManager.spawnCompassPointer(level, origin,
+                new Vec3(nx, 0.06D, nz), 10.0D);
+        player.playNotifySound(ModSounds.ITEM_STORM_COMPASS_LOCATE.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+        if (!canContinue(level, player, stack, hand)) {
+            return;
         }
-        player.level().playSound(null, player.blockPosition(),
-                SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.4F);
 
         String direction = octant(nx, nz);
         String distKey = dist < 200 ? "near" : dist < 800 ? "mid" : "far";
-        ResourceLocation structureId = ResourceLocation.tryParse(target.structureId());
-        Component structureName = structureId == null
-                ? Component.translatable("artifact.unknown_echoes.storm_compass.unknown_ruin")
-                : Component.translatable("structure.unknown_echoes." + structureId.getPath());
         player.displayClientMessage(Component.translatable(
                 "message.unknown_echoes.storm_compass.point",
-                structureName,
+                JournalNavigation.structureName(target),
                 Component.translatable("direction.unknown_echoes." + direction),
                 Component.translatable("message.unknown_echoes.storm_compass.dist." + distKey)), false);
     }

@@ -43,10 +43,10 @@ public final class BossParticleTheme {
             ParticleTypes.DRAGON_BREATH,
             ParticleTypes.PORTAL);
 
-    /** 蓝黑折线。三档都不得引入 REVERSE_PORTAL：那是 VOID_PROPHET 的 body。 */
+    /** 蓝黑折线。REVERSE_PORTAL 归先知；SONIC_BOOM 面片宽 3 格，不适合作逐点刃光。 */
     public static final Theme RIFT = new Theme(
             ParticleTypes.SCULK_SOUL,
-            ParticleTypes.SONIC_BOOM,
+            ParticleTypes.SCULK_CHARGE_POP,
             ParticleTypes.SCULK_CHARGE_POP);
 
     /** 顺序必须与 WorldEcho.aspectTranslationKey 的阶段逐项对齐,错位会让玩家读不出在模拟谁。 */

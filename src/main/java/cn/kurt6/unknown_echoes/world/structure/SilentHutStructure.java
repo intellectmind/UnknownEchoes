@@ -14,14 +14,14 @@ import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.ScatteredFeaturePiece;
-import net.minecraft.world.level.levelgen.structure.SinglePieceStructure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-public class SilentHutStructure extends SinglePieceStructure {
+public class SilentHutStructure extends TerrainAnchoredStructure {
     public static final MapCodec<SilentHutStructure> CODEC = simpleCodec(SilentHutStructure::new);
 
     private static final int WIDTH = 29;
@@ -49,6 +49,11 @@ public class SilentHutStructure extends SinglePieceStructure {
         }
 
         @Override
+        protected int surfaceAnchorOffset() {
+            return -2;
+        }
+
+        @Override
         public void postProcess(WorldGenLevel level, StructureManager structureManager,
                                 ChunkGenerator generator, RandomSource random, BoundingBox box,
                                 ChunkPos chunkPos, BlockPos pos) {
@@ -57,6 +62,7 @@ public class SilentHutStructure extends SinglePieceStructure {
                 return;
             }
 
+            clearStructureSpace(level, box, 0);
             BlockState mossy = ModBlocks.ROOTBOUND_MUDSTONE.get().defaultBlockState();
             BlockState bricks = ModBlocks.SILENT_MUDSTONE_BRICKS.get().defaultBlockState();
             BlockState cracked = ModBlocks.SILENT_MUDSTONE.get().defaultBlockState();
@@ -117,6 +123,17 @@ public class SilentHutStructure extends SinglePieceStructure {
             buildStairCornice(level, box, c, 6, c, Footprint.square(9), ModBlocks.SILENT_MUDSTONE_BRICK_STAIRS.get().defaultBlockState(), ModBlocks.SILENT_MUDSTONE_BRICK_SLAB.get().defaultBlockState(), true);
             buildParapet(level, box, c, 1, c, Footprint.square(12), 5, ModBlocks.SILENT_MUDSTONE_BRICK_WALL.get().defaultBlockState(), ModBlocks.ROOTBOUND_MUDSTONE.get().defaultBlockState());
 
+            // 坍塌屋脊：屋顶采用向西侧塌落的三段脊梁，保留残壳的缺口感。
+            for (int i = 0; i < 5; i++) {
+                int x = c - 4 + i;
+                int y = 7 + (i < 3 ? i : 4 - i);
+                this.placeBlock(level, i % 2 == 0 ? cracked : bricks, x, y, c - 2, box);
+                this.placeBlock(level, mossy, x, y, c - 1, box);
+            }
+            for (int i = 0; i < 3; i++) {
+                this.placeBlock(level, rune, c - 6 - i, 6 + i, c - 3, box);
+            }
+
             buildAccessibleChest(level, random, box, WIDTH / 2, 1, DEPTH - 2,
                     ModLootTables.SILENT_HUT_CHEST);
             buildAccessibleChest(level, random, box, 3, 1, DEPTH / 2,
@@ -142,12 +159,36 @@ public class SilentHutStructure extends SinglePieceStructure {
             }
             buildRuneCauseway(level, box, c, 0, c, Direction.SOUTH,
                     8, 14, 2, moss, mossy, rune);
-            scatterArchitecturalDebris(level, random, box, c, 1, c,
-                    10, 14, 24, cracked, mossy);
+            scatterArchitecturalDebris(level, box, "silent_hut", c, 1, c,
+                    cracked, mossy);
 
             placeStructureSpawner(level, random, box, c + 7, 1, c - 6,
                     ModEntities.SILENT_WALKER.get(), mossy,
                     ModBlocks.BOGLIGHT_STONE.get().defaultBlockState());
+            anchorGroundColumns(level, box, 0, mossy);
+            dressStructure(level, box, "silent_hut");
+            buildSunkenEntry(level, box, bricks);
+        }
+
+        /** 半沉外门沿残墙逐级升高，衔接较高的岸面。 */
+        private void buildSunkenEntry(WorldGenLevel level, BoundingBox box, BlockState bricks) {
+            BlockState stair = ModBlocks.SILENT_MUDSTONE_BRICK_STAIRS.get().defaultBlockState()
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, localFurnitureFacing(Direction.WEST));
+            BlockState air = Blocks.AIR.defaultBlockState();
+            for (int x = WIDTH / 2 - 3; x <= WIDTH / 2; x++) {
+                int rise = WIDTH / 2 - x;
+                for (int y = 1; y < rise; y++) {
+                    placeBlock(level, bricks, x, y, 0, box);
+                }
+                if (rise > 0) {
+                    placeBlock(level, stair, x, rise, 0, box);
+                }
+                generateBox(level, box, x, rise + 1, 0, x, 6, 0, air, air, false);
+            }
+            // 门旁短檐原本由外墙承托，开口后随残墙收掉。
+            generateBox(level, box, WIDTH / 2 - 3, 5, 1, WIDTH / 2 - 3, 5, 3, air, air, false);
+            generateBox(level, box, WIDTH / 2, 5, 1, WIDTH / 2, 5, 3, air, air, false);
+            placeBlock(level, air, WIDTH / 2 + 1, 5, 2, box);
         }
 
         /** 墙体方块:下层更苔化,带随机坍塌缺口。 */

@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "unknown_echoes:worldtree_fruit"
+    },
+    "title": {
+      "translate": "advancement.unknown_echoes.all_seven_wonders.title"
+    },
+    "description": {
+      "translate": "advancement.unknown_echoes.all_seven_wonders.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "unknown_echoes:all_wonders",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

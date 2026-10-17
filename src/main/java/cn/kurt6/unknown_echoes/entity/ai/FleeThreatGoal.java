@@ -58,7 +58,11 @@ public class FleeThreatGoal extends Goal {
             return false;
         }
         this.escapeTarget = this.findEscapeTarget(this.threat);
-        return this.escapeTarget != null;
+        if (this.escapeTarget == null) {
+            this.threat = null;
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -114,10 +118,11 @@ public class FleeThreatGoal extends Goal {
                     : away.normalize().scale(ESCAPE_RADIUS);
             Vec3 airTarget = AirRandomPos.getPosTowards(this.mob, ESCAPE_RADIUS, ESCAPE_VERTICAL, 0,
                     this.mob.position().add(heading), Math.PI * 0.5D);
-            if (airTarget != null) {
+            if (EscapePosition.isNotCloser(this.mob.position(), from.position(), airTarget)) {
                 return airTarget;
             }
         }
-        return DefaultRandomPos.getPosAway(this.mob, ESCAPE_RADIUS, ESCAPE_VERTICAL, from.position());
+        Vec3 target = DefaultRandomPos.getPosAway(this.mob, ESCAPE_RADIUS, ESCAPE_VERTICAL, from.position());
+        return EscapePosition.isNotCloser(this.mob.position(), from.position(), target) ? target : null;
     }
 }

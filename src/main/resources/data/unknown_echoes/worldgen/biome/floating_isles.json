@@ -3,23 +3,29 @@
   "temperature": 0.5,
   "downfall": 0.2,
   "effects": {
-    "fog_color": 13103871,
-    "sky_color": 9620223,
-    "water_color": 4892356,
-    "water_fog_color": 472138,
-    "grass_color": 9554323,
-    "foliage_color": 8435838,
+    "fog_color": 14999535,
+    "sky_color": 10399456,
+    "water_color": 8830931,
+    "water_fog_color": 4750993,
+    "grass_color": 10733490,
+    "foliage_color": 10733490,
     "ambient_particle": {
       "options": {
-        "type": "minecraft:cloud"
+        "type": "minecraft:white_ash"
       },
-      "probability": 0.009
+      "probability": 0.0008
     },
     "mood_sound": {
       "sound": "minecraft:ambient.cave",
-      "tick_delay": 8000,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.cherry_grove",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
     }
   },
   "carvers": {
@@ -40,7 +46,9 @@
       "unknown_echoes:wind_etched_stone_disk"
     ],
     [],
-    [],
+    [
+      "unknown_echoes:floating_isles_landform"
+    ],
     [
       "minecraft:patch_grass_plain",
       "unknown_echoes:echo_flowers",
@@ -63,6 +71,12 @@
         "weight": 10,
         "minCount": 1,
         "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:gale_shrike",
+        "weight": 7,
+        "minCount": 1,
+        "maxCount": 2
       }
     ],
     "creature": [
@@ -71,6 +85,18 @@
         "weight": 30,
         "minCount": 2,
         "maxCount": 4
+      },
+      {
+        "type": "unknown_echoes:wind_drift_jelly",
+        "weight": 18,
+        "minCount": 2,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:sailtail_minnow",
+        "weight": 14,
+        "minCount": 2,
+        "maxCount": 3
       }
     ],
     "ambient": [],

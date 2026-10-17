@@ -29,6 +29,7 @@ public class KeepDistanceGoal extends Goal {
 
     private int retryDelay;
     private Vec3 retreatTarget;
+    private LivingEntity maneuverTarget;
 
     /**
      * minDistance 单位为格:目标近于此距离时开始后撤。
@@ -58,26 +59,35 @@ public class KeepDistanceGoal extends Goal {
             return false;
         }
         LivingEntity target = this.mob.getTarget();
-        if (target == null || !target.isAlive() || this.mob.distanceToSqr(target) > this.minDistanceSqr) {
+        if (!this.mob.isAlive() || this.mob.isNoAi() || target == null || !target.isAlive()
+                || target.level() != this.mob.level() || !this.mob.canAttack(target)
+                || this.mob.isAlliedTo(target) || this.mob.distanceToSqr(target) > this.minDistanceSqr) {
             return false;
         }
         this.retryDelay = RETRY_TICKS;
         this.retreatTarget = DefaultRandomPos.getPosAway(this.mob, RETREAT_RADIUS, RETREAT_VERTICAL,
                 target.position());
+        if (!EscapePosition.isNotCloser(this.mob.position(), target.position(), this.retreatTarget)) {
+            this.retreatTarget = null;
+        }
+        this.maneuverTarget = this.retreatTarget != null ? target : null;
         return this.retreatTarget != null;
     }
 
     @Override
     public boolean canContinueToUse() {
         LivingEntity target = this.mob.getTarget();
-        return target != null && target.isAlive()
-                && !this.movementLocked.getAsBoolean()
+        return this.isManeuverTargetValid()
                 && this.mob.distanceToSqr(target) <= this.minDistanceSqr
                 && !this.mob.getNavigation().isDone();
     }
 
     @Override
     public void start() {
+        if (this.retreatTarget == null || !this.isManeuverTargetValid()) {
+            this.stop();
+            return;
+        }
         this.mob.getNavigation().moveTo(this.retreatTarget.x, this.retreatTarget.y, this.retreatTarget.z,
                 this.speedModifier);
     }
@@ -85,7 +95,16 @@ public class KeepDistanceGoal extends Goal {
     @Override
     public void stop() {
         this.retreatTarget = null;
+        this.maneuverTarget = null;
         this.mob.getNavigation().stop();
+    }
+
+    private boolean isManeuverTargetValid() {
+        LivingEntity target = this.mob.getTarget();
+        return this.mob.isAlive() && !this.mob.isNoAi() && !this.movementLocked.getAsBoolean()
+                && target != null && target == this.maneuverTarget && target.isAlive()
+                && target.level() == this.mob.level() && this.mob.canAttack(target)
+                && !this.mob.isAlliedTo(target);
     }
 
     @Override

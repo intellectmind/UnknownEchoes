@@ -1,15 +1,14 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -53,6 +52,11 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
                                   String tooltipKey, Properties properties) {
         super(tier, properties.attributes(WeaponAttributes.melee(damage, speed)));
         this.tooltipKey = tooltipKey;
+    }
+
+    @Override
+    public boolean isFoil(ItemStack stack) {
+        return cn.kurt6.unknown_echoes.particle.ParticleRules.data(stack).total() == 50 || super.isFoil(stack);
     }
 
     @Override
@@ -169,14 +173,16 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
             }
         }
         WeaponFx.slashArc(level, player, fx, 6.0D, WeaponFx.halfAngleOf(0.42D));
-        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                SoundSource.PLAYERS, 0.9F, 1.15F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_BROADSWORD_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void activateBroadswordSecondary(ServerLevel level, ServerPlayer player) {
         WeaponSkillSupport.applyAbsorption(player, 120, 1, 8.0F);
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 60, 0, true, false, true));
         WeaponFx.wardSpiral(level, player, WeaponFxTheme.of(tooltipKey), 1.05D, 2);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_BROADSWORD_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void activateBattleaxePrimary(ServerLevel level, ServerPlayer player) {
@@ -191,8 +197,8 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
             }
         }
         WeaponFx.slashArc(level, player, fx, 5.0D, WeaponFx.halfAngleOf(0.25D));
-        level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND,
-                SoundSource.PLAYERS, 0.85F, 0.75F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_BATTLEAXE_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.85F, 1.0F);
     }
 
     private void activateBattleaxeSecondary(ServerLevel level, ServerPlayer player) {
@@ -211,8 +217,8 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
             affected++;
         }
         WeaponFx.groundRing(level, player, fx, 5.0D);
-        level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(),
-                SoundSource.PLAYERS, 0.7F, 1.2F + affected * 0.03F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_BATTLEAXE_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.7F, 1.0F);
     }
 
     private void activateSilencePrimary(ServerLevel level, ServerPlayer player) {
@@ -227,8 +233,8 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
             }
         }
         WeaponFx.slashArc(level, player, fx, 7.0D, WeaponFx.halfAngleOf(0.15D));
-        level.playSound(null, player.blockPosition(), SoundEvents.SOUL_ESCAPE.value(),
-                SoundSource.PLAYERS, 0.8F, 0.8F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_SILENCE_SCYTHE_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.8F, 1.0F);
     }
 
     private void activateSilenceSecondary(ServerLevel level, ServerPlayer player) {
@@ -244,6 +250,8 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
             }
         }
         WeaponFx.groundRing(level, player, fx, 7.0D);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_SILENCE_SCYTHE_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void activateBellHammerPrimary(ServerLevel level, ServerPlayer player) {
@@ -258,10 +266,9 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
             }
         }
         WeaponFx.groundRing(level, player, fx, 5.0D);
-        level.sendParticles(ParticleTypes.SONIC_BOOM, player.getX(), player.getY() + 0.9D, player.getZ(),
-                1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.playSound(null, player.blockPosition(), SoundEvents.BELL_BLOCK,
-                SoundSource.PLAYERS, 1.0F, 0.65F);
+        WeaponFx.releaseBurst(level, player.position().add(0, .9, 0), fx, 1.1D);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_BROKEN_BELL_HAMMER_PRIMARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void activateBellHammerSecondary(ServerLevel level, ServerPlayer player) {
@@ -269,8 +276,8 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 160, 0, true, false, true));
         WeaponSkillSupport.applyAbsorption(player, 80, 0, 4.0F);
         WeaponFx.wardSpiral(level, player, WeaponFxTheme.of(tooltipKey), 1.15D, 3);
-        level.playSound(null, player.blockPosition(), SoundEvents.BELL_BLOCK,
-                SoundSource.PLAYERS, 1.0F, 1.25F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_BROKEN_BELL_HAMMER_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     @Override
@@ -385,8 +392,8 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
         long now = level.getGameTime();
         if (isValidHammerMark(data, timeKey, now)) {
             WeaponFx.heavyHitMark(level, target, WeaponFxTheme.of(tooltipKey));
-            level.playSound(null, target.blockPosition(), SoundEvents.ANVIL_LAND,
-                    SoundSource.PLAYERS, 0.8F, 0.7F);
+            level.playSound(null, target.blockPosition(), ModSounds.WEAPON_BROKEN_BELL_HAMMER_PRIMARY.get(),
+                    SoundSource.PLAYERS, 0.8F, 1.0F);
             data.remove(timeKey);
             pruneHammerMarks(data, now, MAX_ACTIVE_HAMMER_MARKS);
             return;
@@ -435,7 +442,7 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50, 0, true, false, true));
         WeaponFx.hitMark(level, target, WeaponFxTheme.CRYSTAL_SONG_STAFF);
         level.playSound(null, target.blockPosition(),
-                SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, 0.7F, 1.6F);
+                ModSounds.WEAPON_CRYSTAL_SONG_STAFF_PRIMARY.get(), SoundSource.PLAYERS, 0.7F, 1.0F);
     }
 
     private float oathbladeBonus(LivingEntity target) {

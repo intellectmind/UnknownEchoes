@@ -3,31 +3,66 @@
   "temperature": 0.15,
   "downfall": 0.0,
   "effects": {
-    "fog_color": 2242116,
-    "sky_color": 1640990,
-    "water_color": 2643020,
-    "water_fog_color": 1053720,
-    "grass_color": 3695436,
-    "foliage_color": 3236166,
+    "fog_color": 8095921,
+    "sky_color": 3948650,
+    "water_color": 6913448,
+    "water_fog_color": 2050900,
+    "grass_color": 7834282,
+    "foliage_color": 7834282,
     "ambient_particle": {
-      "options": { "type": "minecraft:white_ash" },
-      "probability": 0.008
+      "options": {
+        "type": "minecraft:white_ash"
+      },
+      "probability": 0.0015
     },
     "mood_sound": {
       "sound": "minecraft:ambient.basalt_deltas.mood",
-      "tick_delay": 8000,
+      "tick_delay": 12000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.deep_dark",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": "minecraft:ambient.warped_forest.additions",
+      "tick_chance": 0.0003
     }
   },
   "carvers": {
-    "air": ["minecraft:cave", "minecraft:cave_extra_underground", "minecraft:canyon"]
+    "air": [
+      "minecraft:cave",
+      "minecraft:cave_extra_underground",
+      "minecraft:canyon"
+    ]
   },
   "features": [
-    [], [], [], [], [], [],
-    ["unknown_echoes:gravity_shale_disk", "unknown_echoes:suspended_crystal_disk", "unknown_echoes:echo_amber_ore_disk", "unknown_echoes:sky_quartz_ore_disk"],
-    [], [],
-    ["unknown_echoes:inversion_reed_patch", "unknown_echoes:weightless_bloom_patch", "unknown_echoes:wind_eroded_rubble_patch", "unknown_echoes:gravity_bell_patch", "unknown_echoes:star_mist_bloom_patch"],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "unknown_echoes:gravity_shale_disk",
+      "unknown_echoes:suspended_crystal_disk",
+      "unknown_echoes:echo_amber_ore_disk",
+      "unknown_echoes:sky_quartz_ore_disk"
+    ],
+    [],
+    [
+      "unknown_echoes:inverted_chasm_landform"
+    ],
+    [
+      "unknown_echoes:inversion_reed_patch",
+      "unknown_echoes:weightless_bloom_patch",
+      "unknown_echoes:wind_eroded_rubble_patch",
+      "unknown_echoes:gravity_bell_patch",
+      "unknown_echoes:star_mist_bloom_patch"
+    ],
     []
   ],
   "spawners": {
@@ -43,6 +78,12 @@
         "weight": 20,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:shardwing_skate",
+        "weight": 7,
+        "minCount": 1,
+        "maxCount": 1
       }
     ],
     "creature": [
@@ -59,8 +100,12 @@
         "maxCount": 3
       }
     ],
-    "ambient": [], "axolotls": [],
-    "underground_water_creature": [], "water_creature": [], "water_ambient": [], "misc": []
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
   },
   "spawn_costs": {}
 }

@@ -1,5 +1,5 @@
 {
-  "parent": "unknown_echoes:armor_silent_watch",
+  "parent": "unknown_echoes:echo_traveler_armor",
   "display": {
     "icon": {
       "id": "unknown_echoes:oathbound_alloy"
@@ -12,7 +12,7 @@
     },
     "frame": "goal",
     "show_toast": true,
-    "announce_to_chat": true,
+    "announce_to_chat": false,
     "hidden": false
   },
   "criteria": {

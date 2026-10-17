@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -279,7 +280,8 @@ public class CrystalSongkeeper extends MiniBossEntity {
         BlockPos pillar = this.orderedPillars.get(this.tuneSequence[this.demoStep]);
         if (this.demoTimer == 0) {
             MiniBossFx.pillarBeam(level, pillarTop(pillar), this.fxTheme(), DEMO_BEAM_HEIGHT);
-            this.playSound(ModSounds.CRYSTAL_SONGKEEPER_TUNE_DEMO.get(), 1.0F, 0.7F + 0.12F * this.demoStep);
+            this.playTuneCue(level, ModSounds.CRYSTAL_SONGKEEPER_TUNE_DEMO.get(),
+                    0.8F, 0.7F + 0.12F * this.demoStep);
         } else if (this.demoTimer == DEMO_LIT_TICKS) {
             MiniBossFx.solvedMark(level, pillarTop(pillar), this.fxTheme());
         }
@@ -309,17 +311,17 @@ public class CrystalSongkeeper extends MiniBossEntity {
             return;
         }
         if (idx == this.tuneSequence[this.inputProgress]) {
-            this.inputProgress++;
             MiniBossFx.pillarBeam(level, pillarTop(pos), this.fxTheme(), INPUT_BEAM_HEIGHT);
-            this.playSound(ModSounds.CRYSTAL_SONGKEEPER_TUNE_INPUT.get(),
-                    1.1F, 0.8F + 0.12F * this.inputProgress);
+            this.playTuneCue(level, ModSounds.CRYSTAL_SONGKEEPER_TUNE_INPUT.get(),
+                    0.9F, 0.7F + 0.12F * this.inputProgress);
+            this.inputProgress++;
             if (this.inputProgress >= this.tuneSequence.length) {
                 enterStagger(level);
             }
         } else {
 
             this.inputProgress = 0;
-            this.playSound(ModSounds.CRYSTAL_SONGKEEPER_TUNE_FAIL.get(), 1.0F, 1.0F);
+            this.playTuneCue(level, ModSounds.CRYSTAL_SONGKEEPER_TUNE_FAIL.get(), 0.7F, 1.0F);
             broadcastHint(level, "message.unknown_echoes.crystal_songkeeper.tune_wrong");
             this.demoStep = 0;
             this.demoTimer = 0;
@@ -413,7 +415,7 @@ public class CrystalSongkeeper extends MiniBossEntity {
                 MiniBossFx.hitMark(serverLevel, victim, this.fxTheme());
             }
         }
-        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), SOUNDWAVE_RADIUS);
+        MiniBossFx.releasePulse(serverLevel, this.position(), this.fxTheme(), SOUNDWAVE_RADIUS);
         BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
                 24.0D, 0.42F, 6, this.combatImpactColor());
     }
@@ -452,7 +454,7 @@ public class CrystalSongkeeper extends MiniBossEntity {
             }
         }
         // 环画在结算半径上：画小了玩家会站在环外仍然吃满伤害。
-        MiniBossFx.groundRing(serverLevel, this.position(), this.fxTheme(), ARENA_RADIUS);
+        MiniBossFx.releasePulse(serverLevel, this.position(), this.fxTheme(), ARENA_RADIUS);
         BossFx.cinematicImpact(serverLevel, this.position().add(0, 1.0, 0),
                 36.0D, 0.86F, 11, this.combatImpactColor());
     }
@@ -465,6 +467,19 @@ public class CrystalSongkeeper extends MiniBossEntity {
             this.playSound(ModSounds.CRYSTAL_SONGKEEPER_ATTACK.get(), 1.1F, 1.0F);
         }
         return hit;
+    }
+
+    private void playTuneCue(ServerLevel level, SoundEvent sound, float volume, float pitch) {
+        if (this.isSilent()) {
+            return;
+        }
+        // 调音提示与文字覆盖同一范围，场地边缘也必须听清示范音阶。
+        double radius = settlementRadius();
+        for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class,
+                this.getBoundingBox().inflate(radius),
+                candidate -> candidate.distanceToSqr(this) <= radius * radius)) {
+            player.playNotifySound(sound, SoundSource.HOSTILE, volume, pitch);
+        }
     }
 
     private void broadcastHint(ServerLevel serverLevel, String key) {
@@ -522,5 +537,9 @@ public class CrystalSongkeeper extends MiniBossEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return geoCache;
+    }
+    @Override
+    public int musicStage() {
+        return this.tunePhase != TunePhase.IDLE ? 1 : this.staggerTicks > 0 ? 2 : 0;
     }
 }

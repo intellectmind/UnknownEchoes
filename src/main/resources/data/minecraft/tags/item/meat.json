@@ -1,0 +1,21 @@
+{
+  "replace": false,
+  "values": [
+    "unknown_echoes:wind_drift_jelly_meat",
+    "unknown_echoes:cooked_wind_drift_jelly_meat",
+    "unknown_echoes:reedwing_dragonfly_meat",
+    "unknown_echoes:cooked_reedwing_dragonfly_meat",
+    "unknown_echoes:petalwing_butterfly_meat",
+    "unknown_echoes:cooked_petalwing_butterfly_meat",
+    "unknown_echoes:mosslight_firefly_meat",
+    "unknown_echoes:cooked_mosslight_firefly_meat",
+    "unknown_echoes:sailtail_minnow_meat",
+    "unknown_echoes:cooked_sailtail_minnow_meat",
+    "unknown_echoes:moss_sail_snail_meat",
+    "unknown_echoes:cooked_moss_sail_snail_meat",
+    "unknown_echoes:mossback_hedgehog_meat",
+    "unknown_echoes:cooked_mossback_hedgehog_meat",
+    "unknown_echoes:lantern_seahorse_meat",
+    "unknown_echoes:cooked_lantern_seahorse_meat"
+  ]
+}

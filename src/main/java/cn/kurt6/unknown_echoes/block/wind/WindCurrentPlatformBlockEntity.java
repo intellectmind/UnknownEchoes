@@ -1,10 +1,11 @@
 package cn.kurt6.unknown_echoes.block.wind;
 
 import cn.kurt6.unknown_echoes.config.ServerConfig;
+import cn.kurt6.unknown_echoes.fx.ExplorationFx;
+import cn.kurt6.unknown_echoes.fx.MechanismFx;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -117,16 +118,8 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
             }
         }
 
-        if (gameTime % 4 == 0) {
-            double phase = (gameTime / 4.0 + pos.hashCode() % 17) * 0.7;
-            for (int i = 0; i < 3; i++) {
-                double y = pos.getY() + 0.5 + (gameTime / 4.0 * 1.3 + i * height / 3.0) % height;
-                double angle = phase + i * Math.PI * 2 / 3;
-                serverLevel.sendParticles(ParticleTypes.CLOUD,
-                        pos.getX() + 0.5 + Math.cos(angle) * 0.7, y, pos.getZ() + 0.5 + Math.sin(angle) * 0.7,
-                        1, 0.05, 0.1, 0.05, 0.01);
-            }
-        }
+        MechanismFx.emit(serverLevel, ExplorationFx.windFrame(
+                Vec3.atBottomCenterOf(pos), height, gameTime, pos.asLong()));
     }
 
     private static Vec3 addHorizontalDraft(ServerPlayer player, Vec3 motion) {

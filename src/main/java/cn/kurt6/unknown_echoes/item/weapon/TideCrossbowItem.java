@@ -1,5 +1,6 @@
 package cn.kurt6.unknown_echoes.item.weapon;
 
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.entity.projectile.TideBoltEntity;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
@@ -40,6 +41,11 @@ public class TideCrossbowItem extends CrossbowItem implements WeaponSkill {
     }
 
     @Override
+    public boolean isFoil(ItemStack stack) {
+        return cn.kurt6.unknown_echoes.particle.ParticleRules.data(stack).total() == 50 || super.isFoil(stack);
+    }
+
+    @Override
     public boolean hasSecondarySkill() {
         return true;
     }
@@ -68,8 +74,8 @@ public class TideCrossbowItem extends CrossbowItem implements WeaponSkill {
         Vec3 look = player.getLookAngle().normalize();
         WeaponFx.pierceBeam(level, player, WeaponFxTheme.TIDE_CROSSBOW, eye, look,
                 WeaponFx.clippedBeamLength(level, player, eye, look, 20.0D));
-        level.playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW.value(),
-                SoundSource.PLAYERS, 0.9F, 1.35F);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_TIDE_CROSSBOW_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 2);
         return true;
     }
@@ -94,6 +100,8 @@ public class TideCrossbowItem extends CrossbowItem implements WeaponSkill {
         // BUBBLE 离水当 tick 自毁,陆上放会整段消失,所以护体只用染色 dust 螺旋。
         WeaponFx.groundRing(level, player, WeaponFxTheme.TIDE_CROSSBOW, 7.0D);
         WeaponFx.wardSpiral(level, player, WeaponFxTheme.TIDE_CROSSBOW, 1.1D, 3);
+        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_TIDE_CROSSBOW_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
         WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
     }
@@ -117,9 +125,13 @@ public class TideCrossbowItem extends CrossbowItem implements WeaponSkill {
         tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.skill",
                         Component.keybind("key.unknown_echoes.weapon_skill"))
                 .withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.skill_effect")
+                .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.secondary",
                         Component.keybind("key.unknown_echoes.weapon_secondary_skill"))
                 .withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.secondary_effect")
+                .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.secondary_buff")
                 .withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("tooltip.unknown_echoes.tide_crossbow.ammo")
@@ -158,5 +170,14 @@ public class TideCrossbowItem extends CrossbowItem implements WeaponSkill {
     private static boolean isVanillaTideAmmo(ItemStack ammo) {
         return ammo.is(Items.ARROW) || ammo.is(Items.TIPPED_ARROW)
                 || ammo.is(Items.SPECTRAL_ARROW);
+    }
+
+    @Override
+    protected void shoot(net.minecraft.server.level.ServerLevel level, LivingEntity shooter,
+                         net.minecraft.world.InteractionHand hand, ItemStack weapon,
+                         java.util.List<ItemStack> projectiles, float velocity, float inaccuracy,
+                         boolean critical, LivingEntity target) {
+        cn.kurt6.unknown_echoes.particle.ParticleAttack.shoot(shooter, weapon,
+                () -> super.shoot(level, shooter, hand, weapon, projectiles, velocity, inaccuracy, critical, target));
     }
 }

@@ -4,6 +4,7 @@ import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -59,22 +60,41 @@ public class FoldpageTileBlock extends Block {
     }
 
     private static FoldpagePairCoreBlockEntity findCore(Level level, BlockPos origin) {
+        if (!(level instanceof ServerLevel serverLevel)) return null;
         FoldpagePairCoreBlockEntity nearest = null;
+        BlockPos nearestPos = null;
         double nearestDistance = Double.MAX_VALUE;
-        for (BlockPos pos : BlockPos.betweenClosed(
-                origin.offset(-CORE_SEARCH_RADIUS, -4, -CORE_SEARCH_RADIUS),
-                origin.offset(CORE_SEARCH_RADIUS, 4, CORE_SEARCH_RADIUS))) {
-            if (level.hasChunkAt(pos)
-                    && level.getBlockState(pos).is(ModBlocks.FOLDPAGE_PAIR_CORE.get())
-                    && level.getBlockEntity(pos) instanceof FoldpagePairCoreBlockEntity core
-                    && core.ownsTile(origin)) {
-                double distance = pos.distSqr(origin);
-                if (distance < nearestDistance) {
-                    nearest = core;
-                    nearestDistance = distance;
+        for (int x = (origin.getX() - CORE_SEARCH_RADIUS) >> 4;
+             x <= (origin.getX() + CORE_SEARCH_RADIUS) >> 4; x++) {
+            for (int z = (origin.getZ() - CORE_SEARCH_RADIUS) >> 4;
+                 z <= (origin.getZ() + CORE_SEARCH_RADIUS) >> 4; z++) {
+                var chunk = serverLevel.getChunkSource().getChunkNow(x, z);
+                if (chunk == null) continue;
+                for (var blockEntity : chunk.getBlockEntities().values()) {
+                    if (!(blockEntity instanceof FoldpagePairCoreBlockEntity core)) continue;
+                    BlockPos pos = core.getBlockPos();
+                    if (Math.abs(pos.getX() - origin.getX()) > CORE_SEARCH_RADIUS
+                            || Math.abs(pos.getY() - origin.getY()) > 4
+                            || Math.abs(pos.getZ() - origin.getZ()) > CORE_SEARCH_RADIUS
+                            || !core.ownsTile(origin)
+                            || !level.getBlockState(pos).is(ModBlocks.FOLDPAGE_PAIR_CORE.get())) continue;
+                    double distance = pos.distSqr(origin);
+                    // 与原体积遍历相同：等距时按 Z、Y、X 顺序选择，避免相邻核心串线。
+                    if (distance < nearestDistance || distance == nearestDistance
+                            && earlierCore(pos, nearestPos)) {
+                        nearest = core;
+                        nearestPos = pos;
+                        nearestDistance = distance;
+                    }
                 }
             }
         }
         return nearest;
+    }
+
+    private static boolean earlierCore(BlockPos pos, BlockPos other) {
+        return other == null || pos.getZ() < other.getZ()
+                || pos.getZ() == other.getZ() && (pos.getY() < other.getY()
+                || pos.getY() == other.getY() && pos.getX() < other.getX());
     }
 }

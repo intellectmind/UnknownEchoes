@@ -7,6 +7,9 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import cn.kurt6.unknown_echoes.entity.mob.AerialHunter;
+import cn.kurt6.unknown_echoes.entity.mob.HumanoidRaider;
+import cn.kurt6.unknown_echoes.fx.MobAttackFx;
 import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoRenderer;
@@ -46,6 +49,13 @@ public class EchoGlowLayer<T extends GeoAnimatable> extends GeoRenderLayer<T> {
         Color tint = this.glowTint != null
                 ? this.glowTint.apply(animatable)
                 : getRenderer().getRenderColor(animatable, partialTick, packedLight);
+        int phase = animatable instanceof AerialHunter hunter ? hunter.attackPresentation()
+                : animatable instanceof HumanoidRaider raider ? raider.attackPresentation() : 0;
+        if (phase != 0 && animatable instanceof Entity entity && entity.isAlive()) {
+            float gain = MobAttackFx.glow(phase, entity.tickCount + partialTick);
+            tint = Color.ofRGBA(tint.getRedFloat() * gain, tint.getGreenFloat() * gain,
+                    tint.getBlueFloat() * gain, tint.getAlphaFloat());
+        }
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, glow,
                 bufferSource.getBuffer(glow), partialTick, LightTexture.FULL_SKY, packedOverlay,
                 tint.argbInt());

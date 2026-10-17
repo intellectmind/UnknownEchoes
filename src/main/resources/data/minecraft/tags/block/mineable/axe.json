@@ -10,6 +10,11 @@
     "unknown_echoes:whispering_timber_frame",
     "unknown_echoes:whispering_timber_stairs",
     "unknown_echoes:whispering_timber_slab",
-    "unknown_echoes:whispering_timber_wall"
+    "unknown_echoes:whispering_timber_wall",
+    "unknown_echoes:tarred_ship_planks",
+    "unknown_echoes:ship_deck_planks",
+    "unknown_echoes:ship_timber",
+    "unknown_echoes:whispering_panelled_planks",
+    "unknown_echoes:whispering_carved_panels"
   ]
 }
