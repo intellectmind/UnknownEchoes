@@ -65,11 +65,11 @@ public class EchoProjectorItem extends Item {
                     player.getYRot(), 0.0F);
             projection.setOwner(player.getUUID());
             if (!EntitySpawnSafety.isLoadedAndCollisionFree(level, projection)
-                    || !canProject(context, player, level)) {
+                    || !canContinueProject(context, player, level)) {
                 return InteractionResult.CONSUME;
             }
             if (!level.addFreshEntity(projection)
-                    || !projection.isAlive() || !canProject(context, player, level)) {
+                    || !projection.isAlive() || !canContinueProject(context, player, level)) {
                 return InteractionResult.CONSUME;
             }
 
@@ -101,9 +101,15 @@ public class EchoProjectorItem extends Item {
     }
 
     private boolean canProject(UseOnContext context, ServerPlayer player, ServerLevel level) {
-        return player.level() == level && !player.isSpectator()
+        return player.level() == level && player.isAlive() && !player.isSpectator()
+                && player.canInteractWithBlock(context.getClickedPos(), 1.0D)
                 && player.getItemInHand(context.getHand()) == context.getItemInHand()
                 && context.getItemInHand().is(this);
+    }
+
+    private boolean canContinueProject(UseOnContext context, ServerPlayer player, ServerLevel level) {
+        return canProject(context, player, level)
+                && !EchoAbilityManager.getData(player).getUnlockedAbilities().isEmpty();
     }
 
     public static boolean isCurrentProjection(ServerPlayer player, UUID projectionId) {

@@ -1,15 +1,21 @@
 package cn.kurt6.unknown_echoes.block.wind;
 
+import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
+import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
+import cn.kurt6.unknown_echoes.ability.EchoPermission;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.fx.ExplorationFx;
 import cn.kurt6.unknown_echoes.fx.MechanismFx;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
+import cn.kurt6.unknown_echoes.registry.ModSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -46,13 +52,66 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
     private static final int SPEED_BUFF_REFRESH_THRESHOLD_TICKS = 40;
 
     private int activeTicks = 0;
+    private int stateRevision;
+    private boolean ticking;
+    private boolean interacting;
 
     public WindCurrentPlatformBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.WIND_CURRENT_PLATFORM.get(), pos, state);
     }
 
-    public void activate(int ticks) {
+    void interact(ServerLevel level, BlockState state, ServerPlayer player) {
+        int revision = stateRevision;
+        if (interacting || !isCurrentInteraction(level, state, player, revision)) {
+            return;
+        }
+        interacting = true;
+        try {
+            if (!EchoPermission.canUseWindMechanism(player)) {
+                level.playSound(null, worldPosition, ModSounds.BLOCK_WIND_PLATFORM_LOCKED.get(),
+                        SoundSource.BLOCKS, 0.55F, 1.0F);
+                if (!isCurrentInteraction(level, state, player, revision)
+                        || EchoPermission.canUseWindMechanism(player)) {
+                    return;
+                }
+                player.displayClientMessage(
+                        Component.translatable("message.unknown_echoes.wind_platform.locked"), true);
+                if (isCurrentInteraction(level, state, player, revision)
+                        && !EchoPermission.canUseWindMechanism(player)) {
+                    EchoAbilityManager.recordFailure(player, EchoAbilityType.WIND_ECHO, "platform_locked");
+                }
+                return;
+            }
 
+            revision++;
+            activate(ServerConfig.WIND_PLATFORM_ACTIVE_TICKS.get());
+            if (!isCurrentInteraction(level, state, player, revision)
+                    || !EchoPermission.canUseWindMechanism(player)) {
+                return;
+            }
+            if (!state.getValue(WindCurrentPlatformBlock.ACTIVE)) {
+                BlockState active = state.setValue(WindCurrentPlatformBlock.ACTIVE, Boolean.TRUE);
+                if (level.setBlock(worldPosition, active, 3)
+                        && isCurrentInteraction(level, active, player, revision)
+                        && EchoPermission.canUseWindMechanism(player)) {
+                    level.playSound(null, worldPosition, ModSounds.BLOCK_WIND_PLATFORM_ACTIVATE.get(),
+                            SoundSource.BLOCKS, 0.8F, 1.0F);
+                }
+            }
+        } finally {
+            interacting = false;
+        }
+    }
+
+    private boolean isCurrentInteraction(ServerLevel level, BlockState state, ServerPlayer player, int revision) {
+        return player.level() == level && player.isAlive() && !player.isRemoved()
+                && !player.isSpectator() && !player.hasDisconnected()
+                && player.canInteractWithBlock(worldPosition, 1.0D)
+                && isCurrentTick(level, state, revision);
+    }
+
+    public void activate(int ticks) {
+        this.stateRevision++;
         this.activeTicks = Math.max(0, Math.min(Math.max(this.activeTicks, ticks),
                 ServerConfig.WIND_PLATFORM_ACTIVE_TICKS.get()));
         this.setChanged();
@@ -60,16 +119,35 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
 
     /** 时间沙漏白名单重置入口：只清理临时气流,不改个人进度。 */
     public void deactivate() {
+        int revision = ++this.stateRevision;
         this.activeTicks = 0;
-        if (this.level != null && this.getBlockState().getValue(WindCurrentPlatformBlock.ACTIVE)) {
-            this.level.setBlock(this.worldPosition,
-                    this.getBlockState().setValue(WindCurrentPlatformBlock.ACTIVE, Boolean.FALSE), 3);
-        }
         this.setChanged();
+        if (this.level instanceof ServerLevel serverLevel && this.stateRevision == revision) {
+            BlockState current = loadedState(serverLevel);
+            if (current != null && current.getValue(WindCurrentPlatformBlock.ACTIVE)) {
+                serverLevel.setBlock(this.worldPosition,
+                        current.setValue(WindCurrentPlatformBlock.ACTIVE, Boolean.FALSE), 3);
+            }
+        }
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state,
                                   WindCurrentPlatformBlockEntity platform) {
+        if (!(level instanceof ServerLevel serverLevel) || platform.ticking
+                || !platform.worldPosition.equals(pos) || platform.loadedState(serverLevel) != state) {
+            return;
+        }
+        platform.ticking = true;
+        try {
+            tickCurrent(serverLevel, pos, state, platform);
+        } finally {
+            platform.ticking = false;
+        }
+    }
+
+    private static void tickCurrent(ServerLevel level, BlockPos pos, BlockState state,
+                                    WindCurrentPlatformBlockEntity platform) {
+        int revision = platform.stateRevision;
         if (platform.activeTicks <= 0) {
             if (state.getValue(WindCurrentPlatformBlock.ACTIVE)) {
                 level.setBlock(pos, state.setValue(WindCurrentPlatformBlock.ACTIVE, Boolean.FALSE), 3);
@@ -80,33 +158,43 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
         if (platform.activeTicks == 0 || platform.activeTicks % 20 == 0) {
             platform.setChanged();
         }
-        if (platform.activeTicks > 0 && !state.getValue(WindCurrentPlatformBlock.ACTIVE)) {
-            level.setBlock(pos, state.setValue(WindCurrentPlatformBlock.ACTIVE, Boolean.TRUE), 3);
+        if (!platform.isCurrentTick(level, state, revision)) {
+            return;
         }
-        if (!(level instanceof ServerLevel serverLevel)) {
+        if (platform.activeTicks > 0 && !state.getValue(WindCurrentPlatformBlock.ACTIVE)) {
+            state = state.setValue(WindCurrentPlatformBlock.ACTIVE, Boolean.TRUE);
+            if (!level.setBlock(pos, state, 3)) {
+                return;
+            }
+        }
+        if (!platform.isCurrentTick(level, state, revision)) {
             return;
         }
         long gameTime = level.getGameTime();
         int height = ServerConfig.WIND_PLATFORM_LIFT_HEIGHT.get();
         AABB column = new AABB(pos.getX() - 0.75, pos.getY() + 0.2, pos.getZ() - 0.75,
                 pos.getX() + 1.75, pos.getY() + height, pos.getZ() + 1.75);
-        for (Entity entity : serverLevel.getEntities(null, column)) {
-            if (entity.isRemoved() || entity.isNoGravity() || entity.isPassenger()) {
-                continue;
+        for (Entity entity : level.getEntities(null, column)) {
+            if (!platform.isCurrentTick(level, state, revision)) {
+                return;
             }
-            if (entity instanceof ServerPlayer player
-                    && (player.isSpectator() || player.getAbilities().flying)) {
+            if (!isWindTarget(level, column, entity)) {
                 continue;
             }
             if (!shouldApplyForce(entity, gameTime)) {
                 continue;
             }
-            Vec3 motion = entity.getDeltaMovement();
-            Vec3 boosted = motion;
             if (entity instanceof ServerPlayer player) {
-                boosted = addHorizontalDraft(player, boosted);
                 refreshSpeedBuff(player);
             }
+            if (!platform.isCurrentTick(level, state, revision)) {
+                return;
+            }
+            if (!isWindTarget(level, column, entity)) {
+                continue;
+            }
+            Vec3 motion = entity.getDeltaMovement();
+            Vec3 boosted = entity instanceof ServerPlayer player ? addHorizontalDraft(player, motion) : motion;
             if (boosted.y < LIFT_MAX_SPEED) {
                 boosted = new Vec3(boosted.x, Math.min(LIFT_MAX_SPEED, boosted.y + LIFT_ACCEL), boosted.z);
             }
@@ -118,8 +206,35 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
             }
         }
 
-        MechanismFx.emit(serverLevel, ExplorationFx.windFrame(
-                Vec3.atBottomCenterOf(pos), height, gameTime, pos.asLong()));
+        if (platform.isCurrentTick(level, state, revision)) {
+            MechanismFx.emit(level, ExplorationFx.windFrame(
+                    Vec3.atBottomCenterOf(pos), height, gameTime, pos.asLong()));
+        }
+    }
+
+    @Nullable
+    private BlockState loadedState(ServerLevel serverLevel) {
+        if (this.level != serverLevel || isRemoved()) {
+            return null;
+        }
+        var chunk = serverLevel.getChunkSource().getChunkNow(worldPosition.getX() >> 4, worldPosition.getZ() >> 4);
+        if (chunk == null || chunk.getBlockEntities().get(worldPosition) != this) {
+            return null;
+        }
+        BlockState current = chunk.getBlockState(worldPosition);
+        return current.getBlock() instanceof WindCurrentPlatformBlock ? current : null;
+    }
+
+    private boolean isCurrentTick(ServerLevel serverLevel, BlockState state, int revision) {
+        // 停用后重新激活可能恢复相同方块状态，旧 tick 仍须退出。
+        return stateRevision == revision && loadedState(serverLevel) == state;
+    }
+
+    private static boolean isWindTarget(ServerLevel level, AABB column, Entity entity) {
+        return entity.level() == level && entity.isAlive() && !entity.isRemoved()
+                && !entity.isNoGravity() && !entity.isPassenger() && column.intersects(entity.getBoundingBox())
+                && (!(entity instanceof ServerPlayer player)
+                || (!player.isSpectator() && !player.getAbilities().flying && !player.hasDisconnected()));
     }
 
     private static Vec3 addHorizontalDraft(ServerPlayer player, Vec3 motion) {
@@ -227,6 +342,7 @@ public class WindCurrentPlatformBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        this.stateRevision++;
         this.activeTicks = Math.max(0, Math.min(tag.getInt("ActiveTicks"),
                 ServerConfig.WIND_PLATFORM_ACTIVE_TICKS.get()));
     }

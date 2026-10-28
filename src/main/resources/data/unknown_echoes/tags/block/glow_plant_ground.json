@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:andesite",
+    "minecraft:tuff",
+    "minecraft:calcite",
+    "minecraft:gravel",
+    "minecraft:deepslate",
+    "unknown_echoes:folded_slate",
+    "unknown_echoes:gravity_shale",
+    "unknown_echoes:banded_gravity_shale",
+    "unknown_echoes:abyssal_stone",
+    "unknown_echoes:veined_abyssal_stone"
+  ]
+}

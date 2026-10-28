@@ -27,7 +27,8 @@ public class ParticleEnchantingMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private final Inventory inventory;
     private final DataSlot result = DataSlot.standalone();
-    private long nextAction;
+    private int lastActionTick;
+    private boolean hasAction;
 
     public ParticleEnchantingMenu(int id, Inventory inventory) { this(id, inventory, ContainerLevelAccess.NULL); }
 
@@ -97,9 +98,11 @@ public class ParticleEnchantingMenu extends AbstractContainerMenu {
     @Override
     public boolean clickMenuButton(Player player, int action) {
         if (!(player instanceof ServerPlayer server) || player != inventory.player || player.containerMenu != this || !stillValid(player)) return false;
-        long now = server.server.overworld().getGameTime();
-        if (now < nextAction) return false;
-        nextAction = now + 4;
+        // 请求间隔按服务器处理 tick 计；无符号差值允许 int 计数器回绕。
+        int now = server.server.getTickCount();
+        if (hasAction && Integer.toUnsignedLong(now - lastActionTick) < 4L) return false;
+        lastActionTick = now;
+        hasAction = true;
         int rejection = rejection(player, action);
         result.set(rejection);
         if (rejection != 0) { broadcastChanges(); return false; }
@@ -109,7 +112,8 @@ public class ParticleEnchantingMenu extends AbstractContainerMenu {
         ParticleExperience.Change experience = ParticleExperience.prepare(server, operation.experienceDelta());
         if (experience == null || !experience.approve(server) || player.containerMenu != this || !stillValid(player)
                 || weapon() != original || !ItemStack.isSameItemSameComponents(weapon(), snapshot) || !experience.unchanged(server)) {
-            result.set(10); broadcastChanges(); return false;
+            if (player.containerMenu == this && stillValid(player)) { result.set(10); broadcastChanges(); }
+            return false;
         }
         rejection = rejection(player, action);
         if (rejection != 0) { result.set(rejection); broadcastChanges(); return false; }
@@ -124,6 +128,7 @@ public class ParticleEnchantingMenu extends AbstractContainerMenu {
         station.setChanged();
         inventory.setChanged();
         if (operation.success()) ModAdvancements.checkParticleAdvancements(server, weapon());
+        if (player.containerMenu != this || !stillValid(player)) return true;
         access.execute((level, pos) -> ParticleFx.operation(server, pos, operation.result(), action, operation.success()));
         broadcastChanges();
         return true;
@@ -142,6 +147,7 @@ public class ParticleEnchantingMenu extends AbstractContainerMenu {
 
     @Override public boolean stillValid(Player player) {
         return player.isAlive() && !player.isSpectator() && !player.isRemoved()
+                && (!(player instanceof ServerPlayer server) || !server.hasDisconnected())
                 && access.evaluate((level, pos) -> player.level() == level && level.hasChunkAt(pos)
                 && player.distanceToSqr(pos.getCenter()) <= 64
                 && level.getBlockState(pos).is(ModBlocks.PARTICLE_ENCHANTING_TABLE.get()), player.level().isClientSide);

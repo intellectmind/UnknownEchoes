@@ -31,6 +31,7 @@ import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 public class DeepRegionStructure extends TerrainAnchoredStructure {
     public static final MapCodec<DeepRegionStructure> FOLDED_ARCHIVE_CODEC = codec(Kind.FOLDED_ARCHIVE);
@@ -92,6 +93,33 @@ public class DeepRegionStructure extends TerrainAnchoredStructure {
     private DeepRegionStructure(StructureSettings settings, Kind kind) {
         super((random, x, z) -> new Piece(kind, random, x, z), kind.width, kind.depth, settings);
         this.kind = kind;
+    }
+
+    @Override
+    public Optional<GenerationStub> findGenerationPoint(GenerationContext context) {
+        var candidate = super.findGenerationPoint(context);
+        if (kind != Kind.FOLDED_WAYSTATION || candidate.isEmpty()) {
+            return candidate;
+        }
+        var bounds = candidate.get().getPiecesBuilder().build().pieces().getFirst().getBoundingBox();
+        int lowest = Integer.MAX_VALUE;
+        int highest = Integer.MIN_VALUE;
+        // 驿站没有跨层桥，足印内高差超过建筑高度时不能把它嵌在两层地形之间。
+        for (int ix = 0; ix < 3; ix++) {
+            for (int iz = 0; iz < 3; iz++) {
+                int y = context.chunkGenerator().getBaseHeight(
+                        bounds.minX() + (bounds.getXSpan() - 1) * ix / 2,
+                        bounds.minZ() + (bounds.getZSpan() - 1) * iz / 2,
+                        net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE_WG,
+                        context.heightAccessor(), context.randomState());
+                lowest = Math.min(lowest, y);
+                highest = Math.max(highest, y);
+                if (highest - lowest > bounds.getYSpan()) {
+                    return Optional.empty();
+                }
+            }
+        }
+        return candidate;
     }
 
     @Override

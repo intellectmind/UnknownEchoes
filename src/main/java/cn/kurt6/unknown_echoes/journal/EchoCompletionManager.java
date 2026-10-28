@@ -38,10 +38,10 @@ public final class EchoCompletionManager {
     private static final String INDEX_EXPANSION_TWO_KEY = "completion:echo_index_expansion_2";
     private static final ResourceLocation ARCHIVE_STRUCTURE = UnknownEchoes.id("echo_grand_archive");
     private static final ResourceLocation ABYSS_BEACON_STRUCTURE = UnknownEchoes.id("abyss_beacon_structure");
-    private static final int REQUIRED_BIOMES = 8;
-    private static final int REQUIRED_PAGES = 48;
-    private static final int REQUIRED_MINI_BOSSES = 6;
-    private static final int REQUIRED_SCORE = 150;
+    public static final int REQUIRED_BIOMES = 8;
+    public static final int REQUIRED_PAGES = 48;
+    public static final int REQUIRED_MINI_BOSSES = 6;
+    public static final int REQUIRED_SCORE = 150;
     private static final int INDEX_EXPANSION_ONE_PAGES = 60;
     private static final int DEEP_INDEX_PAGES = 72;
     private static final int DEEP_INDEX_SCORE = 160;
@@ -145,6 +145,12 @@ public final class EchoCompletionManager {
 
     public static boolean hasArchiveTerminalRecord(ServerPlayer player) {
         return EchoAbilityManager.hasActivatedMechanism(player, ARCHIVE_TERMINAL_KEY);
+    }
+
+    /** 总览只接收归档完成位，不同步试炼机关键、终端坐标或谜底。 */
+    public static int archiveProgressFlags(ServerPlayer player) {
+        return (hasArchiveTerminalRecord(player) ? 1 : 0)
+                | (hasArchiveTrials(player) ? 2 : 0);
     }
 
     private static boolean showSummaryAndClaim(ServerPlayer player) {

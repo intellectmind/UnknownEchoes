@@ -1,16 +1,10 @@
 package cn.kurt6.unknown_echoes.block.wind;
 
-import cn.kurt6.unknown_echoes.ability.EchoAbilityManager;
-import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
-import cn.kurt6.unknown_echoes.ability.EchoPermission;
-import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.registry.ModBlockEntities;
-import cn.kurt6.unknown_echoes.registry.ModSounds;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
@@ -86,23 +80,15 @@ public class WindCurrentPlatformBlock extends BaseEntityBlock {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        if (!(player instanceof ServerPlayer serverPlayer)) {
+        if (!(level instanceof ServerLevel serverLevel) || !(player instanceof ServerPlayer serverPlayer)
+                || !state.is(this)) {
             return InteractionResult.CONSUME;
         }
-        if (!EchoPermission.canUseWindMechanism(serverPlayer)) {
-            level.playSound(null, pos, ModSounds.BLOCK_WIND_PLATFORM_LOCKED.get(), SoundSource.BLOCKS, 0.55F, 1.0F);
-            serverPlayer.displayClientMessage(
-                    Component.translatable("message.unknown_echoes.wind_platform.locked"), true);
-            EchoAbilityManager.recordFailure(serverPlayer, EchoAbilityType.WIND_ECHO, "platform_locked");
-            return InteractionResult.CONSUME;
-        }
-
-        if (level.getBlockEntity(pos) instanceof WindCurrentPlatformBlockEntity platform) {
-            platform.activate(ServerConfig.WIND_PLATFORM_ACTIVE_TICKS.get());
-            if (!state.getValue(ACTIVE)) {
-                level.setBlock(pos, state.setValue(ACTIVE, Boolean.TRUE), 3);
-                level.playSound(null, pos, ModSounds.BLOCK_WIND_PLATFORM_ACTIVATE.get(), SoundSource.BLOCKS, 0.8F, 1.0F);
-            }
+        var chunk = serverLevel.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        if (chunk != null && chunk.getBlockState(pos) == state
+                && chunk.getBlockEntities().get(pos) instanceof WindCurrentPlatformBlockEntity platform
+                && platform.getBlockPos().equals(pos)) {
+            platform.interact(serverLevel, state, serverPlayer);
         }
         return InteractionResult.CONSUME;
     }

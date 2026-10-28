@@ -8,8 +8,10 @@ import java.util.List;
 
 /** 死亡重生时搬运写在 getPersistentData 根层的冷却截止时间。 */
 public final class CooldownPersistence {
-    /** 截止时间型键的后缀。新增同类键只要沿用这些后缀就会被自动清理。 */
     private static final List<String> DEADLINE_SUFFIXES = List.of("_until", "_ready_at");
+    // _ready 也用于待触发增益，只有明确的冷却键可以跨重生保留。
+    private static final List<String> EXPLICIT_DEADLINE_KEYS = List.of(
+            "ue_particle_control_ready", "ue_particle_holy_ready", "ue_particle_earth_ready");
 
     private CooldownPersistence() {
     }
@@ -28,6 +30,9 @@ public final class CooldownPersistence {
     private static boolean isDeadlineKey(String key) {
         if (!key.startsWith("ue_")) {
             return false;
+        }
+        if (EXPLICIT_DEADLINE_KEYS.contains(key)) {
+            return true;
         }
         for (String suffix : DEADLINE_SUFFIXES) {
             if (key.endsWith(suffix)) {

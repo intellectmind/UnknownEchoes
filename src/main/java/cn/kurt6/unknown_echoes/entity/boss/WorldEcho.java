@@ -72,7 +72,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /** 世界回响体最终 Boss。四道生命地板强制完成五重共鸣转相，高伤害不能跨阶段。 */
-public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, BossVisualState, BossMusicSource {
+public class WorldEcho extends Monster implements GeoEntity, BossTestControl, PhaseGatedBoss, BossVisualState, BossMusicSource {
     private static final EntityDataAccessor<Integer> DATA_ATTACK_MODE =
             SynchedEntityData.defineId(WorldEcho.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_ATTACK_AGE =
@@ -2554,6 +2554,21 @@ public class WorldEcho extends Monster implements GeoEntity, PhaseGatedBoss, Bos
         return this.phaseGateStage < PHASE_FLOORS.length
                 ? this.getMaxHealth() * PHASE_FLOORS[this.phaseGateStage]
                 : 0.0F;
+    }
+
+    @Override
+    public boolean advanceTestPhase() {
+        if (!(this.level() instanceof ServerLevel level) || !this.isAlive() || this.isRemoved()
+                || this.handlingDeath || this.encounterDormant || this.entranceTicksRemaining > 0
+                || this.phaseGateStage >= PHASE_FLOORS.length) return false;
+        this.setHealth(Math.min(this.getHealth(), this.currentMechanicFloor()));
+        this.phaseTransitionPending = false;
+        this.activatedPhasePylons.clear();
+        this.phaseMechanismCooldownUntil = 0L;
+        this.finishAttack();
+        this.completePhaseTransition(level);
+        this.updateBossEventName();
+        return true;
     }
 
     @Override

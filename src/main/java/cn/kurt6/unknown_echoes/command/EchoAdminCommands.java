@@ -15,8 +15,10 @@ import cn.kurt6.unknown_echoes.journal.JournalManager;
 import cn.kurt6.unknown_echoes.registry.ModBlocks;
 import cn.kurt6.unknown_echoes.research.EchoResearchLine;
 import cn.kurt6.unknown_echoes.research.EchoResearchManager;
-import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -32,7 +34,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-/** /echoes admin query|grant|revoke|repair|activate_world_echo <玩家> [<进度项>](权限等级 2)。 */
 public class EchoAdminCommands {
     private static final int WORLD_ECHO_ALTAR_SEARCH_RADIUS = 16;
 
@@ -67,38 +68,41 @@ public class EchoAdminCommands {
                 return SharedSuggestionProvider.suggest(suggestions, builder);
             };
 
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("echoes")
-                .then(Commands.literal("admin")
-                        .requires(source -> source.hasPermission(2))
-                        .then(Commands.literal("query")
-                                .then(Commands.argument("target", EntityArgument.player())
-                                        .executes(ctx -> query(ctx.getSource(),
-                                                EntityArgument.getPlayer(ctx, "target")))))
-                        .then(Commands.literal("grant")
-                                .then(Commands.argument("target", EntityArgument.player())
-                                        .then(Commands.argument("progress", StringArgumentType.string())
-                                                .suggests(PROGRESS_SUGGESTIONS)
-                                                .executes(ctx -> modify(ctx.getSource(),
-                                                        EntityArgument.getPlayer(ctx, "target"),
-                                                        StringArgumentType.getString(ctx, "progress"), true)))))
-                        .then(Commands.literal("revoke")
-                                .then(Commands.argument("target", EntityArgument.player())
-                                        .then(Commands.argument("progress", StringArgumentType.string())
-                                                .suggests(PROGRESS_SUGGESTIONS)
-                                                .executes(ctx -> modify(ctx.getSource(),
-                                                        EntityArgument.getPlayer(ctx, "target"),
-                                                        StringArgumentType.getString(ctx, "progress"), false)))))
-                        .then(Commands.literal("repair")
-                                .then(Commands.argument("target", EntityArgument.player())
-                                        .executes(ctx -> repair(ctx.getSource(),
-                                                EntityArgument.getPlayer(ctx, "target")))))
-                        .then(Commands.literal("activate_world_echo")
-                                .executes(ctx -> activateWorldEcho(ctx.getSource(),
-                                        ctx.getSource().getPlayerOrException()))
-                                .then(Commands.argument("target", EntityArgument.player())
-                                        .executes(ctx -> activateWorldEcho(ctx.getSource(),
-                                                EntityArgument.getPlayer(ctx, "target")))))));
+    public static LiteralArgumentBuilder<CommandSourceStack> progress() {
+        return Commands.literal("progress")
+                .requires(source -> source.hasPermission(2))
+                .then(Commands.literal("query")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .executes(ctx -> query(ctx.getSource(),
+                                        EntityArgument.getPlayer(ctx, "target")))))
+                .then(Commands.literal("grant")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .then(Commands.argument("progress", StringArgumentType.greedyString())
+                                        .suggests(PROGRESS_SUGGESTIONS)
+                                        .executes(ctx -> modify(ctx.getSource(),
+                                                EntityArgument.getPlayer(ctx, "target"),
+                                                StringArgumentType.getString(ctx, "progress"), true)))))
+                .then(Commands.literal("revoke")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .then(Commands.argument("progress", StringArgumentType.greedyString())
+                                        .suggests(PROGRESS_SUGGESTIONS)
+                                        .executes(ctx -> modify(ctx.getSource(),
+                                                EntityArgument.getPlayer(ctx, "target"),
+                                                StringArgumentType.getString(ctx, "progress"), false)))))
+                .then(Commands.literal("repair")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .executes(ctx -> repair(ctx.getSource(),
+                                        EntityArgument.getPlayer(ctx, "target")))));
+    }
+
+    public static LiteralArgumentBuilder<CommandSourceStack> worldEchoTest() {
+        return Commands.literal("world_echo")
+                .requires(source -> source.hasPermission(2))
+                .executes(ctx -> activateWorldEcho(ctx.getSource(),
+                        ctx.getSource().getPlayerOrException()))
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(ctx -> activateWorldEcho(ctx.getSource(),
+                                EntityArgument.getPlayer(ctx, "target"))));
     }
 
     private static int query(CommandSourceStack source, ServerPlayer target) {
@@ -143,7 +147,24 @@ public class EchoAdminCommands {
         return 1;
     }
 
-    private static int modify(CommandSourceStack source, ServerPlayer target, String progress, boolean grant) {
+    private static int modify(CommandSourceStack source, ServerPlayer target, String progress, boolean grant)
+            throws CommandSyntaxException {
+        progress = progress.strip();
+        if (!progress.isEmpty() && StringReader.isQuotedStringStart(progress.charAt(0))) {
+            StringReader reader = new StringReader(progress);
+            progress = reader.readString();
+            if (reader.canRead()) {
+                source.sendFailure(Component.translatable("command.unknown_echoes.admin.progress_format"));
+                return 0;
+            }
+        } else if (progress.chars().anyMatch(Character::isWhitespace)) {
+            source.sendFailure(Component.translatable("command.unknown_echoes.admin.progress_format"));
+            return 0;
+        }
+        return modifyProgress(source, target, progress, grant);
+    }
+
+    private static int modifyProgress(CommandSourceStack source, ServerPlayer target, String progress, boolean grant) {
         String[] parts = progress.split(":", 2);
         if (parts.length < 2) {
             source.sendFailure(Component.translatable("command.unknown_echoes.admin.progress_format"));

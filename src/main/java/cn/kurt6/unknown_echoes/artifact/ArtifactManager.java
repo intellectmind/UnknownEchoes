@@ -558,7 +558,7 @@ public class ArtifactManager {
     }
 
     /** 支付记录先返回调用方，再由调用方进入可能失败的同步或传送回调。 */
-    static EnergyPayment spendEnergyQuietly(ServerPlayer player, int points) {
+    public static EnergyPayment spendEnergyQuietly(ServerPlayer player, int points) {
         if (points <= 0) {
             return new EnergyPayment(0, false);
         }
@@ -582,7 +582,7 @@ public class ArtifactManager {
     }
 
     /** 按支付记录退款，不重读倍率或永续核心；调用方在收尾时同步。 */
-    static void refundSpentEnergy(ServerPlayer player, EnergyPayment payment) {
+    public static void refundSpentEnergy(ServerPlayer player, EnergyPayment payment) {
         if (payment.spentTwentieths() <= 0) {
             return;
         }
@@ -595,7 +595,7 @@ public class ArtifactManager {
         }
     }
 
-    record EnergyPayment(int spentTwentieths, boolean needsSync) {
+    public record EnergyPayment(int spentTwentieths, boolean needsSync) {
     }
 
     /** 与实际扣除完全一致的耗能，供服务端同步 UI；单位为 1/20 点。 */

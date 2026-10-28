@@ -82,9 +82,12 @@
           }
         },
         "argument2": {
-          "type": "minecraft:min",
-          "argument1": {
-            "type": "minecraft:min",
+          "type": "minecraft:range_choice",
+          "input": "minecraft:y",
+          "min_inclusive": 104,
+          "max_exclusive": 256,
+          "when_in_range": {
+            "type": "minecraft:add",
             "argument1": {
               "type": "minecraft:add",
               "argument1": {
@@ -92,43 +95,13 @@
                 "argument1": {
                   "type": "minecraft:y_clamped_gradient",
                   "from_y": 132,
-                  "to_y": 170,
+                  "to_y": 178,
                   "from_value": -0.65,
                   "to_value": 0.32
                 },
                 "argument2": {
                   "type": "minecraft:y_clamped_gradient",
-                  "from_y": 184,
-                  "to_y": 236,
-                  "from_value": 0.32,
-                  "to_value": -0.8
-                }
-              },
-              "argument2": {
-                "type": "minecraft:mul",
-                "argument1": 0.72,
-                "argument2": {
-                  "type": "minecraft:noise",
-                  "noise": "unknown_echoes:island_shape",
-                  "xz_scale": 1,
-                  "y_scale": 0.8
-                }
-              }
-            },
-            "argument2": {
-              "type": "minecraft:add",
-              "argument1": {
-                "type": "minecraft:min",
-                "argument1": {
-                  "type": "minecraft:y_clamped_gradient",
-                  "from_y": 132,
-                  "to_y": 170,
-                  "from_value": -0.65,
-                  "to_value": 0.32
-                },
-                "argument2": {
-                  "type": "minecraft:y_clamped_gradient",
-                  "from_y": 184,
+                  "from_y": 178,
                   "to_y": 236,
                   "from_value": 0.32,
                   "to_value": -0.8
@@ -137,70 +110,113 @@
               "argument2": {
                 "type": "minecraft:add",
                 "argument1": {
-                  "type": "minecraft:mul",
-                  "argument1": 0.9,
-                  "argument2": {
-                    "type": "minecraft:cache_2d",
-                    "argument": {
-                      "type": "minecraft:noise",
-                      "noise": "unknown_echoes:island_extent",
-                      "xz_scale": 1,
-                      "y_scale": 0
-                    }
-                  }
+                  "type": "minecraft:y_clamped_gradient",
+                  "from_y": 104,
+                  "to_y": 132,
+                  "from_value": -4,
+                  "to_value": 0
                 },
-                "argument2": -0.24
-              }
-            }
-          },
-          "argument2": {
-            "type": "minecraft:add",
-            "argument1": {
-              "type": "minecraft:min",
-              "argument1": {
-                "type": "minecraft:y_clamped_gradient",
-                "from_y": 132,
-                "to_y": 170,
-                "from_value": -0.65,
-                "to_value": 0.32
-              },
-              "argument2": {
-                "type": "minecraft:y_clamped_gradient",
-                "from_y": 184,
-                "to_y": 236,
-                "from_value": 0.32,
-                "to_value": -0.8
+                "argument2": {
+                  "type": "minecraft:y_clamped_gradient",
+                  "from_y": 236,
+                  "to_y": 256,
+                  "from_value": 0,
+                  "to_value": -4
+                }
               }
             },
             "argument2": {
-              "type": "minecraft:spline",
-              "spline": {
-                "coordinate": "minecraft:overworld/continents",
-                "points": [
-                  {
-                    "location": -1.2,
-                    "value": -1,
-                    "derivative": 0.0
-                  },
-                  {
-                    "location": -0.04,
-                    "value": -1,
-                    "derivative": 0.0
-                  },
-                  {
-                    "location": 0.06,
-                    "value": 1,
-                    "derivative": 0.0
-                  },
-                  {
-                    "location": 1,
-                    "value": 1,
-                    "derivative": 0.0
+              "type": "minecraft:add",
+              "argument1": {
+                "type": "minecraft:min",
+                "argument1": {
+                  "type": "minecraft:cache_2d",
+                  "argument": {
+                    "type": "minecraft:min",
+                    "argument1": {
+                      "type": "minecraft:add",
+                      "argument1": {
+                        "type": "minecraft:mul",
+                        "argument1": 0.9,
+                        "argument2": {
+                          "type": "minecraft:cache_2d",
+                          "argument": {
+                            "type": "minecraft:noise",
+                            "noise": "unknown_echoes:island_extent",
+                            "xz_scale": 2,
+                            "y_scale": 0
+                          }
+                        }
+                      },
+                      "argument2": -0.4
+                    },
+                    "argument2": {
+                      "type": "minecraft:spline",
+                      "spline": {
+                        "coordinate": "minecraft:overworld/continents",
+                        "points": [
+                          {
+                            "location": -1.2,
+                            "value": -1,
+                            "derivative": 0.0
+                          },
+                          {
+                            "location": -0.04,
+                            "value": -1,
+                            "derivative": 0.0
+                          },
+                          {
+                            "location": 0.06,
+                            "value": 1,
+                            "derivative": 0.0
+                          },
+                          {
+                            "location": 1,
+                            "value": 1,
+                            "derivative": 0.0
+                          }
+                        ]
+                      }
+                    }
                   }
-                ]
+                },
+                "argument2": {
+                  "type": "minecraft:mul",
+                  "argument1": 0.72,
+                  "argument2": {
+                    "type": "minecraft:noise",
+                    "noise": "unknown_echoes:island_shape",
+                    "xz_scale": 1.5,
+                    "y_scale": 0.8
+                  }
+                }
+              },
+              "argument2": {
+                "type": "minecraft:add",
+                "argument1": {
+                  "type": "minecraft:mul",
+                  "argument1": 0.48,
+                  "argument2": {
+                    "type": "minecraft:noise",
+                    "noise": "unknown_echoes:island_edge",
+                    "xz_scale": 1,
+                    "y_scale": 1.15
+                  }
+                },
+                "argument2": {
+                  "type": "minecraft:mul",
+                  "argument1": 0.16,
+                  "argument2": {
+                    "type": "minecraft:noise",
+                    "noise": "unknown_echoes:island_fracture",
+                    "xz_scale": 1,
+                    "y_scale": 1.35
+                  }
+                }
               }
             }
-          }
+          },
+          "when_out_of_range": -64.0
         }
       },
       "argument2": {

@@ -36,10 +36,19 @@ public class ParticleEnchantingTableBlock extends Block {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (player instanceof ServerPlayer server && !player.isSpectator()) {
-            server.openMenu(new SimpleMenuProvider((id, inventory, owner) -> new ParticleEnchantingMenu(
-                    id, inventory, ContainerLevelAccess.create(level, pos)), Component.translatable("container.unknown_echoes.particle_enchanting")));
+        if (!canOpen(player, level, pos)) return InteractionResult.PASS;
+        if (player instanceof ServerPlayer server) {
+            return server.openMenu(new SimpleMenuProvider((id, inventory, owner) -> owner == server && canOpen(owner, level, pos)
+                    ? new ParticleEnchantingMenu(id, inventory, ContainerLevelAccess.create(level, pos)) : null,
+                    Component.translatable("container.unknown_echoes.particle_enchanting"))).isPresent()
+                    ? InteractionResult.CONSUME : InteractionResult.PASS;
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return InteractionResult.SUCCESS;
+    }
+
+    private boolean canOpen(Player player, Level level, BlockPos pos) {
+        return player.level() == level && player.isAlive() && !player.isRemoved() && !player.isSpectator()
+                && (!(player instanceof ServerPlayer server) || !server.hasDisconnected())
+                && player.canInteractWithBlock(pos, 1.0D) && level.hasChunkAt(pos) && level.getBlockState(pos).is(this);
     }
 }

@@ -69,7 +69,8 @@ public final class EntitySpawnSafety {
                 && areCollisionChunksReady(level, bounds);
     }
 
-    private static boolean areCollisionChunksReady(ServerLevel level, AABB bounds) {
+    /** 检查原生方块碰撞遍历足印的 FULL 可读性，不发起区块加载。 */
+    public static boolean areCollisionChunksReady(ServerLevel level, AABB bounds) {
         // BlockCollisions 的取整余量与一格外沿也会查询邻区块，不能只检查实体箱体。
         int minX = (net.minecraft.util.Mth.floor(bounds.minX - 1.0E-7D) - 1) >> 4;
         int maxX = (net.minecraft.util.Mth.floor(bounds.maxX + 1.0E-7D) + 1) >> 4;

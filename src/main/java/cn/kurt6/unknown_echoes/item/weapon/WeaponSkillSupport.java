@@ -15,15 +15,22 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.BooleanSupplier;
 
 /** 主动战技共用的服务端预算与目标筛选，避免各武器出现不同的边界语义。 */
 final class WeaponSkillSupport {
+    private static final Set<BeginKey> BEGINNING = new HashSet<>();
+    private record BeginKey(UUID playerId, String skillKey) {}
+
     private WeaponSkillSupport() {
     }
 
@@ -34,53 +41,95 @@ final class WeaponSkillSupport {
     /** 检查冷却后再确认技能是否仍有实际收益，避免外部增益完整覆盖时白扣资源。 */
     static boolean begin(ServerPlayer player, String key, int cooldownTicks, int energyCost,
                          BooleanSupplier benefitCheck) {
-        long now = player.server.overworld().getGameTime();
-        long readyAt = normalizeCooldownDeadline(player, key, now, cooldownTicks);
-        if (readyAt > now) {
-            long seconds = Math.max(1L, (readyAt - now + 19L) / 20L);
-            player.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.weapon_skill.cooldown", seconds), true);
+        Level source = player.level();
+        if (!canBegin(player, source)) {
             return false;
         }
-        if (!benefitCheck.getAsBoolean()) {
+        BeginKey beginKey = new BeginKey(player.getUUID(), key);
+        if (!BEGINNING.add(beginKey)) {
             return false;
         }
-        if (energyCost > 0 && !ArtifactManager.spendEnergy(player, energyCost)) {
-            return false;
+        try {
+            long now = player.server.overworld().getGameTime();
+            long readyAt = normalizeCooldownDeadline(player, key, now, cooldownTicks);
+            if (readyAt > now) {
+                long seconds = Math.max(1L, (readyAt - now + 19L) / 20L);
+                player.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.weapon_skill.cooldown", seconds), true);
+                return false;
+            }
+            if (!benefitCheck.getAsBoolean()) {
+                return false;
+            }
+            if (!canBegin(player, source)) {
+                return false;
+            }
+            ArtifactManager.EnergyPayment payment = ArtifactManager.spendEnergyQuietly(player, energyCost);
+            if (payment == null) {
+                return false;
+            }
+            player.getPersistentData().putLong(key, safeDeadline(now, cooldownTicks));
+            if (payment.needsSync()) {
+                ArtifactManager.syncToClient(player);
+            }
+            return canBegin(player, source);
+        } finally {
+            BEGINNING.remove(beginKey);
         }
-        player.getPersistentData().putLong(key, safeDeadline(now, cooldownTicks));
-        return true;
+    }
+
+    private static boolean canBegin(ServerPlayer player, Level source) {
+        return player.level() == source && player.isAlive() && !player.hasDisconnected() && !player.isSpectator();
     }
 
     /** 方向型弓技必须在服务端确认弓弦已经拉满，避免只拿着武器按键就消耗技能。 */
     static boolean requireBowDraw(ServerPlayer player, ItemStack stack,
                                   InteractionHand hand, int requiredDrawTicks) {
-        if (player.isUsingItem()
-                && player.getUsedItemHand() == hand
-                && player.getUseItem().getItem() == stack.getItem()
-                && player.getUseItemRemainingTicks()
-                <= stack.getUseDuration(player) - requiredDrawTicks) {
+        Level source = player.level();
+        if (!canCheckCharge(player, source, stack, hand)) {
+            return false;
+        }
+        if (hasRequiredDraw(player, source, stack, hand, requiredDrawTicks)) {
             return true;
         }
-        tellChargeRequired(player);
+        if (canCheckCharge(player, source, stack, hand)) {
+            tellChargeRequired(player);
+        }
         return false;
     }
 
     /** 弩技允许两种合法时机:弩已经完成原版装填,或仍按住右键且服务端蓄力已到终点。 */
     static boolean requireCrossbowCharge(ServerPlayer player, ItemStack stack,
                                          InteractionHand hand, int requiredChargeTicks) {
-        if (CrossbowItem.isCharged(stack)) {
+        Level source = player.level();
+        if (!canCheckCharge(player, source, stack, hand)) {
+            return false;
+        }
+        if (CrossbowItem.isCharged(stack) || hasRequiredDraw(player, source, stack, hand, requiredChargeTicks)) {
             return true;
         }
-        if (player.isUsingItem()
-                && player.getUsedItemHand() == hand
-                && player.getUseItem().getItem() == stack.getItem()
-                && player.getUseItemRemainingTicks()
-                <= stack.getUseDuration(player) - requiredChargeTicks) {
-            return true;
+        if (canCheckCharge(player, source, stack, hand)) {
+            tellChargeRequired(player);
         }
-        tellChargeRequired(player);
         return false;
+    }
+
+    private static boolean canCheckCharge(ServerPlayer player, Level source, ItemStack stack, InteractionHand hand) {
+        return canBegin(player, source) && !stack.isEmpty() && player.getItemInHand(hand) == stack;
+    }
+
+    private static boolean isUsingStack(ServerPlayer player, ItemStack stack, InteractionHand hand) {
+        return player.isUsingItem() && player.getUsedItemHand() == hand && player.getUseItem() == stack;
+    }
+
+    private static boolean hasRequiredDraw(ServerPlayer player, Level source, ItemStack stack,
+                                            InteractionHand hand, int requiredDrawTicks) {
+        if (!isUsingStack(player, stack, hand)) {
+            return false;
+        }
+        int duration = stack.getUseDuration(player);
+        return canCheckCharge(player, source, stack, hand) && isUsingStack(player, stack, hand)
+                && player.getUseItemRemainingTicks() <= duration - requiredDrawTicks;
     }
 
     private static void tellChargeRequired(ServerPlayer player) {
@@ -135,7 +184,7 @@ final class WeaponSkillSupport {
 
         if (player.isUsingItem()
                 && player.getUsedItemHand() == hand
-                && player.getUseItem().getItem() == item) {
+                && player.getUseItem() == stack) {
             player.stopUsingItem();
         }
         if (durabilityCost > 0) {

@@ -70,7 +70,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard, PhaseGatedBoss,
+public class AbyssWatcher extends Monster implements GeoEntity, BossTestControl, BossDamageGuard, PhaseGatedBoss,
         BossVisualState,
         RechallengeBoundBoss, BossMusicSource {
     private static final RawAnimation IDLE_ANIM =
@@ -281,6 +281,10 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
 
     public boolean isClone() {
         return this.entityData.get(DATA_CLONE);
+    }
+
+    public boolean isCloneOf(AbyssWatcher owner) {
+        return this.isClone() && owner.getUUID().equals(this.cloneOwnerUuid);
     }
 
     public void becomeClone() {
@@ -1903,6 +1907,34 @@ public class AbyssWatcher extends Monster implements GeoEntity, BossDamageGuard,
             player.displayClientMessage(Component.translatable("message.unknown_echoes.watcher.veiled"), true);
             this.veiledMessageCooldown = 40;
         }
+    }
+
+    @Override
+    public boolean openTestWindow() {
+        if (!(this.level() instanceof ServerLevel level) || !isCurrentRuneBoss(level)
+                || this.isClone() || this.isBroken()) return false;
+        this.triggerBroken(level);
+        return this.isBroken();
+    }
+
+    @Override
+    public boolean acceptsTestControl() { return !this.isClone(); }
+
+    @Override
+    public boolean advanceTestPhase() {
+        if (!(this.level() instanceof ServerLevel) || !this.isAlive() || this.isRemoved()
+                || !this.acceptsTestControl()) return false;
+        boolean wasBroken = this.isBroken();
+        if (!wasBroken && !this.openTestWindow()) return false;
+        if (!this.isAlive() || this.isRemoved() || !this.isBroken()) return false;
+        if (this.brokenWindowHealthFloor > 0.0F) {
+            if (this.getHealth() <= this.brokenWindowHealthFloor + 0.01F) return false;
+            this.setHealth(this.brokenWindowHealthFloor);
+            // 下一 tick 由原有恢复流程收回机关和破防状态。
+            this.brokenTicksRemaining = 1;
+            return true;
+        }
+        return !wasBroken;
     }
 
     @Override

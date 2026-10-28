@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.function.BooleanSupplier;
 
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
 public final class ParticleEffects {
@@ -59,7 +60,7 @@ public final class ParticleEffects {
     private record Control(long until, long frozenUntil, float slow) { }
     private record Shield(long until, float remaining, int count) { }
     private record Fall(ResourceKey<net.minecraft.world.level.Level> dimension, Vec3 position, long tick, double descended, boolean valid) { }
-    private record DotKill(LivingEntity target, DamageSource source, ServerPlayer player, ParticleAttack attack) { }
+    private record DotKill(LivingEntity target, DamageSource source, ServerPlayer player, ParticleAttack attack, ServerLevel level) { }
     private static final class StatusApplication {
         private final LivingEntity target;
         private final MobEffectInstance effect;
@@ -98,6 +99,9 @@ public final class ParticleEffects {
         return target != player && !target.isRemoved() && !target.isAlliedTo(player) && !player.isAlliedTo(target)
                 && (!(target instanceof Player other) || !other.isSpectator() && player.canHarmPlayer(other));
     }
+    public static boolean isImpactCurrent(ServerPlayer player, LivingEntity target, ServerLevel level) {
+        return activeOwner(player, level) && target.level() == level && !target.isRemoved() && canHit(player, target);
+    }
     private static List<LivingEntity> targets(ServerPlayer player, Vec3 center, double radius) {
         double r = Math.min(7, radius);
         return player.serverLevel().getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(r),
@@ -126,56 +130,78 @@ public final class ParticleEffects {
     }
 
     public static void hit(ServerPlayer player, LivingEntity target, ParticleAttack attack, boolean backstab) {
+        ServerLevel level = player.serverLevel();
+        if (!isImpactCurrent(player, target, level)) return;
+        Vec3 center = target.position();
         ParticleData data = attack.data();
         int fire = data.count(ParticleKind.FIRE), frost = data.count(ParticleKind.FROST), venom = data.count(ParticleKind.VENOM);
         int thunder = data.count(ParticleKind.THUNDER), holy = data.count(ParticleKind.HOLY), earth = data.count(ParticleKind.EARTH);
         boolean lightning = thunder > 0 && player.getRandom().nextFloat() < ParticleStats.thunderChance(thunder);
         if (target.isAlive()) {
             if (fire > 0) {
+                int radius = ParticleStats.fireSpreadRadius(fire);
                 if (applyDot(player, target, attack, ParticleKind.FIRE) && fire >= 7)
-                    for (LivingEntity other : targets(player, target.position(), ParticleStats.fireSpreadRadius(fire)))
-                        if (other != target) applyDot(player, other, attack, ParticleKind.FIRE);
+                    for (LivingEntity other : targets(player, center, radius)) {
+                        if (!isImpactCurrent(player, target, level)) return;
+                        if (other != target && other.distanceToSqr(center) <= radius * radius)
+                            applyDot(player, other, attack, ParticleKind.FIRE);
+                    }
             }
+            if (!isImpactCurrent(player, target, level)) return;
             if (venom > 0 && applyDot(player, target, attack, ParticleKind.VENOM) && venom >= 5) {
                 int radius = ParticleStats.venomSpreadRadius(venom);
-                for (LivingEntity other : targets(player, target.position(), radius)) if (other != target) applyDot(player, other, attack, ParticleKind.VENOM);
-            }
-            boolean freeze = frost >= 3 && player.getRandom().nextFloat() < ParticleStats.frostChance(frost);
-            boolean knock = earth > 0 && player.getRandom().nextFloat() < ParticleStats.earthChance(earth);
-            int freezeTicks = freeze ? ParticleStats.frostDurationTicks(frost) : 0;
-            float thunderSlow = lightning && thunder >= 20 ? 0.3F : 0;
-            int slowTicks = ParticleStats.thunderSlowTicks(thunder);
-            boolean froze = control(player, target, ParticleStats.frostSlow(frost), freezeTicks, thunderSlow,
-                    knock ? ParticleStats.earthDistance(earth) : 0, earth >= 45, player.position(), slowTicks);
-            int frostRadius = froze && frost >= 20 ? 3 : 0;
-            int earthRadius = (knock && earth >= 30 || earth >= 45) ? ParticleStats.earthAreaRadius(earth) : 0;
-            if (frostRadius > 0 || earthRadius > 0) {
-                for (LivingEntity other : targets(player, target.position(), Math.max(frostRadius, earthRadius))) {
-                    if (other == target) continue;
-                    double distance = other.distanceToSqr(target.position());
-                    boolean freezeOther = frostRadius > 0 && distance <= frostRadius * frostRadius;
-                    boolean push = earthRadius > 0 && distance <= earthRadius * earthRadius;
-                    control(player, other, freezeOther ? ParticleStats.frostSlow(frost) : 0, freezeOther ? freezeTicks : 0, 0,
-                            push ? ParticleStats.earthDistance(earth) : 0, push && earth >= 45, target.position(), 60);
+                for (LivingEntity other : targets(player, center, radius)) {
+                    if (!isImpactCurrent(player, target, level)) return;
+                    if (other != target && other.distanceToSqr(center) <= radius * radius)
+                        applyDot(player, other, attack, ParticleKind.VENOM);
                 }
             }
-            if (froze && frost >= 35) field(player, ParticleKind.FROST, target.position(), ParticleStats.frostFieldRadius(frost), 80);
+            if (!isImpactCurrent(player, target, level)) return;
+            if (target.isAlive()) {
+                boolean freeze = frost >= 3 && player.getRandom().nextFloat() < ParticleStats.frostChance(frost);
+                boolean knock = earth > 0 && player.getRandom().nextFloat() < ParticleStats.earthChance(earth);
+                int freezeTicks = freeze ? ParticleStats.frostDurationTicks(frost) : 0;
+                float thunderSlow = lightning && thunder >= 20 ? 0.3F : 0;
+                int slowTicks = ParticleStats.thunderSlowTicks(thunder);
+                boolean froze = control(player, target, ParticleStats.frostSlow(frost), freezeTicks, thunderSlow,
+                        knock ? ParticleStats.earthDistance(earth) : 0, earth >= 45, player.position(), slowTicks);
+                if (!isImpactCurrent(player, target, level)) return;
+                int frostRadius = froze && frost >= 20 ? 3 : 0;
+                int earthRadius = (knock && earth >= 30 || earth >= 45) ? ParticleStats.earthAreaRadius(earth) : 0;
+                if (frostRadius > 0 || earthRadius > 0) {
+                    for (LivingEntity other : targets(player, center, Math.max(frostRadius, earthRadius))) {
+                        if (!isImpactCurrent(player, target, level)) return;
+                        if (other == target) continue;
+                        double distance = other.distanceToSqr(center);
+                        boolean freezeOther = frostRadius > 0 && distance <= frostRadius * frostRadius;
+                        boolean push = earthRadius > 0 && distance <= earthRadius * earthRadius;
+                        control(player, other, freezeOther ? ParticleStats.frostSlow(frost) : 0, freezeOther ? freezeTicks : 0, 0,
+                                push ? ParticleStats.earthDistance(earth) : 0, push && earth >= 45, center, 60);
+                    }
+                }
+                if (!isImpactCurrent(player, target, level)) return;
+                if (froze && frost >= 35) field(player, ParticleKind.FROST, center, ParticleStats.frostFieldRadius(frost), 80);
+            }
         }
-        if (fire >= 20) field(player, ParticleKind.FIRE, target.position(), ParticleStats.fireFieldRadius(fire), ParticleStats.fireFieldTicks(fire));
+        if (fire >= 20) field(player, ParticleKind.FIRE, center, ParticleStats.fireFieldRadius(fire), ParticleStats.fireFieldTicks(fire));
         if (lightning) thunder(player, target, thunder);
+        if (!isImpactCurrent(player, target, level)) return;
         if (holy > 0) holy(player, holy);
+        if (!isImpactCurrent(player, target, level)) return;
         if (backstab && data.count(ParticleKind.SHADOW) >= 30) player.getPersistentData().putLong("ue_particle_shadow_ready", now(player) + 100);
-        if (earth == 50) areaDamage(player, target.position(), 7, 10, ParticleKind.EARTH, null);
+        if (earth == 50) areaDamage(player, center, 7, 10, ParticleKind.EARTH, null);
     }
 
     private static boolean applyDot(ServerPlayer player, LivingEntity target, ParticleAttack attack, ParticleKind kind) {
-        if (immune(player, target, kind)) return false;
+        ServerLevel level = player.serverLevel();
+        if (!canApplyDot(player, target, level, kind)) return false;
         int n = attack.data().count(kind);
         var effect = kind == ParticleKind.FIRE ? ModParticleEffects.FIRE : ModParticleEffects.VENOM;
         if (kind == ParticleKind.VENOM && !target.canBeAffected(new MobEffectInstance(MobEffects.POISON, 20))) return false;
         if (!target.hasEffect(effect)) clearEffect(target, effect);
         int duration = (int) ((kind == ParticleKind.FIRE ? ParticleStats.fireSeconds(n) : ParticleStats.venomSeconds(n)) * 20);
         if (!applyStatus(target, new MobEffectInstance(effect, duration, 0, false, true, true))) return false;
+        if (!canApplyDot(player, target, level, kind)) return false;
         if (kind == ParticleKind.FIRE) target.igniteForSeconds(duration / 20F);
         List<Dot> dots = DOTS.computeIfAbsent(target, ignored -> new ArrayList<>());
         dots.removeIf(dot -> dot.until <= now(player));
@@ -189,8 +215,21 @@ public final class ParticleEffects {
         return true;
     }
 
+    private static boolean canApplyDot(ServerPlayer player, LivingEntity target, ServerLevel level, ParticleKind kind) {
+        return activeOwner(player, level) && target.level() == level && target.isAlive()
+                && canHit(player, target) && !immune(player, target, kind);
+    }
+
     private static boolean control(ServerPlayer player, LivingEntity target, float frostSlow, int freezeTicks, float thunderSlow,
                                    float distance, boolean launch, Vec3 origin, int duration) {
+        return controlWhen(player, target, frostSlow, freezeTicks, thunderSlow, distance, launch, origin, duration, () -> true);
+    }
+
+    private static boolean controlWhen(ServerPlayer player, LivingEntity target, float frostSlow, int freezeTicks, float thunderSlow,
+                                       float distance, boolean launch, Vec3 origin, int duration, BooleanSupplier current) {
+        ServerLevel level = player.serverLevel();
+        if (!current.getAsBoolean()) return false;
+        if (!canControlTarget(player, target, level)) return false;
         if ((frostSlow > 0 || freezeTicks > 0) && immune(player, target, ParticleKind.FROST)) { frostSlow = 0; freezeTicks = 0; }
         if (thunderSlow > 0 && immune(player, target, ParticleKind.THUNDER)) thunderSlow = 0;
         if ((distance > 0 || launch) && immune(player, target, ParticleKind.EARTH)) { distance = 0; launch = false; }
@@ -201,14 +240,37 @@ public final class ParticleEffects {
         if (target.getPersistentData().getLong("ue_particle_control_ready") > time) return false;
         boolean freeze = freezeTicks > 0 && !(target instanceof Player);
         if (!applyStatus(target, new MobEffectInstance(ModParticleEffects.FROST, activeTicks, 0, false, false, true))) return false;
+        if (!current.getAsBoolean()) return false;
+        if (!canControlTarget(player, target, level)) return false;
+        if ((frostSlow > 0 || freezeTicks > 0) && immune(player, target, ParticleKind.FROST)) { frostSlow = 0; freezeTicks = 0; }
+        if (thunderSlow > 0 && immune(player, target, ParticleKind.THUNDER)) thunderSlow = 0;
+        if ((distance > 0 || launch) && immune(player, target, ParticleKind.EARTH)) { distance = 0; launch = false; }
+        slow = Math.max(frostSlow, thunderSlow);
+        freeze = freezeTicks > 0 && !(target instanceof Player);
+        activeTicks = frostSlow > 0 || freezeTicks > 0 ? 60 : Math.min(60, duration);
+        if (slow <= 0 && !freeze && distance <= 0 && !launch) return false;
         target.getPersistentData().putLong("ue_particle_control_ready", time + 60);
-        CONTROLS.put(target, new Control(time + activeTicks, freeze ? time + Math.min(60, freezeTicks) : 0, slow));
+        Control control = new Control(time + activeTicks, freeze ? time + Math.min(60, freezeTicks) : 0, slow);
+        CONTROLS.put(target, control);
         if (distance > 0) {
             Vec3 direction = target.position().subtract(origin).multiply(1, 0, 1).normalize();
             target.knockback(distance * 0.25, -direction.x, -direction.z);
         }
-        if (launch) { target.push(0, 0.5, 0); target.hurtMarked = true; }
+        if (!current.getAsBoolean()) return false;
+        if (!canControlTarget(player, target, level) || CONTROLS.get(target) != control
+                || !target.hasEffect(ModParticleEffects.FROST)) return false;
+        if (launch && !immune(player, target, ParticleKind.EARTH)) { target.push(0, 0.5, 0); target.hurtMarked = true; }
         return freeze;
+    }
+
+    private static boolean canControlTarget(ServerPlayer player, LivingEntity target, ServerLevel level) {
+        return activeOwner(player, level) && target.level() == level && target.isAlive()
+                && canHit(player, target) && !boss(target);
+    }
+
+    private static boolean controlAreaTarget(ServerPlayer player, LivingEntity target, ServerLevel level, Vec3 center, double radius) {
+        return activeOwner(player, level) && target.level() == level && target.distanceToSqr(center) <= radius * radius
+                && player.hasLineOfSight(target);
     }
 
     private static void thunder(ServerPlayer player, LivingEntity target, int n) {
@@ -244,9 +306,12 @@ public final class ParticleEffects {
     }
 
     private static void holy(ServerPlayer player, int n) {
+        ServerLevel level = player.serverLevel();
+        if (!activeOwner(player, level)) return;
         float heal = ParticleStats.holyHeal(n);
         if (player.getRandom().nextFloat() < ParticleStats.holyChance(n)) {
             if (applyStatus(player, new MobEffectInstance(ModParticleEffects.SHIELD, 80, 0, false, true, true))) {
+                if (!activeOwner(player, level)) return;
                 Shield previous = SHIELDS.get(player);
                 float previousValue = previous == null ? 0 : Math.min(previous.remaining, player.getAbsorptionAmount());
                 float amount = Math.min(8, Math.max(previousValue, ParticleStats.holyShield(n)));
@@ -255,8 +320,9 @@ public final class ParticleEffects {
                 if (n >= 10) heal += 2;
             }
         }
+        if (!activeOwner(player, level)) return;
         heal(player, heal);
-        if (n >= 30) field(player, ParticleKind.HOLY, player.position(), ParticleStats.holyFieldRadius(n), 80);
+        if (n >= 30 && activeOwner(player, level)) field(player, ParticleKind.HOLY, player.position(), ParticleStats.holyFieldRadius(n), 80);
     }
 
     private static void heal(LivingEntity target, float amount) {
@@ -284,19 +350,34 @@ public final class ParticleEffects {
         if (used <= 0) return;
         float remaining = Math.max(0, Math.min(target.getAbsorptionAmount(), shield.remaining - used));
         if (remaining > 0) { rememberShield(target, new Shield(shield.until, remaining, shield.count)); return; }
+        var level = target.level();
+        Vec3 center = target.position();
         SHIELDS.remove(target);
         target.getPersistentData().remove(SHIELD_REMAINDER);
         target.removeEffect(ModParticleEffects.SHIELD);
+        if (!isShieldRecipient(target, level)) return;
         int n = shield.count;
         float personal = ParticleStats.holyBreakHeal(n);
         if (personal > 0) heal(target, personal);
-        if (n >= 20 && target instanceof ServerPlayer player) healAllies(player, player.position(), ParticleStats.holyBreakRadius(n), ParticleStats.holyBreakAllyHeal(n), false);
+        if (n >= 20 && target instanceof ServerPlayer player && isShieldRecipient(target, level))
+            healAllies(player, center, ParticleStats.holyBreakRadius(n), ParticleStats.holyBreakAllyHeal(n), false);
+    }
+
+    private static boolean isShieldRecipient(LivingEntity target, net.minecraft.world.level.Level level) {
+        return !level.isClientSide && target.level() == level && target.isAlive() && !target.isRemoved()
+                && (!(target instanceof ServerPlayer player) || activeOwner(player, level));
     }
 
     private static void healAllies(ServerPlayer player, Vec3 center, double radius, float amount, boolean self) {
+        healAlliesWhen(player, center, radius, amount, self, () -> true);
+    }
+
+    private static void healAlliesWhen(ServerPlayer player, Vec3 center, double radius, float amount, boolean self, BooleanSupplier current) {
         ServerLevel level = player.serverLevel();
+        if (!current.getAsBoolean()) return;
         if (!activeOwner(player, level)) return;
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius))) {
+            if (!current.getAsBoolean()) break;
             if (!activeOwner(player, level)) break;
             if (entity.level() == level && !entity.isRemoved() && entity.distanceToSqr(center) <= radius * radius && entity.isAlive()
                     && (self && entity == player || entity != player && player.isAlliedTo(entity))) heal(entity, amount);
@@ -314,43 +395,56 @@ public final class ParticleEffects {
     }
 
     public static void killed(ServerPlayer player, LivingEntity target, ParticleAttack attack) {
+        ServerLevel level = player.serverLevel();
+        if (!isImpactCurrent(player, target, level)) return;
+        Vec3 center = target.position();
         int fire = attack.data().count(ParticleKind.FIRE), venom = attack.data().count(ParticleKind.VENOM);
         int v = attack.data().count(ParticleKind.VOID), shadow = attack.data().count(ParticleKind.SHADOW);
-        if (fire >= 10) areaDamage(player, target.position(), ParticleStats.fireExplosionRadius(fire), ParticleStats.fireExplosionDamage(fire), ParticleKind.FIRE, target);
-        if (venom >= 20) field(player, ParticleKind.VENOM, target.position(), ParticleStats.venomFieldRadius(venom), ParticleStats.venomFieldTicks(venom));
+        if (fire >= 10) areaDamage(player, center, ParticleStats.fireExplosionRadius(fire), ParticleStats.fireExplosionDamage(fire), ParticleKind.FIRE, target);
+        if (!isImpactCurrent(player, target, level)) return;
+        if (venom >= 20) field(player, ParticleKind.VENOM, center, ParticleStats.venomFieldRadius(venom), ParticleStats.venomFieldTicks(venom));
         if (v >= 10 && !(target instanceof Player)) player.heal(player.getMaxHealth() * ParticleStats.voidKillHeal(v));
+        if (!isImpactCurrent(player, target, level)) return;
         if (shadow >= 10) {
             player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, ParticleStats.shadowInvisibleTicks(shadow), 0, false, false, true));
         }
     }
 
     private static void damage(ServerPlayer player, LivingEntity target, float amount, ParticleKind kind, ParticleAttack dot) {
-        if (!target.isAlive() || !canHit(player, target) || immune(player, target, kind) || amount <= 0) return;
+        ServerLevel level = player.serverLevel();
+        if (!target.isAlive() || !isImpactCurrent(player, target, level) || immune(player, target, kind) || amount <= 0) return;
         DamageSource source = source(player, kind);
         WeaponEffectGuard.run(player, () -> {
             DotKill previous = DOT_KILL.get();
-            if (dot != null) DOT_KILL.set(new DotKill(target, source, player, dot)); else DOT_KILL.remove();
+            if (dot != null) DOT_KILL.set(new DotKill(target, source, player, dot, level)); else DOT_KILL.remove();
             try { target.hurt(source, amount); }
             finally { if (previous == null) DOT_KILL.remove(); else DOT_KILL.set(previous); }
         });
     }
     private static void areaDamage(ServerPlayer player, Vec3 center, double radius, float amount, ParticleKind kind, LivingEntity excluded) {
+        areaDamageWhen(player, center, radius, amount, kind, excluded, () -> true);
+    }
+
+    private static void areaDamageWhen(ServerPlayer player, Vec3 center, double radius, float amount, ParticleKind kind,
+                                       LivingEntity excluded, BooleanSupplier current) {
         ServerLevel level = player.serverLevel();
+        if (!current.getAsBoolean()) return;
         if (!activeOwner(player, level)) return;
         double r = Math.min(7, radius);
         for (LivingEntity other : targets(player, center, r)) {
+            if (!current.getAsBoolean()) break;
             if (!activeOwner(player, level)) break;
             // 伤害回调可能传送后续目标；候选列表不能替代当前世界、距离与视线校验。
             if (other != excluded && other.level() == level && other.distanceToSqr(center) <= r * r && player.hasLineOfSight(other))
                 damage(player, other, amount, kind, null);
         }
-        ParticleFx.ring(level, center.add(0, 0.15, 0), radius, kind);
+        if (current.getAsBoolean()) ParticleFx.ring(level, center.add(0, 0.15, 0), radius, kind);
     }
     public static void dotDeath(LivingEntity target, DamageSource source) {
         DotKill kill = DOT_KILL.get();
         if (kill != null && kill.target == target && kill.source == source) {
             DOT_KILL.remove();
-            killed(kill.player, target, kill.attack);
+            if (isImpactCurrent(kill.player, target, kill.level)) killed(kill.player, target, kill.attack);
         }
     }
 
@@ -537,17 +631,41 @@ public final class ParticleEffects {
                 field.next += 20;
                 if (!field.level.hasChunkAt(net.minecraft.core.BlockPos.containing(field.center))) continue;
                 switch (part.getKey()) {
-                    case FIRE, VENOM -> areaDamage(player, field.center, field.radius, 1.25F, part.getKey(), null);
-                    case FROST -> {
-                        for (LivingEntity target : targets(player, field.center, field.radius)) control(player, target, 0.5F, 0, 0, 0, false, field.center, 60);
-                        ParticleFx.ring(field.level, field.center, field.radius, ParticleKind.FROST);
-                    }
-                    case HOLY -> { healAllies(player, field.center, field.radius, 1, true); ParticleFx.ring(field.level, field.center, field.radius, ParticleKind.HOLY); }
+                    case FIRE, VENOM, HOLY -> fieldPulse(player, part.getKey(), field, active);
+                    case FROST -> frostField(player, field, active);
                     default -> { }
                 }
             }
             if (active.isEmpty() && FIELDS.get(player) == active) FIELDS.remove(player);
         }
+    }
+
+    private static void frostField(ServerPlayer player, Field field, Map<ParticleKind, Field> active) {
+        Vec3 center = field.center;
+        double radius = Math.min(7, field.radius);
+        BooleanSupplier current = () -> currentField(player, ParticleKind.FROST, field, active, center, radius);
+        for (LivingEntity target : targets(player, center, radius)) {
+            if (!current.getAsBoolean()) return;
+            controlWhen(player, target, 0.5F, 0, 0, 0, false, center, 60,
+                    () -> current.getAsBoolean() && controlAreaTarget(player, target, field.level, center, radius));
+        }
+        if (current.getAsBoolean()) ParticleFx.ring(field.level, center, radius, ParticleKind.FROST);
+    }
+
+    private static boolean currentField(ServerPlayer player, ParticleKind kind, Field field, Map<ParticleKind, Field> active,
+                                        Vec3 center, double radius) {
+        return activeOwner(player, field.level) && FIELDS.get(player) == active && active.get(kind) == field
+                && field.center.equals(center) && Math.min(7, field.radius) == radius;
+    }
+
+    private static void fieldPulse(ServerPlayer player, ParticleKind kind, Field field, Map<ParticleKind, Field> active) {
+        Vec3 center = field.center;
+        double radius = Math.min(7, field.radius);
+        BooleanSupplier current = () -> currentField(player, kind, field, active, center, radius);
+        if (kind == ParticleKind.HOLY) {
+            healAlliesWhen(player, center, radius, 1, true, current);
+            if (current.getAsBoolean()) ParticleFx.ring(field.level, center, radius, kind);
+        } else areaDamageWhen(player, center, radius, 1.25F, kind, null, current);
     }
 
     private static void trackFall(ServerPlayer player) {
@@ -585,9 +703,15 @@ public final class ParticleEffects {
         int n = data.count(ParticleKind.EARTH);
         if (n < 10 || player.getPersistentData().getLong("ue_particle_earth_ready") > now(player)) return;
         player.getPersistentData().putLong("ue_particle_earth_ready", now(player) + 60);
+        ServerLevel level = player.serverLevel();
+        Vec3 center = player.position();
         double radius = ParticleStats.earthLandingRadius(n);
-        areaDamage(player, player.position(), radius, ParticleStats.earthLandingDamage(n), ParticleKind.EARTH, null);
-        if (n >= 35) for (LivingEntity target : targets(player, player.position(), radius)) control(player, target, 0, 0, 0, ParticleStats.earthDistance(n), n >= 45, player.position(), 60);
+        areaDamage(player, center, radius, ParticleStats.earthLandingDamage(n), ParticleKind.EARTH, null);
+        if (n >= 35 && activeOwner(player, level)) for (LivingEntity target : targets(player, center, radius)) {
+            if (!activeOwner(player, level)) break;
+            controlWhen(player, target, 0, 0, 0, ParticleStats.earthDistance(n), n >= 45, center, 60,
+                    () -> controlAreaTarget(player, target, level, center, radius));
+        }
     }
 
     private static void clearPlayer(ServerPlayer player) {

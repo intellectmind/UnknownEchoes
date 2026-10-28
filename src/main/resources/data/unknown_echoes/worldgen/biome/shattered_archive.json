@@ -59,7 +59,11 @@
       "unknown_echoes:seam_grass_patch",
       "unknown_echoes:archive_fungus_patch",
       "unknown_echoes:archive_lichen_patch",
-      "unknown_echoes:folded_sporebloom_patch"
+      "unknown_echoes:glow_fern_patch",
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:pearl_anemone_patch",
+      "unknown_echoes:folded_sporebloom_patch",
+      "unknown_echoes:tide_grass_patch"
     ],
     []
   ],
@@ -82,6 +86,12 @@
         "weight": 3,
         "minCount": 1,
         "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:riftfang_eel",
+        "weight": 3,
+        "minCount": 1,
+        "maxCount": 1
       }
     ],
     "creature": [
@@ -96,13 +106,38 @@
         "weight": 22,
         "minCount": 1,
         "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:glow_rabbit",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:mossback_hedgehog",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 2
       }
     ],
     "ambient": [],
     "axolotls": [],
     "underground_water_creature": [],
     "water_creature": [],
-    "water_ambient": [],
+    "water_ambient": [
+      {
+        "type": "unknown_echoes:echo_cuttlefish",
+        "weight": 18,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:mirror_tail_fish",
+        "weight": 16,
+        "minCount": 2,
+        "maxCount": 4
+      }
+    ],
     "misc": []
   },
   "spawn_costs": {}

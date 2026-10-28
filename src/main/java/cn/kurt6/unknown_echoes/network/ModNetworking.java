@@ -18,6 +18,7 @@ import java.util.UUID;
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
 public class ModNetworking {
 
+    // 请求限频使用服务器处理 tick；世界冻结时仍需响应玩家操作。
     private static final Map<UUID, Long> LAST_UI_ACTION_TICK = new HashMap<>();
     private static final Map<UUID, MobilityRateLimit> MOBILITY_ACTION_LIMITS = new HashMap<>();
     private static final Map<UUID, Long> LAST_SKILL_ACTION_TICK = new HashMap<>();
@@ -232,6 +233,9 @@ public class ModNetworking {
     }
 
     private static void handleToolSkillState(ServerPlayer player, boolean active) {
+        if (player.hasDisconnected()) {
+            return;
+        }
         UUID id = player.getUUID();
         if (!active || !player.isAlive() || player.isSpectator()
                 || !AreaMiningSupport.usesToolSkillKey(player.getMainHandItem())) {
@@ -242,20 +246,20 @@ public class ModNetworking {
     }
 
     private static boolean allowUiAction(ServerPlayer player) {
-        if (!player.isAlive() || player.isSpectator()) {
+        if (!player.isAlive() || player.hasDisconnected() || player.isSpectator()) {
             return false;
         }
-        long now = player.level().getGameTime();
+        long now = player.server.getTickCount();
         Long previous = LAST_UI_ACTION_TICK.put(player.getUUID(), now);
         return previous == null || previous != now;
     }
 
     /** 移动类包限频:每 tick 允许 3 个(跳+滑翔开始+保持可能挤进同一服务器 tick,单包限频会静默吞包)。 */
     private static boolean allowMobilityAction(ServerPlayer player) {
-        if (!player.isAlive() || player.isSpectator()) {
+        if (!player.isAlive() || player.hasDisconnected() || player.isSpectator()) {
             return false;
         }
-        long now = player.level().getGameTime();
+        long now = player.server.getTickCount();
         MobilityRateLimit limit = MOBILITY_ACTION_LIMITS.get(player.getUUID());
         if (limit == null || limit.tick() != now) {
             MOBILITY_ACTION_LIMITS.put(player.getUUID(), new MobilityRateLimit(now, 1));
@@ -273,10 +277,10 @@ public class ModNetworking {
     }
 
     private static boolean allowSkillAction(ServerPlayer player) {
-        if (!player.isAlive() || player.isSpectator()) {
+        if (!player.isAlive() || player.hasDisconnected() || player.isSpectator()) {
             return false;
         }
-        long now = player.level().getGameTime();
+        long now = player.server.getTickCount();
         Long previous = LAST_SKILL_ACTION_TICK.put(player.getUUID(), now);
         return previous == null || previous != now;
     }
@@ -344,10 +348,10 @@ public class ModNetworking {
     }
 
     private static boolean allowArtifactUse(ServerPlayer player) {
-        if (!player.isAlive() || player.isSpectator()) {
+        if (!player.isAlive() || player.hasDisconnected() || player.isSpectator()) {
             return false;
         }
-        long now = player.server.overworld().getGameTime();
+        long now = player.server.getTickCount();
         Long previous = LAST_ARTIFACT_USE_TICK.put(player.getUUID(), now);
         return previous == null || previous != now;
     }

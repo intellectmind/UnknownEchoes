@@ -134,12 +134,10 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
                     REQUIRED_CALIBRATIONS - completedCalibrations);
             return InteractionResult.CONSUME;
         }
-        if (rejectDuringRechallengeCooldown(serverLevel, state, pos, serverPlayer)) {
-            return InteractionResult.CONSUME;
-        }
-
         if (EchoAbilityManager.hasAbility(serverPlayer, EchoAbilityType.GRAVITY_ECHO)) {
-            summonOrJoinProphet(serverLevel, pos, serverPlayer);
+            if (backfillOwnedTrial(serverLevel, state, pos, serverPlayer)) {
+                requestProphetBattle(serverLevel, state, pos, serverPlayer);
+            }
             return InteractionResult.CONSUME;
         }
 
@@ -154,7 +152,7 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
                 serverPlayer.displayClientMessage(Component.translatable(
                         "message.unknown_echoes.gravity_core.ready"), true);
             } else {
-                summonOrJoinProphet(serverLevel, pos, serverPlayer);
+                requestProphetBattle(serverLevel, state, pos, serverPlayer);
             }
             return InteractionResult.CONSUME;
         }
@@ -164,7 +162,7 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
             return InteractionResult.CONSUME;
         }
         if (!bossDefeated) {
-            summonOrJoinProphet(serverLevel, pos, serverPlayer);
+            requestProphetBattle(serverLevel, state, pos, serverPlayer);
             return InteractionResult.CONSUME;
         }
 
@@ -183,6 +181,35 @@ public class GravityCoreAltarBlock extends BaseEntityBlock {
             RewardAltarBlock.playAbsorbCeremony(level, pos);
         }
         return InteractionResult.CONSUME;
+    }
+
+    /** 复战冷却只限制战斗，不阻塞已完成个人条件的领取与信物补发。 */
+    private static void requestProphetBattle(ServerLevel level, BlockState state, BlockPos pos,
+                                              ServerPlayer player) {
+        if (!RewardAltarBlock.isCurrentInteraction(state, level, pos, player)
+                || rejectDuringRechallengeCooldown(level, state, pos, player)
+                || !RewardAltarBlock.isCurrentInteraction(state, level, pos, player)) {
+            return;
+        }
+        summonOrJoinProphet(level, pos, player);
+    }
+
+    private static boolean backfillOwnedTrial(ServerLevel level, BlockState state, BlockPos pos,
+                                               ServerPlayer player) {
+        if (EchoAbilityManager.hasActivatedMechanism(player, EchoPermission.GRAVITY_TRIAL_KEY)) {
+            return true;
+        }
+        if (!EchoAbilityManager.activateMechanism(player, EchoPermission.GRAVITY_TRIAL_KEY)) {
+            player.displayClientMessage(Component.translatable(
+                    "message.unknown_echoes.progress_record.full"), true);
+            return false;
+        }
+        if (!RewardAltarBlock.isCurrentInteraction(state, level, pos, player)) {
+            return false;
+        }
+        EchoAbilityManager.syncToClient(player);
+        return RewardAltarBlock.isCurrentInteraction(state, level, pos, player)
+                && EchoAbilityManager.hasAbility(player, EchoAbilityType.GRAVITY_ECHO);
     }
 
     private static boolean rejectDuringRechallengeCooldown(ServerLevel level, BlockState state,

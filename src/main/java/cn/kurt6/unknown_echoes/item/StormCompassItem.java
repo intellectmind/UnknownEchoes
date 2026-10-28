@@ -140,7 +140,7 @@ public class StormCompassItem extends Item implements ItemActiveSkill {
     private boolean isCurrentInput(ServerLevel level, ServerPlayer player,
                                     ItemStack stack, InteractionHand hand) {
         return player.level() == level && player.isAlive() && !player.isSpectator()
-                && stack.is(this) && player.getItemInHand(hand) == stack;
+                && !player.hasDisconnected() && stack.is(this) && player.getItemInHand(hand) == stack;
     }
 
     private boolean canContinue(ServerLevel level, ServerPlayer player,

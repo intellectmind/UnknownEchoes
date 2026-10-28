@@ -12,6 +12,7 @@ import cn.kurt6.unknown_echoes.block.deep.DeepRouteNodeBlock;
 import cn.kurt6.unknown_echoes.journal.JournalManager;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
@@ -24,11 +25,6 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.Arrays;
 import java.util.Collection;
 
-/**
- * /unknownechoes 命令。
- * journal 所有玩家可用,查看自己的探索日志;
- * ability grant|revoke|list、artifact grant、realm tp、deep tp 需要权限等级 2。
- */
 public class EchoCommands {
 
     private static final SuggestionProvider<CommandSourceStack> ABILITY_SUGGESTIONS =
@@ -40,69 +36,88 @@ public class EchoCommands {
                     Arrays.stream(ArtifactType.values()).map(ArtifactType::getId), builder);
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("unknownechoes")
-                .then(Commands.literal("journal")
+        EchoCommandHelp.register(dispatcher, java.util.List.of(
+                journal(), abilities(), artifacts(), EchoAdminCommands.progress(),
+                teleports(), tests(), EchoParticleCommands.create(), EchoBossCommands.create(),
+                RealmDisasterCommands.create()));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> journal() {
+        return Commands.literal("journal")
+                .executes(ctx -> {
+                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                    for (Component line : JournalManager.buildSummary(player)) {
+                        player.sendSystemMessage(line);
+                    }
+                    return 1;
+                });
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> abilities() {
+        return Commands.literal("ability")
+                .requires(source -> source.hasPermission(2))
+                .then(Commands.literal("grant")
+                        .then(Commands.argument("targets", EntityArgument.players())
+                                .then(Commands.argument("ability", StringArgumentType.word())
+                                        .suggests(ABILITY_SUGGESTIONS)
+                                        .executes(ctx -> grantAbility(ctx.getSource(),
+                                                EntityArgument.getPlayers(ctx, "targets"),
+                                                StringArgumentType.getString(ctx, "ability"), true)))))
+                .then(Commands.literal("revoke")
+                        .then(Commands.argument("targets", EntityArgument.players())
+                                .then(Commands.argument("ability", StringArgumentType.word())
+                                        .suggests(ABILITY_SUGGESTIONS)
+                                        .executes(ctx -> grantAbility(ctx.getSource(),
+                                                EntityArgument.getPlayers(ctx, "targets"),
+                                                StringArgumentType.getString(ctx, "ability"), false)))))
+                .then(Commands.literal("list")
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .executes(ctx -> listAbilities(ctx.getSource(),
+                                        EntityArgument.getPlayer(ctx, "target")))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> artifacts() {
+        return Commands.literal("artifact")
+                .requires(source -> source.hasPermission(2))
+                .then(Commands.literal("grant")
+                        .then(Commands.argument("targets", EntityArgument.players())
+                                .then(Commands.argument("artifact", StringArgumentType.word())
+                                        .suggests(ARTIFACT_SUGGESTIONS)
+                                        .executes(ctx -> grantArtifact(ctx.getSource(),
+                                                EntityArgument.getPlayers(ctx, "targets"),
+                                                StringArgumentType.getString(ctx, "artifact"))))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> teleports() {
+        return Commands.literal("tp")
+                .requires(source -> source.hasPermission(2))
+                .then(Commands.literal("realm")
                         .executes(ctx -> {
                             ServerPlayer player = ctx.getSource().getPlayerOrException();
-                            for (Component line : JournalManager.buildSummary(player)) {
-                                player.sendSystemMessage(line);
-                            }
+                            EchoBeaconBlock.teleportToRealm(player);
                             return 1;
                         }))
-                .then(Commands.literal("ability")
-                        .requires(source -> source.hasPermission(2))
-                        .then(Commands.literal("grant")
-                                .then(Commands.argument("targets", EntityArgument.players())
-                                        .then(Commands.argument("ability", StringArgumentType.word())
-                                                .suggests(ABILITY_SUGGESTIONS)
-                                                .executes(ctx -> grantAbility(ctx.getSource(),
-                                                        EntityArgument.getPlayers(ctx, "targets"),
-                                                        StringArgumentType.getString(ctx, "ability"), true)))))
-                        .then(Commands.literal("revoke")
-                                .then(Commands.argument("targets", EntityArgument.players())
-                                        .then(Commands.argument("ability", StringArgumentType.word())
-                                                .suggests(ABILITY_SUGGESTIONS)
-                                                .executes(ctx -> grantAbility(ctx.getSource(),
-                                                        EntityArgument.getPlayers(ctx, "targets"),
-                                                        StringArgumentType.getString(ctx, "ability"), false)))))
-                        .then(Commands.literal("list")
-                                .then(Commands.argument("target", EntityArgument.player())
-                                        .executes(ctx -> listAbilities(ctx.getSource(),
-                                                EntityArgument.getPlayer(ctx, "target"))))))
-                .then(Commands.literal("artifact")
-                        .requires(source -> source.hasPermission(2))
-                        .then(Commands.literal("grant")
-                                .then(Commands.argument("targets", EntityArgument.players())
-                                        .then(Commands.argument("artifact", StringArgumentType.word())
-                                                .suggests(ARTIFACT_SUGGESTIONS)
-                                                .executes(ctx -> grantArtifact(ctx.getSource(),
-                                                        EntityArgument.getPlayers(ctx, "targets"),
-                                                        StringArgumentType.getString(ctx, "artifact")))))))
-                .then(Commands.literal("realm")
-                        .requires(source -> source.hasPermission(2))
-                        .then(Commands.literal("tp")
-                                .executes(ctx -> {
-                                    ServerPlayer player = ctx.getSource().getPlayerOrException();
-                                     EchoBeaconBlock.teleportToRealm(player);
-                                     return 1;
-                                 })))
                 .then(Commands.literal("deep")
-                        .requires(source -> source.hasPermission(2))
-                        .then(Commands.literal("tp")
-                                .executes(ctx -> teleportToDeepEchoes(ctx.getSource())))
-                        .then(Commands.literal("prepare")
-                                .then(Commands.literal("void_prophet")
+                        .executes(ctx -> teleportToDeepEchoes(ctx.getSource())));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> tests() {
+        return EchoTestTools.addTo(Commands.literal("test")
+                .requires(source -> source.hasPermission(2))
+                .then(EchoAdminCommands.worldEchoTest())
+                .then(Commands.literal("prepare")
+                        .then(Commands.literal("void_prophet")
+                                .executes(ctx -> prepareVoidProphet(ctx.getSource(),
+                                        java.util.List.of(ctx.getSource().getPlayerOrException())))
+                                .then(Commands.argument("targets", EntityArgument.players())
                                         .executes(ctx -> prepareVoidProphet(ctx.getSource(),
-                                                java.util.List.of(ctx.getSource().getPlayerOrException())))
-                                        .then(Commands.argument("targets", EntityArgument.players())
-                                                .executes(ctx -> prepareVoidProphet(ctx.getSource(),
-                                                        EntityArgument.getPlayers(ctx, "targets")))))
-                                .then(Commands.literal("rift_warden")
+                                                EntityArgument.getPlayers(ctx, "targets")))))
+                        .then(Commands.literal("rift_warden")
+                                .executes(ctx -> prepareRiftWarden(ctx.getSource(),
+                                        java.util.List.of(ctx.getSource().getPlayerOrException())))
+                                .then(Commands.argument("targets", EntityArgument.players())
                                         .executes(ctx -> prepareRiftWarden(ctx.getSource(),
-                                                java.util.List.of(ctx.getSource().getPlayerOrException())))
-                                        .then(Commands.argument("targets", EntityArgument.players())
-                                                .executes(ctx -> prepareRiftWarden(ctx.getSource(),
-                                                        EntityArgument.getPlayers(ctx, "targets"))))))));
+                                                EntityArgument.getPlayers(ctx, "targets")))))));
     }
 
     private static int grantAbility(CommandSourceStack source, Collection<ServerPlayer> targets,

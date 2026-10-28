@@ -64,7 +64,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss, BossVisualState,
+public class VoidProphet extends Monster implements GeoEntity, BossTestControl, PhaseGatedBoss, BossVisualState,
         DeepRechallengeBoundBoss, BossMusicSource {
     private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_MODE =
             SynchedEntityData.defineId(VoidProphet.class, EntityDataSerializers.INT);
@@ -1125,6 +1125,18 @@ public class VoidProphet extends Monster implements GeoEntity, PhaseGatedBoss, B
                     9, 0.65D, 1.2D, 0.65D, 0.08D);
         }
         return hurt;
+    }
+
+    @Override
+    public boolean advanceTestPhase() {
+        if (!(this.level() instanceof ServerLevel level) || !this.isAlive() || this.isRemoved()
+                || this.handlingDeath || this.phaseTransitionTriggered) return false;
+        this.setHealth(Math.min(this.getHealth(), this.phaseDamageFloor()));
+        this.phaseTransitionPending = false;
+        this.phaseMechanismNodes.clear();
+        this.startCoreBreak(level);
+        this.syncVisualAttackState();
+        return true;
     }
 
     @Override

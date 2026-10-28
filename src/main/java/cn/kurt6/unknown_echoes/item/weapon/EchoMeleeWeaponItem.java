@@ -4,6 +4,11 @@ import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.nbt.Tag;
@@ -18,11 +23,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tier;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.ClipContext;
 import net.neoforged.neoforge.common.Tags;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 
 /** 第一维度通用近战武器实现:正式武器共享基础数值和服务端命中特效。 */
 public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
@@ -90,7 +97,7 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
     @Override
     public boolean activateSkill(ServerLevel level, ServerPlayer player,
                                  ItemStack stack, net.minecraft.world.InteractionHand hand) {
-        if (!hasSecondarySkill()) {
+        if (!isCurrentSkillActor(level, player) || !hasSecondarySkill()) {
             return false;
         }
         int cooldown = switch (tooltipKey) {
@@ -119,7 +126,7 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
     @Override
     public boolean activateSecondarySkill(ServerLevel level, ServerPlayer player,
                                           ItemStack stack, net.minecraft.world.InteractionHand hand) {
-        if (!hasSecondarySkill()) {
+        if (!isCurrentSkillActor(level, player) || !hasSecondarySkill()) {
             return false;
         }
         int cooldown = switch (tooltipKey) {
@@ -164,120 +171,361 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
 
     private void activateBroadswordPrimary(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.of(tooltipKey);
-        for (LivingEntity target : WeaponSkillSupport.coneTargets(level, player, 6.0D, 0.42D, 5)) {
-            if (WeaponSkillSupport.hurt(player, target, 12.0F)) {
-                WeaponFx.hitMark(level, target, fx);
-                if (!isBoss(target)) {
-                    target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 60, 0, true, false, true));
-                }
+        SkillAim aim = skillAim(player, 6.0D, 6.0D * 0.55D);
+        Vec3 pivot = aim.feet().add(0.0D, player.getBbHeight() * 0.45D, 0.0D);
+        Predicate<LivingEntity> targetCheck = target -> isCurrentConeTarget(level, player, target, aim, 6.0D, 0.42D);
+        for (LivingEntity target : aimedSkillTargets(level, aim, targetCheck, 5)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
             }
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 12.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !targetCheck.test(target)) {
+                continue;
+            }
+            WeaponFx.hitMark(level, target, fx);
+            if (!targetCheck.test(target) || isBoss(target)) {
+                continue;
+            }
+            target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 60, 0, true, false, true));
         }
-        WeaponFx.slashArc(level, player, fx, 6.0D, WeaponFx.halfAngleOf(0.42D));
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_BROADSWORD_PRIMARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.slashArc(level, pivot, aim.direction(), fx, 6.0D, WeaponFx.halfAngleOf(0.42D));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(aim.feet()), ModSounds.WEAPON_ECHO_BROADSWORD_PRIMARY.get(),
                 SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void activateBroadswordSecondary(ServerLevel level, ServerPlayer player) {
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         WeaponSkillSupport.applyAbsorption(player, 120, 1, 8.0F);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 60, 0, true, false, true));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         WeaponFx.wardSpiral(level, player, WeaponFxTheme.of(tooltipKey), 1.05D, 2);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_BROADSWORD_SECONDARY.get(),
                 SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void activateBattleaxePrimary(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.of(tooltipKey);
-        for (LivingEntity target : WeaponSkillSupport.coneTargets(level, player, 5.0D, 0.25D, 4)) {
-            if (WeaponSkillSupport.hurt(player, target, 18.0F)) {
-                WeaponFx.heavyHitMark(level, target, fx);
-                if (!isBoss(target)) {
-                    target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 0, true, false, true));
-                    target.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 80, 1, true, false, true));
-                }
+        SkillAim aim = skillAim(player, 5.0D, 5.0D * 0.55D);
+        Vec3 pivot = aim.feet().add(0.0D, player.getBbHeight() * 0.45D, 0.0D);
+        Predicate<LivingEntity> targetCheck = target -> isCurrentConeTarget(level, player, target, aim, 5.0D, 0.25D);
+        for (LivingEntity target : aimedSkillTargets(level, aim, targetCheck, 4)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
             }
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 18.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !targetCheck.test(target)) {
+                continue;
+            }
+            WeaponFx.heavyHitMark(level, target, fx);
+            if (!targetCheck.test(target) || isBoss(target)) {
+                continue;
+            }
+            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 0, true, false, true));
+            if (!targetCheck.test(target) || isBoss(target)) {
+                continue;
+            }
+            target.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 80, 1, true, false, true));
         }
-        WeaponFx.slashArc(level, player, fx, 5.0D, WeaponFx.halfAngleOf(0.25D));
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_BATTLEAXE_PRIMARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.slashArc(level, pivot, aim.direction(), fx, 5.0D, WeaponFx.halfAngleOf(0.25D));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(aim.feet()), ModSounds.WEAPON_ECHO_BATTLEAXE_PRIMARY.get(),
                 SoundSource.PLAYERS, 0.85F, 1.0F);
     }
 
     private void activateBattleaxeSecondary(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.of(tooltipKey);
-        int affected = 0;
-        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 5.0D, 6)) {
-            if (!WeaponSkillSupport.hurt(player, target, 13.0F)) {
+        double radius = 5.0D;
+        Vec3 center = player.position();
+        AABB bounds = player.getBoundingBox().inflate(radius);
+        for (LivingEntity target : radiusSkillTargets(level, player, center, bounds, radius, 6)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 13.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
                 continue;
             }
             WeaponFx.hitMark(level, target, fx);
-            if (!isBoss(target)) {
-                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 70, 1, true, false, true));
-                target.knockback(0.7D, player.getX() - target.getX(), player.getZ() - target.getZ());
-                target.hurtMarked = true;
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
             }
-            affected++;
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 70, 1, true, false, true));
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
+            target.knockback(0.7D, center.x - target.getX(), center.z - target.getZ());
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
+            target.hurtMarked = true;
         }
-        WeaponFx.groundRing(level, player, fx, 5.0D);
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ECHO_BATTLEAXE_SECONDARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.groundRing(level, center, fx, radius);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_ECHO_BATTLEAXE_SECONDARY.get(),
                 SoundSource.PLAYERS, 0.7F, 1.0F);
     }
 
     private void activateSilencePrimary(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.of(tooltipKey);
-        for (LivingEntity target : WeaponSkillSupport.coneTargets(level, player, 7.0D, 0.15D, 7)) {
-            if (WeaponSkillSupport.hurt(player, target, 14.0F)) {
-                WeaponFx.hitMark(level, target, fx);
-                if (!isBoss(target)) {
-                    target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 90, 1, true, false, true));
-                    target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 90, 0, true, false, true));
-                }
+        SkillAim aim = skillAim(player, 7.0D, 7.0D * 0.55D);
+        Vec3 pivot = aim.feet().add(0.0D, player.getBbHeight() * 0.45D, 0.0D);
+        Predicate<LivingEntity> targetCheck = target -> isCurrentConeTarget(level, player, target, aim, 7.0D, 0.15D);
+        for (LivingEntity target : aimedSkillTargets(level, aim, targetCheck, 7)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
             }
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 14.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !targetCheck.test(target)) {
+                continue;
+            }
+            WeaponFx.hitMark(level, target, fx);
+            if (!targetCheck.test(target) || isBoss(target)) {
+                continue;
+            }
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 90, 1, true, false, true));
+            if (!targetCheck.test(target) || isBoss(target)) {
+                continue;
+            }
+            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 90, 0, true, false, true));
         }
-        WeaponFx.slashArc(level, player, fx, 7.0D, WeaponFx.halfAngleOf(0.15D));
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_SILENCE_SCYTHE_PRIMARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.slashArc(level, pivot, aim.direction(), fx, 7.0D, WeaponFx.halfAngleOf(0.15D));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(aim.feet()), ModSounds.WEAPON_SILENCE_SCYTHE_PRIMARY.get(),
                 SoundSource.PLAYERS, 0.8F, 1.0F);
     }
 
     private void activateSilenceSecondary(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.of(tooltipKey);
-        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 7.0D, 8)) {
-            if (!WeaponSkillSupport.hurt(player, target, 9.0F)) {
+        double radius = 7.0D;
+        Vec3 center = player.position();
+        AABB bounds = player.getBoundingBox().inflate(radius);
+        for (LivingEntity target : radiusSkillTargets(level, player, center, bounds, radius, 8)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 9.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
                 continue;
             }
             WeaponFx.hitMark(level, target, fx);
-            if (!isBoss(target)) {
-                target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 40, 0, true, false, true));
-                target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 0, true, false, true));
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
             }
+            target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 40, 0, true, false, true));
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
+            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 0, true, false, true));
         }
-        WeaponFx.groundRing(level, player, fx, 7.0D);
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_SILENCE_SCYTHE_SECONDARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.groundRing(level, center, fx, radius);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_SILENCE_SCYTHE_SECONDARY.get(),
                 SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void activateBellHammerPrimary(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.of(tooltipKey);
-        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 5.0D, 8)) {
-            if (WeaponSkillSupport.hurt(player, target, 20.0F)) {
-                WeaponFx.heavyHitMark(level, target, fx);
-                if (!isBoss(target)) {
-                    target.knockback(0.8D, player.getX() - target.getX(), player.getZ() - target.getZ());
-                    target.hurtMarked = true;
-                }
+        double radius = 5.0D;
+        Vec3 center = player.position();
+        AABB bounds = player.getBoundingBox().inflate(radius);
+        for (LivingEntity target : radiusSkillTargets(level, player, center, bounds, radius, 8)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
             }
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 20.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            WeaponFx.heavyHitMark(level, target, fx);
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
+            target.knockback(0.8D, center.x - target.getX(), center.z - target.getZ());
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
+            target.hurtMarked = true;
         }
-        WeaponFx.groundRing(level, player, fx, 5.0D);
-        WeaponFx.releaseBurst(level, player.position().add(0, .9, 0), fx, 1.1D);
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_BROKEN_BELL_HAMMER_PRIMARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.groundRing(level, center, fx, radius);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.releaseBurst(level, center.add(0.0D, 0.9D, 0.0D), fx, 1.1D);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_BROKEN_BELL_HAMMER_PRIMARY.get(),
                 SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void activateBellHammerSecondary(ServerLevel level, ServerPlayer player) {
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 120, 0, true, false, true));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 160, 0, true, false, true));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         WeaponSkillSupport.applyAbsorption(player, 80, 0, 4.0F);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         WeaponFx.wardSpiral(level, player, WeaponFxTheme.of(tooltipKey), 1.15D, 3);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         level.playSound(null, player.blockPosition(), ModSounds.WEAPON_BROKEN_BELL_HAMMER_SECONDARY.get(),
                 SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
+    private record SkillAim(Vec3 feet, Vec3 origin, Vec3 direction, AABB bounds) {
+    }
+
+    private static boolean isCurrentSkillActor(ServerLevel level, ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.hasDisconnected() && !player.isSpectator();
+    }
+
+    private static SkillAim skillAim(ServerPlayer player, double range, double padding) {
+        Vec3 feet = player.position();
+        Vec3 origin = player.getEyePosition();
+        Vec3 direction = player.getLookAngle().normalize();
+        return new SkillAim(feet, origin, direction,
+                new AABB(origin, origin.add(direction.scale(range))).inflate(padding));
+    }
+
+    private static List<LivingEntity> aimedSkillTargets(ServerLevel level, SkillAim aim,
+                                                        Predicate<LivingEntity> targetCheck, int limit) {
+        return level.getEntitiesOfClass(LivingEntity.class, aim.bounds(), targetCheck)
+                .stream()
+                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(aim.feet())))
+                .limit(limit)
+                .toList();
+    }
+
+    private static boolean isCurrentAimTarget(ServerLevel level, ServerPlayer player, LivingEntity target, SkillAim aim) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.getBoundingBox().intersects(aim.bounds());
+    }
+
+    private static boolean isCurrentConeTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                SkillAim aim, double range, double minDot) {
+        if (!isCurrentAimTarget(level, player, target, aim)) {
+            return false;
+        }
+        Vec3 offset = target.getBoundingBox().getCenter().subtract(aim.origin());
+        double distance = offset.length();
+        return distance > 0.0D && distance <= range
+                && offset.scale(1.0D / distance).dot(aim.direction()) >= minDot
+                && hasSightFrom(level, player, target, aim.origin());
+    }
+
+    private static boolean hasSightFrom(ServerLevel level, ServerPlayer player, LivingEntity target, Vec3 origin) {
+        Vec3 end = target.getEyePosition();
+        AABB box = target.getBoundingBox();
+        if (end.distanceTo(origin) > 128.0D) {
+            return false;
+        }
+        BlockHitResult hit = level.clip(new ClipContext(origin, end, ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS && isCurrentSkillActor(level, player)
+                && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && end.equals(target.getEyePosition()) && box.equals(target.getBoundingBox());
+    }
+
+    private static List<LivingEntity> radiusSkillTargets(ServerLevel level, ServerPlayer player,
+                                                         Vec3 center, AABB bounds, double radius, int limit) {
+        return level.getEntitiesOfClass(LivingEntity.class, bounds,
+                        target -> isCurrentRadiusTarget(level, player, target, center, bounds, radius))
+                .stream()
+                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(center)))
+                .limit(limit)
+                .toList();
+    }
+
+    private static boolean isCurrentRadiusTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                   Vec3 center, AABB bounds, double radius) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.position().distanceToSqr(center) <= radius * radius
+                && target.getBoundingBox().intersects(bounds);
     }
 
     @Override
@@ -305,15 +553,31 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
 
     /** Post 阶段确认 hurt 成功后，才提交命中特效与持久状态。 */
     public void applyPostDamageEffect(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        if (!isCurrentPassiveHit(level, player, target)) {
+            return;
+        }
         switch (tooltipKey) {
             case "echo_broadsword" -> applyBroadsword(level, player, target);
-            case "echo_battleaxe" -> applyBattleaxe(player, target);
-            case "silence_scythe" -> applySilenceScythe(level, target);
-            case "crystal_song_staff" -> applyCrystalSongStaff(level, target);
+            case "echo_battleaxe" -> applyBattleaxe(level, player, target);
+            case "silence_scythe" -> applySilenceScythe(level, player, target);
+            case "crystal_song_staff" -> applyCrystalSongStaff(level, player, target);
             case "broken_bell_hammer" -> applyBellHammer(level, player, target);
             default -> {
             }
         }
+    }
+
+    private static boolean isCurrentPassiveHit(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        return isCurrentSkillActor(level, player) && target.level() == level && !target.isRemoved() && !target.isSpectator()
+                && target != player && !target.isAlliedTo(player) && target instanceof Enemy;
+    }
+
+    private static boolean isCurrentPassiveTarget(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        return isCurrentPassiveHit(level, player, target) && target.isAlive();
+    }
+
+    private static boolean isCurrentPassiveControlTarget(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        return isCurrentPassiveTarget(level, player, target) && !isBossLike(target);
     }
 
     public boolean wouldExposeTarget(ServerLevel level, ServerPlayer player, LivingEntity target) {
@@ -349,24 +613,39 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
             return;
         }
         data.putInt(BROADSWORD_COUNT_KEY, 0);
+        if (!isCurrentPassiveTarget(level, player, target)) {
+            return;
+        }
         target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 40, 0, true, false, true));
+        if (!isCurrentPassiveTarget(level, player, target)) {
+            return;
+        }
         WeaponFx.heavyHitMark(level, target, WeaponFxTheme.of(tooltipKey));
     }
 
-    private void applyBattleaxe(ServerPlayer player, LivingEntity target) {
-        if (!isStrongAttack(player) || isBossLike(target) || !(target instanceof Enemy)) {
+    private void applyBattleaxe(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        if (!isStrongAttack(player) || !isCurrentPassiveControlTarget(level, player, target)) {
             return;
         }
         target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, true, false, true));
+        if (!isCurrentPassiveControlTarget(level, player, target)) {
+            return;
+        }
         target.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 80, 0, true, false, true));
     }
 
-    private void applySilenceScythe(ServerLevel level, LivingEntity target) {
-        if (isBossLike(target) || !(target instanceof Enemy)) {
+    private void applySilenceScythe(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        if (!isCurrentPassiveControlTarget(level, player, target)) {
             return;
         }
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 0, true, false, true));
+        if (!isCurrentPassiveControlTarget(level, player, target)) {
+            return;
+        }
         target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 60, 0, true, false, true));
+        if (!isCurrentPassiveControlTarget(level, player, target)) {
+            return;
+        }
         WeaponFx.hitMark(level, target, WeaponFxTheme.of(tooltipKey));
     }
 
@@ -391,11 +670,18 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
         String timeKey = HAMMER_TIME_KEY + "_" + player.getUUID();
         long now = level.getGameTime();
         if (isValidHammerMark(data, timeKey, now)) {
-            WeaponFx.heavyHitMark(level, target, WeaponFxTheme.of(tooltipKey));
-            level.playSound(null, target.blockPosition(), ModSounds.WEAPON_BROKEN_BELL_HAMMER_PRIMARY.get(),
-                    SoundSource.PLAYERS, 0.8F, 1.0F);
+            // 先消耗本次印记，避免表现回调读取旧印记或让外层清理删掉新命中。
             data.remove(timeKey);
             pruneHammerMarks(data, now, MAX_ACTIVE_HAMMER_MARKS);
+            if (!isCurrentPassiveTarget(level, player, target)) {
+                return;
+            }
+            WeaponFx.heavyHitMark(level, target, WeaponFxTheme.of(tooltipKey));
+            if (!isCurrentPassiveTarget(level, player, target)) {
+                return;
+            }
+            level.playSound(null, target.blockPosition(), ModSounds.WEAPON_BROKEN_BELL_HAMMER_PRIMARY.get(),
+                    SoundSource.PLAYERS, 0.8F, 1.0F);
             return;
         }
         pruneHammerMarks(data, now, MAX_ACTIVE_HAMMER_MARKS - 1);
@@ -435,12 +721,18 @@ public class EchoMeleeWeaponItem extends SwordItem implements WeaponSkill {
     private record HammerMark(String key, long markedAt) {
     }
 
-    private void applyCrystalSongStaff(ServerLevel level, LivingEntity target) {
-        if (!(target instanceof Enemy) || isBossLike(target)) {
+    private void applyCrystalSongStaff(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        if (!isCurrentPassiveControlTarget(level, player, target)) {
             return;
         }
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50, 0, true, false, true));
+        if (!isCurrentPassiveControlTarget(level, player, target)) {
+            return;
+        }
         WeaponFx.hitMark(level, target, WeaponFxTheme.CRYSTAL_SONG_STAFF);
+        if (!isCurrentPassiveControlTarget(level, player, target)) {
+            return;
+        }
         level.playSound(null, target.blockPosition(),
                 ModSounds.WEAPON_CRYSTAL_SONG_STAFF_PRIMARY.get(), SoundSource.PLAYERS, 0.7F, 1.0F);
     }

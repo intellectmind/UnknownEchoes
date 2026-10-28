@@ -45,6 +45,9 @@ public class GenericArtifactItem extends Item implements ItemActiveSkill {
 
     private boolean activate(ServerPlayer player, ItemStack stack, InteractionHand hand,
                              boolean bindInstead) {
+        if (!player.isAlive() || player.hasDisconnected() || player.isSpectator()) {
+            return false;
+        }
         if (!ArtifactManager.isEnabled(type)) {
             actionbar(player, "message.unknown_echoes.artifact.disabled");
             return false;

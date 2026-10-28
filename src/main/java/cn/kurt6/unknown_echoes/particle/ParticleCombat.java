@@ -4,6 +4,7 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.item.weapon.WeaponEffectGuard;
 import cn.kurt6.unknown_echoes.mixin.LivingDamageAccessor;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.CombatRules;
 import net.minecraft.world.damagesource.DamageSource;
@@ -29,7 +30,7 @@ import java.util.WeakHashMap;
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
 public final class ParticleCombat {
     private record Melee(ParticleAttack attack, int target, long tick) { }
-    private record Hit(ParticleAttack attack, ServerPlayer player, DamageSource source, float health,
+    private record Hit(ParticleAttack attack, ServerPlayer player, ServerLevel level, DamageSource source, float health,
                        float normal, float voidDamage, float extra, float pierce, boolean backstab, float[] shares, HealthLoss healthLoss) { }
     private static final class HealthLoss {
         private float amount;
@@ -74,7 +75,8 @@ public final class ParticleCombat {
         DamageSource source = event.getSource();
         LivingEntity target = event.getEntity();
         if (!(source.getEntity() instanceof ServerPlayer player) || WeaponEffectGuard.isActive(player)
-                || !ParticleEffects.canHit(player, target) || event.getAmount() <= 0) return;
+                || !ParticleEffects.isImpactCurrent(player, target, player.serverLevel()) || event.getAmount() <= 0) return;
+        ServerLevel level = player.serverLevel();
         ParticleAttack attack = null;
         AbstractArrow arrow = source.getDirectEntity() instanceof AbstractArrow a ? a : null;
         if (arrow != null && source.is(DamageTypes.ARROW) && !ParticleAttack.seen(arrow, target.getUUID())) {
@@ -106,7 +108,7 @@ public final class ParticleCombat {
         if (shadow == 50) extra += particles * 0.3F;
         float pierce = voidCount == 0 || ParticleEffects.immune(player, target, ParticleKind.VOID)
                 ? 0 : ParticleStats.voidPierce(voidCount);
-        Hit hit = new Hit(attack, player, source, target.getHealth(), ordinary, voidDamage, extra, pierce, backstab,
+        Hit hit = new Hit(attack, player, level, source, target.getHealth(), ordinary, voidDamage, extra, pierce, backstab,
                 new float[]{ordinary, voidDamage, extra}, new HealthLoss());
         HITS.put(event.getContainer(), hit);
         event.setAmount(ordinary + voidDamage + extra);
@@ -137,6 +139,7 @@ public final class ParticleCombat {
         if ((event.getNewDamage() <= 0 || hit.healthLoss.amount <= 0) && event.getReduction(DamageContainer.Reduction.ABSORPTION) <= 0) return;
         if (hit.source.getDirectEntity() instanceof AbstractArrow arrow) ParticleAttack.mark(arrow, target.getUUID());
         hit.attack.claimShadow(hit.player);
+        if (!ParticleEffects.isImpactCurrent(hit.player, target, hit.level)) return;
         if (hit.healthLoss.amount > 0 && target.getHealth() <= 0) KILLS.put(container, hit);
         float healthLoss = Math.max(0, Math.min(hit.healthLoss.amount, event.getNewDamage()));
         if (executionCredit != null) healthLoss = Math.min(healthLoss, Math.max(0, executionCredit - event.getReduction(DamageContainer.Reduction.ABSORPTION)));
@@ -146,7 +149,9 @@ public final class ParticleCombat {
         float basis = hit.voidDamage <= 0 ? 0 : n >= 20 ? directAfterArmor : hit.shares[1];
         float healing = totalAfterArmor <= 0 ? 0 : healthLoss * basis / totalAfterArmor * ParticleStats.voidSteal(n);
         if (healing > 0) hit.player.heal(Math.min(healthLoss * 0.08F, healing));
+        if (!ParticleEffects.isImpactCurrent(hit.player, target, hit.level)) return;
         ParticleEffects.hit(hit.player, target, hit.attack, hit.backstab);
+        if (!ParticleEffects.isImpactCurrent(hit.player, target, hit.level)) return;
         ParticleFx.hit(hit.player, target, hit.attack.data());
     }
 
@@ -156,7 +161,8 @@ public final class ParticleCombat {
         if (hit == null || hit.source != event.getSource() || hit.attack.data().count(ParticleKind.VOID) != 50
                 || event.getNewDamage() <= 0 || !(event.getEntity() instanceof net.minecraft.world.entity.monster.Enemy)
                 || ParticleEffects.immune(hit.player, event.getEntity(), ParticleKind.VOID)
-                || ParticleEffects.boss(event.getEntity()) || hit.health > event.getEntity().getMaxHealth() * 0.08F) return;
+                || ParticleEffects.boss(event.getEntity()) || hit.health > event.getEntity().getMaxHealth() * 0.08F
+                || !ParticleEffects.isImpactCurrent(hit.player, event.getEntity(), hit.level)) return;
         EXECUTION_CREDIT.put(event.getContainer(), event.getNewDamage());
         event.setNewDamage(Math.max(event.getNewDamage(), event.getEntity().getHealth() + event.getEntity().getAbsorptionAmount()));
     }
@@ -164,7 +170,10 @@ public final class ParticleCombat {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void death(LivingDeathEvent event) {
         Hit hit = KILLS.remove(currentDamage(event.getEntity()));
-        if (hit != null && hit.source == event.getSource()) ParticleEffects.killed(hit.player, event.getEntity(), hit.attack);
+        if (hit != null && hit.source == event.getSource()) {
+            if (ParticleEffects.isImpactCurrent(hit.player, event.getEntity(), hit.level))
+                ParticleEffects.killed(hit.player, event.getEntity(), hit.attack);
+        }
         else ParticleEffects.dotDeath(event.getEntity(), event.getSource());
     }
 

@@ -65,7 +65,7 @@ import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nullable;
 
-public class ForgottenColossus extends Monster implements GeoEntity, BossDamageGuard, PhaseGatedBoss,
+public class ForgottenColossus extends Monster implements GeoEntity, BossTestControl, BossDamageGuard, PhaseGatedBoss,
         BossVisualState,
         RechallengeBoundBoss, BossMusicSource {
     private static final RawAnimation IDLE_ANIM =
@@ -1362,6 +1362,33 @@ public class ForgottenColossus extends Monster implements GeoEntity, BossDamageG
             player.displayClientMessage(Component.translatable("message.unknown_echoes.boss.protected"), true);
             this.protectedMessageCooldown = 40;
         }
+    }
+
+    @Override
+    public boolean openTestWindow() {
+        if (!(this.level() instanceof ServerLevel level) || !isCurrentSimonBoss(level)
+                || this.handlingSimon || this.isBroken()) return false;
+        this.simonPhase = SimonPhase.INPUT;
+        this.simonInputProgress = this.simonSequence.length;
+        this.enterBrokenState();
+        return this.isBroken();
+    }
+
+    @Override
+    public boolean advanceTestPhase() {
+        if (!(this.level() instanceof ServerLevel) || !this.isAlive() || this.isRemoved()
+                || !this.acceptsTestControl()) return false;
+        boolean wasBroken = this.isBroken();
+        if (!wasBroken && !this.openTestWindow()) return false;
+        if (!this.isAlive() || this.isRemoved() || !this.isBroken()) return false;
+        if (this.brokenWindowHealthFloor > 0.0F) {
+            if (this.getHealth() <= this.brokenWindowHealthFloor + 0.01F) return false;
+            this.setHealth(this.brokenWindowHealthFloor);
+            // 下一 tick 由原有恢复流程收回机关和破防状态。
+            this.brokenTicksRemaining = 1;
+            return true;
+        }
+        return !wasBroken;
     }
 
     @Override

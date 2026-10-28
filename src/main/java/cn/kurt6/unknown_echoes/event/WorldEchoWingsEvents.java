@@ -4,6 +4,7 @@ import cn.kurt6.unknown_echoes.UnknownEchoes;
 import cn.kurt6.unknown_echoes.network.WorldEchoFlightStatePayload;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -23,7 +24,9 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.common.NeoForgeMod;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,13 +39,23 @@ public final class WorldEchoWingsEvents {
     private static final double TAKEOFF_VERTICAL_SPEED = 0.42D;
     public static final ResourceLocation FLIGHT_ATTRIBUTE_MODIFIER_ID =
             UnknownEchoes.id("world_echo_wings_flight");
-    private static final Set<UUID> ACTIVE_FLIGHTS = new HashSet<>();
+    private static final Map<UUID, FlightState> ACTIVE_FLIGHTS = new HashMap<>();
     private static final Set<UUID> VISIBLE_FLIGHTS = new HashSet<>();
+
+    private record FlightState(ServerPlayer player, ServerLevel level) {
+    }
 
     private WorldEchoWingsEvents() {
     }
 
     public static void handleFlightRequest(ServerPlayer player, boolean flying) {
+        if (player.hasDisconnected()) {
+            return;
+        }
+        FlightState current = ACTIVE_FLIGHTS.get(player.getUUID());
+        if (current != null && current.player() != player) {
+            return;
+        }
         if (!flying) {
             stopFlight(player);
             return;
@@ -53,7 +66,8 @@ public final class WorldEchoWingsEvents {
                     new WorldEchoFlightStatePayload(player.getUUID(), false));
             return;
         }
-        if (!ACTIVE_FLIGHTS.add(player.getUUID())) {
+        FlightState flight = new FlightState(player, player.serverLevel());
+        if (ACTIVE_FLIGHTS.putIfAbsent(player.getUUID(), flight) != null) {
             return;
         }
 
@@ -66,7 +80,9 @@ public final class WorldEchoWingsEvents {
         player.fallDistance = 0.0F;
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.PHANTOM_FLAP, SoundSource.PLAYERS, 0.8F, 1.15F);
-        syncVisibleState(player, true);
+        if (keepCurrentFlight(player, flight)) {
+            syncVisibleState(player, true);
+        }
     }
 
     @SubscribeEvent
@@ -76,12 +92,11 @@ public final class WorldEchoWingsEvents {
         }
 
         UUID playerId = player.getUUID();
-        boolean active = ACTIVE_FLIGHTS.contains(playerId);
-        if (active && !canUseWings(player)) {
-            stopFlight(player);
-            active = false;
+        FlightState flight = ACTIVE_FLIGHTS.get(playerId);
+        if (flight != null && !keepCurrentFlight(player, flight)) {
+            return;
         }
-        if (active) {
+        if (flight != null) {
             setFlightAccess(player, true);
             if (!player.getAbilities().flying) {
                 player.getAbilities().flying = true;
@@ -90,10 +105,13 @@ public final class WorldEchoWingsEvents {
             player.fallDistance = 0.0F;
             if (player.tickCount % 10 == 0) {
                 refreshFlightResistance(player);
+                if (!keepCurrentFlight(player, flight)) {
+                    return;
+                }
             }
         }
 
-        if (active || player.getAbilities().flying || VISIBLE_FLIGHTS.contains(playerId)) {
+        if (flight != null || player.getAbilities().flying || VISIBLE_FLIGHTS.contains(playerId)) {
             syncVisibleState(player, hasUsableWings(player) && player.getAbilities().flying);
         }
     }
@@ -156,7 +174,7 @@ public final class WorldEchoWingsEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
-            if (ACTIVE_FLIGHTS.contains(player.getUUID()) || hasFlightAccess(player)) {
+            if (ACTIVE_FLIGHTS.containsKey(player.getUUID()) || hasFlightAccess(player)) {
                 stopFlight(player);
             }
         }
@@ -170,8 +188,20 @@ public final class WorldEchoWingsEvents {
     }
 
     private static boolean canUseWings(ServerPlayer player) {
-        return player.isAlive() && !player.isSpectator() && !player.isPassenger()
+        return player.isAlive() && !player.hasDisconnected() && !player.isSpectator() && !player.isPassenger()
                 && hasUsableWings(player);
+    }
+
+    private static boolean keepCurrentFlight(ServerPlayer player, FlightState flight) {
+        // 同步回调可以停止并重新起飞；旧调用只能清理自己持有的状态。
+        if (ACTIVE_FLIGHTS.get(player.getUUID()) != flight || flight.player() != player) {
+            return false;
+        }
+        if (player.level() != flight.level() || !canUseWings(player)) {
+            stopFlight(player);
+            return false;
+        }
+        return true;
     }
 
     private static boolean hasUsableWings(Player player) {
@@ -183,7 +213,7 @@ public final class WorldEchoWingsEvents {
     }
 
     private static void stopFlight(ServerPlayer player) {
-        boolean wasManaged = ACTIVE_FLIGHTS.remove(player.getUUID()) || hasFlightAccess(player);
+        boolean wasManaged = ACTIVE_FLIGHTS.remove(player.getUUID()) != null || hasFlightAccess(player);
         setFlightAccess(player, false);
         if (wasManaged && !player.mayFly()) {
             player.getAbilities().flying = false;

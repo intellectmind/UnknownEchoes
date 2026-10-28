@@ -18,6 +18,7 @@ public class ClientAbilityCache {
     private static final Set<String> RITUAL_TOKENS = new HashSet<>();
     private static final Map<String, String> FAILURES = new HashMap<>();
     private static int puzzleScore;
+    private static int archiveProgress;
 
     public static void update(SyncAbilityPayload payload) {
         ABILITIES.clear();
@@ -28,6 +29,7 @@ public class ClientAbilityCache {
         DIMENSIONS.addAll(payload.dimensions());
         RESEARCH.clear();
         puzzleScore = 0;
+        archiveProgress = 0;
         for (String entry : payload.research()) {
             int sep = entry.lastIndexOf(':');
             if (sep > 0) {
@@ -35,6 +37,8 @@ public class ClientAbilityCache {
                     int value = Integer.parseInt(entry.substring(sep + 1));
                     if (entry.startsWith("@puzzle_score:")) {
                         puzzleScore = Math.max(0, value);
+                    } else if (entry.startsWith("@archive_progress:")) {
+                        archiveProgress = Math.max(0, value) & 3;
                     } else {
                         RESEARCH.put(entry.substring(0, sep), value);
                     }
@@ -82,6 +86,14 @@ public class ClientAbilityCache {
         return puzzleScore;
     }
 
+    public static boolean hasArchiveTerminalRecord() {
+        return (archiveProgress & 1) != 0;
+    }
+
+    public static boolean hasCompletedArchiveTrials() {
+        return (archiveProgress & 2) != 0;
+    }
+
     public static void clear() {
         ABILITIES.clear();
         BEACONS.clear();
@@ -90,5 +102,6 @@ public class ClientAbilityCache {
         RITUAL_TOKENS.clear();
         FAILURES.clear();
         puzzleScore = 0;
+        archiveProgress = 0;
     }
 }

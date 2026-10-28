@@ -44,7 +44,11 @@ final class WeaponFx {
     }
 
     private static Vec3 flatLook(ServerPlayer player) {
-        Vec3 look = player.getLookAngle().multiply(1.0D, 0.0D, 1.0D);
+        return flatLook(player.getLookAngle());
+    }
+
+    private static Vec3 flatLook(Vec3 direction) {
+        Vec3 look = direction.multiply(1.0D, 0.0D, 1.0D);
         return look.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : look.normalize();
     }
 
@@ -60,12 +64,18 @@ final class WeaponFx {
      */
     static void slashArc(ServerLevel level, ServerPlayer player, WeaponFxTheme.Theme theme,
                          double radius, double halfAngle) {
+        Vec3 direction = player.getLookAngle();
+        Vec3 pivot = player.position().add(0.0D, player.getBbHeight() * 0.45D, 0.0D);
+        slashArc(level, pivot, direction, theme, radius, halfAngle);
+    }
+
+    static void slashArc(ServerLevel level, Vec3 pivot, Vec3 direction, WeaponFxTheme.Theme theme,
+                         double radius, double halfAngle) {
         // halfAngle 必须钳到正值:minDot=1.0 的锥退化成射线时它是 0,lift 会算出
         // 0/0=NaN 并把 NaN 坐标广播给每个客户端。不能改成提前返回,调用点已经结算了伤害。
         double span = Math.max(1.0E-3D, halfAngle);
-        Vec3 look = flatLook(player);
+        Vec3 look = flatLook(direction);
         Vec3 side = new Vec3(-look.z, 0.0D, look.x);
-        Vec3 pivot = player.position().add(0.0D, player.getBbHeight() * 0.45D, 0.0D);
         CombatFx.themed(level, Shape.SLASH, pivot, look, radius, 0, span,
                 theme.core(), theme.edge(), 10);
         int points = Math.min(MAX_ARC_POINTS, 8 + (int) (radius * 2.0D));
@@ -122,7 +132,10 @@ final class WeaponFx {
      */
     static void groundRing(ServerLevel level, ServerPlayer player, WeaponFxTheme.Theme theme,
                            double radius) {
-        Vec3 feet = player.position();
+        groundRing(level, player.position(), theme, radius);
+    }
+
+    static void groundRing(ServerLevel level, Vec3 feet, WeaponFxTheme.Theme theme, double radius) {
         int points = Math.min(MAX_RING_POINTS, 10 + (int) (radius * 2.0D));
         CombatFx.themed(level, Shape.RING, feet.add(0, 0.18, 0), Vec3.ZERO, radius, 0, 0,
                 theme.core(), theme.edge(), 14);
@@ -147,9 +160,12 @@ final class WeaponFx {
      */
     static void wardSpiral(ServerLevel level, ServerPlayer player, WeaponFxTheme.Theme theme,
                            double radius, int turns) {
-        Vec3 feet = player.position();
+        wardSpiral(level, player.position(), player.getBbHeight() + 0.35D, theme, radius, turns);
+    }
+
+    static void wardSpiral(ServerLevel level, Vec3 feet, double height, WeaponFxTheme.Theme theme,
+                           double radius, int turns) {
         int steps = Math.min(MAX_RING_POINTS, 14 + turns * 2);
-        double height = player.getBbHeight() + 0.35D;
         CombatFx.themed(level, Shape.AEGIS, feet, Vec3.ZERO, radius, height, TAU * Math.max(1, turns),
                 theme.core(), theme.edge(), 18);
         ParticleOptions trace = theme.trace(1.2F);
@@ -224,8 +240,11 @@ final class WeaponFx {
     /** 牵引线:从目标指回玩家,让"被拉过来"这件事有可见的因果。 */
     static void pullTether(ServerLevel level, ServerPlayer player,
                            LivingEntity target, WeaponFxTheme.Theme theme) {
+        pullTether(level, player.position().add(0.0D, player.getBbHeight() * 0.5D, 0.0D), target, theme);
+    }
+
+    static void pullTether(ServerLevel level, Vec3 to, LivingEntity target, WeaponFxTheme.Theme theme) {
         Vec3 from = waistOf(target);
-        Vec3 to = player.position().add(0.0D, player.getBbHeight() * 0.5D, 0.0D);
         Vec3 span = to.subtract(from);
         CombatFx.themed(level, Shape.BEAM, from, span, 0, span.length(), 0,
                 theme.core(), theme.edge(), 8);

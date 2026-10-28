@@ -259,6 +259,7 @@ public class EchoAbilityManager {
             }
         }
         research.add("@puzzle_score:" + EchoCompletionManager.puzzleCompletionScore(player));
+        research.add("@archive_progress:" + EchoCompletionManager.archiveProgressFlags(player));
         for (EchoAbilityType type : EchoAbilityType.values()) {
 
             if (ResonanceTokenManager.hasRitualRecord(player, type)) {

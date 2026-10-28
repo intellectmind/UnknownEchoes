@@ -2,6 +2,7 @@ package cn.kurt6.unknown_echoes.artifact;
 
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.UnknownEchoes;
+import cn.kurt6.unknown_echoes.event.EffectControlSupport;
 import cn.kurt6.unknown_echoes.ability.EchoArmorSets;
 import cn.kurt6.unknown_echoes.ability.EchoAbilityType;
 import cn.kurt6.unknown_echoes.ability.EchoPermission;
@@ -75,6 +76,8 @@ import java.lang.ref.WeakReference;
 import java.util.function.BooleanSupplier;
 
 public final class ArtifactEffectManager {
+    private static final Set<ServerPlayer> TICKING_PLAYERS =
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
     private static final ResourceLocation[] TIDE_HEALTH_IDS = {
             UnknownEchoes.id("tide_lantern_health_1"),
             UnknownEchoes.id("tide_lantern_health_2"),
@@ -139,7 +142,7 @@ public final class ArtifactEffectManager {
     /** bindInstead 由「物品副功能」键传入，不读取潜行状态。 */
     public static boolean use(ServerPlayer player, ArtifactType type, InteractionHand hand,
                               boolean bindInstead) {
-        if (!player.isAlive() || player.isSpectator() || !ArtifactManager.isEnabled(type)) {
+        if (!player.isAlive() || player.hasDisconnected() || player.isSpectator() || !ArtifactManager.isEnabled(type)) {
             return false;
         }
         return ArtifactUseGuard.run(player, type, () -> switch (type) {
@@ -163,6 +166,9 @@ public final class ArtifactEffectManager {
 
     public static boolean useFromKey(ServerPlayer player, ArtifactType type, InteractionHand hand,
                                      boolean bindInstead) {
+        if (!player.isAlive() || player.hasDisconnected() || player.isSpectator()) {
+            return false;
+        }
         if (ArtifactManager.isOnCooldown(player, type)) {
             actionbar(player, "message.unknown_echoes.artifact.generic_cooldown");
             return false;
@@ -210,26 +216,36 @@ public final class ArtifactEffectManager {
     }
 
     public static void tick(ServerPlayer player) {
-        tickStormFlight(player);
-        int tickCount = player.tickCount;
-        if (tickCount % 20 != 0) {
+        if (!TICKING_PLAYERS.add(player)) {
             return;
         }
+        Level source = player.level();
+        try {
+            tickStormFlight(player);
+            int tickCount = player.tickCount;
+            if (tickCount % 20 != 0) {
+                return;
+            }
 
-        ArtifactData data = ArtifactManager.getData(player);
-        int tideLevel = level(data, ArtifactType.TIDE_LANTERN);
-        if (tickCount % 40 == 0) {
-            ArtifactAnchorHelper.tickRiftAnchor(player, data);
-            int stormLevel = level(data, ArtifactType.STORM_COMPASS);
-            int lensLevel = level(data, ArtifactType.ECHO_LENS);
-            applyPassiveAttributes(player, tideLevel, stormLevel, lensLevel);
-            tickEchoLensPassive(player, lensLevel);
-            cleanupLensMarks(player);
-            cleanupTimeFreeze(player.server, ArtifactManager.gameTime(player));
-        }
-        tickTideAutoGuard(player, tideLevel);
-        if (tickCount % 200 == 0) {
-            tickTideSustain(player, tideLevel);
+            ArtifactData data = ArtifactManager.getData(player);
+            int tideLevel = level(data, ArtifactType.TIDE_LANTERN);
+            if (tickCount % 40 == 0) {
+                ArtifactAnchorHelper.tickRiftAnchor(player, data);
+                int stormLevel = level(data, ArtifactType.STORM_COMPASS);
+                int lensLevel = level(data, ArtifactType.ECHO_LENS);
+                applyPassiveAttributes(player, tideLevel, stormLevel, lensLevel);
+                tickEchoLensPassive(player, lensLevel);
+                cleanupLensMarks(player);
+                cleanupTimeFreeze(player.server, ArtifactManager.gameTime(player));
+            }
+            if (player.level() == source) {
+                tickTideAutoGuard(player, tideLevel);
+            }
+            if (tickCount % 200 == 0 && player.level() == source) {
+                tickTideSustain(player, tideLevel);
+            }
+        } finally {
+            TICKING_PLAYERS.remove(player);
         }
     }
 
@@ -612,7 +628,8 @@ public final class ArtifactEffectManager {
     private static boolean canContinueStormUse(ServerPlayer player, ServerLevel source,
                                                ItemStack stack, InteractionHand hand) {
         return player.level() == source && player.isAlive() && !player.isSpectator()
-                && !player.isPassenger() && ArtifactManager.isEnabled(ArtifactType.STORM_COMPASS)
+                && !player.hasDisconnected() && !player.isPassenger()
+                && ArtifactManager.isEnabled(ArtifactType.STORM_COMPASS)
                 && player.getItemInHand(hand) == stack
                 && ArtifactManager.validateCredential(player, ArtifactType.STORM_COMPASS, stack);
     }
@@ -620,7 +637,7 @@ public final class ArtifactEffectManager {
     private static boolean canContinueUse(ServerPlayer player, ServerLevel source,
                                            ItemStack stack, InteractionHand hand, ArtifactType type) {
         return player.level() == source && player.isAlive() && !player.isSpectator()
-                && ArtifactManager.isEnabled(type) && player.getItemInHand(hand) == stack
+                && !player.hasDisconnected() && ArtifactManager.isEnabled(type) && player.getItemInHand(hand) == stack
                 && ArtifactManager.validateCredential(player, type, stack);
     }
 
@@ -703,6 +720,9 @@ public final class ArtifactEffectManager {
         }
         List<LivingEntity> interruptions = level >= 3
                 ? findNearbyOrdinaryEnemies(player, 8.0D, 8) : List.of();
+        if (!canContinue.getAsBoolean()) {
+            return false;
+        }
         if (!payForUse(player, ArtifactType.ECHO_LENS)) {
             return false;
         }
@@ -792,6 +812,9 @@ public final class ArtifactEffectManager {
                 .filter(entity -> freezeDeadline(entity, foldedMemory, baseDuration, duration, now)
                         > TIME_FREEZE_ENDS.getOrDefault(entity.getUUID(), Long.MIN_VALUE))
                 .toList();
+        if (!canContinue.getAsBoolean()) {
+            return false;
+        }
         if (targets.isEmpty()) {
             ArtifactManager.startCooldown(player, ArtifactType.TIME_HOURGLASS, 2);
             actionbar(player, "message.unknown_echoes.artifact.time_hourglass.no_target");
@@ -1674,7 +1697,8 @@ public final class ArtifactEffectManager {
         if (flight == null) {
             return;
         }
-        if (level(player, ArtifactType.STORM_COMPASS) <= 0) {
+        if (!player.isAlive() || player.hasDisconnected() || player.isPassenger()
+                || level(player, ArtifactType.STORM_COMPASS) <= 0) {
             stopStormFlight(player, false);
             return;
         }
@@ -1736,13 +1760,14 @@ public final class ArtifactEffectManager {
         }
     }
 
+    /** 读档时只恢复已拥有且启用的潮汐生命容量，不触发其他神器被动。 */
+    public static void refreshTideHealth(ServerPlayer player) {
+        applyTideHealth(player, level(player, ArtifactType.TIDE_LANTERN));
+    }
+
     private static void applyPassiveAttributes(ServerPlayer player, int tideLevel,
                                                int stormLevel, int lensLevel) {
-        AttributeInstance health = player.getAttribute(Attributes.MAX_HEALTH);
-        for (int i = 0; i < TIDE_HEALTH_IDS.length; i++) {
-            applyModifier(health, TIDE_HEALTH_IDS[i], tideHealthBonus(i + 1),
-                    AttributeModifier.Operation.ADD_VALUE, tideLevel == i + 1);
-        }
+        applyTideHealth(player, tideLevel);
         boolean sprintBoost = stormLevel > 0 && player.isSprinting();
         applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), STORM_MOVEMENT_ID,
                 sprintBoost ? 0.04D : 0.0D,
@@ -1752,8 +1777,17 @@ public final class ArtifactEffectManager {
                 AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, lensLevel > 0);
     }
 
+    private static void applyTideHealth(ServerPlayer player, int tideLevel) {
+        AttributeInstance health = player.getAttribute(Attributes.MAX_HEALTH);
+        for (int i = 0; i < TIDE_HEALTH_IDS.length; i++) {
+            applyModifier(health, TIDE_HEALTH_IDS[i], tideHealthBonus(i + 1),
+                    AttributeModifier.Operation.ADD_VALUE, tideLevel == i + 1);
+        }
+    }
+
     private static void tickTideSustain(ServerPlayer player, int tideLevel) {
-        if (tideLevel <= 0) {
+        Level source = player.level();
+        if (tideLevel <= 0 || !canContinueTideSustain(player, source, 1)) {
             return;
         }
         FoodData foodData = player.getFoodData();
@@ -1761,28 +1795,39 @@ public final class ArtifactEffectManager {
             foodData.eat(1, 0.05F);
         }
         if (tideLevel >= 3) {
-            softenControl(player, MobEffects.MOVEMENT_SLOWDOWN);
-            softenControl(player, MobEffects.WEAKNESS);
-            softenControl(player, MobEffects.DIG_SLOWDOWN);
+            BooleanSupplier canContinue = () -> canContinueTideSustain(player, source, 3);
+            softenControl(player, MobEffects.MOVEMENT_SLOWDOWN, canContinue);
+            softenControl(player, MobEffects.WEAKNESS, canContinue);
+            softenControl(player, MobEffects.DIG_SLOWDOWN, canContinue);
         }
     }
 
-    private static void softenControl(ServerPlayer player, Holder<MobEffect> effect) {
+    private static boolean canContinueTideSustain(ServerPlayer player, Level source, int minimumLevel) {
+        return player.level() == source && player.isAlive() && !player.hasDisconnected()
+                && !player.isSpectator() && level(player, ArtifactType.TIDE_LANTERN) >= minimumLevel;
+    }
+
+    private static void softenControl(ServerPlayer player, Holder<MobEffect> effect, BooleanSupplier canContinue) {
+        if (!canContinue.getAsBoolean()) {
+            return;
+        }
         MobEffectInstance instance = player.getEffect(effect);
         if (instance == null || instance.getDuration() <= 80 || instance.getAmplifier() > 1) {
             return;
         }
-        int duration = Math.max(80, instance.getDuration() * 4 / 5);
-        player.removeEffect(effect);
-        player.addEffect(new MobEffectInstance(effect, duration, instance.getAmplifier(),
-                instance.isAmbient(), instance.isVisible(), instance.showIcon()));
+        int duration = Math.max(80, (int) (instance.getDuration() * 4L / 5L));
+        EffectControlSupport.shorten(player, effect, duration, canContinue);
     }
 
     private static void tickTideAutoGuard(ServerPlayer player, int tideLevel) {
+        Level source = player.level();
+        if (tideLevel < 3 || !canContinueTideSustain(player, source, 3)) {
+            return;
+        }
         boolean stableReflection = "stable_reflection".equals(
                 ArtifactManager.getData(player).getTuning(ArtifactType.TIDE_LANTERN));
         float triggerRatio = stableReflection ? 0.4F : 0.3F;
-        if (tideLevel < 3 || player.getHealth() > player.getMaxHealth() * triggerRatio) {
+        if (player.getHealth() > player.getMaxHealth() * triggerRatio) {
             return;
         }
         long now = ArtifactManager.gameTime(player);
@@ -1890,9 +1935,7 @@ public final class ArtifactEffectManager {
 
     private static void applyTideRecovery(ServerPlayer player, int level, boolean weak) {
         ServerLevel source = player.serverLevel();
-        applyTideRecovery(player, level, weak, () -> player.level() == source && player.isAlive()
-                && !player.isSpectator() && ArtifactManager.isEnabled(ArtifactType.TIDE_LANTERN)
-                && level(player, ArtifactType.TIDE_LANTERN) > 0);
+        applyTideRecovery(player, level, weak, () -> canContinueTideSustain(player, source, 3));
     }
 
     private static void applyTideRecovery(ServerPlayer player, int level, boolean weak,
@@ -1943,7 +1986,7 @@ public final class ArtifactEffectManager {
             if ("rune".equals(tuning)) {
                 clearAllNegativeEffects(player, canContinue);
             } else {
-                clearNegativeEffects(player, 1);
+                clearNegativeEffects(player, 1, canContinue);
             }
         }
     }
@@ -1957,24 +2000,26 @@ public final class ArtifactEffectManager {
             if (!canContinue.getAsBoolean()) {
                 return;
             }
-            player.removeEffect(effect);
+            EffectControlSupport.remove(player, effect, canContinue);
         }
     }
 
-    private static void clearNegativeEffects(ServerPlayer player, int limit) {
+    private static void clearNegativeEffects(ServerPlayer player, int limit, BooleanSupplier canContinue) {
         int removed = 0;
         for (Holder<MobEffect> effect : TIDE_CLEANSABLE_NEGATIVE_EFFECTS) {
-            if (removed < limit && removeLowLevelEffect(player, effect)) {
+            if (!canContinue.getAsBoolean()) {
+                return;
+            }
+            if (removed < limit && removeLowLevelEffect(player, effect, canContinue)) {
                 removed++;
             }
         }
     }
 
-    private static boolean removeLowLevelEffect(ServerPlayer player, Holder<MobEffect> effect) {
+    private static boolean removeLowLevelEffect(ServerPlayer player, Holder<MobEffect> effect, BooleanSupplier canContinue) {
         MobEffectInstance instance = player.getEffect(effect);
         if (instance != null && instance.getAmplifier() <= 1) {
-            player.removeEffect(effect);
-            return true;
+            return EffectControlSupport.remove(player, effect, canContinue);
         }
         return false;
     }
@@ -2084,7 +2129,7 @@ public final class ArtifactEffectManager {
 
     private static boolean canContinueLensPassive(ServerPlayer player, ServerLevel source, int lensLevel) {
         return player.level() == source && player.isAlive() && !player.isSpectator()
-                && level(player, ArtifactType.ECHO_LENS) >= lensLevel;
+                && !player.hasDisconnected() && level(player, ArtifactType.ECHO_LENS) >= lensLevel;
     }
 
     private static List<LivingEntity> findLensTargets(ServerPlayer player, int count) {
@@ -2276,6 +2321,7 @@ public final class ArtifactEffectManager {
 
     private static boolean canLensAffect(ServerPlayer player, LivingEntity entity) {
         return entity != player && !entity.isAlliedTo(player)
+                && (!(entity instanceof ServerPlayer targetPlayer) || !targetPlayer.hasDisconnected())
                 && (entity instanceof Player target
                 ? !target.isSpectator() && ServerConfig.ARTIFACT_PVP_EFFECTS.get()
                 : entity instanceof Enemy || isBossEntity(entity));

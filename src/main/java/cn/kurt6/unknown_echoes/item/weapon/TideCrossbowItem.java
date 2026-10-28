@@ -4,6 +4,11 @@ import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.entity.projectile.TideBoltEntity;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -24,6 +29,8 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
+import java.util.Comparator;
+import java.util.function.Predicate;
 
 /** 潮汐弩；弹射物伤害以 ModItems 和 TideBoltEntity 的实际配置为准。 */
 public class TideCrossbowItem extends CrossbowItem implements WeaponSkill {
@@ -53,29 +60,22 @@ public class TideCrossbowItem extends CrossbowItem implements WeaponSkill {
     @Override
     public boolean activateSkill(ServerLevel level, ServerPlayer player,
                                  ItemStack stack, InteractionHand hand) {
+        if (!isCurrentSkillActor(level, player)) {
+            return false;
+        }
         if (!WeaponSkillSupport.requireCrossbowCharge(player, stack, hand,
                 CrossbowItem.getChargeDuration(stack, player) - quickLoadTicks)) {
+            return false;
+        }
+        if (!isCurrentSkillActor(level, player)) {
             return false;
         }
         if (!WeaponSkillSupport.begin(player, skillKey("primary"), PRIMARY_COOLDOWN_TICKS, 0)) {
             return false;
         }
+
         WeaponSkillSupport.consumeCrossbowCharge(stack);
-        for (LivingEntity target : WeaponSkillSupport.lineTargets(level, player, 20.0D, 1.2D, 5)) {
-            if (WeaponSkillSupport.hurt(player, target, 15.0F)) {
-                WeaponFx.hitMark(level, target, WeaponFxTheme.TIDE_CROSSBOW);
-                if (!EchoMeleeWeaponItem.isBoss(target)) {
-                    target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
-                            70, 0, true, false, true));
-                }
-            }
-        }
-        Vec3 eye = player.getEyePosition();
-        Vec3 look = player.getLookAngle().normalize();
-        WeaponFx.pierceBeam(level, player, WeaponFxTheme.TIDE_CROSSBOW, eye, look,
-                WeaponFx.clippedBeamLength(level, player, eye, look, 20.0D));
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_TIDE_CROSSBOW_PRIMARY.get(),
-                SoundSource.PLAYERS, 0.9F, 1.0F);
+        castPrimary(level, player);
         WeaponSkillSupport.finish(player, stack, hand, 2);
         return true;
     }
@@ -83,27 +83,180 @@ public class TideCrossbowItem extends CrossbowItem implements WeaponSkill {
     @Override
     public boolean activateSecondarySkill(ServerLevel level, ServerPlayer player,
                                           ItemStack stack, InteractionHand hand) {
+        if (!isCurrentSkillActor(level, player)) {
+            return false;
+        }
         if (!WeaponSkillSupport.begin(player, skillKey("secondary"), SECONDARY_COOLDOWN_TICKS, 0)) {
             return false;
         }
-        player.addEffect(new MobEffectInstance(MobEffects.WATER_BREATHING, 300, 0, true, false, true));
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 0, true, false, true));
-        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 7.0D, 8)) {
-            if (WeaponSkillSupport.hurt(player, target, 10.0F)) {
-                WeaponFx.hitMark(level, target, WeaponFxTheme.TIDE_CROSSBOW);
-                if (target instanceof Enemy && !EchoMeleeWeaponItem.isBoss(target)) {
-                    target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
-                            100, 1, true, false, true));
-                }
-            }
-        }
-        // BUBBLE 离水当 tick 自毁,陆上放会整段消失,所以护体只用染色 dust 螺旋。
-        WeaponFx.groundRing(level, player, WeaponFxTheme.TIDE_CROSSBOW, 7.0D);
-        WeaponFx.wardSpiral(level, player, WeaponFxTheme.TIDE_CROSSBOW, 1.1D, 3);
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_TIDE_CROSSBOW_SECONDARY.get(),
-                SoundSource.PLAYERS, 0.9F, 1.0F);
+
+        castSecondary(level, player);
         WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
+    }
+
+    private void castPrimary(ServerLevel level, ServerPlayer player) {
+        WeaponFxTheme.Theme fx = WeaponFxTheme.TIDE_CROSSBOW;
+        SkillAim aim = skillAim(player, 20.0D, 1.2D);
+        Predicate<LivingEntity> targetCheck = target -> isCurrentLineTarget(level, player, target, aim, 20.0D, 1.2D);
+        for (LivingEntity target : aimedSkillTargets(level, aim, targetCheck, 5)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 15.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !targetCheck.test(target)) {
+                continue;
+            }
+            WeaponFx.hitMark(level, target, fx);
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            if (!EchoMeleeWeaponItem.isBoss(target)) {
+                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 70, 0, true, false, true));
+            }
+        }
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        double beamLength = WeaponFx.clippedBeamLength(level, player, aim.origin(), aim.direction(), 20.0D);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.pierceBeam(level, player, fx, aim.origin(), aim.direction(), beamLength);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(aim.feet()), ModSounds.WEAPON_TIDE_CROSSBOW_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
+    }
+
+    private void castSecondary(ServerLevel level, ServerPlayer player) {
+        WeaponFxTheme.Theme fx = WeaponFxTheme.TIDE_CROSSBOW;
+        double radius = 7.0D;
+        Vec3 center = player.position();
+        AABB bounds = player.getBoundingBox().inflate(radius);
+        double wardHeight = player.getBbHeight() + 0.35D;
+        player.addEffect(new MobEffectInstance(MobEffects.WATER_BREATHING, 300, 0, true, false, true));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 0, true, false, true));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        for (LivingEntity target : radiusSkillTargets(level, player, center, bounds, radius, 8)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 10.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            WeaponFx.hitMark(level, target, fx);
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            if (!EchoMeleeWeaponItem.isBoss(target)) {
+                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1, true, false, true));
+            }
+        }
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.groundRing(level, center, fx, radius);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.wardSpiral(level, center, wardHeight, fx, 1.1D, 3);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_TIDE_CROSSBOW_SECONDARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
+    }
+
+    private record SkillAim(Vec3 feet, Vec3 origin, Vec3 direction, AABB bounds) {
+    }
+
+    private static boolean isCurrentSkillActor(ServerLevel level, ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.hasDisconnected() && !player.isSpectator();
+    }
+
+    private static SkillAim skillAim(ServerPlayer player, double range, double padding) {
+        Vec3 feet = player.position();
+        Vec3 origin = player.getEyePosition();
+        Vec3 direction = player.getLookAngle().normalize();
+        return new SkillAim(feet, origin, direction,
+                new AABB(origin, origin.add(direction.scale(range))).inflate(padding));
+    }
+
+    private static List<LivingEntity> aimedSkillTargets(ServerLevel level, SkillAim aim,
+                                                        Predicate<LivingEntity> targetCheck, int limit) {
+        return level.getEntitiesOfClass(LivingEntity.class, aim.bounds(), targetCheck)
+                .stream()
+                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(aim.feet())))
+                .limit(limit)
+                .toList();
+    }
+
+    private static boolean isCurrentAimTarget(ServerLevel level, ServerPlayer player, LivingEntity target, SkillAim aim) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.getBoundingBox().intersects(aim.bounds());
+    }
+
+    private static boolean isCurrentLineTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                SkillAim aim, double range, double width) {
+        if (!isCurrentAimTarget(level, player, target, aim)) {
+            return false;
+        }
+        Vec3 offset = target.getBoundingBox().getCenter().subtract(aim.origin());
+        double along = offset.dot(aim.direction());
+        double targetRadius = target.getBbWidth() * 0.5D + width;
+        return along >= 0.25D && along <= range
+                && offset.subtract(aim.direction().scale(along)).lengthSqr() <= targetRadius * targetRadius
+                && hasSightFrom(level, player, target, aim.origin());
+    }
+
+    private static boolean hasSightFrom(ServerLevel level, ServerPlayer player, LivingEntity target, Vec3 origin) {
+        Vec3 end = target.getEyePosition();
+        AABB box = target.getBoundingBox();
+        if (end.distanceTo(origin) > 128.0D) {
+            return false;
+        }
+        BlockHitResult hit = level.clip(new ClipContext(origin, end, ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS && isCurrentSkillActor(level, player)
+                && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && end.equals(target.getEyePosition()) && box.equals(target.getBoundingBox());
+    }
+
+    private static List<LivingEntity> radiusSkillTargets(ServerLevel level, ServerPlayer player,
+                                                         Vec3 center, AABB bounds, double radius, int limit) {
+        return level.getEntitiesOfClass(LivingEntity.class, bounds,
+                        target -> isCurrentRadiusTarget(level, player, target, center, bounds, radius))
+                .stream()
+                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(center)))
+                .limit(limit)
+                .toList();
+    }
+
+    private static boolean isCurrentRadiusTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                   Vec3 center, AABB bounds, double radius) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.position().distanceToSqr(center) <= radius * radius
+                && target.getBoundingBox().intersects(bounds);
     }
 
     private String skillKey(String slot) {

@@ -83,13 +83,14 @@ public class DeepRouteNodeBlock extends Block {
             return InteractionResult.CONSUME;
         }
         String routeKey = ROUTE_PREFIX + route.getSerializedName();
-        if (EchoAbilityManager.hasActivatedMechanism(serverPlayer, routeKey)) {
+        boolean alreadyActivated = EchoAbilityManager.hasActivatedMechanism(serverPlayer, routeKey);
+        boolean completedHall = wouldCompleteAll(serverPlayer, route);
+        if (alreadyActivated && (!completedHall || hasCompletedHall(serverPlayer))) {
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.deep_route.already_" + route.getSerializedName()), true);
             return InteractionResult.CONSUME;
         }
 
-        boolean completedHall = wouldCompleteAll(serverPlayer, route);
         boolean recorded = completedHall
                 ? EchoAbilityManager.activateMechanisms(serverPlayer, routeKey, HALL_COMPLETE_KEY)
                 : EchoAbilityManager.activateMechanism(serverPlayer, routeKey);
@@ -98,11 +99,20 @@ public class DeepRouteNodeBlock extends Block {
                     "message.unknown_echoes.progress_record.full"), true);
             return InteractionResult.CONSUME;
         }
+        if (!isCurrentFeedback(serverLevel, pos, state, serverPlayer, route, completedHall)) {
+            return InteractionResult.CONSUME;
+        }
         EchoAbilityManager.syncToClient(serverPlayer);
+        if (!isCurrentFeedback(serverLevel, pos, state, serverPlayer, route, completedHall)) {
+            return InteractionResult.CONSUME;
+        }
         if (completedHall) {
             ModAdvancements.award(serverPlayer, ModAdvancements.FRACTURE_HALL);
         }
         playFeedback(serverLevel, pos, state, serverPlayer, route, completedHall);
+        if (!isCurrentFeedback(serverLevel, pos, state, serverPlayer, route, completedHall)) {
+            return InteractionResult.CONSUME;
+        }
         if (completedHall) {
             serverPlayer.displayClientMessage(Component.translatable(
                     "message.unknown_echoes.deep_route.hall_complete"), true);
@@ -154,14 +164,24 @@ public class DeepRouteNodeBlock extends Block {
                 && DeepArrayBlockAccess.getIfReady(level, pos) == state;
     }
 
+    private static boolean isCurrentFeedback(ServerLevel level, BlockPos pos, BlockState state,
+                                             ServerPlayer player, Route route, boolean completedHall) {
+        return isCurrentInteraction(level, pos, state, player)
+                && level.dimension().equals(DeepEchoTeleporter.DEEP_ECHOES)
+                && EchoPermission.canEnterDeepEchoes(player)
+                && EchoAbilityManager.hasAbility(player, route.ability)
+                && EchoAbilityManager.hasActivatedMechanism(player, ROUTE_PREFIX + route.getSerializedName())
+                && (!completedHall || hasCompletedHall(player));
+    }
+
     private static void playFeedback(ServerLevel level, BlockPos pos, BlockState state,
                                      ServerPlayer player, Route route, boolean completedHall) {
-        if (!isCurrentInteraction(level, pos, state, player)) {
+        if (!isCurrentFeedback(level, pos, state, player, route, completedHall)) {
             return;
         }
         MechanismFx.emit(level, ProgressionFx.node(Vec3.atBottomCenterOf(pos).add(0, .8, 0),
                 route.theme, completedHall));
-        if (!isCurrentInteraction(level, pos, state, player)) {
+        if (!isCurrentFeedback(level, pos, state, player, route, completedHall)) {
             return;
         }
         if (completedHall) {

@@ -11,6 +11,7 @@ import cn.kurt6.unknown_echoes.ability.RecipeUnlocks;
 import cn.kurt6.unknown_echoes.advancement.ModAdvancements;
 import cn.kurt6.unknown_echoes.block.AquaticBiomePlantBlock;
 import cn.kurt6.unknown_echoes.block.deep.DeepBiomePlantBlock;
+import cn.kurt6.unknown_echoes.client.ClientAbilityCache;
 import cn.kurt6.unknown_echoes.command.EchoCommands;
 import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.config.MobConfigHandler;
@@ -724,19 +725,31 @@ public class CommonEvents {
                 player.server.overworld().getGameTime());
     }
 
-    /** 潮汐研究 1/2:水下挖掘惩罚降低 30%/50%。 */
+    /** 客户端累计挖掘进度后才发送完成请求，速度加成必须参与双端计算。 */
     @SubscribeEvent
     public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)
-                || event.getNewSpeed() <= 0.0F) {
+        if (event.getNewSpeed() <= 0.0F) {
             return;
         }
+        Player player = event.getEntity();
         event.setNewSpeed(applyEchoToolBreakSpeed(player, event.getState(), event.getNewSpeed()));
-        if (!player.isEyeInFluid(FluidTags.WATER)
-                || !EchoAbilityManager.hasAbility(player, EchoAbilityType.TIDE_ECHO)) {
+        if (!player.isEyeInFluid(FluidTags.WATER)) {
             return;
         }
-        int researchLevel = JournalManager.getResearchLevel(player, EchoAbilityType.TIDE_ECHO);
+        int researchLevel;
+        if (player instanceof ServerPlayer server) {
+            if (!EchoAbilityManager.hasAbility(server, EchoAbilityType.TIDE_ECHO)) {
+                return;
+            }
+            researchLevel = JournalManager.getResearchLevel(server, EchoAbilityType.TIDE_ECHO);
+        } else if (player.level().isClientSide && player.isLocalPlayer()) {
+            if (!ClientAbilityCache.hasAbility(EchoAbilityType.TIDE_ECHO)) {
+                return;
+            }
+            researchLevel = ClientAbilityCache.getResearchLevel(EchoAbilityType.TIDE_ECHO);
+        } else {
+            return;
+        }
         if (researchLevel < 1) {
             return;
         }
@@ -1405,7 +1418,7 @@ public class CommonEvents {
                 && player.getOffhandItem().is(ModItems.ECHO_FISHING_ROD.get());
     }
 
-    private static float applyEchoToolBreakSpeed(ServerPlayer player,
+    private static float applyEchoToolBreakSpeed(Player player,
                                                 net.minecraft.world.level.block.state.BlockState state,
                                                 float speed) {
         ItemStack tool = player.getMainHandItem();
@@ -1648,6 +1661,5 @@ public class CommonEvents {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         EchoCommands.register(event.getDispatcher());
-        cn.kurt6.unknown_echoes.command.EchoAdminCommands.register(event.getDispatcher());
     }
 }

@@ -105,15 +105,21 @@ public class SpaceAnchorBlock extends Block {
                     "message.unknown_echoes.progress_record.full"), true);
             return InteractionResult.CONSUME;
         }
+        if (!isCurrentFeedback(serverLevel, pos, state, serverPlayer, completed)) {
+            return InteractionResult.CONSUME;
+        }
         EchoAbilityManager.syncToClient(serverPlayer);
+        if (!isCurrentFeedback(serverLevel, pos, state, serverPlayer, completed)) {
+            return InteractionResult.CONSUME;
+        }
         if (completed) {
             ModAdvancements.award(serverPlayer, ModAdvancements.SPACE_ANCHORS);
         }
-        if (!isCurrentInteraction(serverLevel, pos, state, serverPlayer)) {
+        playFeedback(serverLevel, pos, state, serverPlayer, completed);
+        if (!isCurrentFeedback(serverLevel, pos, state, serverPlayer, completed)) {
             return InteractionResult.CONSUME;
         }
         int activated = countActivatedNearby(serverPlayer, level, pos);
-        playFeedback(serverLevel, pos, state, serverPlayer, completed);
         Component message = completed
                 ? Component.translatable("message.unknown_echoes.space_anchor.completed")
                 : Component.translatable("message.unknown_echoes.space_anchor.activated",
@@ -196,11 +202,23 @@ public class SpaceAnchorBlock extends Block {
                 && DeepArrayBlockAccess.getIfReady(level, pos) == state;
     }
 
+    private static boolean isCurrentFeedback(ServerLevel level, BlockPos pos, BlockState state,
+                                             ServerPlayer player, boolean completed) {
+        return isCurrentInteraction(level, pos, state, player)
+                && level.dimension().equals(DeepEchoTeleporter.DEEP_ECHOES)
+                && EchoPermission.canUseGravityMechanism(player)
+                && EchoAbilityManager.hasActivatedMechanism(player, mechanismKey(level, pos))
+                && (!completed || EchoPermission.hasVoidRouteReady(player));
+    }
+
     private static void playFeedback(ServerLevel level, BlockPos pos, BlockState state,
                                      ServerPlayer player, boolean completed) {
+        if (!isCurrentFeedback(level, pos, state, player, completed)) {
+            return;
+        }
         MechanismFx.emit(level, ProgressionFx.node(Vec3.atBottomCenterOf(pos).add(0, 1, 0),
                 ProgressionFx.Theme.GRAVITY, completed));
-        if (!isCurrentInteraction(level, pos, state, player)) {
+        if (!isCurrentFeedback(level, pos, state, player, completed)) {
             return;
         }
         if (completed) {

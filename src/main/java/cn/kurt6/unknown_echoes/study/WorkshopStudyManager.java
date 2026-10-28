@@ -93,7 +93,8 @@ public final class WorkshopStudyManager {
             return;
         }
         WorkshopStudySession session = entry.session();
-        long now = player.level().getGameTime();
+        // 冻结世界不暂停研习交互，接纳与延迟队列须共用服务器处理 tick。
+        long now = player.server.getTickCount();
         if (!session.allowRequest(now)) {
             if (entry.pending == null) entry.pending = action;
             return;
@@ -198,7 +199,7 @@ public final class WorkshopStudyManager {
         if (entry == null) return;
         if (!valid(player, entry)) close(player);
         else {
-            long now = player.level().getGameTime();
+            long now = player.server.getTickCount();
             if (entry.pending != null && entry.session().allowRequest(now)) {
                 StudyActionPayload action = entry.pending;
                 entry.pending = null;

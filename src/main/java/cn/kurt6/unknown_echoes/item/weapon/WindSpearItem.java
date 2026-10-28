@@ -3,6 +3,7 @@ package cn.kurt6.unknown_echoes.item.weapon;
 import cn.kurt6.unknown_echoes.registry.ModSounds;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,7 +12,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwordItem;
@@ -21,7 +21,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 
+import java.util.Comparator;
 import java.util.List;
 
 public class WindSpearItem extends SwordItem implements WeaponSkill {
@@ -78,21 +80,33 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
     @Override
     public boolean activateSkill(ServerLevel level, net.minecraft.server.level.ServerPlayer player,
                                  ItemStack stack, InteractionHand hand) {
-        if (!WeaponSkillSupport.begin(player,
+        if (!isCurrentSkillActor(level, player) || !WeaponSkillSupport.begin(player,
                 "ue_weapon_skill_wind_spear_primary_until", dashCooldownTicks, 0)) {
             return false;
         }
-        Vec3 look = player.getLookAngle();
-
-        Vec3 dash = new Vec3(look.x, Mth.clamp(look.y * 0.5 + 0.1, -0.1, 0.45), look.z)
-                .normalize().scale(dashStrength);
-        this.sweepWindBlade(level, player, dash.normalize());
-        player.setDeltaMovement(dash);
-        player.hurtMarked = true;
-        level.playSound(null, player.blockPosition(),
-                ModSounds.WEAPON_WIND_SPEAR_PRIMARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+        castPrimary(level, player);
         WeaponSkillSupport.finish(player, stack, hand, 2);
         return true;
+    }
+
+    private void castPrimary(ServerLevel level, ServerPlayer player) {
+        Vec3 origin = player.position();
+        Vec3 start = origin.add(0.0D, player.getBbHeight() * 0.5D, 0.0D);
+        Vec3 look = player.getLookAngle();
+        Vec3 dash = new Vec3(look.x, Mth.clamp(look.y * 0.5 + 0.1, -0.1, 0.45), look.z)
+                .normalize().scale(dashStrength);
+        this.sweepWindBlade(level, player, start, dash.normalize());
+        // 伤害回调可能传送玩家；旧突刺速度只能提交到本次起点。
+        if (!isAtSkillOrigin(level, player, origin)) {
+            return;
+        }
+        player.setDeltaMovement(dash);
+        if (!isAtSkillOrigin(level, player, origin)) {
+            return;
+        }
+        player.hurtMarked = true;
+        level.playSound(null, BlockPos.containing(origin),
+                ModSounds.WEAPON_WIND_SPEAR_PRIMARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     @Override
@@ -103,76 +117,154 @@ public class WindSpearItem extends SwordItem implements WeaponSkill {
     @Override
     public boolean activateSecondarySkill(ServerLevel level, ServerPlayer player,
                                           ItemStack stack, InteractionHand hand) {
-        if (!WeaponSkillSupport.begin(player,
+        if (!isCurrentSkillActor(level, player) || !WeaponSkillSupport.begin(player,
                 "ue_weapon_skill_wind_spear_secondary_until", SECONDARY_COOLDOWN_TICKS, 0)) {
             return false;
         }
-        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 6.0D, 8)) {
-            if (!WeaponSkillSupport.hurt(player, target, 11.0F)) {
-                continue;
-            }
-            WeaponFx.hitMark(level, target, WeaponFxTheme.WIND_SPEAR);
-            if (!EchoMeleeWeaponItem.isBoss(target)) {
-                Vec3 push = target.position().subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
-                if (push.lengthSqr() > 1.0E-4D) {
-                    target.setDeltaMovement(target.getDeltaMovement().add(push.normalize().scale(0.9D))
-                            .add(0.0D, 0.35D, 0.0D));
-                    target.hurtMarked = true;
-                }
-            }
-        }
-        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                net.minecraft.world.effect.MobEffects.SLOW_FALLING, 160, 0, true, false, true));
-        WeaponFx.groundRing(level, player, WeaponFxTheme.WIND_SPEAR, 6.0D);
-        WeaponFx.releaseBurst(level, player.position().add(0.0D, 0.2D, 0.0D),
-                WeaponFxTheme.WIND_SPEAR, 1.0D);
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_WIND_SPEAR_SECONDARY.get(),
-                SoundSource.PLAYERS, 1.0F, 1.0F);
+        castSecondary(level, player);
         WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
     }
 
+    private void castSecondary(ServerLevel level, ServerPlayer player) {
+        WeaponFxTheme.Theme fx = WeaponFxTheme.WIND_SPEAR;
+        double radius = 6.0D;
+        Vec3 center = player.position();
+        AABB bounds = player.getBoundingBox().inflate(radius);
+        for (LivingEntity target : radiusSkillTargets(level, player, center, bounds, radius, 8)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 11.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            WeaponFx.hitMark(level, target, WeaponFxTheme.WIND_SPEAR);
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            if (!EchoMeleeWeaponItem.isBoss(target)) {
+                Vec3 push = target.position().subtract(center).multiply(1.0D, 0.0D, 1.0D);
+                if (push.lengthSqr() > 1.0E-4D) {
+                    target.setDeltaMovement(target.getDeltaMovement().add(push.normalize().scale(0.9D))
+                            .add(0.0D, 0.35D, 0.0D));
+                    if (isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                        target.hurtMarked = true;
+                    }
+                }
+            }
+        }
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.SLOW_FALLING, 160, 0, true, false, true));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.groundRing(level, center, fx, radius);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.releaseBurst(level, center.add(0.0D, 0.2D, 0.0D),
+                WeaponFxTheme.WIND_SPEAR, 1.0D);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_WIND_SPEAR_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
     /** 风刃扫掠：突刺时沿冲刺方向切出风刃，击退路径上的敌对生物。 */
-    private void sweepWindBlade(ServerLevel level, ServerPlayer player, Vec3 dir) {
-        Vec3 start = player.position().add(0, player.getBbHeight() * 0.5, 0);
+    private void sweepWindBlade(ServerLevel level, ServerPlayer player, Vec3 start, Vec3 dir) {
         Vec3 requestedEnd = start.add(dir.scale(BLADE_LENGTH));
         BlockHitResult block = level.clip(new ClipContext(start, requestedEnd,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         double bladeLength = block.getType() == HitResult.Type.MISS
                 ? BLADE_LENGTH : start.distanceTo(block.getLocation());
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         if (bladeLength <= 0.1D) {
             return;
         }
         Vec3 end = start.add(dir.scale(bladeLength));
 
         WeaponFx.pierceBeam(level, player, WeaponFxTheme.WIND_SPEAR, start, dir, bladeLength);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        AABB bounds = new AABB(start, end).inflate(BLADE_RADIUS);
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class,
-                new net.minecraft.world.phys.AABB(start, end).inflate(BLADE_RADIUS),
-                e -> e != player && e.isAlive() && !e.isSpectator() && e instanceof Enemy
-                        && !e.isAlliedTo(player))) {
-            Vec3 toVictim = victim.position().add(0, victim.getBbHeight() * 0.5, 0).subtract(start);
-            double along = toVictim.dot(dir);
-            if (along < 0 || along > bladeLength) {
+                bounds, e -> isCurrentBladeTarget(level, player, e, bounds, start, dir, bladeLength))) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentBladeTarget(level, player, victim, bounds, start, dir, bladeLength)) {
                 continue;
             }
-            if (toVictim.subtract(dir.scale(along)).length() > BLADE_RADIUS) {
-                continue;
+            boolean hurt = WeaponSkillSupport.hurt(player, victim, bladeDamage);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
             }
-            boolean[] hurt = {false};
-            WeaponEffectGuard.run(player, () -> hurt[0] = victim.hurt(
-                    player.damageSources().playerAttack(player), bladeDamage));
-            if (!hurt[0]) {
+            if (!hurt || !isCurrentBladeTarget(level, player, victim, bounds, start, dir, bladeLength)) {
                 continue;
             }
             if (!EchoMeleeWeaponItem.isBoss(victim)) {
-
+                Vec3 toVictim = victim.position().add(0, victim.getBbHeight() * 0.5, 0).subtract(start);
+                double along = toVictim.dot(dir);
                 Vec3 side = toVictim.subtract(dir.scale(along));
                 Vec3 push = (side.lengthSqr() > 1.0E-4 ? side.normalize() : new Vec3(-dir.z, 0, dir.x))
                         .scale(0.6).add(0, 0.35, 0);
                 victim.setDeltaMovement(victim.getDeltaMovement().add(push));
+                if (!isCurrentBladeTarget(level, player, victim, bounds, start, dir, bladeLength)) {
+                    continue;
+                }
                 victim.hurtMarked = true;
             }
             WeaponFx.hitMark(level, victim, WeaponFxTheme.WIND_SPEAR);
         }
+    }
+
+    private static boolean isCurrentSkillActor(ServerLevel level, ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.hasDisconnected() && !player.isSpectator();
+    }
+
+    private static boolean isAtSkillOrigin(ServerLevel level, ServerPlayer player, Vec3 origin) {
+        return isCurrentSkillActor(level, player) && player.position().distanceToSqr(origin) <= 1.0E-6D;
+    }
+
+    private static boolean isCurrentBladeTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                 AABB bounds, Vec3 start, Vec3 dir, double length) {
+        if (!(isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.getBoundingBox().intersects(bounds))) {
+            return false;
+        }
+        Vec3 offset = target.position().add(0, target.getBbHeight() * 0.5, 0).subtract(start);
+        double along = offset.dot(dir);
+        return along >= 0.0D && along <= length && offset.subtract(dir.scale(along)).length() <= BLADE_RADIUS;
+    }
+
+    private static List<LivingEntity> radiusSkillTargets(ServerLevel level, ServerPlayer player,
+                                                         Vec3 center, AABB bounds, double radius, int limit) {
+        return level.getEntitiesOfClass(LivingEntity.class, bounds,
+                        target -> isCurrentRadiusTarget(level, player, target, center, bounds, radius))
+                .stream()
+                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(center)))
+                .limit(limit)
+                .toList();
+    }
+
+    private static boolean isCurrentRadiusTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                   Vec3 center, AABB bounds, double radius) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.position().distanceToSqr(center) <= radius * radius
+                && target.getBoundingBox().intersects(bounds);
     }
 }

@@ -58,6 +58,11 @@
     ],
     [
       "unknown_echoes:inversion_reed_patch",
+      "unknown_echoes:lantern_seafan_patch",
+      "unknown_echoes:shell_bloom_patch",
+      "unknown_echoes:glow_fern_patch",
+      "unknown_echoes:glow_grass_patch",
+      "unknown_echoes:pearl_anemone_patch",
       "unknown_echoes:weightless_bloom_patch",
       "unknown_echoes:gravity_bell_patch",
       "unknown_echoes:star_mist_bloom_patch"
@@ -83,6 +88,12 @@
         "weight": 7,
         "minCount": 1,
         "maxCount": 1
+      },
+      {
+        "type": "unknown_echoes:riftfang_eel",
+        "weight": 4,
+        "minCount": 1,
+        "maxCount": 1
       }
     ],
     "creature": [
@@ -97,13 +108,44 @@
         "weight": 36,
         "minCount": 2,
         "maxCount": 4
+      },
+      {
+        "type": "unknown_echoes:crystal_feather_bird",
+        "weight": 12,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "unknown_echoes:glow_rabbit",
+        "weight": 6,
+        "minCount": 1,
+        "maxCount": 2
       }
     ],
     "ambient": [],
     "axolotls": [],
     "underground_water_creature": [],
     "water_creature": [],
-    "water_ambient": [],
+    "water_ambient": [
+      {
+        "type": "unknown_echoes:pearlback_ray",
+        "weight": 12,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:lantern_seahorse",
+        "weight": 18,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "unknown_echoes:mirror_tail_fish",
+        "weight": 16,
+        "minCount": 2,
+        "maxCount": 4
+      }
+    ],
     "misc": []
   },
   "spawn_costs": {}

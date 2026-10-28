@@ -62,7 +62,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, BossVisualState,
+public class RiftWarden extends Monster implements GeoEntity, BossTestControl, PhaseGatedBoss, BossVisualState,
         DeepRechallengeBoundBoss, BossMusicSource {
     private static final EntityDataAccessor<Integer> DATA_VISUAL_ATTACK_MODE =
             SynchedEntityData.defineId(RiftWarden.class, EntityDataSerializers.INT);
@@ -398,6 +398,23 @@ public class RiftWarden extends Monster implements GeoEntity, PhaseGatedBoss, Bo
             case 1 -> this.getMaxHealth() * SECOND_PHASE_FLOOR;
             default -> 0.0F;
         };
+    }
+
+    @Override
+    public boolean advanceTestPhase() {
+        if (!(this.level() instanceof ServerLevel level) || !this.isAlive() || this.isRemoved()
+                || this.handlingDeath || this.phaseGateStage >= 2) return false;
+        this.setHealth(Math.min(this.getHealth(), this.currentMechanicFloor()));
+        this.phaseTransitionPending = false;
+        this.phaseMechanismStabilizers.clear();
+        this.attackMode = AttackMode.NONE;
+        this.attackAge = 0;
+        this.attackDuration = 0;
+        this.attackHits.clear();
+        this.stormMarks.clear();
+        this.syncVisualAttackState();
+        this.completePhaseTransition(level);
+        return true;
     }
 
     @Override

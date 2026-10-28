@@ -72,8 +72,10 @@ public class EchoPermission {
 
     public static boolean canCalibrateAbyssBeacon(ServerPlayer player) {
         return !player.isSpectator()
-                && EchoCompletionManager.hasMainlineCompletionRecord(player)
-                && EchoCompletionManager.hasCoreResonance(player);
+                && (canEnterDeepEchoes(player)
+                    || (EchoCompletionManager.hasMainlineCompletionRecord(player)
+                        && EchoCompletionManager.hasCoreResonance(player)
+                        && EchoCompletionManager.isComplete(player)));
     }
 
     public static boolean canEnterDeepEchoes(Player player) {

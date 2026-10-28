@@ -13,6 +13,7 @@ import cn.kurt6.unknown_echoes.config.ServerConfig;
 import cn.kurt6.unknown_echoes.artifact.ArtifactType;
 import cn.kurt6.unknown_echoes.journal.AncientPageCatalog;
 import cn.kurt6.unknown_echoes.journal.DeepEchoesProgressCatalog;
+import cn.kurt6.unknown_echoes.journal.EchoCompletionManager;
 import cn.kurt6.unknown_echoes.journal.ExplorationClue;
 import cn.kurt6.unknown_echoes.journal.JournalNavigation;
 import cn.kurt6.unknown_echoes.journal.JournalRevisit;
@@ -210,11 +211,10 @@ public class EchoOverviewScreen extends Screen {
     private static final int BUTTON_ATLAS_HEIGHT = 60;
     private static final int BUTTON_SLICE_WIDTH = 96;
     private static final int BUTTON_SLICE_HEIGHT = 20;
-    private static final int T7_REQUIRED_BIOMES = 8;
-    private static final int T7_REQUIRED_PAGES = 48;
-    private static final int T7_REQUIRED_MINI_BOSSES = 6;
-    private static final int T7_REQUIRED_SCORE = 150;
-    private static final int INDEX_EXPANSION_ONE_PAGES = 60;
+    private static final int T7_REQUIRED_BIOMES = EchoCompletionManager.REQUIRED_BIOMES;
+    private static final int T7_REQUIRED_PAGES = EchoCompletionManager.REQUIRED_PAGES;
+    private static final int T7_REQUIRED_MINI_BOSSES = EchoCompletionManager.REQUIRED_MINI_BOSSES;
+    private static final int T7_REQUIRED_SCORE = EchoCompletionManager.REQUIRED_SCORE;
     private static final int FOCUS_TICKS = 8;
     private static final String[] MODULE_INDICES = {"01", "02", "03", "04", "05", "06", "07"};
 
@@ -482,6 +482,7 @@ public class EchoOverviewScreen extends Screen {
         int score = visibleCompletionScore();
         addWrapped(Component.translatable("overview.unknown_echoes.index.header")
                 .withStyle(ChatFormatting.GOLD), null);
+        addWrapped(Component.translatable("overview.unknown_echoes.index.entry_requirement"), null);
         addWrapped(Component.empty(), null);
         addIndexLine("overview.unknown_echoes.index.abilities", coreAbilityCount(), 3, 3);
         addIndexLine("overview.unknown_echoes.index.main_bosses", mainBossCount(), MAIN_BOSSES.length,
@@ -495,7 +496,13 @@ public class EchoOverviewScreen extends Screen {
                 T7_REQUIRED_PAGES);
         addIndexLine("overview.unknown_echoes.index.mini_bosses", miniBossCount(), MINI_BOSSES.length,
                 T7_REQUIRED_MINI_BOSSES);
+        addIndexLine("overview.unknown_echoes.index.archive_terminal",
+                ClientAbilityCache.hasArchiveTerminalRecord() ? 1 : 0, 1, 1);
+        addIndexLine("overview.unknown_echoes.index.archive_trials",
+                ClientAbilityCache.hasCompletedArchiveTrials() ? 1 : 0, 1, 1);
         addIndexLine("overview.unknown_echoes.index.score", score, T7_REQUIRED_SCORE, T7_REQUIRED_SCORE);
+        addWrapped(Component.translatable("overview.unknown_echoes.index.calibration")
+                .withStyle(ChatFormatting.GRAY), null);
         addWrapped(Component.empty(), null);
         String backfillTarget = visibleBackfillTarget();
         if (!backfillTarget.equals("ready")) {
@@ -622,6 +629,16 @@ public class EchoOverviewScreen extends Screen {
         for (int detail = 1; detail <= detailCount; detail++) {
             String suffix = detail == 1 ? ".detail" : ".detail" + detail;
             tooltip.add(Component.translatable(key + suffix).withStyle(formatting));
+        }
+    }
+
+    private static void addArtifactLimitsTip(List<Component> tooltip, ArtifactType type) {
+        if (type == ArtifactType.TIME_HOURGLASS) {
+            tooltip.add(Component.translatable("overview.unknown_echoes.artifact.hourglass_limits")
+                    .withStyle(ChatFormatting.DARK_GRAY));
+        } else if (type == ArtifactType.DIMENSION_ANCHOR || type == ArtifactType.RIFT_ANCHOR) {
+            tooltip.add(Component.translatable("overview.unknown_echoes.artifact.anchor_limits")
+                    .withStyle(ChatFormatting.DARK_GRAY));
         }
     }
 
@@ -1931,6 +1948,7 @@ public class EchoOverviewScreen extends Screen {
                                         + type.getId() + ".upgrade_" + (lvl + 1))
                                 .withStyle(ChatFormatting.DARK_GRAY));
                     }
+                    addArtifactLimitsTip(tip, type);
                 } else {
                     tip.add(ARTIFACT_HINTS[type.ordinal()].copy().withStyle(ChatFormatting.DARK_GRAY));
                 }
@@ -2736,8 +2754,8 @@ public class EchoOverviewScreen extends Screen {
     }
 
     private static String visibleBackfillTarget() {
-        if (AncientPageCatalog.countFirstDimensionPages(ClientJournalCache.pages())
-                < Math.max(T7_REQUIRED_PAGES, INDEX_EXPANSION_ONE_PAGES)) {
+        if (AncientPageCatalog.countReleasePages(ClientJournalCache.pages())
+                < AncientPageCatalog.TOTAL) {
             return "pages";
         }
         if (miniBossCount() < MINI_BOSSES.length) {

@@ -530,7 +530,7 @@ public class ModBlocks {
             () -> new BiomeGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .replaceable().noCollission().instabreak().sound(SoundType.GRASS)
                     .offsetType(BlockBehaviour.OffsetType.XYZ).lightLevel(state -> 8)
-                    .pushReaction(PushReaction.DESTROY)));
+                    .pushReaction(PushReaction.DESTROY), true));
 
     public static final DeferredBlock<FlowerBlock> ECHO_FLOWER = BLOCKS.register("echo_flower",
             () -> new FlowerBlock(MobEffects.GLOWING, 8.0F,
@@ -543,7 +543,7 @@ public class ModBlocks {
             () -> new BiomeGrassBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN)
                     .replaceable().noCollission().instabreak().sound(SoundType.GRASS)
                     .offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 8)
-                    .pushReaction(PushReaction.DESTROY)));
+                    .pushReaction(PushReaction.DESTROY), true));
 
     public static final DeferredBlock<MiniBossSpawnerBlock> MINIBOSS_SPAWNER = BLOCKS.register("miniboss_spawner",
             () -> new MiniBossSpawnerBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY)

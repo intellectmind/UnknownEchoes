@@ -21,15 +21,21 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Set;
 
 /** 共鸣者套装终局战斗与回访效果。所有结算由服务端事件和瞬态属性完成。 */
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
@@ -55,6 +61,10 @@ public final class ResonatorArmorEvents {
     private static final ResourceLocation TOUGHNESS_ID = UnknownEchoes.id("resonator_toughness");
     private static final ResourceLocation KNOCKBACK_RESISTANCE_ID =
             UnknownEchoes.id("resonator_knockback_resistance");
+    private static final ResourceLocation ABSORPTION_CAPACITY_ID =
+            UnknownEchoes.id("resonator_absorption_capacity");
+    private static final Set<ServerPlayer> REFRESHING_PLAYERS =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     private ResonatorArmorEvents() {
     }
@@ -62,37 +72,73 @@ public final class ResonatorArmorEvents {
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)
-                || player.tickCount % EFFECT_REFRESH_INTERVAL_TICKS != 0) {
+                || player.tickCount % EFFECT_REFRESH_INTERVAL_TICKS != 0
+                || !REFRESHING_PLAYERS.add(player)) {
             return;
         }
 
-        int pieces = player.isSpectator() ? 0 : EchoArmorSets.resonatorPieces(player);
-        applySetAttributes(player, pieces);
-        if (player.getHealth() > player.getMaxHealth()) {
-            player.setHealth(player.getMaxHealth());
-        }
-        if (pieces < 4) {
+        int pieces = 0;
+        try {
+            pieces = currentSetPieces(player);
+            updateSetAttributes(player, pieces);
+            if (pieces < 4) {
+                NightVisionSupport.release(player, NightVisionSupport.Source.RESONATOR);
+                return;
+            }
 
-            NightVisionSupport.release(player, NightVisionSupport.Source.RESONATOR);
-            return;
-        }
-
-        refreshNightVision(player);
-        refreshPassiveEffect(player, MobEffects.FIRE_RESISTANCE);
-        refreshPassiveEffect(player, MobEffects.REGENERATION);
-        removeMinorEffect(player, MobEffects.DARKNESS);
-        removeMinorEffect(player, MobEffects.WEAKNESS);
-        removeMinorEffect(player, MobEffects.MOVEMENT_SLOWDOWN);
-        removeMinorEffect(player, MobEffects.DIG_SLOWDOWN);
-        if (player.tickCount % FOOD_RESTORE_INTERVAL_TICKS == 0) {
-            FoodData foodData = player.getFoodData();
-            if (foodData.getFoodLevel() < 20) {
-                foodData.eat(1, 0.10F);
+            Level level = player.level();
+            refreshNightVision(player);
+            for (Holder<MobEffect> effect : List.of(MobEffects.FIRE_RESISTANCE, MobEffects.REGENERATION)) {
+                if (!canContinueSetEffects(player, level)) {
+                    return;
+                }
+                refreshPassiveEffect(player, effect);
+            }
+            for (Holder<MobEffect> effect : List.of(MobEffects.DARKNESS, MobEffects.WEAKNESS,
+                    MobEffects.MOVEMENT_SLOWDOWN, MobEffects.DIG_SLOWDOWN)) {
+                if (!canContinueSetEffects(player, level)) {
+                    return;
+                }
+                removeMinorEffect(player, effect);
+            }
+            if (canContinueSetEffects(player, level) && player.tickCount % FOOD_RESTORE_INTERVAL_TICKS == 0) {
+                FoodData foodData = player.getFoodData();
+                if (foodData.getFoodLevel() < 20) {
+                    foodData.eat(1, 0.10F);
+                }
+            }
+        } finally {
+            try {
+                int currentPieces = currentSetPieces(player);
+                if (currentPieces != pieces) {
+                    updateSetAttributes(player, currentPieces);
+                    if (currentPieces < 4) {
+                        NightVisionSupport.release(player, NightVisionSupport.Source.RESONATOR);
+                    }
+                }
+            } finally {
+                REFRESHING_PLAYERS.remove(player);
             }
         }
     }
 
-    private static void applySetAttributes(ServerPlayer player, int pieces) {
+    private static int currentSetPieces(ServerPlayer player) {
+        return player.isAlive() && !player.hasDisconnected() && !player.isSpectator()
+                ? EchoArmorSets.resonatorPieces(player) : 0;
+    }
+
+    private static boolean canContinueSetEffects(ServerPlayer player, Level level) {
+        return player.level() == level && currentSetPieces(player) >= 4;
+    }
+
+    private static void updateSetAttributes(ServerPlayer player, int pieces) {
+        applySetAttributes(player, pieces);
+        if (player.getHealth() > player.getMaxHealth()) {
+            player.setHealth(player.getMaxHealth());
+        }
+    }
+
+    static void applySetAttributes(ServerPlayer player, int pieces) {
         boolean twoPieces = pieces >= 2;
         boolean fourPieces = pieces >= 4;
         applyModifier(player.getAttribute(Attributes.MAX_HEALTH), TWO_PIECE_HEALTH_ID,
@@ -109,6 +155,7 @@ public final class ResonatorArmorEvents {
                 4.0D, AttributeModifier.Operation.ADD_VALUE, fourPieces);
         applyModifier(player.getAttribute(Attributes.KNOCKBACK_RESISTANCE), KNOCKBACK_RESISTANCE_ID,
                 0.20D, AttributeModifier.Operation.ADD_VALUE, fourPieces);
+        applyAbsorptionCapacity(player, fourPieces);
     }
 
     @SubscribeEvent
@@ -158,17 +205,36 @@ public final class ResonatorArmorEvents {
         }
     }
 
-    @SubscribeEvent
-    public static void onLivingDeath(LivingDeathEvent event) {
+    /** 击杀恢复在死亡确认后结算，取消物品掉落不影响恢复。 */
+    @SubscribeEvent(receiveCanceled = true)
+    public static void onLivingDrops(LivingDropsEvent event) {
         ServerPlayer attacker = responsiblePlayer(event.getSource());
         if (attacker == null || event.getEntity() instanceof Player
-                || EchoArmorSets.resonatorPieces(attacker) < 4) {
+                || !event.getEntity().isDeadOrDying() || !canReceiveKillRecovery(attacker)) {
             return;
         }
         attacker.heal(4.0F);
+        if (!canReceiveKillRecovery(attacker)) {
+            return;
+        }
+        // 击杀可能发生在装备轮询前，先确保原版吸收上限已包含套装容量。
+        applyAbsorptionCapacity(attacker, true);
         if (attacker.getAbsorptionAmount() < 8.0F) {
             attacker.setAbsorptionAmount(Math.min(8.0F,
                     attacker.getAbsorptionAmount() + 4.0F));
+        }
+    }
+
+    private static boolean canReceiveKillRecovery(ServerPlayer player) {
+        return player.isAlive() && !player.isSpectator()
+                && EchoArmorSets.resonatorPieces(player) >= 4;
+    }
+
+    private static void applyAbsorptionCapacity(ServerPlayer player, boolean active) {
+        applyModifier(player.getAttribute(Attributes.MAX_ABSORPTION), ABSORPTION_CAPACITY_ID,
+                8.0D, AttributeModifier.Operation.ADD_VALUE, active);
+        if (player.getAbsorptionAmount() > player.getMaxAbsorption()) {
+            player.setAbsorptionAmount(player.getMaxAbsorption());
         }
     }
 

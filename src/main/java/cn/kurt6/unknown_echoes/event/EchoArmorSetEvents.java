@@ -26,6 +26,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -36,11 +37,18 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+import java.util.function.BooleanSupplier;
+
 /** 套装件数效果(服务端判定):装备只增强既有能力/场景体验,不授予权限。 */
 @EventBusSubscriber(modid = UnknownEchoes.MODID)
 public class EchoArmorSetEvents {
 
     private static final int SET_EFFECT_REFRESH_INTERVAL_TICKS = 40;
+    private static final Set<ServerPlayer> REFRESHING_PLAYERS =
+            Collections.newSetFromMap(new IdentityHashMap<>());
     /** 夜视时长统一由 NightVisionSupport 按轮询周期换算，保证剩余时长不进入原版闪烁区。 */
     private static final int SUSTAINED_NIGHT_VISION_DURATION_TICKS =
             NightVisionSupport.sustainedDuration(SET_EFFECT_REFRESH_INTERVAL_TICKS);
@@ -71,18 +79,57 @@ public class EchoArmorSetEvents {
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)
-                || player.tickCount % SET_EFFECT_REFRESH_INTERVAL_TICKS != 0) {
+                || player.tickCount % SET_EFFECT_REFRESH_INTERVAL_TICKS != 0
+                || !REFRESHING_PLAYERS.add(player)) {
             return;
         }
-        int pieces = EchoArmorSets.explorerPieces(player);
-        if (player.isSpectator()) {
-            NightVisionSupport.release(player, NightVisionSupport.Source.ARMOR_SET);
+        Level level = player.level();
+        try {
+            updateSetModifiers(player);
+            if (!canRefresh(player, level)) {
+                return;
+            }
+            applyEchoRealmSetEffects(player, level);
+            if (!canRefresh(player, level)) {
+                return;
+            }
+            applyDeepSetEffects(player, level);
+            if (canRefresh(player, level) && hasSetNightVision(player)) {
+                refreshNightVision(player, SUSTAINED_NIGHT_VISION_DURATION_TICKS, true);
+            }
+        } finally {
+            try {
+                if (!hasSetNightVision(player)) {
+                    NightVisionSupport.release(player, NightVisionSupport.Source.ARMOR_SET);
+                }
+            } finally {
+                try {
+                    updateSetModifiers(player);
+                } finally {
+                    REFRESHING_PLAYERS.remove(player);
+                }
+            }
+        }
+    }
+
+    private static boolean isActive(ServerPlayer player) {
+        return player.isAlive() && !player.hasDisconnected() && !player.isSpectator();
+    }
+
+    private static boolean canRefresh(ServerPlayer player, Level level) {
+        return player.level() == level && isActive(player);
+    }
+
+    private static void updateSetModifiers(ServerPlayer player) {
+        if (!isActive(player)) {
             clearSetModifiers(player);
             return;
         }
-
-        boolean nightVisionSupplied = hasExplorerNightVision(player, pieces);
-
+        int pieces = EchoArmorSets.explorerPieces(player);
+        int wind = EchoArmorSets.windWalkerPieces(player);
+        int tide = EchoArmorSets.tideStalkerPieces(player);
+        int oath = EchoArmorSets.echoOathPieces(player);
+        boolean inEchoRealm = player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID);
         applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), SPEED_ID, 0.05D,
                 AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, pieces >= 4);
         applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), TOUGHNESS_ID, 1.0D,
@@ -90,17 +137,33 @@ public class EchoArmorSetEvents {
         applyModifier(player.getAttribute(Attributes.ARMOR), ARMOR_ID, 1.0D,
                 AttributeModifier.Operation.ADD_VALUE, pieces >= 4);
 
-        boolean inEchoRealm = player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID);
-        nightVisionSupplied |= applyEchoRealmSetEffects(player, inEchoRealm);
-        boolean inDeepEchoes = player.level().dimension().location().equals(EchoPermission.DEEP_ECHOES_ID);
-        nightVisionSupplied |= applyDeepSetEffects(player, inDeepEchoes);
+        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), WIND_SPEED_ID, 0.03D,
+                AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, wind >= 2 && inEchoRealm);
+        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), TIDE_SWIM_SPEED_ID, 0.08D,
+                AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, tide >= 4 && player.isEyeInFluid(FluidTags.WATER));
+        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), OATH_SPEED_ID, 0.05D,
+                AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, oath >= 2);
+        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_TOUGHNESS_ID, 2.0D,
+                AttributeModifier.Operation.ADD_VALUE, oath >= 4);
+        applyModifier(player.getAttribute(Attributes.ARMOR), OATH_ARMOR_ID, 2.0D,
+                AttributeModifier.Operation.ADD_VALUE, oath >= 4);
+        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_REALM_TOUGHNESS_ID, 1.0D,
+                AttributeModifier.Operation.ADD_VALUE, oath >= 4 && inEchoRealm);
+        applyModifier(player.getAttribute(Attributes.ARMOR), OATH_REALM_ARMOR_ID, 1.0D,
+                AttributeModifier.Operation.ADD_VALUE, oath >= 4 && inEchoRealm);
+    }
 
-        if (nightVisionSupplied) {
-            refreshNightVision(player, SUSTAINED_NIGHT_VISION_DURATION_TICKS, true);
-        } else {
-
-            NightVisionSupport.release(player, NightVisionSupport.Source.ARMOR_SET);
+    private static boolean hasSetNightVision(ServerPlayer player) {
+        if (!isActive(player)) {
+            return false;
         }
+        int pieces = EchoArmorSets.explorerPieces(player);
+        return hasExplorerNightVision(player, pieces)
+                || EchoArmorSets.tideStalkerPieces(player) >= 2 && player.isEyeInFluid(FluidTags.WATER)
+                || EchoArmorSets.trueSightShadowPieces(player) >= 2
+                && player.level().dimension().location().equals(EchoPermission.ECHO_REALM_ID)
+                || EchoArmorSets.abyssWalkerPieces(player) >= 4
+                && player.level().dimension().location().equals(EchoPermission.DEEP_ECHOES_ID);
     }
 
     private static boolean hasExplorerNightVision(ServerPlayer player, int explorerPieces) {
@@ -110,70 +173,34 @@ public class EchoArmorSetEvents {
                         serverLevel, player.blockPosition(), ECHO_RUINS);
     }
 
-    private static boolean applyEchoRealmSetEffects(ServerPlayer player, boolean inEchoRealm) {
-        int traveler = EchoArmorSets.echoTravelerPieces(player);
-        int wind = EchoArmorSets.windWalkerPieces(player);
-        int tide = EchoArmorSets.tideStalkerPieces(player);
-        int trueSight = EchoArmorSets.trueSightShadowPieces(player);
-        int silent = EchoArmorSets.silentWatchPieces(player);
-        int oath = EchoArmorSets.echoOathPieces(player);
-
-        if (traveler >= 4 && inEchoRealm) {
+    private static void applyEchoRealmSetEffects(ServerPlayer player, Level level) {
+        boolean inEchoRealm = level.dimension().location().equals(EchoPermission.ECHO_REALM_ID);
+        if (EchoArmorSets.echoTravelerPieces(player) >= 4 && inEchoRealm) {
             sendNearbyResourceHints(player);
         }
-
-        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), WIND_SPEED_ID, 0.03D,
-                AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, wind >= 2 && inEchoRealm);
-        if (wind >= 2 && inEchoRealm && !player.onGround() && !player.isInWater()) {
+        if (canRefresh(player, level) && EchoArmorSets.windWalkerPieces(player) >= 2
+                && inEchoRealm && !player.onGround() && !player.isInWater()) {
             addEffectIfMissing(player, MobEffects.SLOW_FALLING, 60, true);
         }
-
-        boolean nightVisionSupplied = tide >= 2 && player.isEyeInFluid(FluidTags.WATER);
-        if (tide >= 4 && player.isEyeInFluid(FluidTags.WATER)) {
+        if (canRefresh(player, level) && EchoArmorSets.tideStalkerPieces(player) >= 4
+                && player.isEyeInFluid(FluidTags.WATER)) {
             addEffectIfMissing(player, MobEffects.DOLPHINS_GRACE, 80, true);
         }
-        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), TIDE_SWIM_SPEED_ID, 0.08D,
-                AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, tide >= 4 && player.isEyeInFluid(FluidTags.WATER));
-
-        nightVisionSupplied |= trueSight >= 2 && inEchoRealm;
-
-        boolean inSilentSwamp = isInBiome(player, SILENT_SWAMP_ID);
-        if (silent >= 2) {
-            protectFromSilentControl(player, MobEffects.BLINDNESS, inSilentSwamp);
-            protectFromSilentControl(player, MobEffects.DARKNESS, inSilentSwamp);
-        }
-        if (silent >= 4) {
-            protectFromSilentControl(player, MobEffects.MOVEMENT_SLOWDOWN, inSilentSwamp);
-            protectFromSilentControl(player, MobEffects.WEAKNESS, inSilentSwamp);
-        }
-
-        boolean oathActive = oath >= 4;
-        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), OATH_SPEED_ID, 0.05D,
-                AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, oath >= 2);
-        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_TOUGHNESS_ID, 2.0D,
-                AttributeModifier.Operation.ADD_VALUE, oathActive);
-        applyModifier(player.getAttribute(Attributes.ARMOR), OATH_ARMOR_ID, 2.0D,
-                AttributeModifier.Operation.ADD_VALUE, oathActive);
-        applyModifier(player.getAttribute(Attributes.ARMOR_TOUGHNESS), OATH_REALM_TOUGHNESS_ID, 1.0D,
-                AttributeModifier.Operation.ADD_VALUE, oathActive && inEchoRealm);
-        applyModifier(player.getAttribute(Attributes.ARMOR), OATH_REALM_ARMOR_ID, 1.0D,
-                AttributeModifier.Operation.ADD_VALUE, oathActive && inEchoRealm);
-        if (oath >= 2) {
-            reduceMinorControl(player);
-        }
-        return nightVisionSupplied;
+        protectFromSilentControl(player, MobEffects.BLINDNESS, level, 2);
+        protectFromSilentControl(player, MobEffects.DARKNESS, level, 2);
+        protectFromSilentControl(player, MobEffects.MOVEMENT_SLOWDOWN, level, 4);
+        protectFromSilentControl(player, MobEffects.WEAKNESS, level, 4);
+        reduceMinorControl(player, level);
     }
 
-    private static boolean applyDeepSetEffects(ServerPlayer player, boolean inDeepEchoes) {
-        if (EchoArmorSets.abyssWalkerPieces(player) < 4) {
-            return false;
-        }
+    private static void applyDeepSetEffects(ServerPlayer player, Level level) {
+        boolean inDeepEchoes = level.dimension().location().equals(EchoPermission.DEEP_ECHOES_ID);
         int maxDuration = inDeepEchoes ? 40 : 80;
-        shortenEffect(player, MobEffects.DARKNESS, maxDuration);
-        shortenEffect(player, MobEffects.WEAKNESS, maxDuration);
-        shortenEffect(player, MobEffects.MOVEMENT_SLOWDOWN, maxDuration);
-        shortenEffect(player, MobEffects.DIG_SLOWDOWN, maxDuration);
-        return inDeepEchoes;
+        BooleanSupplier eligible = () -> canRefresh(player, level) && EchoArmorSets.abyssWalkerPieces(player) >= 4;
+        shortenEffect(player, MobEffects.DARKNESS, maxDuration, eligible);
+        shortenEffect(player, MobEffects.WEAKNESS, maxDuration, eligible);
+        shortenEffect(player, MobEffects.MOVEMENT_SLOWDOWN, maxDuration, eligible);
+        shortenEffect(player, MobEffects.DIG_SLOWDOWN, maxDuration, eligible);
     }
 
     /** 套装轮询仅在效果缺失或即将过期时补发；夜视走独立阈值。 */
@@ -228,34 +255,30 @@ public class EchoArmorSetEvents {
         }
     }
 
-    private static void reduceMinorControl(ServerPlayer player) {
-        shortenEffect(player, MobEffects.MOVEMENT_SLOWDOWN, 60);
-        shortenEffect(player, MobEffects.WEAKNESS, 60);
-        shortenEffect(player, MobEffects.DIG_SLOWDOWN, 60);
-        shortenEffect(player, MobEffects.BLINDNESS, 60);
+    private static void reduceMinorControl(ServerPlayer player, Level level) {
+        BooleanSupplier eligible = () -> canRefresh(player, level) && EchoArmorSets.echoOathPieces(player) >= 2;
+        shortenEffect(player, MobEffects.MOVEMENT_SLOWDOWN, 60, eligible);
+        shortenEffect(player, MobEffects.WEAKNESS, 60, eligible);
+        shortenEffect(player, MobEffects.DIG_SLOWDOWN, 60, eligible);
+        shortenEffect(player, MobEffects.BLINDNESS, 60, eligible);
     }
 
     private static void protectFromSilentControl(ServerPlayer player, Holder<MobEffect> effect,
-                                                   boolean inSilentSwamp) {
+                                                   Level level, int pieces) {
+        boolean inSilentSwamp = isInBiome(player, SILENT_SWAMP_ID);
+        BooleanSupplier eligible = () -> canRefresh(player, level)
+                && EchoArmorSets.silentWatchPieces(player) >= pieces
+                && isInBiome(player, SILENT_SWAMP_ID) == inSilentSwamp;
         if (inSilentSwamp) {
-            player.removeEffect(effect);
+            EffectControlSupport.remove(player, effect, eligible);
         } else {
-            shortenEffect(player, effect, 100);
+            shortenEffect(player, effect, 100, eligible);
         }
     }
 
-    private static void shortenEffect(ServerPlayer player, Holder<MobEffect> effect) {
-        shortenEffect(player, effect, 80);
-    }
-
-    private static void shortenEffect(ServerPlayer player, Holder<MobEffect> effect, int maxDuration) {
-        MobEffectInstance instance = player.getEffect(effect);
-        if (instance == null || instance.getDuration() <= maxDuration || instance.getAmplifier() > 1) {
-            return;
-        }
-        player.removeEffect(effect);
-        player.addEffect(new MobEffectInstance(effect, maxDuration, instance.getAmplifier(),
-                instance.isAmbient(), instance.isVisible(), instance.showIcon()));
+    private static void shortenEffect(ServerPlayer player, Holder<MobEffect> effect, int maxDuration,
+                                      BooleanSupplier eligible) {
+        EffectControlSupport.shorten(player, effect, maxDuration, eligible);
     }
 
     private static boolean isInBiome(ServerPlayer player, ResourceLocation biomeId) {
@@ -316,8 +339,8 @@ public class EchoArmorSetEvents {
 
     @SubscribeEvent
     public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
-        if (event.getEntity() instanceof ServerPlayer player
-                && player.isEyeInFluid(FluidTags.WATER)
+        Player player = event.getEntity();
+        if (player.isEyeInFluid(FluidTags.WATER)
                 && EchoArmorSets.tideStalkerPieces(player) >= 2) {
             event.setNewSpeed(event.getNewSpeed() * 1.15F);
         }

@@ -6,6 +6,12 @@ import cn.kurt6.unknown_echoes.entity.boss.MirrorGuardian;
 import cn.kurt6.unknown_echoes.registry.ModEntityTags;
 import cn.kurt6.unknown_echoes.registry.ModItems;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
@@ -24,6 +30,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 
 public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
 
@@ -68,47 +75,196 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
     @Override
     public boolean activateSkill(ServerLevel level, ServerPlayer player,
                                  ItemStack stack, InteractionHand hand) {
+        if (!isCurrentSkillActor(level, player)) {
+            return false;
+        }
         if (!WeaponSkillSupport.begin(player, skillKey("primary"), PRIMARY_COOLDOWN_TICKS, 0)) {
             return false;
         }
-        WeaponFxTheme.Theme fx = WeaponFxTheme.TRUE_SIGHT_BLADE;
-        Vec3 direction = player.getLookAngle().normalize();
-        for (LivingEntity target : WeaponSkillSupport.lineTargets(level, player, 9.0D, 1.0D, 5)) {
-            float damage = target.getType().is(ModEntityTags.ILLUSION_MOBS) ? 20.0F : 14.0F;
-            if (WeaponSkillSupport.hurt(player, target, damage)) {
-                WeaponFx.hitMark(level, target, fx);
-                target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0, true, false, true));
-            }
-        }
-        WeaponFx.pierceBeam(level, player, fx, player.getEyePosition(), direction, 9.0D);
-        player.setDeltaMovement(direction.x * 1.15D,
-                Math.max(0.05D, direction.y * 0.6D + 0.05D), direction.z * 1.15D);
-        player.hurtMarked = true;
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_TRUE_SIGHT_BLADE_PRIMARY.get(),
-                SoundSource.PLAYERS, 0.9F, 1.0F);
+        castPrimary(level, player);
         WeaponSkillSupport.finish(player, stack, hand, 2);
         return true;
     }
 
     @Override
     public boolean activateSecondarySkill(ServerLevel level, ServerPlayer player,
-                                          ItemStack stack, InteractionHand hand) {
+                                 ItemStack stack, InteractionHand hand) {
+        if (!isCurrentSkillActor(level, player)) {
+            return false;
+        }
         if (!WeaponSkillSupport.begin(player, skillKey("secondary"), SECONDARY_COOLDOWN_TICKS, 0)) {
             return false;
         }
-        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 10.0D, 8)) {
-            float damage = target.getType().is(ModEntityTags.ILLUSION_MOBS) ? 18.0F : 11.0F;
-            if (!WeaponSkillSupport.hurt(player, target, damage)) {
-                continue;
-            }
-            WeaponFx.hitMark(level, target, WeaponFxTheme.TRUE_SIGHT_BLADE);
-            target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 160, 0, true, false, true));
-        }
-        WeaponFx.groundRing(level, player, WeaponFxTheme.TRUE_SIGHT_BLADE, 10.0D);
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_TRUE_SIGHT_BLADE_SECONDARY.get(),
-                SoundSource.PLAYERS, 1.0F, 1.0F);
+        castSecondary(level, player);
         WeaponSkillSupport.finish(player, stack, hand, 3);
         return true;
+    }
+
+    private void castPrimary(ServerLevel level, ServerPlayer player) {
+        WeaponFxTheme.Theme fx = WeaponFxTheme.TRUE_SIGHT_BLADE;
+        SkillAim aim = skillAim(player, 9.0D, 1.0D);
+        Predicate<LivingEntity> targetCheck = target -> isCurrentLineTarget(level, player, target, aim, 9.0D, 1.0D);
+        for (LivingEntity target : aimedSkillTargets(level, aim, targetCheck, 5)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            float damage = target.getType().is(ModEntityTags.ILLUSION_MOBS) ? 20.0F : 14.0F;
+            boolean hurt = WeaponSkillSupport.hurt(player, target, damage);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !targetCheck.test(target)) {
+                continue;
+            }
+            WeaponFx.hitMark(level, target, fx);
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0, true, false, true));
+        }
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.pierceBeam(level, player, fx, aim.origin(), aim.direction(), 9.0D);
+        if (isAtSkillOrigin(level, player, aim)) {
+            Vec3 direction = aim.direction();
+            player.setDeltaMovement(direction.x * 1.15D,
+                    Math.max(0.05D, direction.y * 0.6D + 0.05D), direction.z * 1.15D);
+            if (!isAtSkillOrigin(level, player, aim)) {
+                return;
+            }
+            player.hurtMarked = true;
+        }
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(aim.feet()), ModSounds.WEAPON_TRUE_SIGHT_BLADE_PRIMARY.get(),
+                SoundSource.PLAYERS, 0.9F, 1.0F);
+    }
+
+    private void castSecondary(ServerLevel level, ServerPlayer player) {
+        WeaponFxTheme.Theme fx = WeaponFxTheme.TRUE_SIGHT_BLADE;
+        double radius = 10.0D;
+        Vec3 center = player.position();
+        AABB bounds = player.getBoundingBox().inflate(radius);
+        for (LivingEntity target : radiusSkillTargets(level, player, center, bounds, radius, 8)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            float damage = target.getType().is(ModEntityTags.ILLUSION_MOBS) ? 18.0F : 11.0F;
+            boolean hurt = WeaponSkillSupport.hurt(player, target, damage);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            WeaponFx.hitMark(level, target, fx);
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 160, 0, true, false, true));
+        }
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.groundRing(level, center, fx, radius);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_TRUE_SIGHT_BLADE_SECONDARY.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
+    private record SkillAim(Vec3 feet, Vec3 origin, Vec3 direction, AABB bounds) {
+    }
+
+    private static boolean isCurrentSkillActor(ServerLevel level, ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.hasDisconnected() && !player.isSpectator();
+    }
+
+    private static SkillAim skillAim(ServerPlayer player, double range, double padding) {
+        Vec3 feet = player.position();
+        Vec3 origin = player.getEyePosition();
+        Vec3 direction = player.getLookAngle().normalize();
+        return new SkillAim(feet, origin, direction,
+                new AABB(origin, origin.add(direction.scale(range))).inflate(padding));
+    }
+
+    private static List<LivingEntity> aimedSkillTargets(ServerLevel level, SkillAim aim,
+                                                        Predicate<LivingEntity> targetCheck, int limit) {
+        return level.getEntitiesOfClass(LivingEntity.class, aim.bounds(), targetCheck)
+                .stream()
+                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(aim.feet())))
+                .limit(limit)
+                .toList();
+    }
+
+    private static boolean isCurrentAimTarget(ServerLevel level, ServerPlayer player, LivingEntity target, SkillAim aim) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.getBoundingBox().intersects(aim.bounds());
+    }
+
+    private static boolean isCurrentLineTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                SkillAim aim, double range, double width) {
+        if (!isCurrentAimTarget(level, player, target, aim)) {
+            return false;
+        }
+        Vec3 offset = target.getBoundingBox().getCenter().subtract(aim.origin());
+        double along = offset.dot(aim.direction());
+        double targetRadius = target.getBbWidth() * 0.5D + width;
+        return along >= 0.25D && along <= range
+                && offset.subtract(aim.direction().scale(along)).lengthSqr() <= targetRadius * targetRadius
+                && hasSightFrom(level, player, target, aim.origin());
+    }
+
+    private static boolean hasSightFrom(ServerLevel level, ServerPlayer player, LivingEntity target, Vec3 origin) {
+        Vec3 end = target.getEyePosition();
+        AABB box = target.getBoundingBox();
+        if (end.distanceTo(origin) > 128.0D) {
+            return false;
+        }
+        BlockHitResult hit = level.clip(new ClipContext(origin, end, ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS && isCurrentSkillActor(level, player)
+                && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && end.equals(target.getEyePosition()) && box.equals(target.getBoundingBox());
+    }
+
+    private static List<LivingEntity> radiusSkillTargets(ServerLevel level, ServerPlayer player,
+                                                         Vec3 center, AABB bounds, double radius, int limit) {
+        return level.getEntitiesOfClass(LivingEntity.class, bounds,
+                        target -> isCurrentRadiusTarget(level, player, target, center, bounds, radius))
+                .stream()
+                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(center)))
+                .limit(limit)
+                .toList();
+    }
+
+    private static boolean isCurrentRadiusTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                   Vec3 center, AABB bounds, double radius) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.position().distanceToSqr(center) <= radius * radius
+                && target.getBoundingBox().intersects(bounds);
+    }
+
+    private static boolean isAtSkillOrigin(ServerLevel level, ServerPlayer player, SkillAim aim) {
+        return isCurrentSkillActor(level, player) && player.position().distanceToSqr(aim.feet()) <= 1.0E-6D;
+    }
+
+    private static boolean isCurrentPassiveHit(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        return isCurrentSkillActor(level, player) && target.level() == level && !target.isRemoved() &&
+                target instanceof Enemy && !target.isSpectator() && !target.isAlliedTo(player);
+    }
+
+    private static boolean isCurrentPassiveTarget(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        return isCurrentPassiveHit(level, player, target) && target.isAlive();
     }
 
     private static String skillKey(String slot) {
@@ -130,6 +286,9 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
 
     /** Incoming 阶段只预览镜痕破碎伤害，不提前提交层数或冷却。 */
     public float getDamageEventBonus(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        if (!isCurrentPassiveTarget(level, player, target)) {
+            return 0.0F;
+        }
         if (nextMirrorMarkCount(level, player, target) < 3) {
             return 0.0F;
         }
@@ -138,24 +297,41 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
     }
 
     public boolean wouldExposeTarget(ServerLevel level, ServerPlayer player, LivingEntity target) {
-        return nextMirrorMarkCount(level, player, target) >= 3;
+        return isCurrentPassiveTarget(level, player, target) && nextMirrorMarkCount(level, player, target) >= 3;
     }
 
     /** Post 阶段确认 hurt 成功后，才提交镜痕和真身暴露。 */
     public void applyPostDamageEffect(ServerLevel level, ServerPlayer player, LivingEntity target) {
-        this.tickMirrorMark(level, player, target);
-        if (!player.getCooldowns().isOnCooldown(this)) {
-            LivingEntity real = findRealBody(level, target);
-            if (real != null) {
-                player.getCooldowns().addCooldown(this, REVEAL_COOLDOWN_TICKS);
-                int glowTicks = cn.kurt6.unknown_echoes.ability.EchoArmorSets
-                        .hasListenerClueBonus(player) ? 120 : 60;
-                real.addEffect(new MobEffectInstance(MobEffects.GLOWING, glowTicks, 0, false, false, false));
-                spawnRevealTrail(level, player, real);
-                level.playSound(null, player.blockPosition(),
-                        ModSounds.WEAPON_TRUE_SIGHT_BLADE_SECONDARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
-            }
+        if (!isCurrentPassiveHit(level, player, target)) {
+            return;
         }
+        AABB revealBounds = target.getBoundingBox().inflate(REVEAL_SEARCH_RADIUS);
+        Vec3 revealOrigin = player.getEyePosition();
+        BlockPos soundPos = player.blockPosition();
+        this.tickMirrorMark(level, player, target);
+        if (!isCurrentPassiveHit(level, player, target) || player.getCooldowns().isOnCooldown(this)) {
+            return;
+        }
+        LivingEntity real = findRealBody(level, player, target, revealBounds);
+        if (!isCurrentRealBody(level, player, target, real, revealBounds)
+                || player.getCooldowns().isOnCooldown(this)) {
+            return;
+        }
+        player.getCooldowns().addCooldown(this, REVEAL_COOLDOWN_TICKS);
+        if (!isCurrentRealBody(level, player, target, real, revealBounds)) {
+            return;
+        }
+        int glowTicks = cn.kurt6.unknown_echoes.ability.EchoArmorSets.hasListenerClueBonus(player) ? 120 : 60;
+        real.addEffect(new MobEffectInstance(MobEffects.GLOWING, glowTicks, 0, false, false, false));
+        if (!isCurrentRealBody(level, player, target, real, revealBounds)) {
+            return;
+        }
+        spawnRevealTrail(level, revealOrigin, real);
+        if (!isCurrentRealBody(level, player, target, real, revealBounds)) {
+            return;
+        }
+        level.playSound(null, soundPos,
+                ModSounds.WEAPON_TRUE_SIGHT_BLADE_SECONDARY.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     /**
@@ -163,7 +339,7 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
      * 第 3 层破碎——额外爆发伤害(幻象类双倍)+ 短暂发光 + 碎镜环。
      */
     private int nextMirrorMarkCount(ServerLevel level, ServerPlayer player, LivingEntity target) {
-        if (!(target instanceof net.minecraft.world.entity.monster.Enemy)) {
+        if (!isCurrentPassiveHit(level, player, target)) {
             return 0;
         }
         var data = target.getPersistentData();
@@ -177,6 +353,8 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
         if (count <= 0) {
             return;
         }
+        Vec3 markOrigin = target.position().add(0.0D, target.getBbHeight() * 0.6D, 0.0D);
+        BlockPos soundPos = target.blockPosition();
         var data = target.getPersistentData();
         String suffix = "_" + player.getUUID();
         String countKey = MARK_COUNT_KEY + suffix;
@@ -189,19 +367,28 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
         data.putLong(timeKey, now);
         if (count < 3) {
             data.putInt(countKey, count);
+            if (!isCurrentPassiveTarget(level, player, target)) {
+                return;
+            }
             // 层数只能靠这里读出来:粒子数按 count 递增,玩家据此判断还差几刀到破碎。
             for (int i = 0; i < count; i++) {
+                if (!isCurrentPassiveTarget(level, player, target)) {
+                    return;
+                }
                 double angle = Math.PI * 2 * i / count;
                 level.sendParticles(WeaponFxTheme.TRUE_SIGHT_BLADE.coreDust(1.3F),
-                        target.getX() + Math.cos(angle) * 0.7,
-                        target.getY() + target.getBbHeight() * 0.6,
-                        target.getZ() + Math.sin(angle) * 0.7, 1, 0.0, 0.0, 0.0, 0.0);
+                        markOrigin.x + Math.cos(angle) * 0.7,
+                        markOrigin.y,
+                        markOrigin.z + Math.sin(angle) * 0.7, 1, 0.0, 0.0, 0.0, 0.0);
+            }
+            if (!isCurrentPassiveTarget(level, player, target)) {
+                return;
             }
             if (count == 1) {
-                level.playSound(null, target.blockPosition(),
+                level.playSound(null, soundPos,
                     ModSounds.WEAPON_TRUE_SIGHT_BLADE_MARK_ONE.get(), SoundSource.PLAYERS, 0.8F, 1.0F);
             } else {
-                level.playSound(null, target.blockPosition(),
+                level.playSound(null, soundPos,
                     ModSounds.WEAPON_TRUE_SIGHT_BLADE_MARK_TWO.get(), SoundSource.PLAYERS, 0.8F, 1.0F);
             }
             return;
@@ -209,9 +396,18 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
 
         data.remove(countKey);
         data.remove(timeKey);
+        if (!isCurrentPassiveTarget(level, player, target)) {
+            return;
+        }
         target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 40, 0, false, false, false));
+        if (!isCurrentPassiveTarget(level, player, target)) {
+            return;
+        }
         WeaponFx.heavyHitMark(level, target, WeaponFxTheme.TRUE_SIGHT_BLADE);
-        level.playSound(null, target.blockPosition(),
+        if (!isCurrentPassiveTarget(level, player, target)) {
+            return;
+        }
+        level.playSound(null, soundPos,
                 ModSounds.WEAPON_TRUE_SIGHT_BLADE_SHATTER.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
@@ -288,27 +484,43 @@ public class TrueSightBladeItem extends SwordItem implements WeaponSkill {
     }
 
     /** 命中的是分身/假身时,返回场上的真身;否则 null。 */
-    private static LivingEntity findRealBody(ServerLevel level, LivingEntity hit) {
+    private static LivingEntity findRealBody(ServerLevel level, ServerPlayer player, LivingEntity hit, AABB bounds) {
         if (hit instanceof MirrorGuardian guardian && guardian.isIllusion()) {
-            for (MirrorGuardian real : level.getEntitiesOfClass(MirrorGuardian.class,
-                    hit.getBoundingBox().inflate(REVEAL_SEARCH_RADIUS),
-                    g -> g.isAlive() && !g.isIllusion())) {
-                return real;
+            for (MirrorGuardian real : level.getEntitiesOfClass(MirrorGuardian.class, bounds,
+                    candidate -> isCurrentRealBody(level, player, hit, candidate, bounds))) {
+                if (isCurrentRealBody(level, player, hit, real, bounds)) {
+                    return real;
+                }
             }
         }
         if (hit instanceof AbyssWatcher watcher && watcher.isClone()) {
-            for (AbyssWatcher real : level.getEntitiesOfClass(AbyssWatcher.class,
-                    hit.getBoundingBox().inflate(REVEAL_SEARCH_RADIUS),
-                    w -> w.isAlive() && !w.isClone())) {
-                return real;
+            for (AbyssWatcher real : level.getEntitiesOfClass(AbyssWatcher.class, bounds,
+                    candidate -> isCurrentRealBody(level, player, hit, candidate, bounds))) {
+                if (isCurrentRealBody(level, player, hit, real, bounds)) {
+                    return real;
+                }
             }
         }
         return null;
     }
 
+    private static boolean isCurrentRealBody(ServerLevel level, ServerPlayer player, LivingEntity hit,
+                                              LivingEntity real, AABB bounds) {
+        if (!isCurrentPassiveHit(level, player, hit) || real == null) {
+            return false;
+        }
+        if (!(real.level() == level && real.isAlive() && !real.isSpectator() && !real.isAlliedTo(player)
+                && real.getBoundingBox().intersects(bounds))) {
+            return false;
+        }
+        return (hit instanceof MirrorGuardian guardian && real instanceof MirrorGuardian original
+                    && !original.isIllusion() && guardian.isIllusionOf(original))
+                || (hit instanceof AbyssWatcher watcher && real instanceof AbyssWatcher watcherReal
+                    && !watcherReal.isClone() && watcher.isCloneOf(watcherReal));
+    }
+
     /** 从玩家眼前向真身铺一道短粒子轨迹(方向提示,不给精确坐标 UI)。 */
-    private static void spawnRevealTrail(ServerLevel level, ServerPlayer player, LivingEntity real) {
-        Vec3 from = player.getEyePosition();
+    private static void spawnRevealTrail(ServerLevel level, Vec3 from, LivingEntity real) {
         Vec3 dir = real.position().add(0, real.getBbHeight() * 0.5, 0).subtract(from).normalize();
         // 7 格是方向提示的上限:铺到真身会把精确坐标交给客户端,谜题就白设了。
         WeaponFx.dashTrail(level, from, dir, 7.0D, WeaponFxTheme.TRUE_SIGHT_BLADE);

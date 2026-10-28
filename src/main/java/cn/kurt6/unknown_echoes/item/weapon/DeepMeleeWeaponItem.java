@@ -32,6 +32,8 @@ import net.minecraft.world.phys.Vec3;
 
 /** 第二维度武器特效。所有位移、目标和冷却判定均由服务端执行。 */
 import java.util.List;
+import java.util.Comparator;
+import java.util.function.Predicate;
 
 public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSkill {
     private static final TagKey<Block> GRAVITY_HAMMER_MINEABLE = TagKey.create(
@@ -100,8 +102,14 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
 
     private boolean activate(ServerLevel level, ServerPlayer player, ItemStack stack,
                              InteractionHand hand, boolean secondary) {
+        if (!isCurrentSkillActor(level, player)) {
+            return false;
+        }
         Vec3 riftDestination = secondary && kind == Kind.RIFT_DAGGER
                 ? findSafeBackstep(level, player, 6.0D) : null;
+        if (!isCurrentSkillActor(level, player)) {
+            return false;
+        }
         if (!WeaponSkillSupport.begin(player,
                 "ue_weapon_skill_" + tooltipKey + (secondary ? "_secondary_until" : "_primary_until"),
                 cooldownTicks(secondary), energyCost(secondary),
@@ -165,133 +173,410 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
 
     private void castGravitySlam(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.GRAVITY_HAMMER;
-        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 6.0D, 8)) {
-            if (WeaponSkillSupport.hurt(player, target, 22.0F)) {
-                WeaponFx.heavyHitMark(level, target, fx);
-                if (!isBoss(target)) {
-                    target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
-                            100, 2, true, false, true));
-                }
+        double radius = 6.0D;
+        Vec3 center = player.position();
+        AABB bounds = player.getBoundingBox().inflate(radius);
+        for (LivingEntity target : radiusSkillTargets(level, player, center, bounds, radius, 8)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 22.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
+                continue;
+            }
+            WeaponFx.heavyHitMark(level, target, fx);
+            if (isCurrentRadiusTarget(level, player, target, center, bounds, radius) && !isBoss(target)) {
+                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
+                        100, 2, true, false, true));
             }
         }
-        WeaponFx.groundRing(level, player, fx, 6.0D);
-        WeaponFx.releaseBurst(level, player.position().add(0, .2, 0), fx, 1.15D);
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_GRAVITY_HAMMER_PRIMARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.groundRing(level, center, fx, radius);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.releaseBurst(level, center.add(0, .2, 0), fx, 1.15D);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_GRAVITY_HAMMER_PRIMARY.get(),
                 SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void castGravityWell(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.GRAVITY_HAMMER;
-        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 9.0D, 10)) {
-            if (!WeaponSkillSupport.hurt(player, target, 14.0F) || isBoss(target)) {
+        double radius = 9.0D;
+        Vec3 center = player.position();
+        Vec3 tetherEnd = center.add(0.0D, player.getBbHeight() * 0.5D, 0.0D);
+        AABB bounds = player.getBoundingBox().inflate(radius);
+        for (LivingEntity target : radiusSkillTargets(level, player, center, bounds, radius, 10)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
                 continue;
             }
-            WeaponFx.pullTether(level, player, target, fx);
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 14.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
+            WeaponFx.pullTether(level, tetherEnd, target, fx);
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
             target.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 30, 0, true, false, true));
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
             target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 2,
                     true, false, true));
         }
-        WeaponFx.groundRing(level, player, fx, 9.0D);
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_GRAVITY_HAMMER_SECONDARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.groundRing(level, center, fx, radius);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_GRAVITY_HAMMER_SECONDARY.get(),
                 SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void castRiftRush(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.RIFT_DAGGER;
-        Vec3 direction = player.getLookAngle().normalize();
-        Vec3 origin = player.getEyePosition();
-        for (LivingEntity target : WeaponSkillSupport.lineTargets(level, player, 14.0D, 1.0D, 6)) {
-            if (WeaponSkillSupport.hurt(player, target, 18.0F)) {
-                WeaponFx.hitMark(level, target, fx);
-                if (!isBoss(target)) {
-                    target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 80, 0, true, false, true));
-                }
+        SkillAim aim = skillAim(player, 14.0D, 1.0D);
+        Predicate<LivingEntity> targetCheck = target -> isCurrentLineTarget(level, player, target, aim, 14.0D, 1.0D);
+        for (LivingEntity target : aimedSkillTargets(level, aim, targetCheck, 6)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 18.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !targetCheck.test(target)) {
+                continue;
+            }
+            WeaponFx.hitMark(level, target, fx);
+            if (targetCheck.test(target) && !isBoss(target)) {
+                target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 80, 0, true, false, true));
             }
         }
-        WeaponFx.pierceBeam(level, player, fx, origin, direction, 14.0D);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.pierceBeam(level, player, fx, aim.origin(), aim.direction(), 14.0D);
+        if (!isAtSkillOrigin(level, player, aim)) {
+            return;
+        }
+        Vec3 direction = aim.direction();
         player.setDeltaMovement(direction.x * 1.5D,
                 Math.max(0.08D, direction.y * 0.8D + 0.08D), direction.z * 1.5D);
+        if (!isAtSkillOrigin(level, player, aim)) {
+            return;
+        }
         player.hurtMarked = true;
         player.fallDistance = 0.0F;
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_RIFT_DAGGER_PRIMARY.get(),
+        level.playSound(null, BlockPos.containing(aim.feet()), ModSounds.WEAPON_RIFT_DAGGER_PRIMARY.get(),
                 SoundSource.PLAYERS, 0.8F, 1.0F);
     }
 
     private void castRiftVeil(ServerLevel level, ServerPlayer player, Vec3 destination) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.RIFT_DAGGER;
-        // 折返轨迹必须在传送前用旧坐标铺:传送后玩家已经在终点,取不到出发点。
-        Vec3 origin = player.position().add(0.0D, player.getBbHeight() * 0.5D, 0.0D);
         if (destination != null) {
-            Vec3 span = destination.add(0.0D, player.getBbHeight() * 0.5D, 0.0D).subtract(origin);
-            WeaponFx.dashTrail(level, origin, span, span.length(), fx);
-            player.teleportTo(level, destination.x, destination.y, destination.z,
-                    player.getYRot(), player.getXRot());
-            player.setDeltaMovement(Vec3.ZERO);
-            player.fallDistance = 0.0F;
+            // 隐身和速度是独立收益，折返未到达时仍可施加。
+            tryRiftBackstep(level, player, destination);
+        }
+        if (!isCurrentSkillActor(level, player)) {
+            return;
         }
         player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 60, 0, true, false, true));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 120, 1, true, false, true));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         WeaponFx.wardSpiral(level, player, fx, 0.7D, 2);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         level.playSound(null, player.blockPosition(), ModSounds.WEAPON_RIFT_DAGGER_SECONDARY.get(),
                 SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
+    private static boolean isCurrentSkillActor(ServerLevel level, ServerPlayer player) {
+        return player.level() == level && player.isAlive() && !player.hasDisconnected() && !player.isSpectator();
+    }
+
+    private static boolean hasReachedRiftDestination(ServerLevel level, ServerPlayer player, Vec3 destination) {
+        return isCurrentSkillActor(level, player) && player.position().distanceToSqr(destination) <= 1.0E-6D;
+    }
+
+    private static boolean tryRiftBackstep(ServerLevel level, ServerPlayer player, Vec3 destination) {
+        if (!isCurrentSkillActor(level, player)) {
+            return false;
+        }
+        // 提前保存出发点，确认到达后再发送折返轨迹。
+        Vec3 origin = player.position().add(0.0D, player.getBbHeight() * 0.5D, 0.0D);
+        player.teleportTo(level, destination.x, destination.y, destination.z,
+                player.getYRot(), player.getXRot());
+        if (!hasReachedRiftDestination(level, player, destination)) {
+            return false;
+        }
+        player.setDeltaMovement(Vec3.ZERO);
+        if (!hasReachedRiftDestination(level, player, destination)) {
+            return false;
+        }
+        player.fallDistance = 0.0F;
+        Vec3 span = destination.add(0.0D, player.getBbHeight() * 0.5D, 0.0D).subtract(origin);
+        WeaponFx.dashTrail(level, origin, span, span.length(), WeaponFxTheme.RIFT_DAGGER);
+        return hasReachedRiftDestination(level, player, destination);
+    }
+
     private void castAnchorChains(ServerLevel level, ServerPlayer player) {
-        for (LivingEntity target : WeaponSkillSupport.coneTargets(level, player, 7.0D, 0.1D, 6)) {
-            if (!WeaponSkillSupport.hurt(player, target, 20.0F) || isBoss(target)) {
+        SkillAim aim = skillAim(player, 7.0D, 7.0D * 0.55D);
+        Vec3 pivot = aim.feet().add(0.0D, player.getBbHeight() * 0.45D, 0.0D);
+        Predicate<LivingEntity> targetCheck = target -> isCurrentConeTarget(level, player, target, aim, 7.0D, 0.1D);
+        for (LivingEntity target : aimedSkillTargets(level, aim, targetCheck, 6)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 20.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !targetCheck.test(target) || isBoss(target)) {
                 continue;
             }
             WeaponFx.hitMark(level, target, WeaponFxTheme.ANCHOR_BLADE);
+            if (!targetCheck.test(target) || isBoss(target)) {
+                continue;
+            }
             target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 140, 1, true, false, true));
+            if (!targetCheck.test(target) || isBoss(target)) {
+                continue;
+            }
             target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 2,
                     true, false, true));
         }
-        WeaponFx.slashArc(level, player, WeaponFxTheme.ANCHOR_BLADE,
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.slashArc(level, pivot, aim.direction(), WeaponFxTheme.ANCHOR_BLADE,
                 7.0D, WeaponFx.halfAngleOf(0.1D));
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ANCHOR_BLADE_PRIMARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(aim.feet()), ModSounds.WEAPON_ANCHOR_BLADE_PRIMARY.get(),
                 SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     private void castAnchorBulwark(ServerLevel level, ServerPlayer player) {
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 160, 1, true, false, true));
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         WeaponSkillSupport.applyAbsorption(player, 160, 2, 12.0F);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         WeaponFx.wardSpiral(level, player, WeaponFxTheme.ANCHOR_BLADE, 1.25D, 3);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         level.playSound(null, player.blockPosition(), ModSounds.WEAPON_ANCHOR_BLADE_SECONDARY.get(),
                 SoundSource.PLAYERS, 0.9F, 1.0F);
     }
 
     private void castUnfoldedArc(ServerLevel level, ServerPlayer player) {
-        for (LivingEntity target : WeaponSkillSupport.coneTargets(level, player, 9.0D, -0.05D, 8)) {
-            if (!WeaponSkillSupport.hurt(player, target, 18.0F) || isBoss(target)) {
+        SkillAim aim = skillAim(player, 9.0D, 9.0D * 0.55D);
+        Vec3 pivot = aim.feet().add(0.0D, player.getBbHeight() * 0.45D, 0.0D);
+        Predicate<LivingEntity> targetCheck = target -> isCurrentConeTarget(level, player, target, aim, 9.0D, -0.05D);
+        for (LivingEntity target : aimedSkillTargets(level, aim, targetCheck, 8)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!targetCheck.test(target)) {
+                continue;
+            }
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 18.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !targetCheck.test(target) || isBoss(target)) {
                 continue;
             }
             WeaponFx.hitMark(level, target, WeaponFxTheme.FOLDED_GLAIVE);
+            if (!targetCheck.test(target) || isBoss(target)) {
+                continue;
+            }
             target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1,
                     true, false, true));
-            target.knockback(0.8D, player.getX() - target.getX(), player.getZ() - target.getZ());
+            if (!targetCheck.test(target) || isBoss(target)) {
+                continue;
+            }
+            target.knockback(0.8D, aim.feet().x - target.getX(), aim.feet().z - target.getZ());
         }
-        WeaponFx.slashArc(level, player, WeaponFxTheme.FOLDED_GLAIVE,
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.slashArc(level, pivot, aim.direction(), WeaponFxTheme.FOLDED_GLAIVE,
                 9.0D, WeaponFx.halfAngleOf(-0.05D));
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_FOLDED_GLAIVE_PRIMARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(aim.feet()), ModSounds.WEAPON_FOLDED_GLAIVE_PRIMARY.get(),
                 SoundSource.PLAYERS, 0.9F, 1.0F);
+    }
+
+    private record SkillAim(Vec3 feet, Vec3 origin, Vec3 direction, AABB bounds) {
+    }
+
+    private static SkillAim skillAim(ServerPlayer player, double range, double padding) {
+        Vec3 feet = player.position();
+        Vec3 origin = player.getEyePosition();
+        Vec3 direction = player.getLookAngle().normalize();
+        return new SkillAim(feet, origin, direction,
+                new AABB(origin, origin.add(direction.scale(range))).inflate(padding));
+    }
+
+    private static List<LivingEntity> aimedSkillTargets(ServerLevel level, SkillAim aim,
+                                                        Predicate<LivingEntity> targetCheck, int limit) {
+        return level.getEntitiesOfClass(LivingEntity.class, aim.bounds(), targetCheck)
+                .stream()
+                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(aim.feet())))
+                .limit(limit)
+                .toList();
+    }
+
+    private static boolean isCurrentAimTarget(ServerLevel level, ServerPlayer player, LivingEntity target, SkillAim aim) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.getBoundingBox().intersects(aim.bounds());
+    }
+
+    private static boolean isCurrentConeTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                SkillAim aim, double range, double minDot) {
+        if (!isCurrentAimTarget(level, player, target, aim)) {
+            return false;
+        }
+        Vec3 offset = target.getBoundingBox().getCenter().subtract(aim.origin());
+        double distance = offset.length();
+        return distance > 0.0D && distance <= range
+                && offset.scale(1.0D / distance).dot(aim.direction()) >= minDot
+                && hasSightFrom(level, player, target, aim.origin());
+    }
+
+    private static boolean isCurrentLineTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                SkillAim aim, double range, double width) {
+        if (!isCurrentAimTarget(level, player, target, aim)) {
+            return false;
+        }
+        Vec3 offset = target.getBoundingBox().getCenter().subtract(aim.origin());
+        double along = offset.dot(aim.direction());
+        double targetRadius = target.getBbWidth() * 0.5D + width;
+        return along >= 0.25D && along <= range
+                && offset.subtract(aim.direction().scale(along)).lengthSqr() <= targetRadius * targetRadius
+                && hasSightFrom(level, player, target, aim.origin());
+    }
+
+    private static boolean hasSightFrom(ServerLevel level, ServerPlayer player, LivingEntity target, Vec3 origin) {
+        Vec3 end = target.getEyePosition();
+        AABB box = target.getBoundingBox();
+        if (end.distanceTo(origin) > 128.0D) {
+            return false;
+        }
+        BlockHitResult hit = level.clip(new ClipContext(origin, end, ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS && isCurrentSkillActor(level, player)
+                && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && end.equals(target.getEyePosition()) && box.equals(target.getBoundingBox());
+    }
+
+    private static boolean isAtSkillOrigin(ServerLevel level, ServerPlayer player, SkillAim aim) {
+        return isCurrentSkillActor(level, player) && player.position().distanceToSqr(aim.feet()) <= 1.0E-6D;
     }
 
     private void castFoldedCollapse(ServerLevel level, ServerPlayer player) {
         WeaponFxTheme.Theme fx = WeaponFxTheme.FOLDED_GLAIVE;
-        for (LivingEntity target : WeaponSkillSupport.radiusTargets(level, player, 8.0D, 10)) {
-            if (!WeaponSkillSupport.hurt(player, target, 24.0F) || isBoss(target)) {
+        double radius = 8.0D;
+        Vec3 center = player.position();
+        Vec3 pullPoint = center.add(0.0D, 0.7D, 0.0D);
+        Vec3 tetherEnd = center.add(0.0D, player.getBbHeight() * 0.5D, 0.0D);
+        AABB bounds = player.getBoundingBox().inflate(radius);
+        for (LivingEntity target : radiusSkillTargets(level, player, center, bounds, radius, 10)) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius)) {
                 continue;
             }
-            WeaponFx.pullTether(level, player, target, fx);
-            Vec3 pull = player.position().add(0.0D, 0.7D, 0.0D).subtract(target.position());
+            boolean hurt = WeaponSkillSupport.hurt(player, target, 24.0F);
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!hurt || !isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
+            WeaponFx.pullTether(level, tetherEnd, target, fx);
+            if (!isCurrentRadiusTarget(level, player, target, center, bounds, radius) || isBoss(target)) {
+                continue;
+            }
+            Vec3 pull = pullPoint.subtract(target.position());
             if (pull.lengthSqr() > 1.0E-4D) {
                 target.setDeltaMovement(target.getDeltaMovement().add(pull.normalize().scale(0.75D)));
-                target.hurtMarked = true;
+                if (isCurrentRadiusTarget(level, player, target, center, bounds, radius) && !isBoss(target)) {
+                    target.hurtMarked = true;
+                }
             }
         }
-        WeaponFx.groundRing(level, player, fx, 8.0D);
-        level.playSound(null, player.blockPosition(), ModSounds.WEAPON_FOLDED_GLAIVE_SECONDARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        WeaponFx.groundRing(level, center, fx, radius);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_FOLDED_GLAIVE_SECONDARY.get(),
                 SoundSource.PLAYERS, 0.9F, 1.0F);
+    }
+
+    private static List<LivingEntity> radiusSkillTargets(ServerLevel level, ServerPlayer player,
+                                                         Vec3 center, AABB bounds, double radius, int limit) {
+        return level.getEntitiesOfClass(LivingEntity.class, bounds,
+                        target -> isCurrentRadiusTarget(level, player, target, center, bounds, radius))
+                .stream()
+                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(center)))
+                .limit(limit)
+                .toList();
+    }
+
+    private static boolean isCurrentRadiusTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                   Vec3 center, AABB bounds, double radius) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && target.position().distanceToSqr(center) <= radius * radius
+                && target.getBoundingBox().intersects(bounds);
     }
 
     @Override
@@ -330,7 +615,7 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
     }
 
     private void applyGravityHammer(ServerLevel level, ServerPlayer player, LivingEntity target) {
-        if (!(target instanceof Enemy) || isBoss(target)) {
+        if (!isCurrentControlTarget(level, player, target)) {
             return;
         }
         long now = player.server.overworld().getGameTime();
@@ -343,13 +628,19 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         boolean deepTarget = target.getType().is(ModEntityTags.DEEP_ECHOES_HOSTILES);
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
                 deepTarget ? 70 : 60, deepTarget ? 2 : 1, true, false, true));
+        if (!isCurrentControlTarget(level, player, target)) {
+            return;
+        }
         WeaponFx.heavyHitMark(level, target, WeaponFxTheme.GRAVITY_HAMMER);
+        if (!isCurrentControlTarget(level, player, target)) {
+            return;
+        }
         level.playSound(null, target.blockPosition(), ModSounds.WEAPON_GRAVITY_HAMMER_PRIMARY.get(),
                 SoundSource.PLAYERS, 0.75F, 1.0F);
     }
 
     private void applyRiftDagger(ServerLevel level, ServerPlayer player, LivingEntity target) {
-        if (!(target instanceof Enemy) || isBoss(target)) {
+        if (!isCurrentSkillActor(level, player) || !(target instanceof Enemy) || isBoss(target)) {
             return;
         }
         long now = player.server.overworld().getGameTime();
@@ -358,32 +649,37 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
             return;
         }
         Vec3 destination = findSafeBackstep(level, player, 4.0D);
-        if (destination == null) {
+        if (destination == null || !isCurrentSkillActor(level, player)) {
             return;
         }
         player.getPersistentData().putLong(RIFT_EFFECT_COOLDOWN,
                 WeaponSkillSupport.safeDeadline(now, RIFT_COOLDOWN_TICKS));
         WeaponFx.hitMark(level, target, WeaponFxTheme.RIFT_DAGGER);
-        Vec3 origin = player.position().add(0.0D, player.getBbHeight() * 0.5D, 0.0D);
-        Vec3 span = destination.add(0.0D, player.getBbHeight() * 0.5D, 0.0D).subtract(origin);
-        WeaponFx.dashTrail(level, origin, span, span.length(), WeaponFxTheme.RIFT_DAGGER);
-        player.teleportTo(level, destination.x, destination.y, destination.z,
-                player.getYRot(), player.getXRot());
-        player.setDeltaMovement(Vec3.ZERO);
-        player.fallDistance = 0.0F;
+        if (!tryRiftBackstep(level, player, destination)) {
+            return;
+        }
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED,
                 30, 1, true, false, true));
-        if (target.getType().is(ModEntityTags.DEEP_ECHOES_HOSTILES)) {
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        if (target.isAlive() && target.level() == level && target.getType().is(ModEntityTags.DEEP_ECHOES_HOSTILES)) {
             target.addEffect(new MobEffectInstance(MobEffects.GLOWING,
                     40, 0, true, false, true));
         }
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         WeaponFx.wardSpiral(level, player, WeaponFxTheme.RIFT_DAGGER, 0.6D, 2);
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         level.playSound(null, BlockPos.containing(destination), ModSounds.WEAPON_RIFT_DAGGER_PRIMARY.get(),
                 SoundSource.PLAYERS, 0.65F, 1.0F);
     }
 
     private void applyAnchorBlade(ServerLevel level, ServerPlayer player, LivingEntity target) {
-        if (!(target instanceof Enemy) || isBoss(target)) {
+        if (!isCurrentControlTarget(level, player, target)) {
             return;
         }
         long now = player.server.overworld().getGameTime();
@@ -396,16 +692,26 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         boolean deepTarget = target.getType().is(ModEntityTags.DEEP_ECHOES_HOSTILES);
         target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,
                 deepTarget ? 120 : 100, 1, true, false, true));
+        if (!isCurrentControlTarget(level, player, target)) {
+            return;
+        }
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
                 deepTarget ? 60 : 50, 1,
                 true, false, true));
+        if (!isCurrentControlTarget(level, player, target)) {
+            return;
+        }
         WeaponFx.hitMark(level, target, WeaponFxTheme.ANCHOR_BLADE);
+        if (!isCurrentControlTarget(level, player, target)) {
+            return;
+        }
         level.playSound(null, target.blockPosition(), ModSounds.WEAPON_ANCHOR_BLADE_PRIMARY.get(),
                 SoundSource.PLAYERS, 0.75F, 1.0F);
     }
 
     private void applyFoldedGlaive(ServerLevel level, ServerPlayer player, LivingEntity target) {
-        if (!(target instanceof Enemy) || isBoss(target)) {
+        if (!isCurrentSkillActor(level, player) || target.level() != level
+                || !(target instanceof Enemy) || isBoss(target)) {
             return;
         }
         long now = player.server.overworld().getGameTime();
@@ -415,29 +721,65 @@ public class DeepMeleeWeaponItem extends EchoMeleeWeaponItem implements WeaponSk
         }
         player.getPersistentData().putLong(GLAIVE_EFFECT_COOLDOWN,
                 WeaponSkillSupport.safeDeadline(now, GLAIVE_COOLDOWN_TICKS));
+        // 命中中心可以是刚被击杀的敌人，后续控制仍使用本次命中的范围与方向。
+        Vec3 center = target.position();
+        Vec3 impact = center.add(0.0D, target.getBbHeight() * 0.45D, 0.0D);
+        Vec3 origin = player.position();
         AABB sweep = target.getBoundingBox().inflate(4.5D, 2.0D, 4.5D);
         int affected = 0;
         for (LivingEntity nearby : level.getEntitiesOfClass(LivingEntity.class, sweep,
-                candidate -> candidate instanceof Enemy
-                        && candidate.isAlive()
-                        && candidate.distanceToSqr(target) <= 20.25D
-                        && !candidate.isAlliedTo(player)
-                        && !isBoss(candidate))) {
+                candidate -> isCurrentSweepTarget(level, player, candidate, center, sweep))) {
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (affected >= 6) {
+                break;
+            }
+            if (!isCurrentSweepTarget(level, player, nearby, center, sweep)) {
+                continue;
+            }
+            affected++;
             boolean deepTarget = nearby.getType().is(ModEntityTags.DEEP_ECHOES_HOSTILES);
             nearby.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
                     deepTarget ? 70 : 60, deepTarget ? 1 : 0, true, false, true));
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (!isCurrentSweepTarget(level, player, nearby, center, sweep)) {
+                continue;
+            }
             nearby.knockback(0.8D,
-                    player.getX() - nearby.getX(), player.getZ() - nearby.getZ());
-            WeaponFx.hitMark(level, nearby, WeaponFxTheme.FOLDED_GLAIVE);
-            if (++affected >= 6) {
-                break;
+                    origin.x - nearby.getX(), origin.z - nearby.getZ());
+            if (!isCurrentSkillActor(level, player)) {
+                return;
+            }
+            if (isCurrentSweepTarget(level, player, nearby, center, sweep)) {
+                WeaponFx.hitMark(level, nearby, WeaponFxTheme.FOLDED_GLAIVE);
             }
         }
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
         level.sendParticles(ParticleTypes.SWEEP_ATTACK,
-                target.getX(), target.getY() + target.getBbHeight() * 0.45D, target.getZ(),
+                impact.x, impact.y, impact.z,
                 Math.max(1, affected), 1.2D, 0.25D, 1.2D, 0.0D);
-        level.playSound(null, target.blockPosition(), ModSounds.WEAPON_FOLDED_GLAIVE_PRIMARY.get(),
+        if (!isCurrentSkillActor(level, player)) {
+            return;
+        }
+        level.playSound(null, BlockPos.containing(center), ModSounds.WEAPON_FOLDED_GLAIVE_PRIMARY.get(),
                 SoundSource.PLAYERS, 0.85F, 1.0F);
+    }
+
+    private static boolean isCurrentControlTarget(ServerLevel level, ServerPlayer player, LivingEntity target) {
+        return isCurrentSkillActor(level, player) && target.level() == level && WeaponSkillSupport.isHostile(player, target)
+                && !isBoss(target);
+    }
+
+    private static boolean isCurrentSweepTarget(ServerLevel level, ServerPlayer player, LivingEntity target,
+                                                 Vec3 center, AABB sweep) {
+        return isCurrentControlTarget(level, player, target)
+                && target.position().distanceToSqr(center) <= 20.25D
+                && target.getBoundingBox().intersects(sweep);
     }
 
     private static Vec3 findSafeBackstep(ServerLevel level, ServerPlayer player, double range) {

@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.concurrent.CompletableFuture;
 
 /** 档案终端的深渊信标补录任务。每次只推进一个候选起点，避免同步 /locate 卡住服务端。 */
@@ -56,6 +57,7 @@ public final class AbyssBeaconClueSearch {
     private static final int MAX_CONSECUTIVE_ERRORS = 16;
 
     private static final Map<UUID, SearchTask> ACTIVE = new HashMap<>();
+    private static final Map<ServerPlayer, Object> LATEST_REQUESTS = new WeakHashMap<>();
 
     private AbyssBeaconClueSearch() {
     }
@@ -86,8 +88,14 @@ public final class AbyssBeaconClueSearch {
         SearchTask task = new SearchTask(player.getUUID(), level.dimension(), structureId,
                 holder.value(), player.blockPosition(), level.getSeed(), generatorState, placements);
         ACTIVE.put(player.getUUID(), task);
-        searchNext(player.server, task);
-        return RequestResult.SEARCHING;
+        LATEST_REQUESTS.put(player, task.requestToken);
+        try {
+            searchNext(player.server, task);
+        } finally {
+            task.requesting = false;
+        }
+        return task.result == RequestResult.SEARCHING && ACTIVE.get(task.playerId) != task
+                ? RequestResult.UNAVAILABLE : task.result;
     }
 
     private static RequestResult record(ServerPlayer player, ServerLevel level,
@@ -95,7 +103,6 @@ public final class AbyssBeaconClueSearch {
         boolean added = JournalManager.addClue(player, new ExplorationClue(structureId.toString(),
                 level.dimension().location().toString(), pos, false));
         if (added) {
-            JournalManager.syncJournal(player);
             return RequestResult.ADDED;
         }
         return RequestResult.ALREADY_KNOWN;
@@ -113,6 +120,7 @@ public final class AbyssBeaconClueSearch {
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
         if (player == null || !player.isAlive() || !player.level().dimension().equals(task.dimension)) {
             ACTIVE.remove(task.playerId, task);
+            if (player != null) LATEST_REQUESTS.remove(player, task.requestToken);
             return;
         }
         if (task.inFlight || level.getGameTime() < task.nextStepAt) {
@@ -154,6 +162,7 @@ public final class AbyssBeaconClueSearch {
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
         if (player == null || !player.isAlive() || !player.level().dimension().equals(task.dimension)) {
             ACTIVE.remove(task.playerId, task);
+            if (player != null) LATEST_REQUESTS.remove(player, task.requestToken);
             return;
         }
         if (error != null || chunk == null) {
@@ -178,12 +187,25 @@ public final class AbyssBeaconClueSearch {
             return;
         }
 
-        RequestResult result = record(player, level, task.structureId, target);
-        ACTIVE.remove(task.playerId, task);
-        player.displayClientMessage(Component.translatable(
-                result == RequestResult.ADDED
-                        ? "message.unknown_echoes.completion.abyss_clue_added"
-                        : "message.unknown_echoes.completion.abyss_clue_known"), true);
+        task.result = RequestResult.UNAVAILABLE;
+        try {
+            try {
+                task.result = record(player, level, task.structureId, target);
+            } finally {
+                ACTIVE.remove(task.playerId, task);
+            }
+            // 记录提交后先释放任务，再同步；已知线索也重推，修复此前同步失败的客户端状态。
+            JournalManager.syncJournal(player);
+            if (!task.requesting && isCurrentPlayer(server, task, level, player)
+                    && !ACTIVE.containsKey(task.playerId)) {
+                player.displayClientMessage(Component.translatable(
+                        task.result == RequestResult.ADDED
+                                ? "message.unknown_echoes.completion.abyss_clue_added"
+                                : "message.unknown_echoes.completion.abyss_clue_known"), true);
+            }
+        } finally {
+            LATEST_REQUESTS.remove(player, task.requestToken);
+        }
     }
 
     private static void deferNext(ServerLevel level, SearchTask task) {
@@ -195,27 +217,45 @@ public final class AbyssBeaconClueSearch {
         if (!ACTIVE.remove(task.playerId, task)) {
             return;
         }
+        task.result = RequestResult.UNAVAILABLE;
         ServerPlayer player = server.getPlayerList().getPlayer(task.playerId);
-        if (!server.isStopped() && player != null && player.isAlive()
-                && player.level().dimension().equals(task.dimension)) {
-            player.displayClientMessage(Component.translatable(
-                    "message.unknown_echoes.completion.abyss_clue_unavailable"), true);
+        ServerLevel level = server.getLevel(task.dimension);
+        try {
+            if (!task.requesting && player != null && level != null
+                    && isCurrentPlayer(server, task, level, player)) {
+                player.displayClientMessage(Component.translatable(
+                        "message.unknown_echoes.completion.abyss_clue_unavailable"), true);
+            }
+        } finally {
+            if (player != null) LATEST_REQUESTS.remove(player, task.requestToken);
         }
+    }
+
+    private static boolean isCurrentPlayer(MinecraftServer server, SearchTask task, ServerLevel level,
+                                            ServerPlayer player) {
+        return !server.isStopped() && player.isAlive() && !player.isSpectator()
+                && !player.isRemoved() && !player.hasDisconnected() && player.server == server
+                && server.getPlayerList().getPlayer(task.playerId) == player
+                && LATEST_REQUESTS.get(player) == task.requestToken
+                && server.getLevel(task.dimension) == level && player.level() == level;
     }
 
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         ACTIVE.remove(event.getEntity().getUUID());
+        LATEST_REQUESTS.remove(event.getEntity());
     }
 
     @SubscribeEvent
     public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         ACTIVE.remove(event.getEntity().getUUID());
+        LATEST_REQUESTS.remove(event.getEntity());
     }
 
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         ACTIVE.remove(event.getEntity().getUUID());
+        LATEST_REQUESTS.remove(event.getEntity());
     }
 
     @SubscribeEvent
@@ -236,6 +276,7 @@ public final class AbyssBeaconClueSearch {
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         ACTIVE.clear();
+        LATEST_REQUESTS.clear();
     }
 
     private static final class SearchTask {
@@ -248,6 +289,10 @@ public final class AbyssBeaconClueSearch {
         private boolean inFlight;
         private int searchedCandidates;
         private int consecutiveErrors;
+        private final Object requestToken = new Object();
+        private RequestResult result = RequestResult.SEARCHING;
+        // 同线程已加载候选可以立即完成，交互调用方负责该次最终提示。
+        private boolean requesting = true;
 
         private SearchTask(UUID playerId, ResourceKey<Level> dimension,
                            ResourceLocation structureId, Structure target,
